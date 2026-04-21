@@ -15,15 +15,24 @@ export default function RepartidorRowActions({ order }: { order: Order }) {
 
   async function go(status: OrderStatus) {
     setBusy(true); setErr(null)
-    const { error } = await sb.rpc('set_order_status', {
-      p_order_id: order.id,
-      p_status: status,
-      p_note: note.trim() || null,
-    })
-    setBusy(false)
-    if (error) { setErr(error.message); return }
-    setNote(''); setShowNote(false)
-    router.refresh()
+    try {
+      const res = await fetch(`/api/orders/${order.id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, note: note.trim() || null }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setErr(json?.error || 'error_cambio_estado'); return }
+      if (json?.woo && json.woo.ok === false) {
+        setErr(`Guardado OK, pero no se sincronizó con Woo: ${json.woo.error}`)
+      }
+      setNote(''); setShowNote(false)
+      router.refresh()
+    } catch (e: any) {
+      setErr(e?.message || 'error_red')
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function saveNote() {

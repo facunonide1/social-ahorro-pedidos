@@ -6,6 +6,7 @@ import type { Order, OrderStatus, UserPedidos, OrderStatusHistory } from '@/lib/
 import { formatAddress, googleMapsLink } from '@/lib/address'
 import { formatOrderNumber } from '@/lib/orders/format'
 import OrderActions from './actions'
+import WooSyncBanner from './woo-sync-banner'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,6 +69,8 @@ export default async function OrderDetailPage({ params }: { params: { id: string
       </header>
 
       <main style={{ padding: 20, display: 'grid', gap: 16, maxWidth: 900, margin: '0 auto' }}>
+        <WooSyncBanner order={order} />
+
         {/* CLIENTE + DIRECCION */}
         <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px', marginBottom: 8 }}>CLIENTE</div>
