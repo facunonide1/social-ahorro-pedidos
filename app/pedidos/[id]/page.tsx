@@ -19,7 +19,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     .eq('id', user.id)
     .maybeSingle<UserPedidos>()
 
-  if (!profile?.active) redirect('/login?error=sin_permiso')
+  if (!profile?.active) redirect('/logout?reason=sin_permiso')
 
   const { data: order } = await sb
     .from('orders')

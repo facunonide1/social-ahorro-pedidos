@@ -19,7 +19,7 @@ export default async function RepartidorPage() {
     .eq('id', user.id)
     .maybeSingle<UserPedidos>()
 
-  if (!profile?.active) redirect('/login?error=sin_permiso')
+  if (!profile?.active) redirect('/logout?reason=sin_permiso')
   if (profile.role !== 'repartidor') redirect('/dashboard')
 
   // Traigo TODAS las entregas asignadas al repartidor (incluye atrasadas)
