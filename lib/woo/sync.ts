@@ -69,6 +69,7 @@ export async function syncFromWoo(opts: {
     for (const o of toInsert) {
       const row = {
         woo_order_id: o.id,
+        origin: 'woo' as const,
         status: 'nuevo' as const,
         customer_name:  pickCustomerName(o) || null,
         customer_phone: pickCustomerPhone(o),

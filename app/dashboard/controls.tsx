@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { STATUS_LABELS, STATUS_ORDER } from '@/lib/types'
 import type { OrderStatus } from '@/lib/types'
 
@@ -74,6 +75,11 @@ export default function DashboardControls({
         <option value="today">Solo hoy</option>
         <option value="all">Todos</option>
       </select>
+
+      <Link href="/pedidos/nuevo"
+        style={{ padding: '10px 14px', border: 'none', borderRadius: 12, background: '#FF6D6E', color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+        + Nuevo pedido
+      </Link>
 
       <button onClick={runSync} disabled={syncing}
         style={{ padding: '10px 14px', border: 'none', borderRadius: 12, background: '#726DFF', color: '#fff', fontSize: 13, fontWeight: 700, cursor: syncing ? 'wait' : 'pointer', opacity: syncing ? 0.6 : 1 }}>

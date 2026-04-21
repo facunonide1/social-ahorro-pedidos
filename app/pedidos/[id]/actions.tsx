@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { STATUS_LABELS, STATUS_ORDER, STATUS_COLORS } from '@/lib/types'
 import type { Order, OrderStatus, UserRole, UserPedidos } from '@/lib/types'
 import { messageForStatus, whatsappLink } from '@/lib/whatsapp/messages'
+import { formatOrderNumber } from '@/lib/orders/format'
 
 const BTN: React.CSSProperties = {
   padding: '10px 14px', border: 'none', borderRadius: 12, fontSize: 13, fontWeight: 700,
@@ -72,7 +73,7 @@ export default function OrderActions({
 
   const waText = messageForStatus(order.status, {
     customerName: order.customer_name,
-    wooOrderId: order.woo_order_id,
+    orderNumber: formatOrderNumber(order),
   })
   const waLink = whatsappLink(order.customer_phone, waText)
 

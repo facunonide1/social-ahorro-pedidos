@@ -7,6 +7,8 @@ export type OrderStatus =
   | 'entregado'
   | 'cancelado'
 
+export type OrderOrigin = 'woo' | 'whatsapp' | 'telefono' | 'instagram' | 'otro'
+
 export type UserRole = 'admin' | 'operador' | 'repartidor'
 
 export type OrderItem = {
@@ -20,7 +22,9 @@ export type OrderItem = {
 
 export type Order = {
   id: string
-  woo_order_id: number
+  woo_order_id: number | null
+  manual_order_number: number | null
+  origin: OrderOrigin
   status: OrderStatus
   customer_name: string | null
   customer_phone: string | null
@@ -35,6 +39,21 @@ export type Order = {
   woo_created_at: string | null
   created_at: string
   updated_at: string
+}
+
+export const ORIGIN_LABELS: Record<OrderOrigin, string> = {
+  woo: 'Web',
+  whatsapp: 'WhatsApp',
+  telefono: 'Teléfono',
+  instagram: 'Instagram',
+  otro: 'Otro',
+}
+
+export const MANUAL_ORIGIN_PREFIX: Record<Exclude<OrderOrigin, 'woo'>, string> = {
+  whatsapp: 'WSP',
+  telefono: 'TEL',
+  instagram: 'IG',
+  otro: 'M',
 }
 
 export type OrderStatusHistory = {

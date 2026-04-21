@@ -15,10 +15,10 @@ export function normalizePhoneForWhatsApp(raw: string | null | undefined): strin
 
 export function messageForStatus(status: OrderStatus, opts: {
   customerName: string | null
-  wooOrderId: number
+  orderNumber: string
 }): string {
   const name = opts.customerName?.split(' ')[0] || 'Hola'
-  const n = `#${opts.wooOrderId}`
+  const n = opts.orderNumber
   switch (status) {
     case 'nuevo':
       return `Hola ${name}! Recibimos tu pedido ${n}. Te avisamos cuando lo confirmemos.`

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { STATUS_LABELS, STATUS_ORDER, STATUS_COLORS } from '@/lib/types'
 import type { Order, OrderStatus, UserPedidos } from '@/lib/types'
+import { formatOrderNumber } from '@/lib/orders/format'
 import DashboardControls from './controls'
 
 export const dynamic = 'force-dynamic'
@@ -54,6 +55,7 @@ export default async function DashboardPage({
     const asNumber = Number(q.replace(/\D/g, ''))
     if (Number.isFinite(asNumber) && asNumber > 0) {
       orFilters.push(`woo_order_id.eq.${asNumber}`)
+      orFilters.push(`manual_order_number.eq.${asNumber}`)
     }
     query = query.or(orFilters.join(','))
   }
@@ -112,7 +114,7 @@ export default async function DashboardPage({
                 <Link key={o.id} href={`/pedidos/${o.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                   <div style={{ border: '0.5px solid #f0ede8', borderRadius: 12, padding: '10px 12px', background: '#faf8f5', display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700 }}>#{o.woo_order_id}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700 }}>{formatOrderNumber(o)}</span>
                       <span style={{ fontSize: 12, fontWeight: 700, color: '#2a2a2a' }}>
                         ${Number(o.total).toLocaleString('es-AR')}
                       </span>

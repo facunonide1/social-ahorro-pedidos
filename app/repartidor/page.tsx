@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
 import type { Order, UserPedidos } from '@/lib/types'
 import { formatAddress, googleMapsLink } from '@/lib/address'
+import { formatOrderNumber } from '@/lib/orders/format'
 import RepartidorRowActions from './row-actions'
 
 export const dynamic = 'force-dynamic'
@@ -86,7 +87,7 @@ function DeliveryCard({ order, compact }: { order: Order; compact?: boolean }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
         <div>
           <div style={{ fontSize: 15, fontWeight: 700 }}>{order.customer_name || '—'}</div>
-          <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>#{order.woo_order_id} · ${Number(order.total).toLocaleString('es-AR')}</div>
+          <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{formatOrderNumber(order)} · ${Number(order.total).toLocaleString('es-AR')}</div>
         </div>
         <span style={{ fontSize: 11, fontWeight: 700, color: c.fg, background: c.bg, border: `0.5px solid ${c.border}`, padding: '4px 9px', borderRadius: 999 }}>
           {STATUS_LABELS[order.status]}
