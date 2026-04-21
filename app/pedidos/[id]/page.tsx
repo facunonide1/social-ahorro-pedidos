@@ -1,9 +1,10 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { STATUS_LABELS, STATUS_COLORS, STATUS_ORDER } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, STATUS_ORDER, ORIGIN_LABELS } from '@/lib/types'
 import type { Order, OrderStatus, UserPedidos, OrderStatusHistory } from '@/lib/types'
 import { formatAddress, googleMapsLink } from '@/lib/address'
+import { formatOrderNumber } from '@/lib/orders/format'
 import OrderActions from './actions'
 
 export const dynamic = 'force-dynamic'
@@ -56,9 +57,9 @@ export default async function OrderDetailPage({ params }: { params: { id: string
       <header style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
         <Link href={profile.role === 'repartidor' ? '/repartidor' : '/dashboard'} style={{ textDecoration: 'none', color: '#726DFF', fontSize: 14, fontWeight: 600 }}>← Volver</Link>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.3px' }}>Pedido #{order.woo_order_id}</div>
+          <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.3px' }}>Pedido {formatOrderNumber(order)}</div>
           <div style={{ fontSize: 12, color: '#999' }}>
-            {order.woo_created_at ? new Date(order.woo_created_at).toLocaleString('es-AR') : new Date(order.created_at).toLocaleString('es-AR')}
+            {ORIGIN_LABELS[order.origin]} · {order.woo_created_at ? new Date(order.woo_created_at).toLocaleString('es-AR') : new Date(order.created_at).toLocaleString('es-AR')}
           </div>
         </div>
         <span style={{ fontSize: 12, fontWeight: 700, color: c.fg, background: c.bg, border: `0.5px solid ${c.border}`, padding: '5px 10px', borderRadius: 999 }}>
