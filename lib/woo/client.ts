@@ -1,9 +1,27 @@
 /**
  * Cliente minimo de WooCommerce REST API v3.
- * Solo usamos lo que necesita la app: listar/leer orders.
  */
 
+import type { OrderStatus } from '@/lib/types'
+
 type WooQuery = Record<string, string | number | undefined>
+
+export type WooOrderStatus =
+  | 'pending' | 'processing' | 'on-hold'
+  | 'completed' | 'cancelled' | 'refunded' | 'failed'
+
+/** Mapeo de estados de la app a estados de Woo (Opción A). */
+export function mapStatusToWoo(s: OrderStatus): WooOrderStatus {
+  switch (s) {
+    case 'nuevo':          return 'pending'
+    case 'confirmado':
+    case 'en_preparacion':
+    case 'listo':
+    case 'en_camino':      return 'processing'
+    case 'entregado':      return 'completed'
+    case 'cancelado':      return 'cancelled'
+  }
+}
 
 function authHeader() {
   const key = process.env.WOOCOMMERCE_CONSUMER_KEY!
@@ -93,6 +111,27 @@ export async function fetchOrders(params: {
 
 export async function fetchOrder(id: number): Promise<WooOrder> {
   return wooFetch<WooOrder>(`/orders/${id}`)
+}
+
+/**
+ * Actualiza el status de un pedido en Woo.
+ * Woo dispara sus mails automáticos según su config cuando el status cambia.
+ */
+export async function updateWooOrderStatus(id: number, status: WooOrderStatus): Promise<void> {
+  const res = await fetch(buildUrl(`/orders/${id}`), {
+    method: 'PUT',
+    headers: {
+      Authorization: authHeader(),
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({ status }),
+    cache: 'no-store',
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`Woo PUT ${res.status}: ${body.slice(0, 300)}`)
+  }
 }
 
 export type WooCustomer = {

@@ -38,6 +38,9 @@ export type Order = {
   notes: string | null
   assigned_to: string | null
   woo_created_at: string | null
+  woo_last_sync_status: string | null
+  woo_last_sync_at: string | null
+  woo_last_sync_error: string | null
   created_at: string
   updated_at: string
 }
