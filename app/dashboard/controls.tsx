@@ -62,7 +62,7 @@ export default function DashboardControls({
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
       <form onSubmit={e => { e.preventDefault(); apply({ q }) }}>
         <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder="Buscar nombre, tel, #pedido..."
+          placeholder="Buscar nombre, DNI, tel, #pedido..."
           style={{ ...input, minWidth: 220 }} />
       </form>
 

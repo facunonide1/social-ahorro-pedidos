@@ -10,6 +10,7 @@ export type CustomerSuggestion = {
   name: string | null
   phone: string | null
   email: string | null
+  dni: string | null
   address: {
     address_1?: string
     address_2?: string
@@ -22,6 +23,15 @@ export type CustomerSuggestion = {
 
 function normalizeKey(s: string | null | undefined) {
   return (s ?? '').replace(/\D/g, '').toLowerCase()
+}
+
+function customerKey(c: Pick<CustomerSuggestion, 'phone' | 'email' | 'dni' | 'name'>) {
+  return (
+    normalizeKey(c.dni)
+    || normalizeKey(c.phone)
+    || (c.email || '').toLowerCase()
+    || (c.name  || '').toLowerCase()
+  )
 }
 
 export async function GET(req: NextRequest) {
@@ -47,24 +57,26 @@ export async function GET(req: NextRequest) {
   // 1) Búsqueda en orders locales (pedidos Woo ya sincronizados + manuales)
   const { data: localOrders } = await sb
     .from('orders')
-    .select('customer_name, customer_phone, customer_email, shipping_address, billing_address, created_at')
-    .or(`customer_name.ilike.${like},customer_phone.ilike.${like},customer_email.ilike.${like}`)
+    .select('customer_name, customer_phone, customer_email, customer_dni, shipping_address, billing_address, created_at')
+    .or(`customer_name.ilike.${like},customer_phone.ilike.${like},customer_email.ilike.${like},customer_dni.ilike.${like}`)
     .order('created_at', { ascending: false })
     .limit(80)
 
   const seen = new Set<string>()
   const locals: CustomerSuggestion[] = []
   for (const o of localOrders ?? []) {
-    const key = normalizeKey(o.customer_phone) || (o.customer_email || '').toLowerCase() || (o.customer_name || '').toLowerCase()
-    if (!key || seen.has(key)) continue
-    seen.add(key)
-    locals.push({
+    const suggestion: CustomerSuggestion = {
       source: 'local',
-      name: o.customer_name,
+      name:  o.customer_name,
       phone: o.customer_phone,
       email: o.customer_email,
+      dni:   o.customer_dni,
       address: (o.shipping_address as any) || (o.billing_address as any) || null,
-    })
+    }
+    const key = customerKey(suggestion)
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    locals.push(suggestion)
     if (locals.length >= 10) break
   }
 
@@ -77,14 +89,15 @@ export async function GET(req: NextRequest) {
       name: full || null,
       phone: c.billing?.phone || null,
       email: c.email || null,
+      dni: null, // Woo no tiene DNI estándar
       address: (c.shipping && Object.keys(c.shipping).length ? c.shipping : c.billing) as any || null,
     }
   })
 
-  // Dedupe Woo contra locales por teléfono o email
+  // Dedupe Woo contra locales por DNI / teléfono / email
   const out: CustomerSuggestion[] = [...locals]
   for (const w of wooList) {
-    const key = normalizeKey(w.phone) || (w.email || '').toLowerCase() || (w.name || '').toLowerCase()
+    const key = customerKey(w)
     if (!key || seen.has(key)) continue
     seen.add(key)
     out.push(w)

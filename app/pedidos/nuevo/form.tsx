@@ -44,7 +44,7 @@ export default function NuevoPedidoForm() {
   const [err, setErr] = useState<string | null>(null)
 
   const [origin, setOrigin] = useState<Exclude<OrderOrigin, 'woo'>>('whatsapp')
-  const [customer, setCustomer] = useState({ name: '', phone: '', email: '' })
+  const [customer, setCustomer] = useState({ name: '', phone: '', email: '', dni: '' })
   const [address, setAddress] = useState({
     address_1: '', address_2: '', city: '', state: '', postcode: '',
   })
@@ -63,6 +63,7 @@ export default function NuevoPedidoForm() {
       name:  c.name  || '',
       phone: c.phone || '',
       email: c.email || '',
+      dni:   c.dni   || '',
     })
     const a = c.address || {}
     setAddress({
@@ -119,6 +120,7 @@ export default function NuevoPedidoForm() {
       p_customer_name: customer.name,
       p_customer_phone: customer.phone,
       p_customer_email: customer.email,
+      p_customer_dni: customer.dni,
       p_shipping_address: shipping,
       p_items: cleanItems,
       p_total: total,
@@ -189,10 +191,15 @@ export default function NuevoPedidoForm() {
               placeholder="+54 9 11 5555-5555" style={INPUT} />
           </div>
           <div>
-            <label style={LABEL}>Email</label>
-            <input type="email" value={customer.email} onChange={e => setCustomer({ ...customer, email: e.target.value })}
-              placeholder="cliente@mail.com" style={INPUT} />
+            <label style={LABEL}>DNI</label>
+            <input value={customer.dni} onChange={e => setCustomer({ ...customer, dni: e.target.value })}
+              placeholder="12345678" style={INPUT} />
           </div>
+        </div>
+        <div>
+          <label style={LABEL}>Email</label>
+          <input type="email" value={customer.email} onChange={e => setCustomer({ ...customer, email: e.target.value })}
+            placeholder="cliente@mail.com" style={INPUT} />
         </div>
       </section>
 

@@ -51,6 +51,7 @@ export default async function DashboardPage({
       `customer_name.ilike.${like}`,
       `customer_phone.ilike.${like}`,
       `customer_email.ilike.${like}`,
+      `customer_dni.ilike.${like}`,
     ]
     const asNumber = Number(q.replace(/\D/g, ''))
     if (Number.isFinite(asNumber) && asNumber > 0) {
