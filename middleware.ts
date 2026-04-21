@@ -39,7 +39,13 @@ export async function middleware(request: NextRequest) {
 
   if (isApiSync) return supabaseResponse
   if (isLogin) {
-    if (user) return redirectWithCookies(new URL('/', request.url))
+    // Si hay user pero la URL trae ?error=..., permito mostrar login
+    // (ej: el server redirigió acá por "sin_permiso" y el form se va a
+    // encargar de cerrar la sesión huérfana). Sin esto, el middleware
+    // rebota /login -> / y se arma un loop cuando el user auth existe
+    // pero no tiene fila activa en users_pedidos.
+    const hasError = request.nextUrl.searchParams.has('error')
+    if (user && !hasError) return redirectWithCookies(new URL('/', request.url))
     return supabaseResponse
   }
 

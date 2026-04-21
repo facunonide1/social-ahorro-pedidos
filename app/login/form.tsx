@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
@@ -15,6 +15,15 @@ export default function LoginForm() {
       : ''
   )
   const [form, setForm] = useState({ email: '', password: '' })
+
+  // Si llegamos a /login con ?error=sin_permiso pero todavía hay sesión
+  // activa en supabase, la cerramos para no caer en un loop de redirect
+  // (el middleware rebotaría /login -> / y / rebotaría de vuelta a /login).
+  useEffect(() => {
+    if (search.get('error') === 'sin_permiso') {
+      supabase.auth.signOut().catch(() => {})
+    }
+  }, [search, supabase])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
