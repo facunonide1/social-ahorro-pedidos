@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import DiagnosticPanel from './_diag'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,17 +15,33 @@ export default async function Home() {
     .eq('id', user.id)
     .maybeSingle()
 
-  // Si supabase devuelve error (RLS, function broken, etc.), no lo
-  // silenciemos con un redirect: que el error boundary lo muestre.
   if (error) {
-    throw new Error(
-      `profile_query_failed: ${error.message} | code=${error.code} | hint=${error.hint ?? ''} | user=${user.id}`
+    return (
+      <DiagnosticPanel
+        title="Error consultando users_pedidos"
+        details={{
+          message: error.message,
+          code: (error as any).code ?? '',
+          hint: (error as any).hint ?? '',
+          details: (error as any).details ?? '',
+          user_id: user.id,
+          user_email: user.email,
+        }}
+      />
     )
   }
 
   if (!profile) {
-    throw new Error(
-      `sin_profile: el usuario ${user.email} (id=${user.id}) se autentica en Supabase Auth pero no tiene fila visible en public.users_pedidos. Verificá que exista con ese id y que las RLS policies permitan leerla.`
+    return (
+      <DiagnosticPanel
+        title="Usuario autenticado sin fila visible en users_pedidos"
+        details={{
+          user_id: user.id,
+          user_email: user.email,
+          hint:
+            'El JWT está OK, pero el SELECT .eq("id", user.id) sobre users_pedidos devolvió 0 filas. Puede ser: (a) la fila no existe con ese id, (b) las RLS policies no permiten leerla a este user, (c) las env vars de Vercel apuntan a otro proyecto de Supabase.',
+        }}
+      />
     )
   }
 
