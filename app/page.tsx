@@ -8,17 +8,27 @@ export default async function Home() {
   const { data: { user } } = await sb.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await sb
+  const { data: profile, error } = await sb
     .from('users_pedidos')
     .select('role, active')
     .eq('id', user.id)
     .maybeSingle()
 
-  // Si el user auth existe pero no tiene perfil activo en users_pedidos,
-  // paso por /logout (Route Handler) para que se limpien las cookies de
-  // sesión ANTES de redirigir a /login y así evitar el loop
-  // /login -> / -> /login cuando el middleware detecta la sesión.
-  if (!profile || !profile.active) redirect('/logout?reason=sin_permiso')
+  // Si supabase devuelve error (RLS, function broken, etc.), no lo
+  // silenciemos con un redirect: que el error boundary lo muestre.
+  if (error) {
+    throw new Error(
+      `profile_query_failed: ${error.message} | code=${error.code} | hint=${error.hint ?? ''} | user=${user.id}`
+    )
+  }
+
+  if (!profile) {
+    throw new Error(
+      `sin_profile: el usuario ${user.email} (id=${user.id}) se autentica en Supabase Auth pero no tiene fila visible en public.users_pedidos. Verificá que exista con ese id y que las RLS policies permitan leerla.`
+    )
+  }
+
+  if (!profile.active) redirect('/logout?reason=sin_permiso')
 
   if (profile.role === 'repartidor') redirect('/repartidor')
   redirect('/dashboard')
