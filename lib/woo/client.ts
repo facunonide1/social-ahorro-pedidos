@@ -94,3 +94,27 @@ export async function fetchOrders(params: {
 export async function fetchOrder(id: number): Promise<WooOrder> {
   return wooFetch<WooOrder>(`/orders/${id}`)
 }
+
+export type WooCustomer = {
+  id: number
+  email: string
+  first_name: string
+  last_name: string
+  username: string
+  billing: WooAddress
+  shipping: WooAddress
+}
+
+export async function searchWooCustomers(q: string, perPage = 10): Promise<WooCustomer[]> {
+  const search = q.trim()
+  if (!search) return []
+  try {
+    return await wooFetch<WooCustomer[]>('/customers', {
+      search,
+      per_page: perPage,
+      role: 'all',
+    })
+  } catch {
+    return []
+  }
+}
