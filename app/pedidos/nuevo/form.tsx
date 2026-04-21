@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ORIGIN_LABELS } from '@/lib/types'
 import type { OrderOrigin } from '@/lib/types'
+import CustomerSearch from './customer-search'
+import type { CustomerSuggestion } from '@/app/api/customers/search/route'
 
 type ItemDraft = { name: string; qty: string; price: string; sku: string }
 
@@ -55,6 +57,22 @@ export default function NuevoPedidoForm() {
     const p = Number(it.price) || 0
     return acc + q * p
   }, 0), [items])
+
+  function pickCustomer(c: CustomerSuggestion) {
+    setCustomer({
+      name:  c.name  || '',
+      phone: c.phone || '',
+      email: c.email || '',
+    })
+    const a = c.address || {}
+    setAddress({
+      address_1: a.address_1 || '',
+      address_2: a.address_2 || '',
+      city:      a.city      || '',
+      state:     a.state     || '',
+      postcode:  a.postcode  || '',
+    })
+  }
 
   function patchItem(i: number, patch: Partial<ItemDraft>) {
     setItems(arr => arr.map((it, idx) => idx === i ? { ...it, ...patch } : it))
@@ -158,6 +176,7 @@ export default function NuevoPedidoForm() {
       {/* CLIENTE */}
       <section style={CARD}>
         <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px' }}>CLIENTE</div>
+        <CustomerSearch onPick={pickCustomer} />
         <div>
           <label style={LABEL}>Nombre completo</label>
           <input value={customer.name} onChange={e => setCustomer({ ...customer, name: e.target.value })}
