@@ -8,10 +8,6 @@ import RepartidorRowActions from './row-actions'
 
 export const dynamic = 'force-dynamic'
 
-function startOfTodayISO() {
-  const d = new Date(); d.setHours(0,0,0,0); return d.toISOString()
-}
-
 export default async function RepartidorPage() {
   const sb = createClient()
   const { data: { user } } = await sb.auth.getUser()
@@ -26,18 +22,25 @@ export default async function RepartidorPage() {
   if (!profile?.active) redirect('/login?error=sin_permiso')
   if (profile.role !== 'repartidor') redirect('/dashboard')
 
-  // Entregas del dia asignadas a este repartidor, pendientes o en camino primero
+  // Traigo TODAS las entregas asignadas al repartidor (incluye atrasadas)
+  // y separo en pendientes vs cerrados en memoria, con orden lógico.
   const { data: orders } = await sb
     .from('orders')
     .select('*')
     .eq('assigned_to', profile.id)
-    .gte('created_at', startOfTodayISO())
-    .order('status', { ascending: true })
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending: false })
     .returns<Order[]>()
 
-  const pendientes = (orders ?? []).filter(o => o.status !== 'entregado' && o.status !== 'cancelado')
-  const cerrados = (orders ?? []).filter(o => o.status === 'entregado' || o.status === 'cancelado')
+  const prioridad: Record<string, number> = {
+    en_camino: 0, listo: 1, en_preparacion: 2, confirmado: 3, nuevo: 4,
+    entregado: 5, cancelado: 6,
+  }
+  const sorted = (orders ?? []).slice().sort(
+    (a, b) => (prioridad[a.status] ?? 99) - (prioridad[b.status] ?? 99)
+  )
+
+  const pendientes = sorted.filter(o => o.status !== 'entregado' && o.status !== 'cancelado')
+  const cerrados   = sorted.filter(o => o.status === 'entregado' || o.status === 'cancelado')
 
   return (
     <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a' }}>
@@ -56,7 +59,7 @@ export default async function RepartidorPage() {
       <main style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 640, margin: '0 auto' }}>
         {pendientes.length === 0 && cerrados.length === 0 && (
           <div style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 24, textAlign: 'center', color: '#aaa', fontSize: 14 }}>
-            No tenés entregas asignadas hoy.
+            No tenés entregas asignadas.
           </div>
         )}
 

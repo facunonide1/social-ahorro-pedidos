@@ -27,13 +27,23 @@ export async function middleware(request: NextRequest) {
   const isApiSync = pathname.startsWith('/api/sync')
   const isLogin = pathname === '/login'
 
+  // Copia las cookies ya seteadas por supabase al redirect
+  // para que el token refrescado llegue al servidor en la próxima request.
+  function redirectWithCookies(url: URL) {
+    const res = NextResponse.redirect(url)
+    supabaseResponse.cookies.getAll().forEach(c => {
+      res.cookies.set(c.name, c.value)
+    })
+    return res
+  }
+
   if (isApiSync) return supabaseResponse
   if (isLogin) {
-    if (user) return NextResponse.redirect(new URL('/', request.url))
+    if (user) return redirectWithCookies(new URL('/', request.url))
     return supabaseResponse
   }
 
-  if (!user) return NextResponse.redirect(new URL('/login', request.url))
+  if (!user) return redirectWithCookies(new URL('/login', request.url))
 
   return supabaseResponse
 }

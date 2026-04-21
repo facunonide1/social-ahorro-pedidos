@@ -46,9 +46,16 @@ export default async function DashboardPage({
   if (statusFilter) query = query.eq('status', statusFilter)
   if (q) {
     const like = `%${q}%`
-    query = query.or(
-      `customer_name.ilike.${like},customer_phone.ilike.${like},customer_email.ilike.${like},woo_order_id::text.ilike.${like}`
-    )
+    const orFilters = [
+      `customer_name.ilike.${like}`,
+      `customer_phone.ilike.${like}`,
+      `customer_email.ilike.${like}`,
+    ]
+    const asNumber = Number(q.replace(/\D/g, ''))
+    if (Number.isFinite(asNumber) && asNumber > 0) {
+      orFilters.push(`woo_order_id.eq.${asNumber}`)
+    }
+    query = query.or(orFilters.join(','))
   }
 
   const { data: orders, error } = await query
@@ -107,7 +114,7 @@ export default async function DashboardPage({
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 13, fontWeight: 700 }}>#{o.woo_order_id}</span>
                       <span style={{ fontSize: 12, fontWeight: 700, color: '#2a2a2a' }}>
-                        ${o.total.toLocaleString('es-AR')}
+                        ${Number(o.total).toLocaleString('es-AR')}
                       </span>
                     </div>
                     <div style={{ fontSize: 13, color: '#2a2a2a' }}>{o.customer_name || '—'}</div>

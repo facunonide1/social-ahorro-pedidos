@@ -23,8 +23,9 @@ export default function LoginForm() {
       email: form.email, password: form.password,
     })
     if (error) { setError('Email o contraseña incorrectos'); setLoading(false); return }
-    router.push('/')
-    router.refresh()
+    // hard navigate para garantizar que las cookies de sesión viajen
+    // en la siguiente request al server y el middleware vea al usuario
+    window.location.assign('/')
   }
 
   return (
