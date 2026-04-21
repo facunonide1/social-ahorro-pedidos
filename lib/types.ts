@@ -29,6 +29,7 @@ export type Order = {
   customer_name: string | null
   customer_phone: string | null
   customer_email: string | null
+  customer_dni: string | null
   shipping_address: Record<string, any> | null
   billing_address: Record<string, any> | null
   total: number

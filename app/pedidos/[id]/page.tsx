@@ -75,6 +75,11 @@ export default async function OrderDetailPage({ params }: { params: { id: string
           <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
             {order.customer_phone || 'Sin teléfono'} {order.customer_email ? `· ${order.customer_email}` : ''}
           </div>
+          {order.customer_dni && (
+            <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
+              DNI {order.customer_dni}
+            </div>
+          )}
           {addressStr && (
             <div style={{ marginTop: 12 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px', marginBottom: 4 }}>DIRECCIÓN</div>

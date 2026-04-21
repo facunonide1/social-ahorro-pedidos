@@ -56,7 +56,7 @@ export default function CustomerSearch({ onPick }: { onPick: (c: CustomerSuggest
         value={q}
         onChange={e => setQ(e.target.value)}
         onFocus={() => items.length > 0 && setOpen(true)}
-        placeholder="Escribí nombre, teléfono o email…"
+        placeholder="Escribí nombre, DNI, teléfono o email…"
         style={{
           width: '100%', padding: '10px 12px', border: '1.5px solid #f0ede8',
           borderRadius: 12, fontSize: 14, background: '#faf8f5', color: '#2a2a2a',
@@ -95,7 +95,11 @@ export default function CustomerSearch({ onPick }: { onPick: (c: CustomerSuggest
                 </span>
               </div>
               <div style={{ fontSize: 11, color: '#888' }}>
-                {[c.phone, c.email].filter(Boolean).join(' · ') || 'sin teléfono ni email'}
+                {[
+                  c.dni   ? `DNI ${c.dni}` : null,
+                  c.phone ?? null,
+                  c.email ?? null,
+                ].filter(Boolean).join(' · ') || 'sin datos de contacto'}
               </div>
               {c.address?.address_1 && (
                 <div style={{ fontSize: 11, color: '#aaa' }}>
