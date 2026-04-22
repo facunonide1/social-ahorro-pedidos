@@ -58,6 +58,9 @@ export type Order = {
   woo_last_sync_status: string | null
   woo_last_sync_at: string | null
   woo_last_sync_error: string | null
+  confirmed_at: string | null
+  ready_at: string | null
+  delivered_at: string | null
   created_at: string
   updated_at: string
 }

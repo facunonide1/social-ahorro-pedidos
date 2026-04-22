@@ -5,6 +5,7 @@ import { STATUS_LABELS, STATUS_COLORS, STATUS_ORDER, ORIGIN_LABELS, TIPO_ENVIO_L
 import type { Order, OrderStatus, UserPedidos, OrderStatusHistory, ZonaReparto } from '@/lib/types'
 import { formatAddress, googleMapsLink } from '@/lib/address'
 import { formatOrderNumber } from '@/lib/orders/format'
+import { minutesBetween, formatDuration } from '@/lib/orders/timing'
 import OrderActions from './actions'
 import WooSyncBanner from './woo-sync-banner'
 
@@ -145,6 +146,46 @@ export default async function OrderDetailPage({ params }: { params: { id: string
 
         {/* ACCIONES */}
         <OrderActions order={order} role={profile.role} repartidores={repartidores ?? []} zonas={(zonas ?? []) as ZonaReparto[]} />
+
+        {/* HITOS / TIEMPOS */}
+        {(() => {
+          const entrada = order.woo_created_at || order.created_at
+          const hitos: Array<{ label: string; ts: string | null; prev: string | null }> = [
+            { label: 'Entró',         ts: entrada,              prev: null             },
+            { label: 'Confirmado',    ts: order.confirmed_at,   prev: entrada          },
+            { label: 'Listo',         ts: order.ready_at,       prev: order.confirmed_at ?? entrada },
+            { label: 'Entregado',     ts: order.delivered_at,   prev: order.ready_at ?? order.confirmed_at ?? entrada },
+          ]
+          const totalMin = minutesBetween(entrada, order.delivered_at)
+          return (
+            <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px' }}>TIEMPOS</div>
+                {totalMin !== null && (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#1f8a4c', background: '#eaf7ef', border: '0.5px solid #8fd1a8', padding: '3px 8px', borderRadius: 999 }}>
+                    Total: {formatDuration(totalMin)}
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '6px 14px', fontSize: 13 }}>
+                {hitos.map((h, i) => {
+                  const delta = minutesBetween(h.prev, h.ts)
+                  return (
+                    <div key={h.label} style={{ display: 'contents' }}>
+                      <div style={{ color: '#888', fontWeight: 600 }}>{h.label}</div>
+                      <div style={{ color: h.ts ? '#2a2a2a' : '#bbb' }}>
+                        {h.ts ? new Date(h.ts).toLocaleString('es-AR') : 'pendiente'}
+                      </div>
+                      <div style={{ color: '#aaa', fontSize: 11, whiteSpace: 'nowrap' }}>
+                        {i > 0 && delta !== null ? `+${formatDuration(delta)}` : ''}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          )
+        })()}
 
         {/* HISTORIAL */}
         <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16 }}>
