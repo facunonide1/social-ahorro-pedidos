@@ -1,12 +1,16 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import type { UserPedidos, ZonaReparto } from '@/lib/types'
+import type { Order, UserPedidos, ZonaReparto } from '@/lib/types'
 import NuevoPedidoForm from './form'
 
 export const dynamic = 'force-dynamic'
 
-export default async function NuevoPedidoPage() {
+export default async function NuevoPedidoPage({
+  searchParams,
+}: {
+  searchParams: { from?: string }
+}) {
   const sb = createClient()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) redirect('/login')
@@ -27,6 +31,13 @@ export default async function NuevoPedidoPage() {
     .order('nombre', { ascending: true })
     .returns<Pick<ZonaReparto, 'id'|'nombre'|'color'|'activa'>[]>()
 
+  // Modo "repetir pedido": traigo datos del pedido origen para precargar
+  let source: Order | null = null
+  if (searchParams.from) {
+    const { data } = await sb.from('orders').select('*').eq('id', searchParams.from).maybeSingle<Order>()
+    source = data ?? null
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a' }}>
       <header style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -40,7 +51,12 @@ export default async function NuevoPedidoPage() {
       </header>
 
       <main style={{ padding: 20, maxWidth: 780, margin: '0 auto' }}>
-        <NuevoPedidoForm zonas={zonas ?? []} />
+        {source && (
+          <div style={{ background: '#eeedff', border: '0.5px solid #d9d6ff', borderRadius: 12, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#726DFF' }}>
+            Repitiendo pedido <b>{source.codigo}</b>. Los datos se precargaron; podés ajustar lo que haga falta antes de confirmar.
+          </div>
+        )}
+        <NuevoPedidoForm zonas={zonas ?? []} source={source} />
       </main>
     </div>
   )

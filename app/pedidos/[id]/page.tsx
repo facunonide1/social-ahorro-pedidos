@@ -113,14 +113,24 @@ export default async function OrderDetailPage({ params }: { params: { id: string
 
   return (
     <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a' }}>
-      <header style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+      <header style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <Link href={profile.role === 'repartidor' ? '/repartidor' : '/dashboard'} style={{ textDecoration: 'none', color: '#726DFF', fontSize: 14, fontWeight: 600 }}>← Volver</Link>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.3px' }}>Pedido {formatOrderNumber(order)}</div>
           <div style={{ fontSize: 12, color: '#999' }}>
             {ORIGIN_LABELS[order.origin]} · {order.woo_created_at ? new Date(order.woo_created_at).toLocaleString('es-AR') : new Date(order.created_at).toLocaleString('es-AR')}
           </div>
         </div>
+        {(profile.role === 'admin' || profile.role === 'operador') && (
+          <Link href={`/pedidos/nuevo?from=${order.id}`}
+            style={{ padding: '6px 10px', fontSize: 12, fontWeight: 700, color: '#726DFF', background: '#eeedff', border: '1.5px solid #d9d6ff', borderRadius: 10, textDecoration: 'none' }}>
+            ⎘ Repetir
+          </Link>
+        )}
+        <Link href={`/pedidos/${order.id}/remito`}
+          style={{ padding: '6px 10px', fontSize: 12, fontWeight: 700, color: '#555', background: '#fff', border: '1.5px solid #f0ede8', borderRadius: 10, textDecoration: 'none' }}>
+          🖨 Remito
+        </Link>
         {(() => {
           const tc = TIPO_ENVIO_COLORS[order.tipo_envio]
           return (
