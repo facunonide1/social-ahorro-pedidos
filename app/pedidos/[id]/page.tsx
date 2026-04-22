@@ -2,12 +2,13 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { STATUS_LABELS, STATUS_COLORS, STATUS_ORDER, ORIGIN_LABELS, TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS } from '@/lib/types'
-import type { Order, OrderStatus, UserPedidos, OrderStatusHistory, ZonaReparto } from '@/lib/types'
+import type { Order, OrderStatus, UserPedidos, OrderStatusHistory, ZonaReparto, WhatsappMessage } from '@/lib/types'
 import { formatAddress, googleMapsLink } from '@/lib/address'
 import { formatOrderNumber } from '@/lib/orders/format'
 import { minutesBetween, formatDuration } from '@/lib/orders/timing'
 import OrderActions from './actions'
 import WooSyncBanner from './woo-sync-banner'
+import WhatsappMessagesList from './whatsapp-messages'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,6 +39,13 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     .eq('order_id', order.id)
     .order('created_at', { ascending: false })
 
+  const { data: messages } = await sb
+    .from('whatsapp_messages')
+    .select('*')
+    .eq('order_id', order.id)
+    .order('created_at', { ascending: false })
+    .returns<WhatsappMessage[]>()
+
   const { data: repartidores } = profile.role === 'admin' || profile.role === 'operador'
     ? await sb.from('users_pedidos').select('id, name, email, role, active').eq('role', 'repartidor').eq('active', true)
     : { data: [] as Pick<UserPedidos,'id'|'name'|'email'|'role'|'active'>[] }
@@ -46,10 +54,14 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     ? await sb.from('zonas_reparto').select('id, nombre, color, activa').order('activa', { ascending: false }).order('nombre', { ascending: true })
     : { data: [] as Pick<ZonaReparto,'id'|'nombre'|'color'|'activa'>[] }
 
-  const { data: changers } = await sb
-    .from('users_pedidos')
-    .select('id, name, email')
-    .in('id', Array.from(new Set((history ?? []).map(h => h.changed_by).filter(Boolean))) as string[])
+  const userIds = Array.from(new Set([
+    ...(history ?? []).map(h => h.changed_by),
+    ...(messages ?? []).map(m => m.sent_by),
+  ].filter(Boolean))) as string[]
+
+  const { data: changers } = userIds.length
+    ? await sb.from('users_pedidos').select('id, name, email').in('id', userIds)
+    : { data: [] as Pick<UserPedidos,'id'|'name'|'email'>[] }
 
   const changerMap = new Map((changers ?? []).map(c => [c.id, c.name || c.email]))
 
@@ -221,6 +233,11 @@ export default async function OrderDetailPage({ params }: { params: { id: string
             )
           })}
         </section>
+
+        <WhatsappMessagesList
+          messages={messages ?? []}
+          users={changers ?? []}
+        />
       </main>
     </div>
   )

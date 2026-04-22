@@ -31,6 +31,26 @@ export type AppSettings = {
   updated_at: string
 }
 
+export type WhatsappMsgStatus = 'pending' | 'sent' | 'skipped'
+
+export type WhatsappMessage = {
+  id: string
+  order_id: string
+  status_trigger: OrderStatus
+  phone: string | null
+  message: string
+  status: WhatsappMsgStatus
+  sent_at: string | null
+  sent_by: string | null
+  created_at: string
+}
+
+export const WHATSAPP_STATUS_LABELS: Record<WhatsappMsgStatus, string> = {
+  pending: 'Pendiente',
+  sent:    'Enviado',
+  skipped: 'Omitido',
+}
+
 export type Customer = {
   id: string
   name: string | null
