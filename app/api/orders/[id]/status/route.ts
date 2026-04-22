@@ -39,14 +39,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   // 2) Generar mensaje de WhatsApp pendiente para el nuevo estado.
   //    Queda guardado aunque no haya teléfono (el operador decide si
-  //    despacharlo o marcarlo como omitido).
+  //    despacharlo o marcarlo como omitido). Si el insert falla, lo
+  //    logueamos y lo reportamos en la response (no bloquea el cambio
+  //    de estado, que ya se guardó en el paso 1).
+  let whatsappMsg: { ok: true; id: string } | { ok: false; error: string } | null = null
   if (order) {
     const phone = normalizePhoneForWhatsApp(order.customer_phone)
     const text = messageForStatus(body.status, {
       customerName: order.customer_name,
       orderNumber: formatOrderNumber(order),
     })
-    await createAdminClient()
+    const { data: msgRow, error: msgErr } = await createAdminClient()
       .from('whatsapp_messages')
       .insert({
         order_id: order.id,
@@ -55,7 +58,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         message: text,
         status: 'pending',
       })
-      .then(() => {}, () => {}) // no bloqueo el flujo si falla
+      .select('id')
+      .maybeSingle()
+    if (msgErr) {
+      console.error('[whatsapp_messages insert]', msgErr)
+      whatsappMsg = { ok: false, error: msgErr.message }
+    } else if (msgRow) {
+      whatsappMsg = { ok: true, id: msgRow.id }
+    }
   }
 
   // 3) Best-effort sync a Woo (solo pedidos de origen 'woo')
@@ -86,5 +96,5 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
   }
 
-  return NextResponse.json({ ok: true, order, woo })
+  return NextResponse.json({ ok: true, order, woo, whatsappMsg })
 }
