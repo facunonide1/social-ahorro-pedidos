@@ -12,6 +12,7 @@ import LiveClock from './live-clock'
 import SyncButton from './sync-button'
 import NewOrderNotifier from './new-order-notifier'
 import TitleBadge from './title-badge'
+import GlobalSearch from './global-search'
 
 export const dynamic = 'force-dynamic'
 
@@ -222,6 +223,7 @@ export default async function DashboardPage({
         <header style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <LiveClock />
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <GlobalSearch />
             <NewOrderNotifier />
             <a href={`/api/orders/export?${new URLSearchParams(Object.entries(searchParams).filter(([,v]) => v) as [string,string][]).toString()}`}
               title="Exportar los pedidos del filtro actual a CSV"
