@@ -126,6 +126,7 @@ export type Order = {
   confirmed_at: string | null
   ready_at: string | null
   delivered_at: string | null
+  delivery_proof_url: string | null
   created_at: string
   updated_at: string
 }
