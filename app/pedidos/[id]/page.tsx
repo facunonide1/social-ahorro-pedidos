@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { STATUS_LABELS, STATUS_COLORS, STATUS_ORDER, ORIGIN_LABELS } from '@/lib/types'
-import type { Order, OrderStatus, UserPedidos, OrderStatusHistory } from '@/lib/types'
+import type { Order, OrderStatus, UserPedidos, OrderStatusHistory, ZonaReparto } from '@/lib/types'
 import { formatAddress, googleMapsLink } from '@/lib/address'
 import { formatOrderNumber } from '@/lib/orders/format'
 import OrderActions from './actions'
@@ -40,6 +40,10 @@ export default async function OrderDetailPage({ params }: { params: { id: string
   const { data: repartidores } = profile.role === 'admin' || profile.role === 'operador'
     ? await sb.from('users_pedidos').select('id, name, email, role, active').eq('role', 'repartidor').eq('active', true)
     : { data: [] as Pick<UserPedidos,'id'|'name'|'email'|'role'|'active'>[] }
+
+  const { data: zonas } = profile.role === 'admin' || profile.role === 'operador'
+    ? await sb.from('zonas_reparto').select('id, nombre, color, activa').order('activa', { ascending: false }).order('nombre', { ascending: true })
+    : { data: [] as Pick<ZonaReparto,'id'|'nombre'|'color'|'activa'>[] }
 
   const { data: changers } = await sb
     .from('users_pedidos')
@@ -127,7 +131,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         </section>
 
         {/* ACCIONES */}
-        <OrderActions order={order} role={profile.role} repartidores={repartidores ?? []} />
+        <OrderActions order={order} role={profile.role} repartidores={repartidores ?? []} zonas={(zonas ?? []) as ZonaReparto[]} />
 
         {/* HISTORIAL */}
         <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16 }}>

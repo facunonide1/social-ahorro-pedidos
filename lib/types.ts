@@ -11,6 +11,17 @@ export type OrderOrigin = 'woo' | 'whatsapp' | 'telefono' | 'instagram' | 'otro'
 
 export type UserRole = 'admin' | 'operador' | 'repartidor'
 
+export type ZonaReparto = {
+  id: string
+  nombre: string
+  descripcion: string | null
+  barrios: string[]
+  color: string
+  activa: boolean
+  created_at: string
+  updated_at: string
+}
+
 export type OrderItem = {
   product_id?: number
   name: string
@@ -37,6 +48,7 @@ export type Order = {
   items: OrderItem[]
   notes: string | null
   assigned_to: string | null
+  zona_id: string | null
   woo_created_at: string | null
   woo_last_sync_status: string | null
   woo_last_sync_at: string | null
