@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { mapStatusToWoo, updateWooOrderStatus } from '@/lib/woo/client'
+import { messageForStatus, normalizePhoneForWhatsApp } from '@/lib/whatsapp/messages'
+import { formatOrderNumber } from '@/lib/orders/format'
 import type { OrderStatus } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -35,7 +37,28 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const order = Array.isArray(updated) ? updated[0] : updated
 
-  // 2) Best-effort sync a Woo (solo pedidos de origen 'woo')
+  // 2) Generar mensaje de WhatsApp pendiente para el nuevo estado.
+  //    Queda guardado aunque no haya teléfono (el operador decide si
+  //    despacharlo o marcarlo como omitido).
+  if (order) {
+    const phone = normalizePhoneForWhatsApp(order.customer_phone)
+    const text = messageForStatus(body.status, {
+      customerName: order.customer_name,
+      orderNumber: formatOrderNumber(order),
+    })
+    await createAdminClient()
+      .from('whatsapp_messages')
+      .insert({
+        order_id: order.id,
+        status_trigger: body.status,
+        phone,
+        message: text,
+        status: 'pending',
+      })
+      .then(() => {}, () => {}) // no bloqueo el flujo si falla
+  }
+
+  // 3) Best-effort sync a Woo (solo pedidos de origen 'woo')
   let woo: { ok: true; status: string } | { ok: false; error: string } | null = null
   if (order?.origin === 'woo' && order.woo_order_id) {
     const target = mapStatusToWoo(body.status)
