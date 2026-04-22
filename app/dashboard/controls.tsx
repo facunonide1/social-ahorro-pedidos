@@ -2,13 +2,12 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { STATUS_LABELS, STATUS_ORDER, TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS } from '@/lib/types'
-import type { OrderStatus, TipoEnvio, ZonaReparto, UserRole } from '@/lib/types'
+import type { OrderStatus, TipoEnvio, ZonaReparto } from '@/lib/types'
 
 export default function DashboardControls({
   initialQ, initialStatus, initialScope, initialZona, initialTipo,
-  zonas, role,
+  zonas,
 }: {
   initialQ: string
   initialStatus: OrderStatus | undefined
@@ -16,7 +15,6 @@ export default function DashboardControls({
   initialZona: string | undefined
   initialTipo: TipoEnvio | undefined
   zonas: Pick<ZonaReparto,'id'|'nombre'|'color'|'activa'>[]
-  role: UserRole
 }) {
   const router = useRouter()
   const [q, setQ] = useState(initialQ)
@@ -24,8 +22,6 @@ export default function DashboardControls({
   const [scope, setScope] = useState<'today' | 'all'>(initialScope)
   const [zona, setZona] = useState<string>(initialZona ?? '')
   const [tipo, setTipo] = useState<string>(initialTipo ?? '')
-  const [syncing, setSyncing] = useState(false)
-  const [syncMsg, setSyncMsg] = useState<string | null>(null)
   const [, startTransition] = useTransition()
 
   function apply(next: Partial<{ q: string; status: string; scope: 'today'|'all'; zona: string; tipo: string }>) {
@@ -45,41 +41,20 @@ export default function DashboardControls({
 
   function selectTipo(t: string) { setTipo(t); apply({ tipo: t }) }
 
-  async function runSync() {
-    setSyncing(true); setSyncMsg(null)
-    try {
-      const res = await fetch('/api/sync', { method: 'POST' })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json?.error || 'error')
-      setSyncMsg(`+${json.inserted} nuevos (${json.fetched} revisados)`)
-      router.refresh()
-    } catch (e: any) {
-      setSyncMsg(`Error: ${e?.message || 'desconocido'}`)
-    } finally {
-      setSyncing(false)
-      setTimeout(() => setSyncMsg(null), 4000)
-    }
-  }
-
-  async function logout() {
-    await fetch('/logout', { method: 'POST' })
-    router.push('/login')
-  }
-
   const input: React.CSSProperties = {
-    padding: '10px 12px', border: '1.5px solid #f0ede8', borderRadius: 12,
-    fontSize: 13, background: '#faf8f5', outline: 'none', color: '#2a2a2a',
+    padding: '9px 12px', border: '1.5px solid #f0ede8', borderRadius: 10,
+    fontSize: 13, background: '#fff', outline: 'none', color: '#2a2a2a',
   }
 
   const TIPO_TAB: React.CSSProperties = {
-    padding: '8px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700,
+    padding: '8px 14px', borderRadius: 999, fontSize: 12, fontWeight: 700,
     cursor: 'pointer', border: '1.5px solid transparent', letterSpacing: '-0.2px',
   }
 
   return (
-    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {/* TABS DE TIPO DE ENVÍO */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', width: '100%', marginBottom: 4 }}>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         <button onClick={() => selectTipo('')}
           style={{
             ...TIPO_TAB,
@@ -106,53 +81,32 @@ export default function DashboardControls({
         })}
       </div>
 
-      <form onSubmit={e => { e.preventDefault(); apply({ q }) }}>
-        <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder="Buscar SA-2026-XXXX, nombre, DNI, tel…"
-          style={{ ...input, minWidth: 240 }} />
-      </form>
+      {/* FILTROS */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <form onSubmit={e => { e.preventDefault(); apply({ q }) }} style={{ flex: '1 1 260px' }}>
+          <input value={q} onChange={e => setQ(e.target.value)}
+            placeholder="Buscar SA-2026-XXXX, nombre, DNI, tel…"
+            style={{ ...input, width: '100%' }} />
+        </form>
 
-      <select value={status} onChange={e => { setStatus(e.target.value); apply({ status: e.target.value }) }} style={input}>
-        <option value="">Todos los estados</option>
-        {STATUS_ORDER.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-      </select>
+        <select value={status} onChange={e => { setStatus(e.target.value); apply({ status: e.target.value }) }} style={input}>
+          <option value="">Todos los estados</option>
+          {STATUS_ORDER.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+        </select>
 
-      <select value={scope} onChange={e => { const v = e.target.value as 'today'|'all'; setScope(v); apply({ scope: v }) }} style={input}>
-        <option value="today">Solo hoy</option>
-        <option value="all">Todos</option>
-      </select>
+        <select value={scope} onChange={e => { const v = e.target.value as 'today'|'all'; setScope(v); apply({ scope: v }) }} style={input}>
+          <option value="today">Solo hoy</option>
+          <option value="all">Todos</option>
+        </select>
 
-      <select value={zona} onChange={e => { setZona(e.target.value); apply({ zona: e.target.value }) }} style={input}>
-        <option value="">Todas las zonas</option>
-        <option value="sin_zona">Sin zona</option>
-        {zonas.filter(z => z.activa).map(z => (
-          <option key={z.id} value={z.id}>{z.nombre}</option>
-        ))}
-      </select>
-
-      {role === 'admin' && (
-        <Link href="/admin/configuracion"
-          style={{ padding: '10px 14px', border: '1.5px solid #f0ede8', borderRadius: 12, background: '#fff', color: '#666', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-          ⚙ Config
-        </Link>
-      )}
-
-      <Link href="/pedidos/nuevo"
-        style={{ padding: '10px 14px', border: 'none', borderRadius: 12, background: '#FF6D6E', color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
-        + Nuevo pedido
-      </Link>
-
-      <button onClick={runSync} disabled={syncing}
-        style={{ padding: '10px 14px', border: 'none', borderRadius: 12, background: '#726DFF', color: '#fff', fontSize: 13, fontWeight: 700, cursor: syncing ? 'wait' : 'pointer', opacity: syncing ? 0.6 : 1 }}>
-        {syncing ? 'Sincronizando...' : 'Sincronizar Woo'}
-      </button>
-
-      {syncMsg && <span style={{ fontSize: 12, color: '#666' }}>{syncMsg}</span>}
-
-      <button onClick={logout}
-        style={{ padding: '10px 14px', border: '1.5px solid #f0ede8', borderRadius: 12, background: '#fff', color: '#666', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-        Salir
-      </button>
+        <select value={zona} onChange={e => { setZona(e.target.value); apply({ zona: e.target.value }) }} style={input}>
+          <option value="">Todas las zonas</option>
+          <option value="sin_zona">Sin zona</option>
+          {zonas.filter(z => z.activa).map(z => (
+            <option key={z.id} value={z.id}>{z.nombre}</option>
+          ))}
+        </select>
+      </div>
     </div>
   )
 }

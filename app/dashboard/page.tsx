@@ -5,6 +5,9 @@ import { STATUS_LABELS, STATUS_ORDER, STATUS_COLORS, TIPO_ENVIO_LABELS, TIPO_ENV
 import type { Order, OrderStatus, TipoEnvio, UserPedidos, ZonaReparto } from '@/lib/types'
 import { formatOrderNumber } from '@/lib/orders/format'
 import DashboardControls from './controls'
+import DashboardSidebar from './sidebar'
+import LiveClock from './live-clock'
+import SyncButton from './sync-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +15,14 @@ function startOfTodayISO() {
   const d = new Date()
   d.setHours(0, 0, 0, 0)
   return d.toISOString()
+}
+
+type Kpi = {
+  label: string
+  value: number
+  fg: string
+  bg: string
+  border: string
 }
 
 export default async function DashboardPage({
@@ -40,6 +51,8 @@ export default async function DashboardPage({
     ? searchParams.tipo
     : undefined) as TipoEnvio | undefined
 
+  const todayISO = startOfTodayISO()
+
   const { data: zonas } = await sb
     .from('zonas_reparto')
     .select('id, nombre, color, activa')
@@ -53,7 +66,7 @@ export default async function DashboardPage({
     .order('created_at', { ascending: false })
     .limit(300)
 
-  if (scope === 'today') query = query.gte('created_at', startOfTodayISO())
+  if (scope === 'today') query = query.gte('created_at', todayISO)
   if (statusFilter) query = query.eq('status', statusFilter)
   if (zonaFilter === 'sin_zona') query = query.is('zona_id', null)
   else if (zonaFilter) query = query.eq('zona_id', zonaFilter)
@@ -75,100 +88,146 @@ export default async function DashboardPage({
     query = query.or(orFilters.join(','))
   }
 
-  const { data: orders, error } = await query
+  // KPIs del día en paralelo
+  const [
+    totalRes,
+    pendientesRes,
+    enCaminoRes,
+    entregadosRes,
+    fueraHorarioRes,
+    ordersRes,
+  ] = await Promise.all([
+    sb.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', todayISO),
+    sb.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', todayISO).in('status', ['nuevo','confirmado','en_preparacion','listo']),
+    sb.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', todayISO).eq('status', 'en_camino'),
+    sb.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', todayISO).eq('status', 'entregado'),
+    sb.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', todayISO).eq('fuera_de_horario', true).not('status', 'in', '(entregado,cancelado)'),
+    query,
+  ])
+
+  const orders = ordersRes.data
+  const error  = ordersRes.error
 
   const byStatus = new Map<OrderStatus, Order[]>()
   for (const s of STATUS_ORDER) byStatus.set(s, [])
   ;(orders ?? []).forEach(o => byStatus.get(o.status as OrderStatus)?.push(o as Order))
 
-  const { count: totalToday } = await sb
-    .from('orders')
-    .select('id', { count: 'exact', head: true })
-    .gte('created_at', startOfTodayISO())
+  const kpis: Kpi[] = [
+    { label: 'Total hoy',        value: totalRes.count        ?? 0, fg: '#2a2a2a', bg: '#fff',    border: '#ede9e4' },
+    { label: 'Pendientes',       value: pendientesRes.count   ?? 0, fg: '#726DFF', bg: '#eeedff', border: '#d9d6ff' },
+    { label: 'En camino',        value: enCaminoRes.count     ?? 0, fg: '#2855c7', bg: '#e9f0ff', border: '#9cb6ee' },
+    { label: 'Entregados',       value: entregadosRes.count   ?? 0, fg: '#1f8a4c', bg: '#eaf7ef', border: '#8fd1a8' },
+    { label: 'Fuera de horario', value: fueraHorarioRes.count ?? 0, fg: '#c6831a', bg: '#fff7ec', border: '#edc989' },
+  ]
 
   return (
-    <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a' }}>
-      <header style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 10, height: 10, borderRadius: 999, background: '#FF6D6E' }} />
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.3px' }}>Social Ahorro · Pedidos</div>
-            <div style={{ fontSize: 12, color: '#999' }}>
-              {profile.name || profile.email} · <span style={{ textTransform: 'capitalize' }}>{profile.role}</span> · {totalToday ?? 0} hoy
-            </div>
+    <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a', display: 'flex', alignItems: 'stretch' }}>
+      <DashboardSidebar profile={profile} />
+
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* HEADER */}
+        <header style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <LiveClock />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Link href="/pedidos/nuevo"
+              style={{ padding: '9px 13px', border: 'none', borderRadius: 10, background: '#FF6D6E', color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+              + Nuevo pedido
+            </Link>
+            <SyncButton />
           </div>
-        </div>
-        <DashboardControls
-          initialQ={q}
-          initialStatus={statusFilter}
-          initialScope={scope}
-          initialZona={zonaFilter}
-          initialTipo={tipoFilter}
-          zonas={(zonas ?? []) as ZonaReparto[]}
-          role={profile.role}
-        />
-      </header>
+        </header>
 
-      {error && (
-        <div style={{ margin: 24, padding: 14, background: '#fff0f0', border: '0.5px solid #FF6D6E', borderRadius: 12, fontSize: 13, color: '#FF6D6E' }}>
-          Error cargando pedidos: {error.message}
-        </div>
-      )}
+        {error && (
+          <div style={{ margin: 24, padding: 14, background: '#fff0f0', border: '0.5px solid #FF6D6E', borderRadius: 12, fontSize: 13, color: '#FF6D6E' }}>
+            Error cargando pedidos: {error.message}
+          </div>
+        )}
 
-      <main style={{ padding: '20px 24px', display: 'grid', gap: 18, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-        {STATUS_ORDER.map(status => {
-          const list = byStatus.get(status) ?? []
-          const c = STATUS_COLORS[status]
-          if (statusFilter && status !== statusFilter) return null
-          return (
-            <section key={status} style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 18, padding: 14, display: 'flex', flexDirection: 'column', gap: 10, minHeight: 180 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase', color: c.fg }}>
-                  {STATUS_LABELS[status]}
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: c.fg, background: c.bg, border: `0.5px solid ${c.border}`, padding: '3px 8px', borderRadius: 999 }}>
-                  {list.length}
-                </span>
+        {/* KPIs */}
+        <section style={{ padding: '16px 24px 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>
+          {kpis.map(k => (
+            <div key={k.label} style={{
+              background: k.bg, border: `0.5px solid ${k.border}`, borderRadius: 14,
+              padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 2,
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: k.fg, letterSpacing: '0.4px', textTransform: 'uppercase' }}>
+                {k.label}
               </div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: k.fg, letterSpacing: '-0.5px' }}>
+                {k.value}
+              </div>
+            </div>
+          ))}
+        </section>
 
-              {list.length === 0 ? (
-                <div style={{ fontSize: 12, color: '#bbb', padding: '12px 2px' }}>—</div>
-              ) : list.map(o => {
-                const tc = TIPO_ENVIO_COLORS[o.tipo_envio]
-                return (
-                  <Link key={o.id} href={`/pedidos/${o.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div style={{ border: '0.5px solid #f0ede8', borderRadius: 12, padding: '10px 12px', background: '#faf8f5', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700 }}>{formatOrderNumber(o)}</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: '#2a2a2a' }}>
-                          ${Number(o.total).toLocaleString('es-AR')}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: tc.fg, background: tc.bg, border: `0.5px solid ${tc.border}`, padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
-                          {TIPO_ENVIO_LABELS[o.tipo_envio]}
-                        </span>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: '#888', background: '#faf8f5', border: '0.5px solid #ede9e4', padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
-                          {ORIGIN_LABELS[o.origin]}
-                        </span>
-                        {o.fuera_de_horario && (
-                          <span style={{ fontSize: 10, fontWeight: 700, color: '#c6831a', background: '#fff7ec', border: '0.5px solid #edc989', padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
-                            Fuera de horario
+        {/* FILTROS */}
+        <section style={{ padding: '16px 24px 0' }}>
+          <DashboardControls
+            initialQ={q}
+            initialStatus={statusFilter}
+            initialScope={scope}
+            initialZona={zonaFilter}
+            initialTipo={tipoFilter}
+            zonas={(zonas ?? []) as ZonaReparto[]}
+          />
+        </section>
+
+        {/* KANBAN */}
+        <main style={{ padding: '16px 24px 24px', display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
+          {STATUS_ORDER.map(status => {
+            const list = byStatus.get(status) ?? []
+            const c = STATUS_COLORS[status]
+            if (statusFilter && status !== statusFilter) return null
+            return (
+              <section key={status} style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 12, display: 'flex', flexDirection: 'column', gap: 10, minHeight: 160 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase', color: c.fg }}>
+                    {STATUS_LABELS[status]}
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: c.fg, background: c.bg, border: `0.5px solid ${c.border}`, padding: '3px 8px', borderRadius: 999 }}>
+                    {list.length}
+                  </span>
+                </div>
+
+                {list.length === 0 ? (
+                  <div style={{ fontSize: 12, color: '#bbb', padding: '12px 2px' }}>—</div>
+                ) : list.map(o => {
+                  const tc = TIPO_ENVIO_COLORS[o.tipo_envio]
+                  return (
+                    <Link key={o.id} href={`/pedidos/${o.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <div style={{ border: '0.5px solid #f0ede8', borderRadius: 12, padding: '10px 12px', background: '#faf8f5', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '-0.2px' }}>{formatOrderNumber(o)}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#2a2a2a' }}>
+                            ${Number(o.total).toLocaleString('es-AR')}
                           </span>
-                        )}
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: tc.fg, background: tc.bg, border: `0.5px solid ${tc.border}`, padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                            {TIPO_ENVIO_LABELS[o.tipo_envio]}
+                          </span>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: '#888', background: '#fff', border: '0.5px solid #ede9e4', padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                            {ORIGIN_LABELS[o.origin]}
+                          </span>
+                          {o.fuera_de_horario && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#c6831a', background: '#fff7ec', border: '0.5px solid #edc989', padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                              Fuera de horario
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: 13, color: '#2a2a2a' }}>{o.customer_name || '—'}</div>
+                        <div style={{ fontSize: 11, color: '#999' }}>
+                          {o.customer_phone || 's/tel'} · {o.items?.length ?? 0} item{(o.items?.length ?? 0) === 1 ? '' : 's'}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 13, color: '#2a2a2a' }}>{o.customer_name || '—'}</div>
-                      <div style={{ fontSize: 11, color: '#999' }}>
-                        {o.customer_phone || 's/tel'} · {o.items?.length ?? 0} item{(o.items?.length ?? 0) === 1 ? '' : 's'}
-                      </div>
-                    </div>
-                  </Link>
-                )
-              })}
-            </section>
-          )
-        })}
-      </main>
+                    </Link>
+                  )
+                })}
+              </section>
+            )
+          })}
+        </main>
+      </div>
     </div>
   )
 }
