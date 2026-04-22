@@ -45,8 +45,10 @@ export default async function DashboardPage({
     rep?: string        // assigned_to uuid
     date?: string       // YYYY-MM-DD
     fuera?: string      // '1' → solo fuera_de_horario activos
+    view?: string       // 'kanban' | 'lista'
   }
 }) {
+  const viewMode = searchParams.view === 'lista' ? 'lista' : 'kanban'
   const sb = createClient()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) redirect('/login')
@@ -164,12 +166,23 @@ export default async function DashboardPage({
     }
   }
 
+  // IDs de orders con alguna incidencia para pintar badge INCIDENCIA
+  const orderIds = (orders ?? []).map(o => o.id)
+  const incidentOrderIds = new Set<string>()
+  if (orderIds.length > 0) {
+    const { data: incs } = await sb
+      .from('order_incidents')
+      .select('order_id')
+      .in('order_id', orderIds)
+    for (const r of incs ?? []) incidentOrderIds.add(r.order_id as string)
+  }
+
   const byStatus = new Map<OrderStatus, Order[]>()
   for (const s of STATUS_ORDER) byStatus.set(s, [])
   ;(orders ?? []).forEach(o => byStatus.get(o.status as OrderStatus)?.push(o as Order))
 
   // Construcción de KPIs (clickeables como filtros)
-  function makeHref(next: { status?: string; fuera?: '1' }) {
+  function makeHref(next: { status?: string; fuera?: '1'; view?: string }) {
     const p = new URLSearchParams()
     if (next.status)       p.set('status', next.status)
     if (next.fuera === '1') p.set('fuera', '1')
@@ -177,6 +190,8 @@ export default async function DashboardPage({
     if (zonaFilter) p.set('zona', zonaFilter)
     if (repFilter)  p.set('rep',  repFilter)
     if (q)          p.set('q',    q)
+    const v = next.view ?? (viewMode === 'lista' ? 'lista' : '')
+    if (v && v !== 'kanban') p.set('view', v)
     return `/dashboard${p.toString() ? '?' + p : ''}`
   }
 
@@ -242,6 +257,35 @@ export default async function DashboardPage({
           ))}
         </section>
 
+        {/* TOGGLE KANBAN / LISTA */}
+        <div style={{ padding: '16px 24px 0', display: 'flex', gap: 6 }}>
+          {([['kanban','Kanban'], ['lista','Lista']] as const).map(([key, label]) => {
+            const active = viewMode === key
+            const p = new URLSearchParams()
+            if (key !== 'kanban') p.set('view', 'lista')
+            if (statusRaw) p.set('status', statusRaw)
+            if (fueraFilter) p.set('fuera', '1')
+            if (tipoFilter) p.set('tipo', tipoFilter)
+            if (zonaFilter) p.set('zona', zonaFilter)
+            if (repFilter)  p.set('rep',  repFilter)
+            if (q)          p.set('q',    q)
+            if (dateStr)    p.set('date', dateStr)
+            const href = `/dashboard${p.toString() ? '?' + p : ''}`
+            return (
+              <Link key={key} href={href}
+                style={{
+                  padding: '7px 14px', borderRadius: 999, fontSize: 12, fontWeight: 700,
+                  textDecoration: 'none', letterSpacing: '-0.2px',
+                  background: active ? '#2a2a2a' : '#fff',
+                  color:      active ? '#fff'    : '#666',
+                  border:     active ? '1.5px solid #2a2a2a' : '1.5px solid #f0ede8',
+                }}>
+                {label}
+              </Link>
+            )
+          })}
+        </div>
+
         {/* FILTROS */}
         <section style={{ padding: '16px 24px 0' }}>
           <DashboardControls
@@ -257,7 +301,74 @@ export default async function DashboardPage({
           />
         </section>
 
+        {/* LISTA */}
+        {viewMode === 'lista' && (
+          <main style={{ padding: '16px 24px 24px' }}>
+            <div style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: '#faf8f5', borderBottom: '0.5px solid #ede9e4' }}>
+                    {['Código','Cliente','Teléfono','Tipo','Estado','Zona','Repartidor','Total','Desde hace',''].map(h => (
+                      <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(orders ?? []).length === 0 && (
+                    <tr><td colSpan={10} style={{ padding: 24, textAlign: 'center', color: '#aaa' }}>Sin pedidos para los filtros aplicados.</td></tr>
+                  )}
+                  {(orders ?? []).map(o => {
+                    const sc = STATUS_COLORS[o.status as OrderStatus]
+                    const tc = TIPO_ENVIO_COLORS[o.tipo_envio]
+                    const t = relativeFrom(o.woo_created_at || o.created_at, o.status as OrderStatus)
+                    const tsc = SEVERITY_COLORS[t.severity]
+                    const zonaObj = (zonasRes.data ?? []).find(z => z.id === o.zona_id)
+                    const repObj  = (repsRes.data ?? []).find(r => r.id === o.assigned_to)
+                    const isExpressActive = o.tipo_envio === 'express' && o.status !== 'entregado' && o.status !== 'cancelado'
+                    return (
+                      <tr key={o.id} style={{ borderBottom: '0.5px solid #f5f1ec' }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 700 }}>{formatOrderNumber(o)}</td>
+                        <td style={{ padding: '10px 12px' }}>{o.customer_name || '—'}</td>
+                        <td style={{ padding: '10px 12px', color: '#666' }}>{o.customer_phone || 's/tel'}</td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <span className={isExpressActive ? 'sa-express-pulse' : ''}
+                            style={{ fontSize: 10, fontWeight: 700, color: tc.fg, background: tc.bg, border: `0.5px solid ${tc.border}`, padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                            {TIPO_ENVIO_LABELS[o.tipo_envio]}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: sc.fg, background: sc.bg, border: `0.5px solid ${sc.border}`, padding: '3px 8px', borderRadius: 999 }}>
+                            {STATUS_LABELS[o.status as OrderStatus]}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 12px', color: '#666' }}>{zonaObj?.nombre || '—'}</td>
+                        <td style={{ padding: '10px 12px', color: o.assigned_to ? '#2a2a2a' : '#a33' }}>
+                          {repObj ? (repObj.name || repObj.email) : (o.tipo_envio === 'retiro' ? '—' : 'Sin asignar')}
+                        </td>
+                        <td style={{ padding: '10px 12px', fontWeight: 700 }}>${Number(o.total).toLocaleString('es-AR')}</td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: tsc.fg, background: tsc.bg, border: `0.5px solid ${tsc.border}`, padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px' }}>
+                            {t.text}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 12px' }}>
+                          <Link href={`/pedidos/${o.id}`} style={{ fontSize: 12, fontWeight: 600, color: '#726DFF', textDecoration: 'none' }}>
+                            Ver →
+                          </Link>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </main>
+        )}
+
         {/* KANBAN */}
+        {viewMode === 'kanban' && (
         <main style={{ padding: '16px 24px 24px', display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))' }}>
           {STATUS_ORDER.map(status => {
             const list = byStatus.get(status) ?? []
@@ -323,6 +434,11 @@ export default async function DashboardPage({
                               Sin repartidor
                             </span>
                           )}
+                          {incidentOrderIds.has(o.id) && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: '#a33', border: '0.5px solid #a33', padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                              Incidencia
+                            </span>
+                          )}
                         </div>
                         <div style={{ fontSize: 13, color: '#2a2a2a' }}>{o.customer_name || '—'}</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
@@ -347,6 +463,7 @@ export default async function DashboardPage({
             )
           })}
         </main>
+        )}
       </div>
 
       {/* Keyframes globales para el badge Express parpadeante */}
