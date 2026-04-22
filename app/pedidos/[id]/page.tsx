@@ -11,6 +11,7 @@ import WooSyncBanner from './woo-sync-banner'
 import WhatsappMessagesList from './whatsapp-messages'
 import IncidentsSection from './incidents'
 import ItemsEditor from './items-editor'
+import DeliveryProof from './delivery-proof'
 
 export const dynamic = 'force-dynamic'
 
@@ -261,6 +262,22 @@ export default async function OrderDetailPage({ params }: { params: { id: string
           initialIncidents={incidents ?? []}
           users={changers ?? []}
         />
+
+        {/* COMPROBANTE DE ENTREGA */}
+        {(() => {
+          const canEdit = profile.role === 'admin' || profile.role === 'operador' ||
+            (profile.role === 'repartidor' && order.assigned_to === profile.id)
+          const relevant = order.tipo_envio !== 'retiro' && ['en_camino','entregado'].includes(order.status)
+          if (!canEdit && !order.delivery_proof_url) return null
+          if (!relevant && !order.delivery_proof_url) return null
+          return (
+            <DeliveryProof
+              orderId={order.id}
+              currentUrl={order.delivery_proof_url}
+              canEdit={canEdit}
+            />
+          )
+        })()}
 
         {/* HITOS / TIEMPOS */}
         {(() => {
