@@ -8,6 +8,7 @@ import DashboardControls from './controls'
 import DashboardSidebar from './sidebar'
 import LiveClock from './live-clock'
 import SyncButton from './sync-button'
+import NewOrderNotifier from './new-order-notifier'
 
 export const dynamic = 'force-dynamic'
 
@@ -129,6 +130,7 @@ export default async function DashboardPage({
         <header style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <LiveClock />
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <NewOrderNotifier />
             <Link href="/pedidos/nuevo"
               style={{ padding: '9px 13px', border: 'none', borderRadius: 10, background: '#FF6D6E', color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
               + Nuevo pedido
