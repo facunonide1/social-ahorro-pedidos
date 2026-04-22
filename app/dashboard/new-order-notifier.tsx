@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 import { TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS, ORIGIN_LABELS } from '@/lib/types'
 import type { TipoEnvio, OrderOrigin } from '@/lib/types'
 
@@ -18,7 +19,6 @@ type Incoming = {
 const STORAGE_KEY = 'sa-notif-sound'
 
 function playDing(audioCtx: AudioContext) {
-  // Dos tonos cortos (E5 y A5). Web Audio puro, sin archivo externo.
   const now = audioCtx.currentTime
   for (const [freq, start] of [[659.25, 0], [880, 0.18]] as const) {
     const osc = audioCtx.createOscillator()
@@ -37,22 +37,13 @@ function playDing(audioCtx: AudioContext) {
 
 export default function NewOrderNotifier() {
   const router = useRouter()
-  const [since, setSince] = useState(() => new Date().toISOString())
+  const sb = createClient()
   const [pending, setPending] = useState<{ count: number; items: Incoming[] }>({ count: 0, items: [] })
   const [soundOn, setSoundOn] = useState(false)
+  const [connected, setConnected] = useState(false)
   const audioRef = useRef<AudioContext | null>(null)
-
-  // Cargo preferencia guardada. Importante: el audio recién queda "activo"
-  // cuando el user hace click en el toggle (por autoplay policy del browser),
-  // así que arrancamos en off aunque localStorage diga on.
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved === '1') {
-        // queda pendiente de arranque del AudioContext por interacción
-      }
-    } catch {}
-  }, [])
+  const soundOnRef = useRef(false)
+  soundOnRef.current = soundOn
 
   function toggleSound() {
     if (!audioRef.current) {
@@ -64,48 +55,65 @@ export default function NewOrderNotifier() {
     const next = !soundOn
     setSoundOn(next)
     try { localStorage.setItem(STORAGE_KEY, next ? '1' : '0') } catch {}
-    // ping de confirmación al activar
     if (next && audioRef.current) {
       try { playDing(audioRef.current) } catch {}
     }
   }
 
+  // Suscripción Realtime a INSERT en orders
   useEffect(() => {
-    let cancelled = false
-    async function poll() {
-      try {
-        const res = await fetch(`/api/orders/since?t=${encodeURIComponent(since)}`, { cache: 'no-store' })
-        if (!res.ok) return
-        const data = await res.json() as { count: number; items: Incoming[] }
-        if (cancelled) return
-        if (data.count > 0) {
+    const channel = sb
+      .channel('sa-orders-realtime')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        (payload) => {
+          const row = payload.new as Incoming
           setPending(prev => ({
-            count: data.count,
-            items: data.items,
+            count: prev.count + 1,
+            items: [row, ...prev.items].slice(0, 20),
           }))
-          if (soundOn && audioRef.current) {
+          if (soundOnRef.current && audioRef.current) {
             try { playDing(audioRef.current) } catch {}
           }
         }
-      } catch {
-        // red caída, no rompo
-      }
+      )
+      .subscribe((status) => {
+        setConnected(status === 'SUBSCRIBED')
+      })
+
+    return () => {
+      sb.removeChannel(channel)
     }
-    const t = setInterval(poll, 30_000)
-    return () => { cancelled = true; clearInterval(t) }
-  }, [since, soundOn])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function acknowledge() {
-    setSince(new Date().toISOString())
     setPending({ count: 0, items: [] })
     router.refresh()
   }
 
   return (
     <>
-      {/* Toggle de sonido (va en el header junto al reloj) */}
+      {/* Indicador de conexión Realtime */}
+      <span title={connected ? 'Conectado en tiempo real' : 'Reconectando…'}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          padding: '6px 10px', borderRadius: 999, fontSize: 11, fontWeight: 600,
+          background: connected ? '#eaf7ef' : '#fff7ec',
+          color:      connected ? '#1f8a4c' : '#c6831a',
+          border: `1px solid ${connected ? '#8fd1a8' : '#edc989'}`,
+        }}>
+        <span style={{
+          width: 7, height: 7, borderRadius: 999,
+          background: connected ? '#1f8a4c' : '#c6831a',
+          boxShadow: connected ? '0 0 0 2px rgba(31,138,76,0.2)' : 'none',
+        }} />
+        {connected ? 'En vivo' : 'Offline'}
+      </span>
+
+      {/* Toggle de sonido */}
       <button onClick={toggleSound}
-        title={soundOn ? 'Sonido de alerta activado' : 'Activar sonido de alerta cuando entra un pedido nuevo'}
+        title={soundOn ? 'Sonido activado' : 'Activar sonido de alerta'}
         style={{
           padding: '8px 10px', borderRadius: 10, fontSize: 13, fontWeight: 600,
           cursor: 'pointer', fontFamily: 'inherit',
@@ -116,7 +124,7 @@ export default function NewOrderNotifier() {
         {soundOn ? '🔔 Alertas' : '🔕 Alertas'}
       </button>
 
-      {/* Badge flotante con pedidos nuevos */}
+      {/* Badge flotante */}
       {pending.count > 0 && (
         <div style={{
           position: 'fixed', right: 20, bottom: 20, zIndex: 50,
@@ -178,7 +186,6 @@ export default function NewOrderNotifier() {
         </div>
       )}
 
-      {/* Animación de pulso suave */}
       <style>{`
         @keyframes sa-pulse {
           0%   { box-shadow: 0 12px 32px rgba(255,109,110,0.25); }
