@@ -13,7 +13,7 @@ export default function DashboardSidebar({ profile }: { profile: UserPedidos }) 
     profile.role === 'operador' ? 'Operador'      : 'Repartidor'
 
   return (
-    <aside style={{
+    <aside className="sa-sidebar-desktop" style={{
       width: 220, background: '#2a2a2a', color: '#fff',
       display: 'flex', flexDirection: 'column',
       position: 'sticky', top: 0, height: '100vh',

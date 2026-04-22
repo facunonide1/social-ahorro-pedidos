@@ -242,7 +242,7 @@ export default function NuevoPedidoForm({ zonas }: { zonas: Pick<ZonaReparto, 'i
           <input value={customer.name} onChange={e => setCustomer({ ...customer, name: e.target.value })}
             placeholder="Juan Pérez" style={INPUT} />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="sa-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
             <label style={LABEL}>Teléfono</label>
             <input value={customer.phone} onChange={e => setCustomer({ ...customer, phone: e.target.value })}
@@ -274,7 +274,7 @@ export default function NuevoPedidoForm({ zonas }: { zonas: Pick<ZonaReparto, 'i
           <input value={address.address_2} onChange={e => setAddress({ ...address, address_2: e.target.value })}
             placeholder="3° B · timbre rojo" style={INPUT} />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12 }}>
+        <div className="sa-form-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12 }}>
           <div>
             <label style={LABEL}>Ciudad</label>
             <input value={address.city} onChange={e => setAddress({ ...address, city: e.target.value })}
@@ -320,7 +320,7 @@ export default function NuevoPedidoForm({ zonas }: { zonas: Pick<ZonaReparto, 'i
         <ProductSearch onPick={addProductItem} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {items.map((it, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '3fr 0.7fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
+            <div key={i} className="sa-items-row" style={{ display: 'grid', gridTemplateColumns: '3fr 0.7fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
               <div>
                 <label style={LABEL}>Producto</label>
                 <input value={it.name} onChange={e => patchItem(i, { name: e.target.value })}
@@ -336,7 +336,7 @@ export default function NuevoPedidoForm({ zonas }: { zonas: Pick<ZonaReparto, 'i
                 <input type="number" min="0" step="0.01" value={it.price}
                   onChange={e => patchItem(i, { price: e.target.value })} placeholder="0" style={INPUT} />
               </div>
-              <div>
+              <div className="sa-items-sku">
                 <label style={LABEL}>SKU</label>
                 <input value={it.sku} onChange={e => patchItem(i, { sku: e.target.value })}
                   placeholder="—" style={INPUT} />

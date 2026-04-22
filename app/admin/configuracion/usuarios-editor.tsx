@@ -135,7 +135,7 @@ export default function UsuariosEditor({
       {/* FORM CREAR */}
       <form onSubmit={createUser} style={{ display: 'flex', flexDirection: 'column', gap: 12, background: '#faf8f5', border: '0.5px solid #f0ede8', borderRadius: 12, padding: 14 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: '#2a2a2a' }}>Nuevo usuario</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr', gap: 12 }}>
+        <div className="sa-form-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr', gap: 12 }}>
           <div>
             <label style={LABEL}>Email</label>
             <input type="email" value={draft.email} onChange={e => setDraft({ ...draft, email: e.target.value })}

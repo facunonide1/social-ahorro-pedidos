@@ -7,6 +7,7 @@ import { formatOrderNumber } from '@/lib/orders/format'
 import { relativeFrom, SEVERITY_COLORS } from '@/lib/orders/timing'
 import DashboardControls from './controls'
 import DashboardSidebar from './sidebar'
+import MobileNav from './mobile-nav'
 import LiveClock from './live-clock'
 import SyncButton from './sync-button'
 import NewOrderNotifier from './new-order-notifier'
@@ -216,6 +217,7 @@ export default async function DashboardPage({
       <DashboardSidebar profile={profile} />
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <MobileNav profile={profile} />
         {/* HEADER */}
         <header style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <LiveClock />
@@ -309,7 +311,7 @@ export default async function DashboardPage({
         {/* LISTA */}
         {viewMode === 'lista' && (
           <main style={{ padding: '16px 24px 24px' }}>
-            <div style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, overflow: 'hidden' }}>
+            <div className="sa-list-table-wrap" style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: '#faf8f5', borderBottom: '0.5px solid #ede9e4' }}>

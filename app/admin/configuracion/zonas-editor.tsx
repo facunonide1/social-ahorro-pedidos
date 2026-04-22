@@ -118,7 +118,7 @@ export default function ZonasEditor({ initialZonas }: { initialZonas: ZonaRepart
         <div style={{ fontSize: 12, fontWeight: 700, color: '#2a2a2a' }}>
           {editing ? 'Editar zona' : 'Nueva zona'}
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 3fr', gap: 12 }}>
+        <div className="sa-form-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 3fr', gap: 12 }}>
           <div>
             <label style={LABEL}>Nombre</label>
             <input value={draft.nombre} onChange={e => setDraft({ ...draft, nombre: e.target.value })}

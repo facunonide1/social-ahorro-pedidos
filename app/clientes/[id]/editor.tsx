@@ -97,7 +97,7 @@ export default function CustomerEditor({ customer }: { customer: Customer }) {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
+      <div className="sa-form-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
         <div>
           <label style={LABEL}>Nombre</label>
           <input value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} style={INPUT} />
@@ -107,7 +107,7 @@ export default function CustomerEditor({ customer }: { customer: Customer }) {
           <input value={draft.dni} onChange={e => setDraft({ ...draft, dni: e.target.value })} style={INPUT} />
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div className="sa-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
           <label style={LABEL}>Teléfono</label>
           <input value={draft.phone} onChange={e => setDraft({ ...draft, phone: e.target.value })} style={INPUT} />
