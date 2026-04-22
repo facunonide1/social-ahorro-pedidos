@@ -35,6 +35,7 @@ export type OrderItem = {
 
 export type Order = {
   id: string
+  codigo: string
   woo_order_id: number | null
   manual_order_number: number | null
   origin: OrderOrigin
