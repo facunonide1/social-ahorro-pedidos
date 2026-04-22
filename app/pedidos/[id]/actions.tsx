@@ -51,8 +51,15 @@ export default function OrderActions({
       const json = await res.json()
       if (!res.ok) { setErr(json?.error || 'error_cambio_estado'); return }
       setNoteDraft('')
+      const warnings: string[] = []
       if (json?.woo && json.woo.ok === false) {
-        setErr(`Estado guardado acá, pero falló sincronizar a Woo: ${json.woo.error}`)
+        warnings.push(`No se sincronizó con Woo: ${json.woo.error}`)
+      }
+      if (json?.whatsappMsg && json.whatsappMsg.ok === false) {
+        warnings.push(`No se generó mensaje WhatsApp: ${json.whatsappMsg.error}`)
+      }
+      if (warnings.length) {
+        setErr(`Estado guardado. ${warnings.join(' · ')}`)
       }
       router.refresh()
     } catch (e: any) {
