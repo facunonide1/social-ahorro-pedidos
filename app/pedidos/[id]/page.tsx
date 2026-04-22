@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { STATUS_LABELS, STATUS_COLORS, STATUS_ORDER, ORIGIN_LABELS, TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS } from '@/lib/types'
-import type { Order, OrderStatus, UserPedidos, OrderStatusHistory, ZonaReparto, WhatsappMessage, OrderIncident } from '@/lib/types'
+import type { Order, OrderStatus, UserPedidos, OrderStatusHistory, ZonaReparto, WhatsappMessage, OrderIncident, Customer } from '@/lib/types'
 import { formatAddress, googleMapsLink } from '@/lib/address'
 import { formatOrderNumber } from '@/lib/orders/format'
 import { minutesBetween, formatDuration } from '@/lib/orders/timing'
@@ -53,6 +53,14 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     .eq('order_id', order.id)
     .order('created_at', { ascending: false })
     .returns<OrderIncident[]>()
+
+  // Customer + cuántos pedidos tiene en total (para badge NUEVO/RECURRENTE/VIP)
+  const { data: customer } = order.customer_id
+    ? await sb.from('customers').select('*').eq('id', order.customer_id).maybeSingle<Customer>()
+    : { data: null }
+  const { count: customerOrdersCount } = order.customer_id
+    ? await sb.from('orders').select('id', { count: 'exact', head: true }).eq('customer_id', order.customer_id)
+    : { count: null }
 
   const { data: repartidores } = profile.role === 'admin' || profile.role === 'operador'
     ? await sb.from('users_pedidos').select('id, name, email, role, active').eq('role', 'repartidor').eq('active', true)
@@ -115,6 +123,22 @@ export default async function OrderDetailPage({ params }: { params: { id: string
       <main style={{ padding: 20, display: 'grid', gap: 16, maxWidth: 900, margin: '0 auto' }}>
         <WooSyncBanner order={order} />
 
+        {/* BLACKLIST BANNER */}
+        {customer?.tags?.includes('blacklist') && (
+          <section style={{ background: '#fbeaea', border: '2px solid #a33', borderRadius: 16, padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ fontSize: 22 }}>⚠️</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#a33', letterSpacing: '0.4px' }}>CLIENTE EN LISTA NEGRA</div>
+              {customer.notes && (
+                <div style={{ fontSize: 13, color: '#2a2a2a', marginTop: 4, whiteSpace: 'pre-wrap' }}>{customer.notes}</div>
+              )}
+            </div>
+            <Link href={`/clientes/${customer.id}`} style={{ fontSize: 12, fontWeight: 700, color: '#a33', textDecoration: 'underline' }}>
+              Ver ficha
+            </Link>
+          </section>
+        )}
+
         {/* CLIENTE + DIRECCION */}
         <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -126,7 +150,16 @@ export default async function OrderDetailPage({ params }: { params: { id: string
               </Link>
             )}
           </div>
-          <div style={{ fontSize: 16, fontWeight: 600 }}>{order.customer_name || '—'}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 16, fontWeight: 600 }}>{order.customer_name || '—'}</span>
+            {customerOrdersCount !== null && (() => {
+              const n = customerOrdersCount
+              if (n >= 10) return <span style={{ fontSize: 10, fontWeight: 700, color: '#c6831a', background: '#fff7ec', border: '0.5px solid #edc989', padding: '2px 8px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>VIP · {n} pedidos</span>
+              if (n >= 2)  return <span style={{ fontSize: 10, fontWeight: 700, color: '#726DFF', background: '#eeedff', border: '0.5px solid #d9d6ff', padding: '2px 8px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>Recurrente · {n} pedidos</span>
+              if (n === 1) return <span style={{ fontSize: 10, fontWeight: 700, color: '#1f8a4c', background: '#eaf7ef', border: '0.5px solid #8fd1a8', padding: '2px 8px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>Primera compra</span>
+              return null
+            })()}
+          </div>
           <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
             {order.customer_phone || 'Sin teléfono'} {order.customer_email ? `· ${order.customer_email}` : ''}
           </div>
@@ -139,6 +172,14 @@ export default async function OrderDetailPage({ params }: { params: { id: string
             <div style={{ marginTop: 12 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px', marginBottom: 4 }}>DIRECCIÓN</div>
               <div style={{ fontSize: 13, color: '#2a2a2a' }}>{addressStr}</div>
+              {/* Mapa embebido (Google Maps no requiere API key en modo output=embed) */}
+              <div style={{ marginTop: 10, borderRadius: 12, overflow: 'hidden', border: '0.5px solid #ede9e4' }}>
+                <iframe
+                  src={`https://www.google.com/maps?q=${encodeURIComponent(addressStr)}&output=embed`}
+                  width="100%" height="220" loading="lazy" referrerPolicy="no-referrer-when-downgrade"
+                  style={{ border: 0, display: 'block' }}
+                />
+              </div>
               {mapsLink && (
                 <a href={mapsLink} target="_blank" rel="noreferrer"
                   style={{ display: 'inline-block', marginTop: 8, fontSize: 13, fontWeight: 600, color: '#726DFF', textDecoration: 'none' }}>
@@ -228,31 +269,50 @@ export default async function OrderDetailPage({ params }: { params: { id: string
           )
         })()}
 
-        {/* HISTORIAL */}
+        {/* TIMELINE VISUAL */}
         <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px', marginBottom: 10 }}>HISTORIAL</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px', marginBottom: 12 }}>TIMELINE</div>
           {(history ?? []).length === 0 ? (
             <div style={{ fontSize: 13, color: '#bbb' }}>Sin movimientos</div>
-          ) : (history ?? []).map((h: OrderStatusHistory, i) => {
-            const hc = STATUS_COLORS[h.status]
-            return (
-              <div key={h.id} style={{ display: 'flex', gap: 12, paddingBottom: 12, marginBottom: 12, borderBottom: i < (history?.length ?? 0) - 1 ? '0.5px solid #f0ede8' : 'none' }}>
-                <div style={{ width: 10, height: 10, borderRadius: 999, background: hc.fg, marginTop: 6, flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: hc.fg }}>{STATUS_LABELS[h.status]}</div>
-                  <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
-                    {new Date(h.created_at).toLocaleString('es-AR')}
-                    {h.changed_by && changerMap.has(h.changed_by) && ` · ${changerMap.get(h.changed_by)}`}
-                  </div>
-                  {h.note && (
-                    <div style={{ fontSize: 13, color: '#2a2a2a', marginTop: 6, padding: 8, background: '#faf8f5', borderRadius: 8 }}>
-                      {h.note}
+          ) : (
+            <div style={{ position: 'relative', paddingLeft: 30 }}>
+              {/* Línea vertical */}
+              <div style={{ position: 'absolute', left: 13, top: 6, bottom: 6, width: 2, background: '#ede9e4' }} />
+              {([...(history ?? [])].reverse()).map((h: OrderStatusHistory) => {
+                const hc = STATUS_COLORS[h.status]
+                const icon =
+                  h.status === 'nuevo'          ? '📥' :
+                  h.status === 'confirmado'     ? '✓'  :
+                  h.status === 'en_preparacion' ? '🛠️' :
+                  h.status === 'listo'          ? '📦' :
+                  h.status === 'en_camino'      ? '🛵' :
+                  h.status === 'entregado'      ? '✅' :
+                  h.status === 'cancelado'      ? '✕'  : '•'
+                return (
+                  <div key={h.id} style={{ position: 'relative', paddingBottom: 16 }}>
+                    <div style={{
+                      position: 'absolute', left: -30, top: 0, width: 28, height: 28, borderRadius: 999,
+                      background: hc.bg, border: `2px solid ${hc.fg}`, color: hc.fg,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 13, fontWeight: 700,
+                    }}>
+                      {icon}
                     </div>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+                    <div style={{ fontSize: 13, fontWeight: 700, color: hc.fg }}>{STATUS_LABELS[h.status]}</div>
+                    <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
+                      {new Date(h.created_at).toLocaleString('es-AR')}
+                      {h.changed_by && changerMap.has(h.changed_by) && ` · ${changerMap.get(h.changed_by)}`}
+                    </div>
+                    {h.note && (
+                      <div style={{ fontSize: 13, color: '#2a2a2a', marginTop: 6, padding: 8, background: '#faf8f5', borderRadius: 8, border: '0.5px solid #f0ede8' }}>
+                        {h.note}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </section>
 
         <WhatsappMessagesList

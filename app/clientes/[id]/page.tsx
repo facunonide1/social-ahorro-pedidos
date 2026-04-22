@@ -36,9 +36,40 @@ export default async function ClienteDetailPage({ params }: { params: { id: stri
     .returns<Order[]>()
 
   const ordersList = orders ?? []
-  const totalFacturado = ordersList
-    .filter(o => o.status !== 'cancelado')
-    .reduce((acc, o) => acc + Number(o.total || 0), 0)
+  const relevantes = ordersList.filter(o => o.status !== 'cancelado')
+  const totalFacturado = relevantes.reduce((acc, o) => acc + Number(o.total || 0), 0)
+  const ticketPromedio = relevantes.length ? Math.round(totalFacturado / relevantes.length) : 0
+  const ultimoPedido = ordersList[0]?.created_at ?? null
+  const diasDesdeUltimo = ultimoPedido ? Math.floor((Date.now() - new Date(ultimoPedido).getTime()) / 86400000) : null
+
+  // Frecuencia: días promedio entre pedidos (si hay >= 2 relevantes)
+  let frecuenciaDias: number | null = null
+  if (relevantes.length >= 2) {
+    const sorted = [...relevantes].sort((a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    const first = new Date(sorted[0].created_at).getTime()
+    const last  = new Date(sorted[sorted.length - 1].created_at).getTime()
+    frecuenciaDias = Math.round(((last - first) / 86400000) / (sorted.length - 1))
+  }
+
+  // Método de pago más frecuente
+  const payCounts = new Map<string, number>()
+  for (const o of ordersList) {
+    if (o.payment_method) payCounts.set(o.payment_method, (payCounts.get(o.payment_method) ?? 0) + 1)
+  }
+  let metodoPreferido: string | null = null
+  let maxN = 0
+  for (const [m, n] of payCounts) if (n > maxN) { metodoPreferido = m; maxN = n }
+
+  const isBlacklisted = customer.tags.includes('blacklist')
+  const hasIncidents = ordersList.length > 0 && await (async () => {
+    const { count } = await sb.from('order_incidents').select('id', { count: 'exact', head: true }).in('order_id', ordersList.map(o => o.id))
+    return (count ?? 0) > 0
+  })()
+
+  let tipoCliente: 'NUEVO' | 'RECURRENTE' | 'VIP' | null = null
+  if (relevantes.length >= 10) tipoCliente = 'VIP'
+  else if (relevantes.length >= 2)  tipoCliente = 'RECURRENTE'
+  else if (relevantes.length === 1) tipoCliente = 'NUEVO'
 
   return (
     <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a' }}>
@@ -55,6 +86,55 @@ export default async function ClienteDetailPage({ params }: { params: { id: stri
       </header>
 
       <main style={{ padding: 20, maxWidth: 980, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* BLACKLIST BANNER */}
+        {isBlacklisted && (
+          <section style={{ background: '#fbeaea', border: '2px solid #a33', borderRadius: 16, padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ fontSize: 22 }}>⚠️</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#a33', letterSpacing: '0.4px' }}>CLIENTE EN LISTA NEGRA</div>
+              {customer.notes && (
+                <div style={{ fontSize: 13, color: '#2a2a2a', marginTop: 4, whiteSpace: 'pre-wrap' }}>{customer.notes}</div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* KPIs del cliente */}
+        <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+          {[
+            { label: 'Pedidos totales', value: String(ordersList.length), fg: '#2a2a2a', bg: '#fff', border: '#ede9e4' },
+            { label: 'Monto total',     value: `$${totalFacturado.toLocaleString('es-AR')}`, fg: '#1f8a4c', bg: '#eaf7ef', border: '#8fd1a8' },
+            { label: 'Ticket promedio', value: `$${ticketPromedio.toLocaleString('es-AR')}`, fg: '#726DFF', bg: '#eeedff', border: '#d9d6ff' },
+            { label: 'Último pedido',   value: diasDesdeUltimo === null ? '—' : diasDesdeUltimo === 0 ? 'hoy' : `hace ${diasDesdeUltimo}d`, fg: '#2855c7', bg: '#e9f0ff', border: '#9cb6ee' },
+            { label: 'Frecuencia',      value: frecuenciaDias === null ? '—' : `cada ${frecuenciaDias}d`, fg: '#c6831a', bg: '#fff7ec', border: '#edc989' },
+            { label: 'Pago preferido',  value: metodoPreferido ?? '—', fg: '#555', bg: '#f5f5f5', border: '#e2e2e2' },
+          ].map(k => (
+            <div key={k.label} style={{ background: k.bg, border: `0.5px solid ${k.border}`, borderRadius: 14, padding: '12px 14px' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: k.fg, letterSpacing: '0.4px', textTransform: 'uppercase' }}>{k.label}</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: k.fg, letterSpacing: '-0.4px', marginTop: 2, wordBreak: 'break-word' }}>{k.value}</div>
+            </div>
+          ))}
+        </section>
+
+        {/* BADGES CATEGORÍA */}
+        {(tipoCliente || hasIncidents) && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {tipoCliente === 'VIP' && (
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#c6831a', background: '#fff7ec', border: '1.5px solid #edc989', padding: '4px 10px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>⭐ VIP</span>
+            )}
+            {tipoCliente === 'RECURRENTE' && (
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#726DFF', background: '#eeedff', border: '1.5px solid #d9d6ff', padding: '4px 10px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>Recurrente</span>
+            )}
+            {tipoCliente === 'NUEVO' && (
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#1f8a4c', background: '#eaf7ef', border: '1.5px solid #8fd1a8', padding: '4px 10px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>Nuevo</span>
+            )}
+            {hasIncidents && (
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#a33', background: '#fbeaea', border: '1.5px solid #e0a8a8', padding: '4px 10px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>Con incidencias</span>
+            )}
+          </div>
+        )}
+
         {/* EDITOR DE DATOS + NOTAS + TAGS */}
         <CustomerEditor customer={customer} />
 
