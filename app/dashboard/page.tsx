@@ -10,13 +10,17 @@ import DashboardSidebar from './sidebar'
 import LiveClock from './live-clock'
 import SyncButton from './sync-button'
 import NewOrderNotifier from './new-order-notifier'
+import TitleBadge from './title-badge'
 
 export const dynamic = 'force-dynamic'
 
-function startOfTodayISO() {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  return d.toISOString()
+const PENDIENTES_STATUSES: OrderStatus[] = ['nuevo','confirmado','en_preparacion','listo']
+
+function startOfDayISO(date = new Date()) {
+  const d = new Date(date); d.setHours(0, 0, 0, 0); return d.toISOString()
+}
+function endOfDayISO(date = new Date()) {
+  const d = new Date(date); d.setHours(23, 59, 59, 999); return d.toISOString()
 }
 
 type Kpi = {
@@ -25,12 +29,23 @@ type Kpi = {
   fg: string
   bg: string
   border: string
+  href: string
+  active: boolean
 }
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string; scope?: string; zona?: string; tipo?: string }
+  searchParams: {
+    q?: string
+    status?: string     // individual OR 'pendientes'
+    scope?: string      // 'today' | 'all'
+    zona?: string
+    tipo?: string
+    rep?: string        // assigned_to uuid
+    date?: string       // YYYY-MM-DD
+    fuera?: string      // '1' → solo fuera_de_horario activos
+  }
 }) {
   const sb = createClient()
   const { data: { user } } = await sb.auth.getUser()
@@ -46,21 +61,36 @@ export default async function DashboardPage({
   if (profile.role === 'repartidor') redirect('/repartidor')
 
   const q = (searchParams.q || '').trim()
-  const scope = searchParams.scope === 'all' ? 'all' : 'today'
-  const statusFilter = (searchParams.status as OrderStatus | undefined) || undefined
+  const statusRaw = (searchParams.status ?? '').trim()
+  const isPendientesFilter = statusRaw === 'pendientes'
+  const statusFilter: OrderStatus | undefined = !isPendientesFilter && statusRaw
+    ? (statusRaw as OrderStatus)
+    : undefined
   const zonaFilter = (searchParams.zona || '').trim() || undefined
   const tipoFilter = (['express','programado','retiro'].includes(searchParams.tipo ?? '')
     ? searchParams.tipo
     : undefined) as TipoEnvio | undefined
+  const repFilter = (searchParams.rep || '').trim() || undefined
+  const fueraFilter = searchParams.fuera === '1'
 
-  const todayISO = startOfTodayISO()
+  // Fecha: si viene date, la usamos como "el día de esa fecha".
+  // Si no viene, scope controla (today por default, all = ignora fecha).
+  const dateStr = (searchParams.date || '').trim()
+  const scope  = searchParams.scope === 'all' ? 'all' : 'today'
+  const useDate = !!dateStr
+  const fromISO = useDate ? startOfDayISO(new Date(dateStr + 'T00:00:00')) :
+                   scope === 'today' ? startOfDayISO() : null
+  const toISO   = useDate ? endOfDayISO(new Date(dateStr + 'T00:00:00')) : null
 
-  const { data: zonas } = await sb
-    .from('zonas_reparto')
-    .select('id, nombre, color, activa')
-    .order('activa', { ascending: false })
-    .order('nombre', { ascending: true })
+  const todayISO = startOfDayISO()
 
+  // Zonas y repartidores para los filtros
+  const [zonasRes, repsRes] = await Promise.all([
+    sb.from('zonas_reparto').select('id, nombre, color, activa').order('activa', { ascending: false }).order('nombre', { ascending: true }),
+    sb.from('users_pedidos').select('id, name, email').eq('role', 'repartidor').eq('active', true).order('name', { ascending: true }),
+  ])
+
+  // Query principal del listado
   let query = sb
     .from('orders')
     .select('*')
@@ -68,11 +98,18 @@ export default async function DashboardPage({
     .order('created_at', { ascending: false })
     .limit(300)
 
-  if (scope === 'today') query = query.gte('created_at', todayISO)
-  if (statusFilter) query = query.eq('status', statusFilter)
+  if (fromISO) query = query.gte('created_at', fromISO)
+  if (toISO)   query = query.lte('created_at', toISO)
+  if (isPendientesFilter) query = query.in('status', PENDIENTES_STATUSES)
+  else if (statusFilter)  query = query.eq('status', statusFilter)
   if (zonaFilter === 'sin_zona') query = query.is('zona_id', null)
   else if (zonaFilter) query = query.eq('zona_id', zonaFilter)
   if (tipoFilter) query = query.eq('tipo_envio', tipoFilter)
+  if (repFilter === 'sin_asignar') query = query.is('assigned_to', null)
+  else if (repFilter) query = query.eq('assigned_to', repFilter)
+  if (fueraFilter) {
+    query = query.eq('fuera_de_horario', true).not('status', 'in', '(entregado,cancelado)')
+  }
   if (q) {
     const like = `%${q}%`
     const orFilters = [
@@ -90,19 +127,22 @@ export default async function DashboardPage({
     query = query.or(orFilters.join(','))
   }
 
-  // KPIs del día en paralelo
+  // KPIs del día (siempre sobre HOY, no la fecha seleccionada, para que el
+  // operador vea a golpe de vista cómo va la jornada actual)
   const [
     totalRes,
     pendientesRes,
     enCaminoRes,
     entregadosRes,
+    canceladosRes,
     fueraHorarioRes,
     ordersRes,
   ] = await Promise.all([
     sb.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', todayISO),
-    sb.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', todayISO).in('status', ['nuevo','confirmado','en_preparacion','listo']),
+    sb.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', todayISO).in('status', PENDIENTES_STATUSES),
     sb.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', todayISO).eq('status', 'en_camino'),
     sb.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', todayISO).eq('status', 'entregado'),
+    sb.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', todayISO).eq('status', 'cancelado'),
     sb.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', todayISO).eq('fuera_de_horario', true).not('status', 'in', '(entregado,cancelado)'),
     query,
   ])
@@ -110,20 +150,54 @@ export default async function DashboardPage({
   const orders = ordersRes.data
   const error  = ordersRes.error
 
+  // Map de counts por customer para el badge NUEVO/RECURRENTE
+  const customerIds = Array.from(new Set((orders ?? []).map(o => o.customer_id).filter(Boolean))) as string[]
+  const customerOrdersCount = new Map<string, number>()
+  if (customerIds.length > 0) {
+    const { data: summaries } = await sb
+      .from('customers')
+      .select('id, orders:orders(count)')
+      .in('id', customerIds)
+    for (const c of (summaries ?? []) as any[]) {
+      const n = Array.isArray(c.orders) ? (c.orders[0]?.count ?? 0) : 0
+      customerOrdersCount.set(c.id, n)
+    }
+  }
+
   const byStatus = new Map<OrderStatus, Order[]>()
   for (const s of STATUS_ORDER) byStatus.set(s, [])
   ;(orders ?? []).forEach(o => byStatus.get(o.status as OrderStatus)?.push(o as Order))
 
+  // Construcción de KPIs (clickeables como filtros)
+  function makeHref(next: { status?: string; fuera?: '1' }) {
+    const p = new URLSearchParams()
+    if (next.status)       p.set('status', next.status)
+    if (next.fuera === '1') p.set('fuera', '1')
+    if (tipoFilter) p.set('tipo', tipoFilter)
+    if (zonaFilter) p.set('zona', zonaFilter)
+    if (repFilter)  p.set('rep',  repFilter)
+    if (q)          p.set('q',    q)
+    return `/dashboard${p.toString() ? '?' + p : ''}`
+  }
+
   const kpis: Kpi[] = [
-    { label: 'Total hoy',        value: totalRes.count        ?? 0, fg: '#2a2a2a', bg: '#fff',    border: '#ede9e4' },
-    { label: 'Pendientes',       value: pendientesRes.count   ?? 0, fg: '#726DFF', bg: '#eeedff', border: '#d9d6ff' },
-    { label: 'En camino',        value: enCaminoRes.count     ?? 0, fg: '#2855c7', bg: '#e9f0ff', border: '#9cb6ee' },
-    { label: 'Entregados',       value: entregadosRes.count   ?? 0, fg: '#1f8a4c', bg: '#eaf7ef', border: '#8fd1a8' },
-    { label: 'Fuera de horario', value: fueraHorarioRes.count ?? 0, fg: '#c6831a', bg: '#fff7ec', border: '#edc989' },
+    { label: 'Total hoy',   value: totalRes.count        ?? 0, fg: '#2a2a2a', bg: '#fff',    border: '#ede9e4',
+      href: '/dashboard', active: !statusRaw && !fueraFilter },
+    { label: 'Pendientes',  value: pendientesRes.count   ?? 0, fg: '#726DFF', bg: '#eeedff', border: '#d9d6ff',
+      href: makeHref({ status: 'pendientes' }), active: isPendientesFilter },
+    { label: 'En camino',   value: enCaminoRes.count     ?? 0, fg: '#2855c7', bg: '#e9f0ff', border: '#9cb6ee',
+      href: makeHref({ status: 'en_camino' }),  active: statusFilter === 'en_camino' },
+    { label: 'Entregados',  value: entregadosRes.count   ?? 0, fg: '#1f8a4c', bg: '#eaf7ef', border: '#8fd1a8',
+      href: makeHref({ status: 'entregado' }),  active: statusFilter === 'entregado' },
+    { label: 'Cancelados',  value: canceladosRes.count   ?? 0, fg: '#a33',    bg: '#fbeaea', border: '#e0a8a8',
+      href: makeHref({ status: 'cancelado' }),  active: statusFilter === 'cancelado' },
+    { label: 'Fuera de horario', value: fueraHorarioRes.count ?? 0, fg: '#c6831a', bg: '#fff7ec', border: '#edc989',
+      href: makeHref({ fuera: '1' }),           active: fueraFilter },
   ]
 
   return (
     <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a', display: 'flex', alignItems: 'stretch' }}>
+      <TitleBadge pendientes={pendientesRes.count ?? 0} />
       <DashboardSidebar profile={profile} />
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
@@ -146,20 +220,25 @@ export default async function DashboardPage({
           </div>
         )}
 
-        {/* KPIs */}
-        <section style={{ padding: '16px 24px 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>
+        {/* KPIs clickeables */}
+        <section style={{ padding: '16px 24px 0', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
           {kpis.map(k => (
-            <div key={k.label} style={{
-              background: k.bg, border: `0.5px solid ${k.border}`, borderRadius: 14,
-              padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 2,
-            }}>
+            <Link key={k.label} href={k.href} scroll={false}
+              style={{
+                textDecoration: 'none',
+                background: k.bg,
+                border: `${k.active ? '2px' : '0.5px'} solid ${k.active ? k.fg : k.border}`,
+                borderRadius: 14, padding: '12px 14px',
+                display: 'flex', flexDirection: 'column', gap: 2,
+                transition: 'transform 0.1s',
+              }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: k.fg, letterSpacing: '0.4px', textTransform: 'uppercase' }}>
                 {k.label}
               </div>
               <div style={{ fontSize: 26, fontWeight: 800, color: k.fg, letterSpacing: '-0.5px' }}>
                 {k.value}
               </div>
-            </div>
+            </Link>
           ))}
         </section>
 
@@ -167,11 +246,14 @@ export default async function DashboardPage({
         <section style={{ padding: '16px 24px 0' }}>
           <DashboardControls
             initialQ={q}
-            initialStatus={statusFilter}
+            initialStatus={isPendientesFilter ? undefined : statusFilter}
             initialScope={scope}
             initialZona={zonaFilter}
             initialTipo={tipoFilter}
-            zonas={(zonas ?? []) as ZonaReparto[]}
+            initialRep={repFilter}
+            initialDate={dateStr}
+            zonas={(zonasRes.data ?? []) as ZonaReparto[]}
+            repartidores={(repsRes.data ?? [])}
           />
         </section>
 
@@ -180,7 +262,10 @@ export default async function DashboardPage({
           {STATUS_ORDER.map(status => {
             const list = byStatus.get(status) ?? []
             const c = STATUS_COLORS[status]
+            // Si el filtro es un estado individual, mostramos sólo esa columna
             if (statusFilter && status !== statusFilter) return null
+            // Si el filtro es "pendientes" mostramos sólo los pendientes
+            if (isPendientesFilter && !PENDIENTES_STATUSES.includes(status)) return null
             return (
               <section key={status} style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 12, display: 'flex', flexDirection: 'column', gap: 10, minHeight: 160 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -196,6 +281,10 @@ export default async function DashboardPage({
                   <div style={{ fontSize: 12, color: '#bbb', padding: '12px 2px' }}>—</div>
                 ) : list.map(o => {
                   const tc = TIPO_ENVIO_COLORS[o.tipo_envio]
+                  const isExpressActive = o.tipo_envio === 'express' && o.status !== 'entregado' && o.status !== 'cancelado'
+                  const customerCount = o.customer_id ? customerOrdersCount.get(o.customer_id) ?? 0 : 0
+                  const isNewCustomer  = customerCount === 1
+                  const isReturning    = customerCount >= 2
                   return (
                     <Link key={o.id} href={`/pedidos/${o.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                       <div style={{ border: '0.5px solid #f0ede8', borderRadius: 12, padding: '10px 12px', background: '#faf8f5', display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -206,15 +295,32 @@ export default async function DashboardPage({
                           </span>
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: tc.fg, background: tc.bg, border: `0.5px solid ${tc.border}`, padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                          <span
+                            className={isExpressActive ? 'sa-express-pulse' : ''}
+                            style={{ fontSize: 10, fontWeight: 700, color: tc.fg, background: tc.bg, border: `0.5px solid ${tc.border}`, padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
                             {TIPO_ENVIO_LABELS[o.tipo_envio]}
                           </span>
                           <span style={{ fontSize: 10, fontWeight: 700, color: '#888', background: '#fff', border: '0.5px solid #ede9e4', padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
                             {ORIGIN_LABELS[o.origin]}
                           </span>
+                          {isNewCustomer && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#1f8a4c', background: '#eaf7ef', border: '0.5px solid #8fd1a8', padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                              Nuevo
+                            </span>
+                          )}
+                          {isReturning && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#726DFF', background: '#eeedff', border: '0.5px solid #d9d6ff', padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                              {customerCount} pedidos
+                            </span>
+                          )}
                           {o.fuera_de_horario && (
                             <span style={{ fontSize: 10, fontWeight: 700, color: '#c6831a', background: '#fff7ec', border: '0.5px solid #edc989', padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
                               Fuera de horario
+                            </span>
+                          )}
+                          {!o.assigned_to && o.status !== 'entregado' && o.status !== 'cancelado' && o.tipo_envio !== 'retiro' && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#a33', background: '#fbeaea', border: '0.5px solid #e0a8a8', padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                              Sin repartidor
                             </span>
                           )}
                         </div>
@@ -242,6 +348,15 @@ export default async function DashboardPage({
           })}
         </main>
       </div>
+
+      {/* Keyframes globales para el badge Express parpadeante */}
+      <style>{`
+        @keyframes sa-express-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(255,109,110,0.6); opacity: 1; }
+          50%      { box-shadow: 0 0 0 4px rgba(255,109,110,0.0); opacity: 0.7; }
+        }
+        .sa-express-pulse { animation: sa-express-pulse 1.3s ease-in-out infinite; }
+      `}</style>
     </div>
   )
 }

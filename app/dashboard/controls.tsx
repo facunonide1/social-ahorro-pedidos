@@ -5,16 +5,21 @@ import { useRouter } from 'next/navigation'
 import { STATUS_LABELS, STATUS_ORDER, TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS } from '@/lib/types'
 import type { OrderStatus, TipoEnvio, ZonaReparto } from '@/lib/types'
 
+type RepartidorLite = { id: string; name: string | null; email: string }
+
 export default function DashboardControls({
-  initialQ, initialStatus, initialScope, initialZona, initialTipo,
-  zonas,
+  initialQ, initialStatus, initialScope, initialZona, initialTipo, initialRep, initialDate,
+  zonas, repartidores,
 }: {
   initialQ: string
   initialStatus: OrderStatus | undefined
   initialScope: 'today' | 'all'
   initialZona: string | undefined
   initialTipo: TipoEnvio | undefined
+  initialRep: string | undefined
+  initialDate: string
   zonas: Pick<ZonaReparto,'id'|'nombre'|'color'|'activa'>[]
+  repartidores: RepartidorLite[]
 }) {
   const router = useRouter()
   const [q, setQ] = useState(initialQ)
@@ -22,20 +27,29 @@ export default function DashboardControls({
   const [scope, setScope] = useState<'today' | 'all'>(initialScope)
   const [zona, setZona] = useState<string>(initialZona ?? '')
   const [tipo, setTipo] = useState<string>(initialTipo ?? '')
+  const [rep, setRep]   = useState<string>(initialRep ?? '')
+  const [date, setDate] = useState<string>(initialDate ?? '')
   const [, startTransition] = useTransition()
 
-  function apply(next: Partial<{ q: string; status: string; scope: 'today'|'all'; zona: string; tipo: string }>) {
+  function apply(next: Partial<{
+    q: string; status: string; scope: 'today'|'all';
+    zona: string; tipo: string; rep: string; date: string;
+  }>) {
     const params = new URLSearchParams()
-    const nq = next.q !== undefined ? next.q : q
-    const ns = next.status !== undefined ? next.status : status
-    const nsc = next.scope ?? scope
-    const nz = next.zona !== undefined ? next.zona : zona
-    const nt = next.tipo !== undefined ? next.tipo : tipo
+    const nq   = next.q      !== undefined ? next.q      : q
+    const ns   = next.status !== undefined ? next.status : status
+    const nsc  = next.scope  ?? scope
+    const nz   = next.zona   !== undefined ? next.zona   : zona
+    const nt   = next.tipo   !== undefined ? next.tipo   : tipo
+    const nr   = next.rep    !== undefined ? next.rep    : rep
+    const nd   = next.date   !== undefined ? next.date   : date
     if (nq) params.set('q', nq)
     if (ns) params.set('status', ns)
     if (nsc && nsc !== 'today') params.set('scope', nsc)
     if (nz) params.set('zona', nz)
     if (nt) params.set('tipo', nt)
+    if (nr) params.set('rep',  nr)
+    if (nd) params.set('date', nd)
     startTransition(() => router.push(`/dashboard${params.toString() ? '?' + params.toString() : ''}`))
   }
 
@@ -83,7 +97,7 @@ export default function DashboardControls({
 
       {/* FILTROS */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <form onSubmit={e => { e.preventDefault(); apply({ q }) }} style={{ flex: '1 1 260px' }}>
+        <form onSubmit={e => { e.preventDefault(); apply({ q }) }} style={{ flex: '1 1 240px' }}>
           <input value={q} onChange={e => setQ(e.target.value)}
             placeholder="Buscar SA-2026-XXXX, nombre, DNI, tel…"
             style={{ ...input, width: '100%' }} />
@@ -94,11 +108,6 @@ export default function DashboardControls({
           {STATUS_ORDER.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
         </select>
 
-        <select value={scope} onChange={e => { const v = e.target.value as 'today'|'all'; setScope(v); apply({ scope: v }) }} style={input}>
-          <option value="today">Solo hoy</option>
-          <option value="all">Todos</option>
-        </select>
-
         <select value={zona} onChange={e => { setZona(e.target.value); apply({ zona: e.target.value }) }} style={input}>
           <option value="">Todas las zonas</option>
           <option value="sin_zona">Sin zona</option>
@@ -106,6 +115,32 @@ export default function DashboardControls({
             <option key={z.id} value={z.id}>{z.nombre}</option>
           ))}
         </select>
+
+        <select value={rep} onChange={e => { setRep(e.target.value); apply({ rep: e.target.value }) }} style={input}>
+          <option value="">Todos los repartidores</option>
+          <option value="sin_asignar">Sin asignar</option>
+          {repartidores.map(r => (
+            <option key={r.id} value={r.id}>{r.name || r.email}</option>
+          ))}
+        </select>
+
+        <input type="date" value={date}
+          onChange={e => { setDate(e.target.value); apply({ date: e.target.value, scope: 'today' }) }}
+          style={input} />
+
+        {!date && (
+          <select value={scope} onChange={e => { const v = e.target.value as 'today'|'all'; setScope(v); apply({ scope: v }) }} style={input}>
+            <option value="today">Solo hoy</option>
+            <option value="all">Todos</option>
+          </select>
+        )}
+
+        {date && (
+          <button onClick={() => { setDate(''); apply({ date: '' }) }}
+            style={{ ...input, cursor: 'pointer', background: '#faf8f5' }}>
+            Limpiar fecha
+          </button>
+        )}
       </div>
     </div>
   )
