@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
-import type { Order, UserPedidos } from '@/lib/types'
+import type { Order, UserPedidos, ZonaReparto } from '@/lib/types'
 import { formatAddress, googleMapsLink } from '@/lib/address'
 import { formatOrderNumber } from '@/lib/orders/format'
 import RepartidorRowActions from './row-actions'
@@ -23,25 +23,56 @@ export default async function RepartidorPage() {
   if (!profile?.active) redirect('/logout?reason=sin_permiso')
   if (profile.role !== 'repartidor') redirect('/dashboard')
 
-  // Traigo TODAS las entregas asignadas al repartidor (incluye atrasadas)
-  // y separo en pendientes vs cerrados en memoria, con orden lógico.
   const { data: orders } = await sb
     .from('orders')
-    .select('*')
+    .select('*, zonas_reparto(id, nombre, color)')
     .eq('assigned_to', profile.id)
     .order('created_at', { ascending: false })
-    .returns<Order[]>()
 
   const prioridad: Record<string, number> = {
     en_camino: 0, listo: 1, en_preparacion: 2, confirmado: 3, nuevo: 4,
     entregado: 5, cancelado: 6,
   }
   const sorted = (orders ?? []).slice().sort(
-    (a, b) => (prioridad[a.status] ?? 99) - (prioridad[b.status] ?? 99)
+    (a: any, b: any) => (prioridad[a.status] ?? 99) - (prioridad[b.status] ?? 99)
   )
 
-  const pendientes = sorted.filter(o => o.status !== 'entregado' && o.status !== 'cancelado')
-  const cerrados   = sorted.filter(o => o.status === 'entregado' || o.status === 'cancelado')
+  const pendientes = sorted.filter((o: any) => o.status !== 'entregado' && o.status !== 'cancelado')
+  const cerrados   = sorted.filter((o: any) => o.status === 'entregado' || o.status === 'cancelado')
+
+  // Agrupo pendientes por zona para optimizar ruta
+  type Group = { zonaId: string | null; nombre: string; color: string; orders: Order[] }
+  const groups = new Map<string, Group>()
+  for (const o of pendientes as any[]) {
+    const zid = o.zona_id ?? 'sin-zona'
+    if (!groups.has(zid)) {
+      groups.set(zid, {
+        zonaId: o.zona_id ?? null,
+        nombre: o.zonas_reparto?.nombre ?? 'Sin zona asignada',
+        color:  o.zonas_reparto?.color ?? '#aaa',
+        orders: [],
+      })
+    }
+    groups.get(zid)!.orders.push(o as Order)
+  }
+  // Orden de zonas: primero las con más pedidos
+  const groupsList = Array.from(groups.values()).sort((a, b) => b.orders.length - a.orders.length)
+
+  // Link de Google Maps con ruta multi-stop
+  function buildRouteLink(list: Order[]): string | null {
+    const stops = list
+      .map(o => formatAddress(o.shipping_address) || formatAddress(o.billing_address))
+      .filter(Boolean)
+    if (stops.length === 0) return null
+    // https://www.google.com/maps/dir/?api=1&destination=...&waypoints=...
+    const last = stops[stops.length - 1]
+    const waypoints = stops.slice(0, -1).join('|')
+    const params = new URLSearchParams({ api: '1', destination: last })
+    if (waypoints) params.set('waypoints', waypoints)
+    return `https://www.google.com/maps/dir/?${params}`
+  }
+
+  const totalRouteLink = buildRouteLink(pendientes as Order[])
 
   return (
     <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a' }}>
@@ -58,18 +89,48 @@ export default async function RepartidorPage() {
       </header>
 
       <main style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 640, margin: '0 auto' }}>
+        {totalRouteLink && (
+          <a href={totalRouteLink} target="_blank" rel="noreferrer"
+            style={{ padding: '14px', borderRadius: 14, background: '#726DFF', color: '#fff', fontSize: 14, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>
+            🗺 Abrir ruta completa en Google Maps ({pendientes.length} paradas)
+          </a>
+        )}
+
         {pendientes.length === 0 && cerrados.length === 0 && (
           <div style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 24, textAlign: 'center', color: '#aaa', fontSize: 14 }}>
             No tenés entregas asignadas.
           </div>
         )}
 
-        {pendientes.map(o => <DeliveryCard key={o.id} order={o} />)}
+        {groupsList.map(g => {
+          const routeLink = buildRouteLink(g.orders)
+          return (
+            <div key={g.zonaId ?? 'sin-zona'} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 12,
+              }}>
+                <span style={{ width: 12, height: 12, borderRadius: 999, background: g.color }} />
+                <span style={{ fontSize: 13, fontWeight: 700 }}>{g.nombre}</span>
+                <span style={{ fontSize: 11, color: '#888', marginLeft: 'auto' }}>
+                  {g.orders.length} pedido{g.orders.length === 1 ? '' : 's'}
+                </span>
+                {routeLink && (
+                  <a href={routeLink} target="_blank" rel="noreferrer"
+                    style={{ fontSize: 11, fontWeight: 700, color: '#726DFF', textDecoration: 'none', marginLeft: 8 }}>
+                    Ruta →
+                  </a>
+                )}
+              </div>
+              {g.orders.map(o => <DeliveryCard key={o.id} order={o} />)}
+            </div>
+          )
+        })}
 
         {cerrados.length > 0 && (
           <div style={{ marginTop: 8 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px', padding: '8px 4px' }}>CERRADOS</div>
-            {cerrados.map(o => <DeliveryCard key={o.id} order={o} compact />)}
+            {cerrados.map((o: any) => <DeliveryCard key={o.id} order={o as Order} compact />)}
           </div>
         )}
       </main>

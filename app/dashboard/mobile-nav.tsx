@@ -74,6 +74,9 @@ export default function MobileNav({ profile }: { profile: UserPedidos }) {
                   <span>⚙</span> Configuración
                 </Link>
               )}
+              <Link href="/cuenta" onClick={() => setOpen(false)} style={NAV_ITEM}>
+                <span>🔑</span> Mi cuenta
+              </Link>
             </nav>
 
             <div style={{ borderTop: '1px solid #1a1a1a', padding: '14px', display: 'flex', flexDirection: 'column', gap: 10 }}>

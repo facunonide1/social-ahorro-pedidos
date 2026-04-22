@@ -3,6 +3,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { mapStatusToWoo, updateWooOrderStatus } from '@/lib/woo/client'
 import { messageForStatus, normalizePhoneForWhatsApp } from '@/lib/whatsapp/messages'
 import { formatOrderNumber } from '@/lib/orders/format'
+import { sendStatusEmail } from '@/lib/email/resend'
 import type { OrderStatus } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -72,7 +73,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
   }
 
-  // 3) Best-effort sync a Woo (solo pedidos de origen 'woo')
+  // 3) Best-effort: email al cliente (si RESEND_API_KEY está configurada
+  //    y hay plantilla para este estado). No bloquea el flujo.
+  let emailRes: { ok: true } | { ok: false; skipped?: string; error?: string } | null = null
+  if (order) {
+    emailRes = await sendStatusEmail(order, body.status)
+  }
+
+  // 4) Best-effort sync a Woo (solo pedidos de origen 'woo')
   let woo: { ok: true; status: string } | { ok: false; error: string } | null = null
   if (order?.origin === 'woo' && order.woo_order_id) {
     const target = mapStatusToWoo(body.status)
@@ -100,5 +108,5 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
   }
 
-  return NextResponse.json({ ok: true, order, woo, whatsappMsg })
+  return NextResponse.json({ ok: true, order, woo, whatsappMsg, email: emailRes })
 }

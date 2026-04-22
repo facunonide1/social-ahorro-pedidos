@@ -15,6 +15,8 @@ export default function LoginForm() {
       : ''
   )
   const [form, setForm] = useState({ email: '', password: '' })
+  const [mfa, setMfa] = useState<null | { factorId: string; challengeId: string }>(null)
+  const [mfaCode, setMfaCode] = useState('')
 
   // Si llegamos a /login con ?error=sin_permiso pero todavía hay sesión
   // activa en supabase, la cerramos para no caer en un loop de redirect
@@ -28,12 +30,41 @@ export default function LoginForm() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true); setError('')
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error: signErr } = await supabase.auth.signInWithPassword({
       email: form.email, password: form.password,
     })
-    if (error) { setError('Email o contraseña incorrectos'); setLoading(false); return }
-    // hard navigate para garantizar que las cookies de sesión viajen
-    // en la siguiente request al server y el middleware vea al usuario
+    if (signErr) { setError('Email o contraseña incorrectos'); setLoading(false); return }
+
+    // Si el usuario tiene TOTP verificado, hay que subir a aal2 antes del
+    // redirect. Preguntamos los factores y si hay alguno verificado, lanzamos
+    // el challenge.
+    const { data: assur } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+    if (assur?.nextLevel && assur.nextLevel !== assur.currentLevel && assur.nextLevel === 'aal2') {
+      const { data: factors } = await supabase.auth.mfa.listFactors()
+      const totp = factors?.totp?.find(f => f.status === 'verified')
+      if (totp) {
+        const { data: ch, error: chErr } = await supabase.auth.mfa.challenge({ factorId: totp.id })
+        if (chErr || !ch) {
+          setError(chErr?.message || 'mfa_challenge_failed')
+          setLoading(false); return
+        }
+        setMfa({ factorId: totp.id, challengeId: ch.id })
+        setLoading(false)
+        return
+      }
+    }
+
+    window.location.assign('/')
+  }
+
+  async function handleMfa(e: React.FormEvent) {
+    e.preventDefault()
+    if (!mfa) return
+    setLoading(true); setError('')
+    const { error: vErr } = await supabase.auth.mfa.verify({
+      factorId: mfa.factorId, challengeId: mfa.challengeId, code: mfaCode.trim(),
+    })
+    if (vErr) { setError('Código incorrecto. Intentá de nuevo.'); setLoading(false); return }
     window.location.assign('/')
   }
 
@@ -59,9 +90,11 @@ export default function LoginForm() {
         borderRadius: '24px', padding: '28px 24px', border: '0.5px solid #ede9e4',
       }}>
         <h2 style={{ fontSize: 22, fontWeight: 700, color: '#2a2a2a', marginBottom: 4, letterSpacing: '-0.4px' }}>
-          Panel interno
+          {mfa ? 'Verificación 2FA' : 'Panel interno'}
         </h2>
-        <p style={{ fontSize: 13, color: '#aaa', marginBottom: 24 }}>Ingresá con tu email y contraseña</p>
+        <p style={{ fontSize: 13, color: '#aaa', marginBottom: 24 }}>
+          {mfa ? 'Ingresá el código de 6 dígitos de tu app autenticadora' : 'Ingresá con tu email y contraseña'}
+        </p>
 
         {error && (
           <div style={{ background: '#fff0f0', border: '0.5px solid #FF6D6E', borderRadius: 12, padding: '12px 14px', marginBottom: 16 }}>
@@ -69,6 +102,21 @@ export default function LoginForm() {
           </div>
         )}
 
+        {mfa ? (
+          <form onSubmit={handleMfa} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <input value={mfaCode} onChange={e => setMfaCode(e.target.value)} inputMode="numeric" maxLength={6}
+              placeholder="123456" autoFocus
+              style={{ width: '100%', padding: 14, border: '1.5px solid #f0ede8', borderRadius: 12, fontSize: 22, color: '#2a2a2a', background: '#faf8f5', outline: 'none', boxSizing: 'border-box', letterSpacing: 10, textAlign: 'center' }} />
+            <button type="submit" disabled={loading || mfaCode.trim().length < 6}
+              style={{ width: '100%', background: loading ? '#ffb3b3' : '#FF6D6E', border: 'none', borderRadius: 14, padding: 16, fontSize: 15, fontWeight: 700, color: '#fff', cursor: loading ? 'not-allowed' : 'pointer', letterSpacing: '-0.2px' }}>
+              {loading ? 'Verificando…' : 'Verificar →'}
+            </button>
+            <button type="button" onClick={() => { setMfa(null); setMfaCode(''); supabase.auth.signOut().catch(() => {}) }}
+              style={{ background: 'transparent', border: 'none', color: '#888', fontSize: 12, cursor: 'pointer' }}>
+              Cancelar y volver al login
+            </button>
+          </form>
+        ) : (
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: '#888', display: 'block', marginBottom: 6, letterSpacing: '0.3px' }}>EMAIL</label>
@@ -86,6 +134,7 @@ export default function LoginForm() {
             {loading ? 'Ingresando...' : 'Ingresar →'}
           </button>
         </form>
+        )}
       </div>
     </div>
   )

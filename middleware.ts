@@ -25,6 +25,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   const isApiSync = pathname.startsWith('/api/sync')
+  const isWooWebhook = pathname.startsWith('/api/woo-webhook')
   const isLogin = pathname === '/login'
 
   // Copia las cookies ya seteadas por supabase al redirect
@@ -37,7 +38,7 @@ export async function middleware(request: NextRequest) {
     return res
   }
 
-  if (isApiSync) return supabaseResponse
+  if (isApiSync || isWooWebhook) return supabaseResponse
   if (isLogin) {
     // Si hay user pero la URL trae ?error=..., permito mostrar login
     // (ej: el server redirigió acá por "sin_permiso" y el form se va a
