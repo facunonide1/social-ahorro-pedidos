@@ -75,6 +75,12 @@ export type WooLineItem = {
   meta_data?: Array<{ key: string; value: unknown; display_key?: string; display_value?: string }>
 }
 
+export type WooShippingLine = {
+  id: number
+  method_id?: string
+  method_title?: string
+}
+
 export type WooOrder = {
   id: number
   status: string
@@ -89,6 +95,7 @@ export type WooOrder = {
   billing: WooAddress
   shipping: WooAddress
   line_items: WooLineItem[]
+  shipping_lines?: WooShippingLine[]
 }
 
 export async function fetchOrders(params: {

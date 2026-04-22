@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { STATUS_LABELS, STATUS_ORDER, STATUS_COLORS } from '@/lib/types'
-import type { Order, OrderStatus, UserPedidos, ZonaReparto } from '@/lib/types'
+import { STATUS_LABELS, STATUS_ORDER, STATUS_COLORS, TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS } from '@/lib/types'
+import type { Order, OrderStatus, TipoEnvio, UserPedidos, ZonaReparto } from '@/lib/types'
 import { formatOrderNumber } from '@/lib/orders/format'
 import DashboardControls from './controls'
 
@@ -17,7 +17,7 @@ function startOfTodayISO() {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string; scope?: string; zona?: string }
+  searchParams: { q?: string; status?: string; scope?: string; zona?: string; tipo?: string }
 }) {
   const sb = createClient()
   const { data: { user } } = await sb.auth.getUser()
@@ -36,6 +36,9 @@ export default async function DashboardPage({
   const scope = searchParams.scope === 'all' ? 'all' : 'today'
   const statusFilter = (searchParams.status as OrderStatus | undefined) || undefined
   const zonaFilter = (searchParams.zona || '').trim() || undefined
+  const tipoFilter = (['express','programado','retiro'].includes(searchParams.tipo ?? '')
+    ? searchParams.tipo
+    : undefined) as TipoEnvio | undefined
 
   const { data: zonas } = await sb
     .from('zonas_reparto')
@@ -54,6 +57,7 @@ export default async function DashboardPage({
   if (statusFilter) query = query.eq('status', statusFilter)
   if (zonaFilter === 'sin_zona') query = query.is('zona_id', null)
   else if (zonaFilter) query = query.eq('zona_id', zonaFilter)
+  if (tipoFilter) query = query.eq('tipo_envio', tipoFilter)
   if (q) {
     const like = `%${q}%`
     const orFilters = [
@@ -98,6 +102,7 @@ export default async function DashboardPage({
           initialStatus={statusFilter}
           initialScope={scope}
           initialZona={zonaFilter}
+          initialTipo={tipoFilter}
           zonas={(zonas ?? []) as ZonaReparto[]}
           role={profile.role}
         />
@@ -127,22 +132,35 @@ export default async function DashboardPage({
 
               {list.length === 0 ? (
                 <div style={{ fontSize: 12, color: '#bbb', padding: '12px 2px' }}>—</div>
-              ) : list.map(o => (
-                <Link key={o.id} href={`/pedidos/${o.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                  <div style={{ border: '0.5px solid #f0ede8', borderRadius: 12, padding: '10px 12px', background: '#faf8f5', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700 }}>{formatOrderNumber(o)}</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#2a2a2a' }}>
-                        ${Number(o.total).toLocaleString('es-AR')}
-                      </span>
+              ) : list.map(o => {
+                const tc = TIPO_ENVIO_COLORS[o.tipo_envio]
+                return (
+                  <Link key={o.id} href={`/pedidos/${o.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <div style={{ border: '0.5px solid #f0ede8', borderRadius: 12, padding: '10px 12px', background: '#faf8f5', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700 }}>{formatOrderNumber(o)}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#2a2a2a' }}>
+                          ${Number(o.total).toLocaleString('es-AR')}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: tc.fg, background: tc.bg, border: `0.5px solid ${tc.border}`, padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                          {TIPO_ENVIO_LABELS[o.tipo_envio]}
+                        </span>
+                        {o.fuera_de_horario && (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: '#c6831a', background: '#fff7ec', border: '0.5px solid #edc989', padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                            Fuera de horario
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 13, color: '#2a2a2a' }}>{o.customer_name || '—'}</div>
+                      <div style={{ fontSize: 11, color: '#999' }}>
+                        {o.customer_phone || 's/tel'} · {o.items?.length ?? 0} item{(o.items?.length ?? 0) === 1 ? '' : 's'}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 13, color: '#2a2a2a' }}>{o.customer_name || '—'}</div>
-                    <div style={{ fontSize: 11, color: '#999' }}>
-                      {o.customer_phone || 's/tel'} · {o.items?.length ?? 0} item{(o.items?.length ?? 0) === 1 ? '' : 's'}
-                    </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                )
+              })}
             </section>
           )
         })}

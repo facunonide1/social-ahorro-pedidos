@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { STATUS_LABELS, STATUS_COLORS, STATUS_ORDER, ORIGIN_LABELS } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, STATUS_ORDER, ORIGIN_LABELS, TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS } from '@/lib/types'
 import type { Order, OrderStatus, UserPedidos, OrderStatusHistory, ZonaReparto } from '@/lib/types'
 import { formatAddress, googleMapsLink } from '@/lib/address'
 import { formatOrderNumber } from '@/lib/orders/format'
@@ -67,6 +67,19 @@ export default async function OrderDetailPage({ params }: { params: { id: string
             {ORIGIN_LABELS[order.origin]} · {order.woo_created_at ? new Date(order.woo_created_at).toLocaleString('es-AR') : new Date(order.created_at).toLocaleString('es-AR')}
           </div>
         </div>
+        {(() => {
+          const tc = TIPO_ENVIO_COLORS[order.tipo_envio]
+          return (
+            <span style={{ fontSize: 11, fontWeight: 700, color: tc.fg, background: tc.bg, border: `0.5px solid ${tc.border}`, padding: '4px 9px', borderRadius: 999, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+              {TIPO_ENVIO_LABELS[order.tipo_envio]}
+            </span>
+          )
+        })()}
+        {order.fuera_de_horario && (
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#c6831a', background: '#fff7ec', border: '0.5px solid #edc989', padding: '4px 9px', borderRadius: 999 }}>
+            Fuera de horario
+          </span>
+        )}
         <span style={{ fontSize: 12, fontWeight: 700, color: c.fg, background: c.bg, border: `0.5px solid ${c.border}`, padding: '5px 10px', borderRadius: 999 }}>
           {STATUS_LABELS[order.status]}
         </span>
