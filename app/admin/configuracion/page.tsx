@@ -2,11 +2,11 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import type { UserPedidos, ZonaReparto } from '@/lib/types'
-import NuevoPedidoForm from './form'
+import ZonasEditor from './zonas-editor'
 
 export const dynamic = 'force-dynamic'
 
-export default async function NuevoPedidoPage() {
+export default async function ConfiguracionPage() {
   const sb = createClient()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) redirect('/login')
@@ -18,14 +18,14 @@ export default async function NuevoPedidoPage() {
     .maybeSingle<UserPedidos>()
 
   if (!profile?.active) redirect('/logout?reason=sin_permiso')
-  if (profile.role === 'repartidor') redirect('/repartidor')
+  if (profile.role !== 'admin') redirect('/dashboard')
 
   const { data: zonas } = await sb
     .from('zonas_reparto')
-    .select('id, nombre, color, activa')
-    .eq('activa', true)
+    .select('*')
+    .order('activa', { ascending: false })
     .order('nombre', { ascending: true })
-    .returns<Pick<ZonaReparto, 'id'|'nombre'|'color'|'activa'>[]>()
+    .returns<ZonaReparto[]>()
 
   return (
     <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a' }}>
@@ -34,13 +34,18 @@ export default async function NuevoPedidoPage() {
           ← Volver
         </Link>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.3px' }}>Nuevo pedido manual</div>
-          <div style={{ fontSize: 12, color: '#999' }}>Para pedidos que entran por WhatsApp, teléfono u otros canales.</div>
+          <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.3px' }}>Configuración</div>
+          <div style={{ fontSize: 12, color: '#999' }}>Solo administradores. Cambios impactan a todo el equipo.</div>
         </div>
       </header>
 
-      <main style={{ padding: 20, maxWidth: 780, margin: '0 auto' }}>
-        <NuevoPedidoForm zonas={zonas ?? []} />
+      <main style={{ padding: 20, maxWidth: 900, margin: '0 auto' }}>
+        <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px', marginBottom: 10 }}>
+            ZONAS DE REPARTO
+          </div>
+          <ZonasEditor initialZonas={zonas ?? []} />
+        </section>
       </main>
     </div>
   )

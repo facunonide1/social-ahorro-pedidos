@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { STATUS_LABELS, STATUS_ORDER, STATUS_COLORS } from '@/lib/types'
-import type { Order, OrderStatus, UserRole, UserPedidos } from '@/lib/types'
+import type { Order, OrderStatus, UserRole, UserPedidos, ZonaReparto } from '@/lib/types'
 import { messageForStatus, whatsappLink } from '@/lib/whatsapp/messages'
 import { formatOrderNumber } from '@/lib/orders/format'
 
@@ -14,11 +14,12 @@ const BTN: React.CSSProperties = {
 }
 
 export default function OrderActions({
-  order, role, repartidores,
+  order, role, repartidores, zonas,
 }: {
   order: Order
   role: UserRole
   repartidores: Pick<UserPedidos,'id'|'name'|'email'|'role'|'active'>[]
+  zonas: Pick<ZonaReparto,'id'|'nombre'|'color'|'activa'>[]
 }) {
   const router = useRouter()
   const sb = createClient()
@@ -27,6 +28,8 @@ export default function OrderActions({
   const [noteDraft, setNoteDraft] = useState('')
   const [assigning, setAssigning] = useState(false)
   const [assignTo, setAssignTo] = useState<string>(order.assigned_to ?? '')
+  const [zonaSaving, setZonaSaving] = useState(false)
+  const [zonaId, setZonaId] = useState<string>(order.zona_id ?? '')
 
   const allowedStatuses: OrderStatus[] = role === 'repartidor'
     ? ['en_camino', 'entregado']
@@ -76,6 +79,17 @@ export default function OrderActions({
       .update({ assigned_to: assignTo || null })
       .eq('id', order.id)
     setAssigning(false)
+    if (error) { setErr(error.message); return }
+    router.refresh()
+  }
+
+  async function saveZona() {
+    setZonaSaving(true); setErr(null)
+    const { error } = await sb
+      .from('orders')
+      .update({ zona_id: zonaId || null })
+      .eq('id', order.id)
+    setZonaSaving(false)
     if (error) { setErr(error.message); return }
     router.refresh()
   }
@@ -139,6 +153,26 @@ export default function OrderActions({
         </a>
       ) : (
         <div style={{ fontSize: 12, color: '#aaa' }}>Sin teléfono válido para WhatsApp</div>
+      )}
+
+      {/* ZONA (solo admin/operador) */}
+      {(role === 'admin' || role === 'operador') && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.3px', marginBottom: 6 }}>ZONA DE REPARTO</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <select value={zonaId} onChange={e => setZonaId(e.target.value)}
+              style={{ flex: 1, padding: 10, border: '1.5px solid #f0ede8', borderRadius: 12, fontSize: 13, background: '#faf8f5', outline: 'none', color: '#2a2a2a' }}>
+              <option value="">— Sin zona —</option>
+              {zonas.filter(z => z.activa || z.id === order.zona_id).map(z => (
+                <option key={z.id} value={z.id}>{z.nombre}{!z.activa ? ' (inactiva)' : ''}</option>
+              ))}
+            </select>
+            <button onClick={saveZona} disabled={zonaSaving || zonaId === (order.zona_id ?? '')}
+              style={{ ...BTN, background: '#726DFF', color: '#fff', opacity: zonaSaving || zonaId === (order.zona_id ?? '') ? 0.5 : 1 }}>
+              Guardar
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ASIGNAR REPARTIDOR (solo admin/operador) */}

@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ORIGIN_LABELS } from '@/lib/types'
-import type { OrderOrigin } from '@/lib/types'
+import type { OrderOrigin, ZonaReparto } from '@/lib/types'
 import CustomerSearch from './customer-search'
 import type { CustomerSuggestion } from '@/app/api/customers/search/route'
 
@@ -37,7 +37,7 @@ function emptyItem(): ItemDraft {
 
 const MANUAL_ORIGINS: Exclude<OrderOrigin, 'woo'>[] = ['whatsapp', 'telefono', 'instagram', 'otro']
 
-export default function NuevoPedidoForm() {
+export default function NuevoPedidoForm({ zonas }: { zonas: Pick<ZonaReparto, 'id'|'nombre'|'color'|'activa'>[] }) {
   const router = useRouter()
   const sb = createClient()
   const [busy, setBusy] = useState(false)
@@ -48,6 +48,7 @@ export default function NuevoPedidoForm() {
   const [address, setAddress] = useState({
     address_1: '', address_2: '', city: '', state: '', postcode: '',
   })
+  const [zonaId, setZonaId] = useState<string>('')
   const [paymentMethod, setPaymentMethod] = useState('')
   const [notes, setNotes] = useState('')
   const [items, setItems] = useState<ItemDraft[]>([emptyItem()])
@@ -122,6 +123,7 @@ export default function NuevoPedidoForm() {
       p_customer_email: customer.email,
       p_customer_dni: customer.dni,
       p_shipping_address: shipping,
+      p_zona_id: zonaId || null,
       p_items: cleanItems,
       p_total: total,
       p_payment_method: paymentMethod,
@@ -232,6 +234,20 @@ export default function NuevoPedidoForm() {
             <input value={address.postcode} onChange={e => setAddress({ ...address, postcode: e.target.value })}
               style={INPUT} />
           </div>
+        </div>
+        <div>
+          <label style={LABEL}>Zona de reparto</label>
+          <select value={zonaId} onChange={e => setZonaId(e.target.value)} style={INPUT}>
+            <option value="">— Sin zona —</option>
+            {zonas.map(z => (
+              <option key={z.id} value={z.id}>{z.nombre}</option>
+            ))}
+          </select>
+          {zonas.length === 0 && (
+            <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>
+              Todavía no hay zonas creadas. Un admin puede crearlas en ⚙ Config.
+            </div>
+          )}
         </div>
       </section>
 

@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { STATUS_LABELS, STATUS_ORDER, STATUS_COLORS } from '@/lib/types'
-import type { Order, OrderStatus, UserPedidos } from '@/lib/types'
+import type { Order, OrderStatus, UserPedidos, ZonaReparto } from '@/lib/types'
 import { formatOrderNumber } from '@/lib/orders/format'
 import DashboardControls from './controls'
 
@@ -17,7 +17,7 @@ function startOfTodayISO() {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { q?: string; status?: string; scope?: string }
+  searchParams: { q?: string; status?: string; scope?: string; zona?: string }
 }) {
   const sb = createClient()
   const { data: { user } } = await sb.auth.getUser()
@@ -35,6 +35,13 @@ export default async function DashboardPage({
   const q = (searchParams.q || '').trim()
   const scope = searchParams.scope === 'all' ? 'all' : 'today'
   const statusFilter = (searchParams.status as OrderStatus | undefined) || undefined
+  const zonaFilter = (searchParams.zona || '').trim() || undefined
+
+  const { data: zonas } = await sb
+    .from('zonas_reparto')
+    .select('id, nombre, color, activa')
+    .order('activa', { ascending: false })
+    .order('nombre', { ascending: true })
 
   let query = sb
     .from('orders')
@@ -45,6 +52,8 @@ export default async function DashboardPage({
 
   if (scope === 'today') query = query.gte('created_at', startOfTodayISO())
   if (statusFilter) query = query.eq('status', statusFilter)
+  if (zonaFilter === 'sin_zona') query = query.is('zona_id', null)
+  else if (zonaFilter) query = query.eq('zona_id', zonaFilter)
   if (q) {
     const like = `%${q}%`
     const orFilters = [
@@ -84,7 +93,14 @@ export default async function DashboardPage({
             </div>
           </div>
         </div>
-        <DashboardControls initialQ={q} initialStatus={statusFilter} initialScope={scope} />
+        <DashboardControls
+          initialQ={q}
+          initialStatus={statusFilter}
+          initialScope={scope}
+          initialZona={zonaFilter}
+          zonas={(zonas ?? []) as ZonaReparto[]}
+          role={profile.role}
+        />
       </header>
 
       {error && (
