@@ -1,0 +1,39 @@
+name: Sync WooCommerce
+
+# Dispara POST /api/sync cada 3 minutos para que los pedidos nuevos
+# bajen de Woo sin tener que apretar el botón a mano.
+#
+# Requiere dos secrets del repo (Settings → Secrets → Actions):
+#   - APP_URL           https://social-ahorro-pedidos.vercel.app
+#   - SYNC_CRON_SECRET  el mismo que está en Vercel (en env vars)
+
+on:
+  schedule:
+    - cron: '*/3 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: sync-woo
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Call /api/sync
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          SYNC_CRON_SECRET: ${{ secrets.SYNC_CRON_SECRET }}
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$SYNC_CRON_SECRET" ]; then
+            echo "Faltan secrets APP_URL o SYNC_CRON_SECRET"
+            exit 1
+          fi
+          resp=$(curl -s -o /tmp/body.json -w "%{http_code}" \
+            -X POST \
+            -H "x-sync-secret: $SYNC_CRON_SECRET" \
+            "$APP_URL/api/sync")
+          echo "HTTP $resp"
+          cat /tmp/body.json
+          test "$resp" -ge 200 -a "$resp" -lt 300
