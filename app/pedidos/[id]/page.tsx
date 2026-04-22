@@ -2,13 +2,14 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { STATUS_LABELS, STATUS_COLORS, STATUS_ORDER, ORIGIN_LABELS, TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS } from '@/lib/types'
-import type { Order, OrderStatus, UserPedidos, OrderStatusHistory, ZonaReparto, WhatsappMessage } from '@/lib/types'
+import type { Order, OrderStatus, UserPedidos, OrderStatusHistory, ZonaReparto, WhatsappMessage, OrderIncident } from '@/lib/types'
 import { formatAddress, googleMapsLink } from '@/lib/address'
 import { formatOrderNumber } from '@/lib/orders/format'
 import { minutesBetween, formatDuration } from '@/lib/orders/timing'
 import OrderActions from './actions'
 import WooSyncBanner from './woo-sync-banner'
 import WhatsappMessagesList from './whatsapp-messages'
+import IncidentsSection from './incidents'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,6 +47,13 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     .order('created_at', { ascending: false })
     .returns<WhatsappMessage[]>()
 
+  const { data: incidents } = await sb
+    .from('order_incidents')
+    .select('*')
+    .eq('order_id', order.id)
+    .order('created_at', { ascending: false })
+    .returns<OrderIncident[]>()
+
   const { data: repartidores } = profile.role === 'admin' || profile.role === 'operador'
     ? await sb.from('users_pedidos').select('id, name, email, role, active').eq('role', 'repartidor').eq('active', true)
     : { data: [] as Pick<UserPedidos,'id'|'name'|'email'|'role'|'active'>[] }
@@ -57,6 +65,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
   const userIds = Array.from(new Set([
     ...(history ?? []).map(h => h.changed_by),
     ...(messages ?? []).map(m => m.sent_by),
+    ...(incidents ?? []).map(i => i.registrado_by),
   ].filter(Boolean))) as string[]
 
   const { data: changers } = userIds.length
@@ -91,6 +100,11 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         {order.fuera_de_horario && (
           <span style={{ fontSize: 11, fontWeight: 700, color: '#c6831a', background: '#fff7ec', border: '0.5px solid #edc989', padding: '4px 9px', borderRadius: 999 }}>
             Fuera de horario
+          </span>
+        )}
+        {(incidents ?? []).length > 0 && (
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#a33', background: '#fbeaea', border: '0.5px solid #e0a8a8', padding: '4px 9px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+            Incidencia
           </span>
         )}
         <span style={{ fontSize: 12, fontWeight: 700, color: c.fg, background: c.bg, border: `0.5px solid ${c.border}`, padding: '5px 10px', borderRadius: 999 }}>
@@ -166,6 +180,13 @@ export default async function OrderDetailPage({ params }: { params: { id: string
 
         {/* ACCIONES */}
         <OrderActions order={order} role={profile.role} repartidores={repartidores ?? []} zonas={(zonas ?? []) as ZonaReparto[]} />
+
+        {/* INCIDENCIAS */}
+        <IncidentsSection
+          orderId={order.id}
+          initialIncidents={incidents ?? []}
+          users={changers ?? []}
+        />
 
         {/* HITOS / TIEMPOS */}
         {(() => {

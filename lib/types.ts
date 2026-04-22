@@ -31,6 +31,30 @@ export type AppSettings = {
   updated_at: string
 }
 
+export type IncidentType =
+  | 'cliente_ausente'
+  | 'direccion_incorrecta'
+  | 'sin_stock'
+  | 'dano_entrega'
+  | 'otro'
+
+export type OrderIncident = {
+  id: string
+  order_id: string
+  tipo: IncidentType
+  descripcion: string | null
+  registrado_by: string | null
+  created_at: string
+}
+
+export const INCIDENT_LABELS: Record<IncidentType, string> = {
+  cliente_ausente:      'Cliente ausente',
+  direccion_incorrecta: 'Dirección incorrecta',
+  sin_stock:            'Producto sin stock',
+  dano_entrega:         'Daño en entrega',
+  otro:                 'Otro',
+}
+
 export type WhatsappMsgStatus = 'pending' | 'sent' | 'skipped'
 
 export type WhatsappMessage = {
