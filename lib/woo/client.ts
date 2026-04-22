@@ -164,3 +164,31 @@ export async function searchWooCustomers(q: string, perPage = 10): Promise<WooCu
     return []
   }
 }
+
+export type WooProduct = {
+  id: number
+  name: string
+  sku?: string
+  price: string
+  regular_price?: string
+  stock_status?: 'instock' | 'outofstock' | 'onbackorder'
+  stock_quantity?: number | null
+  type?: string
+  status?: string
+  images?: Array<{ id: number; src: string }>
+}
+
+export async function searchWooProducts(q: string, perPage = 12): Promise<WooProduct[]> {
+  const search = q.trim()
+  if (!search) return []
+  try {
+    return await wooFetch<WooProduct[]>('/products', {
+      search,
+      per_page: perPage,
+      status: 'publish',
+      orderby: 'relevance',
+    })
+  } catch {
+    return []
+  }
+}
