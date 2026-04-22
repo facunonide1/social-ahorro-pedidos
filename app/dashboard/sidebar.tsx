@@ -47,10 +47,23 @@ export default function DashboardSidebar({ profile }: { profile: UserPedidos }) 
           <div style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{profile.name || profile.email}</div>
           <div style={{ fontSize: 11, color: '#888' }}>{roleLabel}</div>
         </div>
-        <Link href="/logout"
-          style={{ ...NAV_ITEM, justifyContent: 'center', background: 'transparent', border: '1px solid #3a3a3a', padding: '8px 10px' }}>
-          Salir
-        </Link>
+        {/*
+          Form POST en vez de <Link>: Next.js prefetchea los <Link> en viewport
+          y si apuntan a /logout ejecutarían signOut() en background (el route
+          maneja tanto GET como POST). Con un form explícito el logout sólo
+          ocurre cuando el usuario aprieta el botón.
+        */}
+        <form action="/logout" method="post">
+          <button type="submit"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              width: '100%', padding: '8px 10px', borderRadius: 10, fontSize: 13,
+              fontWeight: 600, color: '#d9d6d1', background: 'transparent',
+              border: '1px solid #3a3a3a', cursor: 'pointer', fontFamily: 'inherit',
+            }}>
+            Salir
+          </button>
+        </form>
       </div>
     </aside>
   )
