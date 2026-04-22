@@ -35,6 +35,9 @@ export default function DashboardSidebar({ profile }: { profile: UserPedidos }) 
         <Link href="/pedidos/nuevo" style={NAV_ITEM}>
           <span>➕</span> Nuevo pedido
         </Link>
+        <Link href="/clientes" style={NAV_ITEM}>
+          <span>👥</span> Clientes
+        </Link>
         {profile.role === 'admin' && (
           <Link href="/admin/configuracion" style={NAV_ITEM}>
             <span>⚙</span> Configuración

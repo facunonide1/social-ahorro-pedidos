@@ -91,7 +91,15 @@ export default async function OrderDetailPage({ params }: { params: { id: string
 
         {/* CLIENTE + DIRECCION */}
         <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px', marginBottom: 8 }}>CLIENTE</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px' }}>CLIENTE</div>
+            {order.customer_id && (
+              <Link href={`/clientes/${order.customer_id}`}
+                style={{ fontSize: 12, fontWeight: 600, color: '#726DFF', textDecoration: 'none' }}>
+                Ver ficha →
+              </Link>
+            )}
+          </div>
           <div style={{ fontSize: 16, fontWeight: 600 }}>{order.customer_name || '—'}</div>
           <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
             {order.customer_phone || 'Sin teléfono'} {order.customer_email ? `· ${order.customer_email}` : ''}

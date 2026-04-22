@@ -31,6 +31,19 @@ export type AppSettings = {
   updated_at: string
 }
 
+export type Customer = {
+  id: string
+  name: string | null
+  phone: string | null
+  email: string | null
+  dni: string | null
+  address: Record<string, any> | null
+  tags: string[]
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type OrderItem = {
   product_id?: number
   name: string
@@ -61,6 +74,7 @@ export type Order = {
   notes: string | null
   assigned_to: string | null
   zona_id: string | null
+  customer_id: string | null
   woo_created_at: string | null
   woo_last_sync_status: string | null
   woo_last_sync_at: string | null
