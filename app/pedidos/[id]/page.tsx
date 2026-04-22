@@ -66,6 +66,28 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     ? await sb.from('users_pedidos').select('id, name, email, role, active').eq('role', 'repartidor').eq('active', true)
     : { data: [] as Pick<UserPedidos,'id'|'name'|'email'|'role'|'active'>[] }
 
+  // Sugerencia: el repartidor más frecuente en los últimos pedidos entregados de la zona.
+  let suggestedRepartidorId: string | null = null
+  if (order.zona_id && (profile.role === 'admin' || profile.role === 'operador')) {
+    const { data: historico } = await sb
+      .from('orders')
+      .select('assigned_to')
+      .eq('zona_id', order.zona_id)
+      .eq('status', 'entregado')
+      .not('assigned_to', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(30)
+    const counts = new Map<string, number>()
+    for (const r of historico ?? []) {
+      if (!r.assigned_to) continue
+      counts.set(r.assigned_to, (counts.get(r.assigned_to) ?? 0) + 1)
+    }
+    let max = 0
+    for (const [id, n] of counts) {
+      if (n > max) { max = n; suggestedRepartidorId = id }
+    }
+  }
+
   const { data: zonas } = profile.role === 'admin' || profile.role === 'operador'
     ? await sb.from('zonas_reparto').select('id, nombre, color, activa').order('activa', { ascending: false }).order('nombre', { ascending: true })
     : { data: [] as Pick<ZonaReparto,'id'|'nombre'|'color'|'activa'>[] }
@@ -220,7 +242,13 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         </section>
 
         {/* ACCIONES */}
-        <OrderActions order={order} role={profile.role} repartidores={repartidores ?? []} zonas={(zonas ?? []) as ZonaReparto[]} />
+        <OrderActions
+          order={order}
+          role={profile.role}
+          repartidores={repartidores ?? []}
+          zonas={(zonas ?? []) as ZonaReparto[]}
+          suggestedRepartidorId={suggestedRepartidorId}
+        />
 
         {/* INCIDENCIAS */}
         <IncidentsSection
