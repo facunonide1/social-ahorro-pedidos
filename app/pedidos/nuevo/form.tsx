@@ -6,7 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import { ORIGIN_LABELS, TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS } from '@/lib/types'
 import type { OrderOrigin, TipoEnvio, ZonaReparto } from '@/lib/types'
 import CustomerSearch from './customer-search'
+import ProductSearch from './product-search'
 import type { CustomerSuggestion } from '@/app/api/customers/search/route'
+import type { ProductSuggestion } from '@/app/api/products/search/route'
 
 type ItemDraft = { name: string; qty: string; price: string; sku: string }
 
@@ -83,6 +85,37 @@ export default function NuevoPedidoForm({ zonas }: { zonas: Pick<ZonaReparto, 'i
   function addItem() { setItems(arr => [...arr, emptyItem()]) }
   function removeItem(i: number) {
     setItems(arr => arr.length === 1 ? arr : arr.filter((_, idx) => idx !== i))
+  }
+
+  /**
+   * Agrega un item desde el catálogo de Woo. Si ya existe un item con el
+   * mismo SKU o nombre, en vez de duplicarlo le aumenta la cantidad.
+   * Si la primera fila está vacía, la usa en vez de agregar una nueva.
+   */
+  function addProductItem(p: ProductSuggestion) {
+    setItems(arr => {
+      const match = arr.findIndex(it =>
+        (p.sku && it.sku.trim() === p.sku) ||
+        (!p.sku && it.name.trim().toLowerCase() === p.name.toLowerCase())
+      )
+      if (match !== -1) {
+        return arr.map((it, idx) => idx === match
+          ? { ...it, qty: String((Number(it.qty) || 0) + 1) }
+          : it
+        )
+      }
+      const draft: ItemDraft = {
+        name: p.name,
+        qty: '1',
+        price: String(p.price || 0),
+        sku: p.sku ?? '',
+      }
+      const firstEmpty = arr.findIndex(it => !it.name.trim() && !it.sku.trim())
+      if (firstEmpty !== -1) {
+        return arr.map((it, idx) => idx === firstEmpty ? draft : it)
+      }
+      return [...arr, draft]
+    })
   }
 
   async function submit(e: React.FormEvent) {
@@ -280,9 +313,11 @@ export default function NuevoPedidoForm({ zonas }: { zonas: Pick<ZonaReparto, 'i
           <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px' }}>ITEMS</div>
           <button type="button" onClick={addItem}
             style={{ ...BTN, background: '#f0ede8', color: '#666' }}>
-            + Agregar item
+            + Agregar manual
           </button>
         </div>
+
+        <ProductSearch onPick={addProductItem} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {items.map((it, i) => (
             <div key={i} style={{ display: 'grid', gridTemplateColumns: '3fr 0.7fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
