@@ -16,17 +16,38 @@ function waLink(phone: string | null, text: string): string | null {
 }
 
 export default function WhatsappMessagesList({
-  messages, users,
+  messages, users, orderId,
 }: {
   messages: WhatsappMessage[]
   users: Pick<UserPedidos,'id'|'name'|'email'>[]
+  orderId: string
 }) {
   const router = useRouter()
   const [rows, setRows] = useState(messages)
   const [busy, setBusy] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  const [regenMsg, setRegenMsg] = useState<string | null>(null)
 
   const userMap = new Map(users.map(u => [u.id, u.name || u.email]))
+
+  async function regenerate() {
+    setBusy('regenerate'); setErr(null); setRegenMsg(null)
+    try {
+      const res = await fetch(`/api/orders/${orderId}/regenerate-messages`, { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) {
+        setErr(json?.hint || json?.error || 'error')
+        return
+      }
+      setRegenMsg(json.created > 0 ? `Se generaron ${json.created} mensajes a partir del historial.` : 'No había mensajes faltantes.')
+      router.refresh()
+    } catch (e: any) {
+      setErr(e?.message || 'error_red')
+    } finally {
+      setBusy(null)
+      setTimeout(() => setRegenMsg(null), 5000)
+    }
+  }
 
   async function patch(id: string, status: 'sent' | 'skipped' | 'pending') {
     setBusy(id); setErr(null)
@@ -58,12 +79,28 @@ export default function WhatsappMessagesList({
 
   if (rows.length === 0) {
     return (
-      <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px', marginBottom: 10 }}>
+      <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px' }}>
           MENSAJES DE WHATSAPP
         </div>
-        <div style={{ fontSize: 13, color: '#bbb' }}>
-          Todavía no se generaron mensajes. Cada cambio de estado agrega un mensaje aquí.
+        {err && (
+          <div style={{ background: '#fff0f0', border: '0.5px solid #FF6D6E', borderRadius: 10, padding: 10, fontSize: 12, color: '#FF6D6E' }}>
+            {err}
+          </div>
+        )}
+        {regenMsg && (
+          <div style={{ background: '#eaf7ef', border: '0.5px solid #8fd1a8', borderRadius: 10, padding: 10, fontSize: 12, color: '#1f8a4c' }}>
+            {regenMsg}
+          </div>
+        )}
+        <div style={{ fontSize: 13, color: '#888' }}>
+          Todavía no hay mensajes para este pedido. Cada cambio de estado agrega uno automáticamente; si el pedido ya cambió antes, podés reconstruirlos desde el historial.
+        </div>
+        <div>
+          <button onClick={regenerate} disabled={busy === 'regenerate'}
+            style={{ ...BTN, background: '#726DFF', color: '#fff' }}>
+            {busy === 'regenerate' ? 'Generando…' : 'Generar desde historial'}
+          </button>
         </div>
       </section>
     )
@@ -71,13 +108,25 @@ export default function WhatsappMessagesList({
 
   return (
     <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px' }}>
-        MENSAJES DE WHATSAPP
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px' }}>
+          MENSAJES DE WHATSAPP
+        </div>
+        <button onClick={regenerate} disabled={busy === 'regenerate'}
+          title="Reconstruye los mensajes faltantes usando el historial del pedido."
+          style={{ ...BTN, background: '#fff', color: '#726DFF', border: '1.5px solid #d9d6ff', padding: '6px 10px' }}>
+          {busy === 'regenerate' ? '…' : 'Regenerar desde historial'}
+        </button>
       </div>
 
       {err && (
         <div style={{ background: '#fff0f0', border: '0.5px solid #FF6D6E', borderRadius: 10, padding: 10, fontSize: 12, color: '#FF6D6E' }}>
           {err}
+        </div>
+      )}
+      {regenMsg && (
+        <div style={{ background: '#eaf7ef', border: '0.5px solid #8fd1a8', borderRadius: 10, padding: 10, fontSize: 12, color: '#1f8a4c' }}>
+          {regenMsg}
         </div>
       )}
 

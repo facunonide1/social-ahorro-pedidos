@@ -316,6 +316,7 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         </section>
 
         <WhatsappMessagesList
+          orderId={order.id}
           messages={messages ?? []}
           users={changers ?? []}
         />

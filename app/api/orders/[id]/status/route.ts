@@ -62,7 +62,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       .maybeSingle()
     if (msgErr) {
       console.error('[whatsapp_messages insert]', msgErr)
-      whatsappMsg = { ok: false, error: msgErr.message }
+      const msg = msgErr.message || ''
+      const friendly = msg.includes('does not exist') || (msgErr as any).code === '42P01'
+        ? 'La tabla whatsapp_messages no existe. Falta aplicar la migración 0012_whatsapp_messages.sql en Supabase.'
+        : msg
+      whatsappMsg = { ok: false, error: friendly }
     } else if (msgRow) {
       whatsappMsg = { ok: true, id: msgRow.id }
     }
