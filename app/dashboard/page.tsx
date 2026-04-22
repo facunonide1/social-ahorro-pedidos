@@ -221,6 +221,11 @@ export default async function DashboardPage({
           <LiveClock />
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <NewOrderNotifier />
+            <a href={`/api/orders/export?${new URLSearchParams(Object.entries(searchParams).filter(([,v]) => v) as [string,string][]).toString()}`}
+              title="Exportar los pedidos del filtro actual a CSV"
+              style={{ padding: '9px 13px', border: '1.5px solid #f0ede8', borderRadius: 10, background: '#fff', color: '#555', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+              ⬇ CSV
+            </a>
             <Link href="/pedidos/nuevo"
               style={{ padding: '9px 13px', border: 'none', borderRadius: 10, background: '#FF6D6E', color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
               + Nuevo pedido
