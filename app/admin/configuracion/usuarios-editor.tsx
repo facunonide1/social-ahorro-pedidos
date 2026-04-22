@@ -192,18 +192,29 @@ export default function UsuariosEditor({
                 </div>
                 <div style={{ fontSize: 12, color: '#888' }}>{u.email}</div>
               </div>
-              <select value={u.role} onChange={e => patchUser(u, { role: e.target.value as UserRole })}
+              <select value={u.role}
+                disabled={isSelf}
+                onChange={e => patchUser(u, { role: e.target.value as UserRole })}
+                title={isSelf ? 'No podés cambiar tu propio rol. Pedile a otro admin que lo haga.' : ''}
                 style={{
                   padding: '6px 10px', fontSize: 12, fontWeight: 700,
                   background: rc.bg, color: rc.fg, border: `1.5px solid ${rc.border}`,
-                  borderRadius: 999, cursor: 'pointer', outline: 'none',
+                  borderRadius: 999, outline: 'none',
+                  cursor: isSelf ? 'not-allowed' : 'pointer',
+                  opacity: isSelf ? 0.55 : 1,
                 }}>
                 <option value="admin">{ROLE_LABELS.admin}</option>
                 <option value="operador">{ROLE_LABELS.operador}</option>
                 <option value="repartidor">{ROLE_LABELS.repartidor}</option>
               </select>
               <button onClick={() => patchUser(u, { active: !u.active })}
-                style={{ ...BTN, background: '#f0ede8', color: '#666', padding: '8px 12px' }}>
+                disabled={isSelf}
+                title={isSelf ? 'No podés desactivar tu propio usuario' : ''}
+                style={{
+                  ...BTN, background: '#f0ede8', color: '#666', padding: '8px 12px',
+                  opacity: isSelf ? 0.4 : 1,
+                  cursor: isSelf ? 'not-allowed' : 'pointer',
+                }}>
                 {u.active ? 'Desactivar' : 'Activar'}
               </button>
               <button onClick={() => removeUser(u)} disabled={isSelf}
