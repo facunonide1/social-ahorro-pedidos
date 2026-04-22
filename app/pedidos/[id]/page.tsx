@@ -10,6 +10,7 @@ import OrderActions from './actions'
 import WooSyncBanner from './woo-sync-banner'
 import WhatsappMessagesList from './whatsapp-messages'
 import IncidentsSection from './incidents'
+import ItemsEditor from './items-editor'
 
 export const dynamic = 'force-dynamic'
 
@@ -219,8 +220,8 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         </section>
 
         {/* ITEMS */}
-        <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px', marginBottom: 10 }}>ITEMS ({order.items.length})</div>
+        <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px' }}>ITEMS ({order.items.length})</div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {order.items.map((it, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '10px 0', borderBottom: i < order.items.length - 1 ? '0.5px solid #f0ede8' : 'none' }}>
@@ -235,10 +236,14 @@ export default async function OrderDetailPage({ params }: { params: { id: string
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTop: '0.5px solid #f0ede8' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, borderTop: '0.5px solid #f0ede8' }}>
             <div style={{ fontSize: 12, color: '#888' }}>{order.payment_method || 'Pago no especificado'}</div>
             <div style={{ fontSize: 16, fontWeight: 700 }}>${Number(order.total).toLocaleString('es-AR')}</div>
           </div>
+
+          {(profile.role === 'admin' || profile.role === 'operador') && (
+            <ItemsEditor order={order} />
+          )}
         </section>
 
         {/* ACCIONES */}
