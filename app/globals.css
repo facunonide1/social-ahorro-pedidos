@@ -15,3 +15,63 @@ html, body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
+
+/* =====================================================================
+   Responsive helpers — media queries para viewports chicos.
+   Los styles inline de los componentes siempre ganan; por eso usamos
+   !important en los overrides.
+===================================================================== */
+
+/* Visibility helpers */
+@media (max-width: 768px) {
+  .sa-desktop-only    { display: none !important; }
+  .sa-sidebar-desktop { display: none !important; }
+}
+
+@media (min-width: 769px) {
+  .sa-mobile-only     { display: none !important; }
+  .sa-mobile-topbar   { display: none !important; }
+}
+
+/* Grids de formularios: colapsan a 1 columna en mobile */
+@media (max-width: 768px) {
+  .sa-form-grid,
+  .sa-form-grid-items {
+    grid-template-columns: 1fr !important;
+  }
+  .sa-items-row {
+    grid-template-columns: 2fr 0.5fr 1fr auto !important;
+  }
+  .sa-items-row > .sa-items-sku {
+    grid-column: 1 / -1 !important;
+  }
+
+  /* Padding global más chico en mobile */
+  .sa-pad-lg { padding: 14px !important; }
+  .sa-pad-md { padding: 12px !important; }
+
+  /* Tabla de la vista lista con scroll horizontal */
+  .sa-list-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sa-list-table-wrap table {
+    min-width: 760px;
+  }
+}
+
+/* Drawer del menú mobile: animación */
+.sa-drawer-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.5);
+  animation: sa-fade-in 0.18s ease-out;
+}
+.sa-drawer-panel {
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 101;
+  width: 240px; background: #2a2a2a; color: #fff;
+  display: flex; flex-direction: column;
+  animation: sa-slide-in 0.2s ease-out;
+  box-shadow: 4px 0 24px rgba(0,0,0,0.3);
+}
+@keyframes sa-fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes sa-slide-in { from { transform: translateX(-100%) } to { transform: translateX(0) } }

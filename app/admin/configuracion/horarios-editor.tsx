@@ -67,7 +67,7 @@ export default function HorariosEditor({ initial }: { initial: AppSettings }) {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, alignItems: 'end' }}>
+      <div className="sa-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, alignItems: 'end' }}>
         <div>
           <label style={LABEL}>Hora de apertura</label>
           <select value={open} onChange={e => setOpen(Number(e.target.value))} style={SELECT}>

@@ -104,7 +104,7 @@ export default function ItemsEditor({ order }: { order: Order }) {
       )}
 
       {items.map((it, i) => (
-        <div key={i} style={{ display: 'grid', gridTemplateColumns: '3fr 0.7fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
+        <div key={i} className="sa-items-row" style={{ display: 'grid', gridTemplateColumns: '3fr 0.7fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
           <div>
             {i === 0 && <label style={LABEL}>Producto</label>}
             <input value={it.name} onChange={e => patch(i, { name: e.target.value })} style={INPUT} />
@@ -119,7 +119,7 @@ export default function ItemsEditor({ order }: { order: Order }) {
             <input type="number" min="0" step="0.01" value={it.price}
               onChange={e => patch(i, { price: e.target.value })} style={INPUT} />
           </div>
-          <div>
+          <div className="sa-items-sku">
             {i === 0 && <label style={LABEL}>SKU</label>}
             <input value={it.sku} onChange={e => patch(i, { sku: e.target.value })} style={INPUT} />
           </div>
