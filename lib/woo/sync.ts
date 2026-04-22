@@ -108,17 +108,44 @@ export async function syncFromWoo(opts: {
       const wooCreated = o.date_created_gmt
         ? new Date(`${o.date_created_gmt}Z`).toISOString()
         : null
+      const name  = pickCustomerName(o) || null
+      const phone = pickCustomerPhone(o)
+      const email = pickCustomerEmail(o)?.toLowerCase() ?? null
+      const shipping = o.shipping ?? null
+      const billing  = o.billing  ?? null
+
+      // Match/crea customer
+      let customerId: string | null = null
+      if (phone) {
+        const { data } = await admin.from('customers').select('id').eq('phone', phone).limit(1).maybeSingle()
+        if (data) customerId = data.id
+      }
+      if (!customerId && email) {
+        const { data } = await admin.from('customers').select('id').eq('email', email).limit(1).maybeSingle()
+        if (data) customerId = data.id
+      }
+      if (!customerId) {
+        const { data: created } = await admin
+          .from('customers')
+          .insert({ name, phone, email, address: shipping || billing })
+          .select('id').maybeSingle()
+        customerId = created?.id ?? null
+      }
+      // Si el customer ya existe no sobreescribo sus datos (pueden haberlos
+      // editado a mano). Los operadores pueden actualizar desde /clientes.
+
       const row = {
         woo_order_id: o.id,
         origin: 'woo' as const,
         tipo_envio: pickTipoEnvio(o),
         fuera_de_horario: isFueraDeHorario(wooCreated, horaApertura, horaCierre),
         status: 'nuevo' as const,
-        customer_name:  pickCustomerName(o) || null,
-        customer_phone: pickCustomerPhone(o),
-        customer_email: pickCustomerEmail(o),
-        shipping_address: o.shipping ?? null,
-        billing_address:  o.billing  ?? null,
+        customer_id:     customerId,
+        customer_name:   name,
+        customer_phone:  phone,
+        customer_email:  email,
+        shipping_address: shipping,
+        billing_address:  billing,
         total: Number(o.total) || 0,
         payment_method: o.payment_method_title || o.payment_method || null,
         items: mapItems(o.line_items ?? []),
