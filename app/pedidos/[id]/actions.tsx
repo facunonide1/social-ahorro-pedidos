@@ -14,12 +14,13 @@ const BTN: React.CSSProperties = {
 }
 
 export default function OrderActions({
-  order, role, repartidores, zonas,
+  order, role, repartidores, zonas, suggestedRepartidorId,
 }: {
   order: Order
   role: UserRole
   repartidores: Pick<UserPedidos,'id'|'name'|'email'|'role'|'active'>[]
   zonas: Pick<ZonaReparto,'id'|'nombre'|'color'|'activa'>[]
+  suggestedRepartidorId?: string | null
 }) {
   const router = useRouter()
   const sb = createClient()
@@ -229,15 +230,34 @@ export default function OrderActions({
       )}
 
       {/* ASIGNAR REPARTIDOR (solo admin/operador) */}
-      {(role === 'admin' || role === 'operador') && (
+      {(role === 'admin' || role === 'operador') && (() => {
+        const suggested = suggestedRepartidorId
+          ? repartidores.find(r => r.id === suggestedRepartidorId)
+          : null
+        const showSuggestion = !!suggested && suggested.id !== (order.assigned_to ?? '')
+        return (
         <div>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.3px', marginBottom: 6 }}>REPARTIDOR</div>
+          {showSuggestion && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, padding: '6px 10px', background: '#eeedff', border: '0.5px solid #d9d6ff', borderRadius: 10 }}>
+              <span style={{ fontSize: 11, color: '#726DFF', fontWeight: 700, letterSpacing: '0.3px', textTransform: 'uppercase' }}>Sugerido</span>
+              <span style={{ fontSize: 12, color: '#2a2a2a', flex: 1 }}>
+                {suggested!.name || suggested!.email} (hizo más entregas en esta zona)
+              </span>
+              <button type="button" onClick={() => setAssignTo(suggested!.id)}
+                style={{ ...BTN, background: '#726DFF', color: '#fff', padding: '6px 10px', fontSize: 12 }}>
+                Usar
+              </button>
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 8 }}>
             <select value={assignTo} onChange={e => setAssignTo(e.target.value)}
               style={{ flex: 1, padding: 10, border: '1.5px solid #f0ede8', borderRadius: 12, fontSize: 13, background: '#faf8f5', outline: 'none', color: '#2a2a2a' }}>
               <option value="">— Sin asignar —</option>
               {repartidores.map(r => (
-                <option key={r.id} value={r.id}>{r.name || r.email}</option>
+                <option key={r.id} value={r.id}>
+                  {r.name || r.email}{r.id === suggestedRepartidorId ? ' ★' : ''}
+                </option>
               ))}
             </select>
             <button onClick={assign} disabled={assigning || assignTo === (order.assigned_to ?? '')}
@@ -246,7 +266,8 @@ export default function OrderActions({
             </button>
           </div>
         </div>
-      )}
+        )
+      })()}
     </section>
   )
 }
