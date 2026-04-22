@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ORIGIN_LABELS, TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS } from '@/lib/types'
-import type { OrderOrigin, TipoEnvio, ZonaReparto } from '@/lib/types'
+import type { Order, OrderOrigin, TipoEnvio, ZonaReparto } from '@/lib/types'
 import CustomerSearch from './customer-search'
 import ProductSearch from './product-search'
 import type { CustomerSuggestion } from '@/app/api/customers/search/route'
@@ -39,22 +39,47 @@ function emptyItem(): ItemDraft {
 
 const MANUAL_ORIGINS: Exclude<OrderOrigin, 'woo'>[] = ['whatsapp', 'telefono', 'instagram', 'otro']
 
-export default function NuevoPedidoForm({ zonas }: { zonas: Pick<ZonaReparto, 'id'|'nombre'|'color'|'activa'>[] }) {
+export default function NuevoPedidoForm({
+  zonas, source,
+}: {
+  zonas: Pick<ZonaReparto, 'id'|'nombre'|'color'|'activa'>[]
+  source?: Order | null
+}) {
   const router = useRouter()
   const sb = createClient()
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
-  const [origin, setOrigin] = useState<Exclude<OrderOrigin, 'woo'>>('whatsapp')
-  const [tipoEnvio, setTipoEnvio] = useState<TipoEnvio>('programado')
-  const [customer, setCustomer] = useState({ name: '', phone: '', email: '', dni: '' })
-  const [address, setAddress] = useState({
-    address_1: '', address_2: '', city: '', state: '', postcode: '',
+  // Datos derivados del pedido origen, si estamos "repitiendo"
+  const srcOriginManual: Exclude<OrderOrigin, 'woo'> =
+    (source && source.origin !== 'woo') ? source.origin : 'whatsapp'
+  const srcAddr = (source?.shipping_address ?? source?.billing_address ?? {}) as any
+  const srcItems: ItemDraft[] = (source?.items ?? []).map(it => ({
+    name: it.name ?? '',
+    qty:  String(it.qty ?? 1),
+    price: String(it.price ?? 0),
+    sku: it.sku ?? '',
+  }))
+
+  const [origin, setOrigin] = useState<Exclude<OrderOrigin, 'woo'>>(srcOriginManual)
+  const [tipoEnvio, setTipoEnvio] = useState<TipoEnvio>(source?.tipo_envio ?? 'programado')
+  const [customer, setCustomer] = useState({
+    name:  source?.customer_name  ?? '',
+    phone: source?.customer_phone ?? '',
+    email: source?.customer_email ?? '',
+    dni:   source?.customer_dni   ?? '',
   })
-  const [zonaId, setZonaId] = useState<string>('')
-  const [paymentMethod, setPaymentMethod] = useState('')
-  const [notes, setNotes] = useState('')
-  const [items, setItems] = useState<ItemDraft[]>([emptyItem()])
+  const [address, setAddress] = useState({
+    address_1: srcAddr.address_1 ?? '',
+    address_2: srcAddr.address_2 ?? '',
+    city:      srcAddr.city      ?? '',
+    state:     srcAddr.state     ?? '',
+    postcode:  srcAddr.postcode  ?? '',
+  })
+  const [zonaId, setZonaId] = useState<string>(source?.zona_id ?? '')
+  const [paymentMethod, setPaymentMethod] = useState(source?.payment_method ?? '')
+  const [notes, setNotes] = useState(source?.notes ?? '')
+  const [items, setItems] = useState<ItemDraft[]>(srcItems.length > 0 ? srcItems : [emptyItem()])
 
   const total = useMemo(() => items.reduce((acc, it) => {
     const q = Number(it.qty) || 0
