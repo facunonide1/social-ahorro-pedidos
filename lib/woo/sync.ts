@@ -1,6 +1,35 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { fetchOrders, type WooOrder, type WooLineItem } from './client'
-import type { OrderItem } from '@/lib/types'
+import type { OrderItem, TipoEnvio } from '@/lib/types'
+
+/**
+ * Deduce el tipo de envío a partir del shipping_method de Woo.
+ * Si el method_title o method_id contiene "express" → express.
+ * Si contiene "retiro" / "pickup" / "local pickup" → retiro.
+ * Default: programado.
+ */
+function pickTipoEnvio(o: WooOrder): TipoEnvio {
+  const raw = ((o.shipping_lines ?? [])
+    .map(l => `${l.method_id ?? ''} ${l.method_title ?? ''}`)
+    .join(' ') || '').toLowerCase()
+  if (raw.includes('express')) return 'express'
+  if (raw.includes('pickup') || raw.includes('retiro') || raw.includes('local_pickup')) return 'retiro'
+  return 'programado'
+}
+
+/**
+ * Fuera de horario: pedido creado antes de las 08 o a partir de las 20,
+ * en hora local Buenos Aires.
+ */
+function isFueraDeHorario(iso: string | null | undefined): boolean {
+  if (!iso) return false
+  const d = new Date(iso)
+  const hour = Number(d.toLocaleString('en-US', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    hour: '2-digit', hour12: false,
+  }))
+  return hour < 8 || hour >= 20
+}
 
 function mapItems(items: WooLineItem[]): OrderItem[] {
   return items.map(it => ({
@@ -67,9 +96,14 @@ export async function syncFromWoo(opts: {
     result.skipped += orders.length - toInsert.length
 
     for (const o of toInsert) {
+      const wooCreated = o.date_created_gmt
+        ? new Date(`${o.date_created_gmt}Z`).toISOString()
+        : null
       const row = {
         woo_order_id: o.id,
         origin: 'woo' as const,
+        tipo_envio: pickTipoEnvio(o),
+        fuera_de_horario: isFueraDeHorario(wooCreated),
         status: 'nuevo' as const,
         customer_name:  pickCustomerName(o) || null,
         customer_phone: pickCustomerPhone(o),
@@ -80,9 +114,7 @@ export async function syncFromWoo(opts: {
         payment_method: o.payment_method_title || o.payment_method || null,
         items: mapItems(o.line_items ?? []),
         notes: o.customer_note || null,
-        woo_created_at: o.date_created_gmt
-          ? new Date(`${o.date_created_gmt}Z`).toISOString()
-          : null,
+        woo_created_at: wooCreated,
       }
       const { error } = await admin.from('orders').insert(row)
       if (error) {

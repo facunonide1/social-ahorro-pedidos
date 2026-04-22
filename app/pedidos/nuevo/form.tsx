@@ -3,8 +3,8 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ORIGIN_LABELS } from '@/lib/types'
-import type { OrderOrigin, ZonaReparto } from '@/lib/types'
+import { ORIGIN_LABELS, TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS } from '@/lib/types'
+import type { OrderOrigin, TipoEnvio, ZonaReparto } from '@/lib/types'
 import CustomerSearch from './customer-search'
 import type { CustomerSuggestion } from '@/app/api/customers/search/route'
 
@@ -44,6 +44,7 @@ export default function NuevoPedidoForm({ zonas }: { zonas: Pick<ZonaReparto, 'i
   const [err, setErr] = useState<string | null>(null)
 
   const [origin, setOrigin] = useState<Exclude<OrderOrigin, 'woo'>>('whatsapp')
+  const [tipoEnvio, setTipoEnvio] = useState<TipoEnvio>('programado')
   const [customer, setCustomer] = useState({ name: '', phone: '', email: '', dni: '' })
   const [address, setAddress] = useState({
     address_1: '', address_2: '', city: '', state: '', postcode: '',
@@ -118,6 +119,7 @@ export default function NuevoPedidoForm({ zonas }: { zonas: Pick<ZonaReparto, 'i
 
     const { data, error } = await sb.rpc('create_manual_order', {
       p_origin: origin,
+      p_tipo_envio: tipoEnvio,
       p_customer_name: customer.name,
       p_customer_phone: customer.phone,
       p_customer_email: customer.email,
@@ -173,6 +175,27 @@ export default function NuevoPedidoForm({ zonas }: { zonas: Pick<ZonaReparto, 'i
           </div>
           <div style={{ fontSize: 11, color: '#aaa', marginTop: 6 }}>
             El número del pedido se genera automáticamente según el canal (WSP-001, TEL-001, etc.).
+          </div>
+        </div>
+
+        <div>
+          <label style={LABEL}>Tipo de envío</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {(['express','programado','retiro'] as TipoEnvio[]).map(t => {
+              const selected = tipoEnvio === t
+              const c = TIPO_ENVIO_COLORS[t]
+              return (
+                <button key={t} type="button" onClick={() => setTipoEnvio(t)}
+                  style={{
+                    ...BTN,
+                    background: selected ? c.fg : '#fff',
+                    color: selected ? '#fff' : c.fg,
+                    border: selected ? 'none' : `1.5px solid ${c.border}`,
+                  }}>
+                  {TIPO_ENVIO_LABELS[t]}
+                </button>
+              )
+            })}
           </div>
         </div>
       </section>

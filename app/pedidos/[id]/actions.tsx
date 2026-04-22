@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { STATUS_LABELS, STATUS_ORDER, STATUS_COLORS } from '@/lib/types'
-import type { Order, OrderStatus, UserRole, UserPedidos, ZonaReparto } from '@/lib/types'
+import { STATUS_LABELS, STATUS_ORDER, STATUS_COLORS, TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS, TIPO_ENVIO_FLOW } from '@/lib/types'
+import type { Order, OrderStatus, TipoEnvio, UserRole, UserPedidos, ZonaReparto } from '@/lib/types'
 import { messageForStatus, whatsappLink } from '@/lib/whatsapp/messages'
 import { formatOrderNumber } from '@/lib/orders/format'
 
@@ -30,10 +30,14 @@ export default function OrderActions({
   const [assignTo, setAssignTo] = useState<string>(order.assigned_to ?? '')
   const [zonaSaving, setZonaSaving] = useState(false)
   const [zonaId, setZonaId] = useState<string>(order.zona_id ?? '')
+  const [tipoSaving, setTipoSaving] = useState(false)
+  const [tipoEnvio, setTipoEnvio] = useState<TipoEnvio>(order.tipo_envio)
 
+  // Filtramos los estados permitidos según el flujo del tipo de envío.
+  const flow = TIPO_ENVIO_FLOW[order.tipo_envio]
   const allowedStatuses: OrderStatus[] = role === 'repartidor'
-    ? ['en_camino', 'entregado']
-    : STATUS_ORDER.filter(s => s !== order.status)
+    ? (['en_camino', 'entregado'] as OrderStatus[]).filter(s => flow.includes(s))
+    : flow.filter(s => s !== order.status)
 
   async function changeStatus(next: OrderStatus) {
     setBusy(true); setErr(null)
@@ -90,6 +94,17 @@ export default function OrderActions({
       .update({ zona_id: zonaId || null })
       .eq('id', order.id)
     setZonaSaving(false)
+    if (error) { setErr(error.message); return }
+    router.refresh()
+  }
+
+  async function saveTipo() {
+    setTipoSaving(true); setErr(null)
+    const { error } = await sb
+      .from('orders')
+      .update({ tipo_envio: tipoEnvio })
+      .eq('id', order.id)
+    setTipoSaving(false)
     if (error) { setErr(error.message); return }
     router.refresh()
   }
@@ -153,6 +168,37 @@ export default function OrderActions({
         </a>
       ) : (
         <div style={{ fontSize: 12, color: '#aaa' }}>Sin teléfono válido para WhatsApp</div>
+      )}
+
+      {/* TIPO DE ENVÍO (solo admin/operador) */}
+      {(role === 'admin' || role === 'operador') && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.3px', marginBottom: 6 }}>TIPO DE ENVÍO</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {(['express','programado','retiro'] as TipoEnvio[]).map(t => {
+              const selected = tipoEnvio === t
+              const c = TIPO_ENVIO_COLORS[t]
+              return (
+                <button key={t} type="button" onClick={() => setTipoEnvio(t)}
+                  style={{
+                    ...BTN,
+                    background: selected ? c.fg : '#fff',
+                    color: selected ? '#fff' : c.fg,
+                    border: selected ? 'none' : `1.5px solid ${c.border}`,
+                  }}>
+                  {TIPO_ENVIO_LABELS[t]}
+                </button>
+              )
+            })}
+            <button onClick={saveTipo} disabled={tipoSaving || tipoEnvio === order.tipo_envio}
+              style={{ ...BTN, background: '#726DFF', color: '#fff', opacity: tipoSaving || tipoEnvio === order.tipo_envio ? 0.5 : 1 }}>
+              Guardar tipo
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: '#aaa', marginTop: 6 }}>
+            El tipo determina qué estados se pueden elegir abajo (retiro no pasa por "en_camino", express no pasa por "listo").
+          </div>
+        </div>
       )}
 
       {/* ZONA (solo admin/operador) */}

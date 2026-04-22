@@ -3,17 +3,18 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { STATUS_LABELS, STATUS_ORDER } from '@/lib/types'
-import type { OrderStatus, ZonaReparto, UserRole } from '@/lib/types'
+import { STATUS_LABELS, STATUS_ORDER, TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS } from '@/lib/types'
+import type { OrderStatus, TipoEnvio, ZonaReparto, UserRole } from '@/lib/types'
 
 export default function DashboardControls({
-  initialQ, initialStatus, initialScope, initialZona,
+  initialQ, initialStatus, initialScope, initialZona, initialTipo,
   zonas, role,
 }: {
   initialQ: string
   initialStatus: OrderStatus | undefined
   initialScope: 'today' | 'all'
   initialZona: string | undefined
+  initialTipo: TipoEnvio | undefined
   zonas: Pick<ZonaReparto,'id'|'nombre'|'color'|'activa'>[]
   role: UserRole
 }) {
@@ -22,22 +23,27 @@ export default function DashboardControls({
   const [status, setStatus] = useState<string>(initialStatus ?? '')
   const [scope, setScope] = useState<'today' | 'all'>(initialScope)
   const [zona, setZona] = useState<string>(initialZona ?? '')
+  const [tipo, setTipo] = useState<string>(initialTipo ?? '')
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState<string | null>(null)
   const [, startTransition] = useTransition()
 
-  function apply(next: Partial<{ q: string; status: string; scope: 'today'|'all'; zona: string }>) {
+  function apply(next: Partial<{ q: string; status: string; scope: 'today'|'all'; zona: string; tipo: string }>) {
     const params = new URLSearchParams()
     const nq = next.q !== undefined ? next.q : q
     const ns = next.status !== undefined ? next.status : status
     const nsc = next.scope ?? scope
     const nz = next.zona !== undefined ? next.zona : zona
+    const nt = next.tipo !== undefined ? next.tipo : tipo
     if (nq) params.set('q', nq)
     if (ns) params.set('status', ns)
     if (nsc && nsc !== 'today') params.set('scope', nsc)
     if (nz) params.set('zona', nz)
+    if (nt) params.set('tipo', nt)
     startTransition(() => router.push(`/dashboard${params.toString() ? '?' + params.toString() : ''}`))
   }
+
+  function selectTipo(t: string) { setTipo(t); apply({ tipo: t }) }
 
   async function runSync() {
     setSyncing(true); setSyncMsg(null)
@@ -65,8 +71,41 @@ export default function DashboardControls({
     fontSize: 13, background: '#faf8f5', outline: 'none', color: '#2a2a2a',
   }
 
+  const TIPO_TAB: React.CSSProperties = {
+    padding: '8px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700,
+    cursor: 'pointer', border: '1.5px solid transparent', letterSpacing: '-0.2px',
+  }
+
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      {/* TABS DE TIPO DE ENVÍO */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', width: '100%', marginBottom: 4 }}>
+        <button onClick={() => selectTipo('')}
+          style={{
+            ...TIPO_TAB,
+            background: tipo === '' ? '#2a2a2a' : '#fff',
+            color:      tipo === '' ? '#fff'    : '#666',
+            border:     tipo === '' ? '1.5px solid #2a2a2a' : '1.5px solid #f0ede8',
+          }}>
+          Todos
+        </button>
+        {(['express','programado','retiro'] as const).map(t => {
+          const c = TIPO_ENVIO_COLORS[t]
+          const active = tipo === t
+          return (
+            <button key={t} onClick={() => selectTipo(t)}
+              style={{
+                ...TIPO_TAB,
+                background: active ? c.fg : c.bg,
+                color:      active ? '#fff' : c.fg,
+                border:     `1.5px solid ${c.border}`,
+              }}>
+              {TIPO_ENVIO_LABELS[t]}
+            </button>
+          )
+        })}
+      </div>
+
       <form onSubmit={e => { e.preventDefault(); apply({ q }) }}>
         <input value={q} onChange={e => setQ(e.target.value)}
           placeholder="Buscar nombre, DNI, tel, #pedido..."

@@ -9,6 +9,8 @@ export type OrderStatus =
 
 export type OrderOrigin = 'woo' | 'whatsapp' | 'telefono' | 'instagram' | 'otro'
 
+export type TipoEnvio = 'express' | 'programado' | 'retiro'
+
 export type UserRole = 'admin' | 'operador' | 'repartidor'
 
 export type ZonaReparto = {
@@ -36,6 +38,8 @@ export type Order = {
   woo_order_id: number | null
   manual_order_number: number | null
   origin: OrderOrigin
+  tipo_envio: TipoEnvio
+  fuera_de_horario: boolean
   status: OrderStatus
   customer_name: string | null
   customer_phone: string | null
@@ -70,6 +74,28 @@ export const MANUAL_ORIGIN_PREFIX: Record<Exclude<OrderOrigin, 'woo'>, string> =
   telefono: 'TEL',
   instagram: 'IG',
   otro: 'M',
+}
+
+export const TIPO_ENVIO_LABELS: Record<TipoEnvio, string> = {
+  express: 'Express',
+  programado: 'Programado',
+  retiro: 'Retiro en tienda',
+}
+
+export const TIPO_ENVIO_COLORS: Record<TipoEnvio, { bg: string; fg: string; border: string }> = {
+  express:    { bg: '#fff0f0', fg: '#FF6D6E', border: '#FF6D6E' },
+  programado: { bg: '#eeedff', fg: '#726DFF', border: '#726DFF' },
+  retiro:     { bg: '#eaf7ef', fg: '#1f8a4c', border: '#6FEF6C' },
+}
+
+/**
+ * Flujo de estados permitidos por tipo de envío.
+ * La UI solo muestra botones para las transiciones válidas según el tipo.
+ */
+export const TIPO_ENVIO_FLOW: Record<TipoEnvio, OrderStatus[]> = {
+  express:    ['nuevo', 'confirmado', 'en_preparacion', 'en_camino', 'entregado', 'cancelado'],
+  programado: ['nuevo', 'confirmado', 'en_preparacion', 'listo', 'en_camino', 'entregado', 'cancelado'],
+  retiro:     ['nuevo', 'confirmado', 'en_preparacion', 'listo', 'entregado', 'cancelado'],
 }
 
 export type OrderStatusHistory = {
