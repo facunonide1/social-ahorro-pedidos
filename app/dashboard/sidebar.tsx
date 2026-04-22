@@ -43,6 +43,9 @@ export default function DashboardSidebar({ profile }: { profile: UserPedidos }) 
             <span>⚙</span> Configuración
           </Link>
         )}
+        <Link href="/cuenta" style={NAV_ITEM}>
+          <span>🔑</span> Mi cuenta
+        </Link>
       </nav>
 
       <div style={{ borderTop: '0.5px solid #1a1a1a', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
