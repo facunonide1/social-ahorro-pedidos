@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import type { UserPedidos, ZonaReparto } from '@/lib/types'
+import type { UserPedidos, ZonaReparto, AppSettings } from '@/lib/types'
 import ZonasEditor from './zonas-editor'
 import UsuariosEditor from './usuarios-editor'
+import HorariosEditor from './horarios-editor'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,7 +22,7 @@ export default async function ConfiguracionPage() {
   if (!profile?.active) redirect('/logout?reason=sin_permiso')
   if (profile.role !== 'admin') redirect('/dashboard')
 
-  const [zonasRes, usersRes] = await Promise.all([
+  const [zonasRes, usersRes, settingsRes] = await Promise.all([
     sb.from('zonas_reparto')
       .select('*')
       .order('activa', { ascending: false })
@@ -32,7 +33,15 @@ export default async function ConfiguracionPage() {
       .order('active', { ascending: false })
       .order('name', { ascending: true })
       .returns<UserPedidos[]>(),
+    sb.from('app_settings')
+      .select('*')
+      .eq('id', 1)
+      .maybeSingle<AppSettings>(),
   ])
+
+  const settings: AppSettings = settingsRes.data ?? {
+    id: 1, hora_apertura: 8, hora_cierre: 20, updated_at: new Date().toISOString(),
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a' }}>
@@ -47,6 +56,13 @@ export default async function ConfiguracionPage() {
       </header>
 
       <main style={{ padding: 20, maxWidth: 900, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px', marginBottom: 10 }}>
+            HORARIO DE ATENCIÓN
+          </div>
+          <HorariosEditor initial={settings} />
+        </section>
+
         <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px', marginBottom: 10 }}>
             ZONAS DE REPARTO

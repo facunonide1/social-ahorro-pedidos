@@ -18,17 +18,17 @@ function pickTipoEnvio(o: WooOrder): TipoEnvio {
 }
 
 /**
- * Fuera de horario: pedido creado antes de las 08 o a partir de las 20,
- * en hora local Buenos Aires.
+ * Fuera de horario: pedido creado antes de hora_apertura o a partir
+ * de hora_cierre, en hora local Buenos Aires.
  */
-function isFueraDeHorario(iso: string | null | undefined): boolean {
+function isFueraDeHorario(iso: string | null | undefined, open: number, close: number): boolean {
   if (!iso) return false
   const d = new Date(iso)
   const hour = Number(d.toLocaleString('en-US', {
     timeZone: 'America/Argentina/Buenos_Aires',
     hour: '2-digit', hour12: false,
   }))
-  return hour < 8 || hour >= 20
+  return hour < open || hour >= close
 }
 
 function mapItems(items: WooLineItem[]): OrderItem[] {
@@ -80,6 +80,15 @@ export async function syncFromWoo(opts: {
   const pages   = opts.pages   ?? 2
   const result: SyncResult = { fetched: 0, inserted: 0, skipped: 0, errors: [] }
 
+  // Cargamos los horarios configurados una sola vez por corrida.
+  const { data: settings } = await admin
+    .from('app_settings')
+    .select('hora_apertura, hora_cierre')
+    .eq('id', 1)
+    .maybeSingle()
+  const horaApertura = settings?.hora_apertura ?? 8
+  const horaCierre   = settings?.hora_cierre   ?? 20
+
   for (let page = 1; page <= pages; page++) {
     const orders = await fetchOrders({ perPage, page, after: opts.after })
     if (orders.length === 0) break
@@ -103,7 +112,7 @@ export async function syncFromWoo(opts: {
         woo_order_id: o.id,
         origin: 'woo' as const,
         tipo_envio: pickTipoEnvio(o),
-        fuera_de_horario: isFueraDeHorario(wooCreated),
+        fuera_de_horario: isFueraDeHorario(wooCreated, horaApertura, horaCierre),
         status: 'nuevo' as const,
         customer_name:  pickCustomerName(o) || null,
         customer_phone: pickCustomerPhone(o),

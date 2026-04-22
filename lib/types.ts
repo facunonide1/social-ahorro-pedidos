@@ -24,6 +24,13 @@ export type ZonaReparto = {
   updated_at: string
 }
 
+export type AppSettings = {
+  id: 1
+  hora_apertura: number
+  hora_cierre: number
+  updated_at: string
+}
+
 export type OrderItem = {
   product_id?: number
   name: string
