@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { STATUS_LABELS, STATUS_ORDER, STATUS_COLORS, TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS } from '@/lib/types'
+import { STATUS_LABELS, STATUS_ORDER, STATUS_COLORS, TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS, ORIGIN_LABELS } from '@/lib/types'
 import type { Order, OrderStatus, TipoEnvio, UserPedidos, ZonaReparto } from '@/lib/types'
 import { formatOrderNumber } from '@/lib/orders/format'
 import DashboardControls from './controls'
@@ -61,6 +61,7 @@ export default async function DashboardPage({
   if (q) {
     const like = `%${q}%`
     const orFilters = [
+      `codigo.ilike.${like}`,
       `customer_name.ilike.${like}`,
       `customer_phone.ilike.${like}`,
       `customer_email.ilike.${like}`,
@@ -146,6 +147,9 @@ export default async function DashboardPage({
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 10, fontWeight: 700, color: tc.fg, background: tc.bg, border: `0.5px solid ${tc.border}`, padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
                           {TIPO_ENVIO_LABELS[o.tipo_envio]}
+                        </span>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#888', background: '#faf8f5', border: '0.5px solid #ede9e4', padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                          {ORIGIN_LABELS[o.origin]}
                         </span>
                         {o.fuera_de_horario && (
                           <span style={{ fontSize: 10, fontWeight: 700, color: '#c6831a', background: '#fff7ec', border: '0.5px solid #edc989', padding: '2px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>

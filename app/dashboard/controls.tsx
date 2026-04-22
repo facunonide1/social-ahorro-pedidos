@@ -108,8 +108,8 @@ export default function DashboardControls({
 
       <form onSubmit={e => { e.preventDefault(); apply({ q }) }}>
         <input value={q} onChange={e => setQ(e.target.value)}
-          placeholder="Buscar nombre, DNI, tel, #pedido..."
-          style={{ ...input, minWidth: 220 }} />
+          placeholder="Buscar SA-2026-XXXX, nombre, DNI, tel…"
+          style={{ ...input, minWidth: 240 }} />
       </form>
 
       <select value={status} onChange={e => { setStatus(e.target.value); apply({ status: e.target.value }) }} style={input}>
