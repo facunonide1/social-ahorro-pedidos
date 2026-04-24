@@ -4,10 +4,22 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const SUPA_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  // En Preview deploys de Vercel las env vars pueden no estar
+  // configuradas. Antes de hardenear esto, el middleware crasheaba con
+  // MIDDLEWARE_INVOCATION_FAILED (500) y no se podía ver nada. Ahora
+  // dejamos pasar la request: las páginas igual van a fallar al
+  // levantar el cliente, pero al menos se renderiza un error legible.
+  if (!SUPA_URL || !SUPA_KEY) {
+    console.error('[middleware] Faltan NEXT_PUBLIC_SUPABASE_URL / ANON_KEY. Configurar env vars en Vercel.')
+    return supabaseResponse
+  }
+
+  let user: { id: string } | null = null
+  try {
+    const supabase = createServerClient(SUPA_URL, SUPA_KEY, {
       cookies: {
         getAll() { return request.cookies.getAll() },
         setAll(cookiesToSet) {
@@ -18,10 +30,14 @@ export async function middleware(request: NextRequest) {
           )
         },
       },
-    }
-  )
+    })
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch (err) {
+    console.error('[middleware] supabase.auth.getUser falló:', err)
+    return supabaseResponse
+  }
 
-  const { data: { user } } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
 
   const isApiSync = pathname.startsWith('/api/sync')
