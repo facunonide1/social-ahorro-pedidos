@@ -14,11 +14,11 @@ type NavItem = {
 const NAV: NavItem[] = [
   { href: '/hub',              label: 'Inicio',       icon: '🏠' },
   { href: '/hub/proveedores',  label: 'Proveedores',  icon: '🏭', roles: ['super_admin','gerente','comprador','administrativo','auditor'] },
-  { href: '/hub/facturas',     label: 'Facturas',     icon: '📄', roles: ['super_admin','gerente','administrativo','tesoreria','auditor'], comingSoon: true },
-  { href: '/hub/pagos',        label: 'Pagos',        icon: '💸', roles: ['super_admin','gerente','tesoreria','auditor'], comingSoon: true },
-  { href: '/hub/recepciones',  label: 'Recepciones',  icon: '📦', comingSoon: true },
-  { href: '/hub/sucursales',   label: 'Sucursales',   icon: '🏪', roles: ['super_admin','gerente'], comingSoon: true },
-  { href: '/hub/usuarios',     label: 'Usuarios',     icon: '👥', roles: ['super_admin','gerente'], comingSoon: true },
+  { href: '/hub/facturas',     label: 'Facturas',     icon: '📄', roles: ['super_admin','gerente','administrativo','tesoreria','auditor'] },
+  { href: '/hub/pagos',        label: 'Pagos',        icon: '💸', roles: ['super_admin','gerente','tesoreria','auditor'] },
+  { href: '/hub/recepciones',  label: 'Recepciones',  icon: '📦', roles: ['super_admin','gerente','administrativo','sucursal','auditor'] },
+  { href: '/hub/sucursales',   label: 'Sucursales',   icon: '🏪', roles: ['super_admin','gerente'] },
+  { href: '/hub/usuarios',     label: 'Usuarios',     icon: '👥', roles: ['super_admin','gerente'] },
 ]
 
 const ITEM: React.CSSProperties = {
