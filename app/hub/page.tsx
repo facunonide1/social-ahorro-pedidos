@@ -16,12 +16,12 @@ type SectionCard = {
 }
 
 const SECTIONS: SectionCard[] = [
-  { href: '/hub/proveedores',  title: 'Proveedores',   desc: 'Maestro de proveedores, contactos, cuentas bancarias y documentos.', icon: '🏭' },
-  { href: '/hub/facturas',     title: 'Facturas',      desc: 'Facturas de proveedor, estado, vencimientos.',                       icon: '📄', comingSoon: true },
-  { href: '/hub/pagos',        title: 'Pagos',         desc: 'Órdenes de pago y conciliación.',                                    icon: '💸', roles: ['super_admin','gerente','tesoreria','auditor'], comingSoon: true },
-  { href: '/hub/recepciones',  title: 'Recepciones',   desc: 'Recepción de mercadería en sucursal.',                               icon: '📦', comingSoon: true },
-  { href: '/hub/sucursales',   title: 'Sucursales',    desc: 'Alta y edición de sucursales.',                                      icon: '🏪', roles: ['super_admin','gerente'], comingSoon: true },
-  { href: '/hub/usuarios',     title: 'Usuarios',      desc: 'Admins del Hub y sus roles.',                                        icon: '👥', roles: ['super_admin','gerente'], comingSoon: true },
+  { href: '/hub/proveedores',  title: 'Proveedores',   desc: 'Maestro de proveedores, contactos, cuentas bancarias y documentos.', icon: '🏭', roles: ['super_admin','gerente','comprador','administrativo','auditor'] },
+  { href: '/hub/facturas',     title: 'Facturas',      desc: 'Facturas de proveedor, estado, vencimientos.',                       icon: '📄', roles: ['super_admin','gerente','administrativo','tesoreria','auditor'] },
+  { href: '/hub/pagos',        title: 'Pagos',         desc: 'Órdenes de pago y conciliación.',                                    icon: '💸', roles: ['super_admin','gerente','tesoreria','auditor'] },
+  { href: '/hub/recepciones',  title: 'Recepciones',   desc: 'Recepción de mercadería en sucursal.',                               icon: '📦', roles: ['super_admin','gerente','administrativo','sucursal','auditor'] },
+  { href: '/hub/sucursales',   title: 'Sucursales',    desc: 'Alta y edición de sucursales.',                                      icon: '🏪', roles: ['super_admin','gerente'] },
+  { href: '/hub/usuarios',     title: 'Usuarios',      desc: 'Admins del Hub y sus roles.',                                        icon: '👥', roles: ['super_admin','gerente'] },
   { href: '/dashboard',        title: 'CRM Pedidos',   desc: 'Panel operativo de pedidos de la farmacia (app existente).',         icon: '🛵' },
 ]
 
