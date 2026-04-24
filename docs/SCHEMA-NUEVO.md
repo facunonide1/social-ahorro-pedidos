@@ -18,13 +18,11 @@
 
 5. **Autonumeración**: `pagos.numero_orden_pago` se completa con un trigger `before insert` (formato `OP-YYYY-NNNN`) usando una secuencia nueva `orden_pago_seq`. Mismo patrón que el código `SA-YYYY-XXXX` de orders.
 
-6. **RLS abierta de lectura / cerrada de escritura**. Todos los roles de `admin_role` pueden leer todas las tablas (patrón permisivo para un equipo chico). Escritura segmentada por rol operativo:
-   - `super_admin` / `gerente`: todo
-   - `comprador` / `administrativo`: proveedores, documentos, facturas
-   - `tesoreria`: cuentas bancarias, pagos
-   - `sucursal`: recepciones de su sucursal
-   - `auditor`: solo lectura + lectura de `auditoria_logs`
-   Refinar por entidad a medida que aparezcan casos reales.
+6. **RLS por sensibilidad y por sucursal**.
+   - **Tablas sensibles** (`pagos`, `pago_facturas`, `proveedor_cuentas_bancarias`): lectura solo `super_admin` / `gerente` / `tesoreria` / `auditor`. Escritura solo `super_admin` / `gerente` / `tesoreria`. `comprador`, `administrativo` y `sucursal` NO ven ni escriben.
+   - **Resto de tablas**: lectura para cualquier admin activo; escritura segmentada por rol operativo.
+   - **Segregación por sucursal**: los usuarios con rol `sucursal` solo ven/editan `recepciones_mercaderia` y `recepcion_items` de SU sucursal, y solo leen `facturas_proveedor` de SU sucursal. Los demás roles ven todo.
+   - `auditor` siempre tiene lectura + acceso exclusivo de lectura a `auditoria_logs` (junto con super_admin/gerente).
 
 7. **Notificaciones con doble destinatario**. `notificaciones_admin.user_id` (individual) _o_ `rol_destinatario` (broadcast por rol). Check constraint garantiza que al menos uno esté seteado.
 
