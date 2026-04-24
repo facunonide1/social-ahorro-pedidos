@@ -578,11 +578,13 @@ create policy proveedor_contactos_write on public.proveedor_contactos
 
 drop policy if exists proveedor_cuentas_read on public.proveedor_cuentas_bancarias;
 create policy proveedor_cuentas_read on public.proveedor_cuentas_bancarias
-  for select using (public.current_admin_role() is not null);
+  for select using (
+    public.current_admin_role() in ('super_admin', 'gerente', 'tesoreria', 'auditor')
+  );
 drop policy if exists proveedor_cuentas_write on public.proveedor_cuentas_bancarias;
 create policy proveedor_cuentas_write on public.proveedor_cuentas_bancarias
-  for all using (public.current_admin_role() in ('super_admin', 'gerente', 'tesoreria', 'administrativo'))
-           with check (public.current_admin_role() in ('super_admin', 'gerente', 'tesoreria', 'administrativo'));
+  for all using (public.current_admin_role() in ('super_admin', 'gerente', 'tesoreria'))
+           with check (public.current_admin_role() in ('super_admin', 'gerente', 'tesoreria'));
 
 drop policy if exists proveedor_documentos_read on public.proveedor_documentos;
 create policy proveedor_documentos_read on public.proveedor_documentos
@@ -592,10 +594,18 @@ create policy proveedor_documentos_write on public.proveedor_documentos
   for all using (public.current_admin_role() in ('super_admin', 'gerente', 'comprador', 'administrativo'))
            with check (public.current_admin_role() in ('super_admin', 'gerente', 'comprador', 'administrativo'));
 
--- Facturas y factura_items
+-- Facturas
+-- Read: todos los roles admin, pero los 'sucursal' solo las de su sucursal.
+-- Write: super_admin/gerente/administrativo/tesoreria.
 drop policy if exists facturas_read on public.facturas_proveedor;
 create policy facturas_read on public.facturas_proveedor
-  for select using (public.current_admin_role() is not null);
+  for select using (
+    public.current_admin_role() is not null
+    and (
+      (select rol from public.users_admin where id = auth.uid()) <> 'sucursal'
+      or sucursal_id = (select sucursal_id from public.users_admin where id = auth.uid())
+    )
+  );
 drop policy if exists facturas_write on public.facturas_proveedor;
 create policy facturas_write on public.facturas_proveedor
   for all using (public.current_admin_role() in ('super_admin', 'gerente', 'administrativo', 'tesoreria'))
@@ -603,16 +613,28 @@ create policy facturas_write on public.facturas_proveedor
 
 drop policy if exists factura_items_read on public.factura_items;
 create policy factura_items_read on public.factura_items
-  for select using (public.current_admin_role() is not null);
+  for select using (
+    public.current_admin_role() is not null
+    and (
+      (select rol from public.users_admin where id = auth.uid()) <> 'sucursal'
+      or exists (
+        select 1 from public.facturas_proveedor f
+        where f.id = factura_items.factura_id
+          and f.sucursal_id = (select sucursal_id from public.users_admin where id = auth.uid())
+      )
+    )
+  );
 drop policy if exists factura_items_write on public.factura_items;
 create policy factura_items_write on public.factura_items
   for all using (public.current_admin_role() in ('super_admin', 'gerente', 'administrativo', 'tesoreria'))
            with check (public.current_admin_role() in ('super_admin', 'gerente', 'administrativo', 'tesoreria'));
 
--- Pagos y pago_facturas: write solo tesoreria/gerente/super_admin
+-- Pagos: sensible. Read solo super_admin/gerente/tesoreria/auditor. Write super_admin/gerente/tesoreria.
 drop policy if exists pagos_read on public.pagos;
 create policy pagos_read on public.pagos
-  for select using (public.current_admin_role() is not null);
+  for select using (
+    public.current_admin_role() in ('super_admin', 'gerente', 'tesoreria', 'auditor')
+  );
 drop policy if exists pagos_write on public.pagos;
 create policy pagos_write on public.pagos
   for all using (public.current_admin_role() in ('super_admin', 'gerente', 'tesoreria'))
@@ -620,28 +642,77 @@ create policy pagos_write on public.pagos
 
 drop policy if exists pago_facturas_read on public.pago_facturas;
 create policy pago_facturas_read on public.pago_facturas
-  for select using (public.current_admin_role() is not null);
+  for select using (
+    public.current_admin_role() in ('super_admin', 'gerente', 'tesoreria', 'auditor')
+  );
 drop policy if exists pago_facturas_write on public.pago_facturas;
 create policy pago_facturas_write on public.pago_facturas
   for all using (public.current_admin_role() in ('super_admin', 'gerente', 'tesoreria'))
            with check (public.current_admin_role() in ('super_admin', 'gerente', 'tesoreria'));
 
--- Recepciones: write para sucursal + gerente + super_admin + administrativo
+-- Recepciones: read para todo admin activo (sucursal filtrada a su sucursal);
+-- write para super_admin/gerente/administrativo; 'sucursal' escribe solo las suyas.
 drop policy if exists recepciones_read on public.recepciones_mercaderia;
 create policy recepciones_read on public.recepciones_mercaderia
-  for select using (public.current_admin_role() is not null);
+  for select using (
+    public.current_admin_role() is not null
+    and (
+      (select rol from public.users_admin where id = auth.uid()) <> 'sucursal'
+      or sucursal_id = (select sucursal_id from public.users_admin where id = auth.uid())
+    )
+  );
 drop policy if exists recepciones_write on public.recepciones_mercaderia;
 create policy recepciones_write on public.recepciones_mercaderia
-  for all using (public.current_admin_role() in ('super_admin', 'gerente', 'administrativo', 'sucursal'))
-           with check (public.current_admin_role() in ('super_admin', 'gerente', 'administrativo', 'sucursal'));
+  for all using (
+    public.current_admin_role() in ('super_admin', 'gerente', 'administrativo')
+    or (
+      public.current_admin_role() = 'sucursal'
+      and sucursal_id = (select sucursal_id from public.users_admin where id = auth.uid())
+    )
+  ) with check (
+    public.current_admin_role() in ('super_admin', 'gerente', 'administrativo')
+    or (
+      public.current_admin_role() = 'sucursal'
+      and sucursal_id = (select sucursal_id from public.users_admin where id = auth.uid())
+    )
+  );
 
 drop policy if exists recepcion_items_read on public.recepcion_items;
 create policy recepcion_items_read on public.recepcion_items
-  for select using (public.current_admin_role() is not null);
+  for select using (
+    public.current_admin_role() is not null
+    and (
+      (select rol from public.users_admin where id = auth.uid()) <> 'sucursal'
+      or exists (
+        select 1 from public.recepciones_mercaderia r
+        where r.id = recepcion_items.recepcion_id
+          and r.sucursal_id = (select sucursal_id from public.users_admin where id = auth.uid())
+      )
+    )
+  );
 drop policy if exists recepcion_items_write on public.recepcion_items;
 create policy recepcion_items_write on public.recepcion_items
-  for all using (public.current_admin_role() in ('super_admin', 'gerente', 'administrativo', 'sucursal'))
-           with check (public.current_admin_role() in ('super_admin', 'gerente', 'administrativo', 'sucursal'));
+  for all using (
+    public.current_admin_role() in ('super_admin', 'gerente', 'administrativo')
+    or (
+      public.current_admin_role() = 'sucursal'
+      and exists (
+        select 1 from public.recepciones_mercaderia r
+        where r.id = recepcion_items.recepcion_id
+          and r.sucursal_id = (select sucursal_id from public.users_admin where id = auth.uid())
+      )
+    )
+  ) with check (
+    public.current_admin_role() in ('super_admin', 'gerente', 'administrativo')
+    or (
+      public.current_admin_role() = 'sucursal'
+      and exists (
+        select 1 from public.recepciones_mercaderia r
+        where r.id = recepcion_items.recepcion_id
+          and r.sucursal_id = (select sucursal_id from public.users_admin where id = auth.uid())
+      )
+    )
+  );
 
 -- Auditoría: read para auditor + super_admin + gerente; insert para todos los admin activos (los registros los genera la app).
 drop policy if exists auditoria_read on public.auditoria_logs;
