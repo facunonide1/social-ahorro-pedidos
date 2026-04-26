@@ -81,6 +81,24 @@ export type AdminRole =
   | 'auditor'
   | 'sucursal'
 
+/**
+ * Departamentos del ERP.
+ *
+ * Usado por la nueva estructura `app/(admin)/`. Mientras no se aplique
+ * la migración de roles v2, el mapeo `ROL_A_DEPARTAMENTOS_LEGACY`
+ * traduce los roles actuales (v1) al set de departamentos accesibles.
+ */
+export type Departamento =
+  | 'ejecutivo'
+  | 'compras'
+  | 'finanzas'
+  | 'operaciones'
+  | 'sucursales'
+  | 'comercial'
+  | 'clientes'
+  | 'rrhh'
+  | 'bi'
+
 export type NotificacionTipo = 'alerta' | 'tarea' | 'info' | 'aprobacion'
 export type NotificacionPrioridad = 'baja' | 'media' | 'alta' | 'critica'
 
@@ -145,6 +163,49 @@ export const NOTIFICACION_PRIORIDAD_LABELS: Record<NotificacionPrioridad, string
   alta:     'Alta',
   critica:  'Crítica',
 }
+
+export const DEPARTAMENTO_LABELS: Record<Departamento, string> = {
+  ejecutivo:    'Ejecutivo',
+  compras:      'Compras',
+  finanzas:     'Finanzas',
+  operaciones:  'Operaciones',
+  sucursales:   'Sucursales',
+  comercial:    'Comercial',
+  clientes:     'Clientes',
+  rrhh:         'RRHH',
+  bi:           'BI',
+}
+
+/**
+ * Mapeo legacy: roles actuales (v1) → departamentos accesibles.
+ *
+ * Cuando se aplique el refactor de roles v2 con la tabla
+ * `rol_departamento`, este mapeo lo reemplaza la consulta SQL. Este
+ * objeto vive solo para que el sidebar y los hooks funcionen ANTES de
+ * la migración.
+ */
+export const ROL_A_DEPARTAMENTOS_LEGACY: Record<AdminRole, Departamento[]> = {
+  super_admin:    ['ejecutivo','compras','finanzas','operaciones','sucursales','comercial','clientes','rrhh','bi'],
+  gerente:        ['ejecutivo','compras','finanzas','operaciones','sucursales','comercial','clientes','rrhh','bi'],
+  auditor:        ['ejecutivo','compras','finanzas','operaciones','sucursales','comercial','clientes','rrhh','bi'],
+  comprador:      ['compras'],
+  administrativo: ['finanzas'],
+  tesoreria:      ['finanzas'],
+  sucursal:       ['sucursales'],
+}
+
+/**
+ * Roles transversales que tienen acceso global, independientemente
+ * de departamento o sucursal.
+ */
+export const ROLES_TRANSVERSALES: ReadonlyArray<AdminRole> = ['super_admin', 'gerente', 'auditor']
+
+/**
+ * Roles considerados "jefatura" en el modelo legacy.
+ * Cuando llegue el refactor v2, esta lista se infiere de
+ * `rol_departamento.es_jefe`.
+ */
+export const ROLES_JEFE_LEGACY: ReadonlyArray<AdminRole> = ['super_admin', 'gerente']
 
 // ============ ENTIDADES ============
 

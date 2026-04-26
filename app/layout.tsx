@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Toaster } from 'sonner'
+import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import { ThemeProvider } from '@/components/theme-provider'
 import './globals.css'
 
@@ -19,8 +20,10 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <ThemeProvider>
-          {children}
-          <Toaster position="top-right" richColors closeButton />
+          <NuqsAdapter>
+            {children}
+            <Toaster position="top-right" richColors closeButton />
+          </NuqsAdapter>
         </ThemeProvider>
       </body>
     </html>
