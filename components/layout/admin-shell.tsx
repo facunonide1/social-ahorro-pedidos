@@ -1,50 +1,64 @@
 'use client'
 
-import { ReactNode } from 'react'
-import { SucursalSelector } from '@/components/layout/sucursal-selector'
-import { PeriodSelector } from '@/components/layout/period-selector'
+import { ReactNode, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
+import { useSucursalStore } from '@/lib/stores/sucursal-store'
+import { useNotificationsStore } from '@/lib/stores/notifications-store'
+import { deptFromPath } from '@/lib/utils/departamento-from-path'
+import { TopNav } from '@/components/layout/top-nav'
+import { Sidebar } from '@/components/layout/sidebar'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import type { HubProfile } from '@/lib/admin-hub/auth'
 
 /**
  * Shell del Admin (admin)/.
  *
- * **T-C.1**: shell mínimo con barra superior que contiene los
- * selectores globales. El TopNav con departamentos + UserMenu +
- * Notifications + Sidebar contextual se monta en T-C.2.
+ * - TopNav con departamentos + selectores + user menu (sticky).
+ * - Sidebar contextual con submenús del depto activo (sticky).
+ * - Carga inicial: `loadSucursales()` + `subscribe(profile.id)` para
+ *   notificaciones realtime. Cleanup `unsubscribe()` al desmontar.
  *
- * El sidebar va a ocupar el espacio izquierdo en T-C.2 (hoy
- * `<main>` toma todo el ancho).
+ * Server-to-client serialization: `profile` viene del layout server
+ * después del auth guard.
  */
 export function AdminShell({
-  profile: _profile,
+  profile,
   children,
 }: {
   profile: HubProfile
   children: ReactNode
 }) {
+  const pathname = usePathname() || '/admin'
+  const deptActivo = deptFromPath(pathname)
+
+  const loadSucursales = useSucursalStore((s) => s.loadSucursales)
+  const isHydratedSuc  = useSucursalStore((s) => s.isHydrated)
+  const subscribe      = useNotificationsStore((s) => s.subscribe)
+  const unsubscribe    = useNotificationsStore((s) => s.unsubscribe)
+
+  // Catálogo de sucursales — una vez hidratado el store.
+  useEffect(() => {
+    if (isHydratedSuc) loadSucursales()
+  }, [isHydratedSuc, loadSucursales])
+
+  // Suscripción realtime a notificaciones del usuario.
+  useEffect(() => {
+    if (!profile.id) return
+    subscribe(profile.id)
+    return () => {
+      unsubscribe()
+    }
+  }, [profile.id, subscribe, unsubscribe])
+
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center gap-2">
-          <div className="size-2.5 rounded-full bg-primary" aria-hidden />
-          <div className="text-sm font-bold tracking-tight">Social Ahorro</div>
-          <span className="hidden rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:inline">
-            Admin
-          </span>
+    <TooltipProvider delayDuration={250}>
+      <div className="flex min-h-screen flex-col bg-background text-foreground">
+        <TopNav profile={profile} />
+        <div className="flex flex-1">
+          <Sidebar deptActivo={deptActivo} />
+          <main className="flex-1 overflow-x-hidden">{children}</main>
         </div>
-
-        {/* Espacio donde T-C.2 monta los departamentos del TopNav */}
-        <div className="flex-1" />
-
-        <div className="flex items-center gap-2">
-          <SucursalSelector />
-          <PeriodSelector />
-        </div>
-      </header>
-
-      <div className="flex flex-1 flex-col">
-        <main className="flex-1">{children}</main>
       </div>
-    </div>
+    </TooltipProvider>
   )
 }

@@ -9,6 +9,10 @@
 
 import type { Departamento } from '@/lib/types/admin'
 
+/** URL del repo cuponera (departamentos Comercial / Clientes apuntan acá). */
+export const CUPONERA_URL: string =
+  process.env.NEXT_PUBLIC_CUPONERA_URL || 'https://cuponera.socialahorro.com'
+
 export type DeptEstado = 'activo' | 'placeholder' | 'fase2' | 'externo'
 
 export type DeptInfo = {
@@ -80,7 +84,7 @@ export const DEPARTAMENTOS_INFO: Record<Departamento, DeptInfo> = {
     color: 'bg-pink-500',
     estado: 'externo',
     descripcion: 'Promociones, cuponera y comunicación comercial.',
-    externalUrl: 'https://cuponera.socialahorro.com',
+    externalUrl: CUPONERA_URL,
   },
   clientes: {
     id: 'clientes',
@@ -90,7 +94,7 @@ export const DEPARTAMENTOS_INFO: Record<Departamento, DeptInfo> = {
     color: 'bg-fuchsia-500',
     estado: 'externo',
     descripcion: 'Maestro de clientes, segmentación y CRM.',
-    externalUrl: 'https://cuponera.socialahorro.com',
+    externalUrl: CUPONERA_URL,
   },
   rrhh: {
     id: 'rrhh',
