@@ -4,9 +4,18 @@ import type { UserPedidos } from '@/lib/types'
 
 import { CrmShell } from '@/components/crm/crm-shell'
 import { PageHeader } from '@/components/shared/page-header'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 
 import MfaSection from './mfa'
+import ProfileCard from './profile-card'
+import PasswordCard from './password-card'
+import SessionCard from './session-card'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,22 +33,25 @@ export default async function CuentaPage() {
 
   return (
     <CrmShell>
-      <PageHeader
-        title="Mi cuenta"
-        description={`${profile.name || profile.email} · ${profile.role}`}
-      />
+      <PageHeader title="Mi cuenta" description="Información de tu perfil" />
       <div className="mx-auto w-full max-w-3xl space-y-4 p-4 md:p-6">
+        <ProfileCard profile={profile} />
+
+        <PasswordCard email={profile.email} />
+
         <Card>
           <CardHeader>
             <CardTitle>Verificación en dos pasos</CardTitle>
             <CardDescription>
-              Protegé tu cuenta con un código adicional desde tu app autenticadora.
+              Sumá un código adicional desde tu app autenticadora.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <MfaSection />
           </CardContent>
         </Card>
+
+        <SessionCard />
       </div>
     </CrmShell>
   )

@@ -2,55 +2,81 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { AlertCircle, ArrowRight } from 'lucide-react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { AlertCircle, ArrowRight, Loader2 } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/client'
 
 import { AuthShell } from '@/components/crm/auth-shell'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+
+const loginSchema = z.object({
+  email: z.email('Email inválido'),
+  password: z.string().min(6, 'Mínimo 6 caracteres'),
+})
+
+const mfaSchema = z.object({
+  code: z
+    .string()
+    .min(6, 'El código tiene 6 dígitos')
+    .max(6, 'El código tiene 6 dígitos')
+    .regex(/^\d+$/, 'Solo números'),
+})
+
+type LoginValues = z.infer<typeof loginSchema>
+type MfaValues = z.infer<typeof mfaSchema>
 
 export default function LoginForm() {
   const search = useSearchParams()
   const supabase = createClient()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(
+  const redirectTo = search.get('redirectTo') || '/'
+
+  const [authError, setAuthError] = useState(
     search.get('error') === 'sin_permiso'
-      ? 'Tu usuario no tiene acceso. Contactá al administrador.'
+      ? 'Esta cuenta no tiene acceso al CRM'
       : '',
   )
-  const [form, setForm] = useState({ email: '', password: '' })
   const [mfa, setMfa] = useState<null | { factorId: string; challengeId: string }>(null)
-  const [mfaCode, setMfaCode] = useState('')
+
+  const loginForm = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  })
+
+  const mfaForm = useForm<MfaValues>({
+    resolver: zodResolver(mfaSchema),
+    defaultValues: { code: '' },
+  })
 
   // Si llegamos a /login con ?error=sin_permiso pero todavía hay sesión
-  // activa en supabase, la cerramos para no caer en un loop de redirect
-  // (el middleware rebotaría /login -> / y / rebotaría de vuelta a /login).
+  // activa en supabase, la cerramos para no caer en un loop de redirect.
   useEffect(() => {
     if (search.get('error') === 'sin_permiso') {
       supabase.auth.signOut().catch(() => {})
     }
   }, [search, supabase])
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    const { error: signErr } = await supabase.auth.signInWithPassword({
-      email: form.email,
-      password: form.password,
-    })
+  async function onLogin(values: LoginValues) {
+    setAuthError('')
+    const { error: signErr } = await supabase.auth.signInWithPassword(values)
     if (signErr) {
-      setError('Email o contraseña incorrectos')
-      setLoading(false)
+      setAuthError('Email o contraseña incorrectos')
       return
     }
 
-    // Si el usuario tiene TOTP verificado, hay que subir a aal2 antes del
-    // redirect. Preguntamos los factores y si hay alguno verificado, lanzamos
-    // el challenge.
+    // MFA TOTP: si hay factor verificado, escalar a aal2 antes del redirect.
     const { data: assur } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
     if (assur?.nextLevel && assur.nextLevel !== assur.currentLevel && assur.nextLevel === 'aal2') {
       const { data: factors } = await supabase.auth.mfa.listFactors()
@@ -58,141 +84,175 @@ export default function LoginForm() {
       if (totp) {
         const { data: ch, error: chErr } = await supabase.auth.mfa.challenge({ factorId: totp.id })
         if (chErr || !ch) {
-          setError(chErr?.message || 'mfa_challenge_failed')
-          setLoading(false)
+          setAuthError(chErr?.message || 'No pudimos iniciar la verificación 2FA')
           return
         }
         setMfa({ factorId: totp.id, challengeId: ch.id })
-        setLoading(false)
         return
       }
     }
 
-    window.location.assign('/')
+    window.location.assign(redirectTo)
   }
 
-  async function handleMfa(e: React.FormEvent) {
-    e.preventDefault()
+  async function onMfa(values: MfaValues) {
     if (!mfa) return
-    setLoading(true)
-    setError('')
+    setAuthError('')
     const { error: vErr } = await supabase.auth.mfa.verify({
       factorId: mfa.factorId,
       challengeId: mfa.challengeId,
-      code: mfaCode.trim(),
+      code: values.code.trim(),
     })
     if (vErr) {
-      setError('Código incorrecto. Intentá de nuevo.')
-      setLoading(false)
+      setAuthError('Código incorrecto. Intentá de nuevo.')
+      mfaForm.reset({ code: '' })
       return
     }
-    window.location.assign('/')
+    window.location.assign(redirectTo)
   }
+
+  function cancelMfa() {
+    setMfa(null)
+    mfaForm.reset({ code: '' })
+    supabase.auth.signOut().catch(() => {})
+  }
+
+  const loginBusy = loginForm.formState.isSubmitting
+  const mfaBusy = mfaForm.formState.isSubmitting
 
   return (
     <AuthShell
       subtitle={
         mfa
           ? 'Ingresá el código de 6 dígitos de tu app autenticadora'
-          : 'Ingresá con tu email y contraseña'
+          : 'Accedé a tu cuenta del panel interno'
       }
     >
       <div className="mb-5 space-y-1.5">
         <h2 className="text-xl font-bold tracking-tight">
-          {mfa ? 'Verificación 2FA' : 'Panel interno'}
+          {mfa ? 'Verificación 2FA' : 'Iniciar sesión'}
         </h2>
         <p className="text-xs text-muted-foreground">
-          {mfa
-            ? 'Necesitamos confirmar tu identidad'
-            : 'Acceso restringido a usuarios autorizados'}
+          {mfa ? 'Necesitamos confirmar tu identidad' : 'Acceso restringido a usuarios autorizados'}
         </p>
       </div>
 
-      {error && (
+      {authError && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="size-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{authError}</AlertDescription>
         </Alert>
       )}
 
       {mfa ? (
-        <form onSubmit={handleMfa} className="flex flex-col gap-3">
-          <Input
-            value={mfaCode}
-            onChange={(e) => setMfaCode(e.target.value)}
-            inputMode="numeric"
-            maxLength={6}
-            placeholder="123456"
-            autoFocus
-            className="h-14 text-center text-xl tracking-[0.5em] tabular-nums"
-            aria-label="Código de 6 dígitos"
-          />
-          <Button
-            type="submit"
-            disabled={loading || mfaCode.trim().length < 6}
-            className="h-12 w-full"
-          >
-            {loading ? 'Verificando…' : (
-              <>
-                Verificar
-                <ArrowRight className="size-4" />
-              </>
-            )}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setMfa(null)
-              setMfaCode('')
-              supabase.auth.signOut().catch(() => {})
-            }}
-          >
-            Cancelar y volver al login
-          </Button>
-        </form>
+        <Form {...mfaForm}>
+          <form onSubmit={mfaForm.handleSubmit(onMfa)} className="flex flex-col gap-3">
+            <FormField
+              control={mfaForm.control}
+              name="code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="sr-only">Código de 6 dígitos</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="123456"
+                      autoFocus
+                      className="h-14 text-center text-xl tracking-[0.5em] tabular-nums"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" disabled={mfaBusy} className="h-12 w-full">
+              {mfaBusy ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Verificando…
+                </>
+              ) : (
+                <>
+                  Verificar
+                  <ArrowRight className="size-4" />
+                </>
+              )}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={cancelMfa}>
+              Cancelar y volver al login
+            </Button>
+          </form>
+        </Form>
       ) : (
-        <form onSubmit={handleLogin} className="flex flex-col gap-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="login-email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Email
-            </Label>
-            <Input
-              id="login-email"
-              type="email"
-              required
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="tu@email.com"
-              autoComplete="email"
+        <Form {...loginForm}>
+          <form onSubmit={loginForm.handleSubmit(onLogin)} className="flex flex-col gap-4">
+            <FormField
+              control={loginForm.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Email
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="tu@email.com"
+                      autoComplete="email"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="login-password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Contraseña
-            </Label>
-            <Input
-              id="login-password"
-              type="password"
-              required
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              placeholder="••••••••"
-              autoComplete="current-password"
+            <FormField
+              control={loginForm.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Contraseña
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      autoComplete="current-password"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <Button type="submit" disabled={loading} className="mt-1 h-12 w-full">
-            {loading ? 'Ingresando…' : (
-              <>
-                Ingresar
-                <ArrowRight className="size-4" />
-              </>
-            )}
-          </Button>
-        </form>
+            <Button type="submit" disabled={loginBusy} className="mt-1 h-12 w-full">
+              {loginBusy ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Ingresando…
+                </>
+              ) : (
+                <>
+                  Iniciar sesión
+                  <ArrowRight className="size-4" />
+                </>
+              )}
+            </Button>
+
+            <p className="pt-1 text-center text-xs text-muted-foreground">
+              ¿Olvidaste tu contraseña? Pedile al administrador que te la resetee.
+            </p>
+          </form>
+        </Form>
       )}
+
+      <p className="mt-6 text-center text-[11px] text-muted-foreground">
+        Social Ahorro · {new Date().getFullYear()}
+      </p>
     </AuthShell>
   )
 }

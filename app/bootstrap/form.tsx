@@ -1,12 +1,29 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AlertCircle, ArrowRight, CheckCircle2, PartyPopper } from 'lucide-react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle2,
+  Loader2,
+  PartyPopper,
+} from 'lucide-react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 
 type Status =
   | { kind: 'checking' }
@@ -14,15 +31,32 @@ type Status =
   | { kind: 'already_bootstrapped' }
   | { kind: 'schema_missing'; hint: string }
 
+const schema = z.object({
+  nombre: z
+    .string()
+    .min(1, 'Ingresá un nombre')
+    .max(100, 'Máximo 100 caracteres'),
+  email: z.email('Email inválido'),
+  password: z
+    .string()
+    .min(8, 'Mínimo 8 caracteres')
+    .max(128, 'Demasiado largo'),
+})
+
+type Values = z.infer<typeof schema>
+
 export default function BootstrapForm() {
   const [status, setStatus] = useState<Status>({ kind: 'checking' })
-  const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [ok, setOk] = useState<{ email: string } | null>(null)
-  const [form, setForm] = useState({
-    nombre: 'Admin Principal',
-    email: 'admin@socialahorro.com.ar',
-    password: '',
+
+  const form = useForm<Values>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      nombre: 'Admin Principal',
+      email: 'admin@socialahorro.com.ar',
+      password: '',
+    },
   })
 
   useEffect(() => {
@@ -42,19 +76,13 @@ export default function BootstrapForm() {
       )
   }, [])
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault()
+  async function onSubmit(values: Values) {
     setErr(null)
-    if (form.password.length < 8) {
-      setErr('La contraseña debe tener al menos 8 caracteres.')
-      return
-    }
-    setBusy(true)
     try {
       const res = await fetch('/api/admin/bootstrap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(values),
       })
       const json = await res.json()
       if (!res.ok) {
@@ -64,14 +92,13 @@ export default function BootstrapForm() {
       setOk({ email: json.email })
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : 'error_red')
-    } finally {
-      setBusy(false)
     }
   }
 
   if (status.kind === 'checking') {
     return (
-      <div className="py-6 text-center text-sm text-muted-foreground">
+      <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" />
         Chequeando estado…
       </div>
     )
@@ -146,85 +173,94 @@ export default function BootstrapForm() {
   }
 
   // status.kind === 'ready'
+  const busy = form.formState.isSubmitting
+
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
-      <div className="space-y-1">
-        <h2 className="text-lg font-bold tracking-tight">Crear primer super_admin</h2>
-        <p className="text-xs text-muted-foreground">
-          Este formulario se desactiva apenas exista un super_admin. Elegí una contraseña fuerte y anotá los datos.
-        </p>
-      </div>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        <div className="space-y-1">
+          <h2 className="text-lg font-bold tracking-tight">Crear primer super_admin</h2>
+          <p className="text-xs text-muted-foreground">
+            Este formulario se desactiva apenas exista un super_admin. Elegí una contraseña fuerte y anotá los datos.
+          </p>
+        </div>
 
-      {err && (
-        <Alert variant="destructive">
-          <AlertCircle className="size-4" />
-          <AlertDescription>{err}</AlertDescription>
-        </Alert>
-      )}
-
-      <div className="space-y-1.5">
-        <Label
-          htmlFor="bootstrap-nombre"
-          className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-        >
-          Nombre
-        </Label>
-        <Input
-          id="bootstrap-nombre"
-          value={form.nombre}
-          onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-          placeholder="Admin Principal"
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label
-          htmlFor="bootstrap-email"
-          className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-        >
-          Email
-        </Label>
-        <Input
-          id="bootstrap-email"
-          type="email"
-          required
-          value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-          placeholder="admin@socialahorro.com.ar"
-          autoComplete="email"
-        />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label
-          htmlFor="bootstrap-password"
-          className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-        >
-          Contraseña <span className="font-normal normal-case text-muted-foreground/80">(mínimo 8)</span>
-        </Label>
-        <Input
-          id="bootstrap-password"
-          type="password"
-          required
-          minLength={8}
-          value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
-          placeholder="••••••••"
-          autoComplete="new-password"
-        />
-        <p className="text-[11px] text-muted-foreground">
-          Sugerencia: mezclá mayúsculas, números y al menos un símbolo.
-        </p>
-      </div>
-
-      <Button type="submit" disabled={busy} className="mt-1 h-12 w-full">
-        {busy ? 'Creando…' : (
-          <>
-            Crear super_admin
-            <ArrowRight className="size-4" />
-          </>
+        {err && (
+          <Alert variant="destructive">
+            <AlertCircle className="size-4" />
+            <AlertDescription>{err}</AlertDescription>
+          </Alert>
         )}
-      </Button>
-    </form>
+
+        <FormField
+          control={form.control}
+          name="nombre"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nombre</FormLabel>
+              <FormControl>
+                <Input placeholder="Admin Principal" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input
+                  type="email"
+                  autoComplete="email"
+                  placeholder="admin@socialahorro.com.ar"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Contraseña</FormLabel>
+              <FormControl>
+                <Input
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Mínimo 8 caracteres"
+                  {...field}
+                />
+              </FormControl>
+              <FormDescription>
+                Sugerencia: mezclá mayúsculas, números y al menos un símbolo.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" disabled={busy} className="mt-1 h-12 w-full">
+          {busy ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Creando…
+            </>
+          ) : (
+            <>
+              Crear super_admin
+              <ArrowRight className="size-4" />
+            </>
+          )}
+        </Button>
+      </form>
+    </Form>
   )
 }

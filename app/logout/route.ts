@@ -21,10 +21,20 @@ function isPrefetch(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const sb = createClient()
   await sb.auth.signOut()
+
   const reason = req.nextUrl.searchParams.get('reason')
-  const target = new URL('/login', req.url)
-  if (reason) target.searchParams.set('error', reason)
-  return NextResponse.redirect(target, { status: 303 })
+
+  // Si el server forzó el logout (ej: ?reason=sin_permiso), preservamos
+  // el flow viejo: vamos directo a /login?error=<reason> para que el form
+  // muestre el mensaje específico. Si fue acción intencional del user,
+  // mostramos /logout/ok con el mensaje "Cerraste sesión".
+  if (reason) {
+    const target = new URL('/login', req.url)
+    target.searchParams.set('error', reason)
+    return NextResponse.redirect(target, { status: 303 })
+  }
+
+  return NextResponse.redirect(new URL('/logout/ok', req.url), { status: 303 })
 }
 
 export async function GET(req: NextRequest) {
