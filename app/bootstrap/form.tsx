@@ -1,6 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { AlertCircle, ArrowRight, CheckCircle2, PartyPopper } from 'lucide-react'
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 type Status =
   | { kind: 'checking' }
@@ -8,32 +14,21 @@ type Status =
   | { kind: 'already_bootstrapped' }
   | { kind: 'schema_missing'; hint: string }
 
-const INPUT: React.CSSProperties = {
-  width: '100%', padding: 14, border: '1.5px solid #f0ede8', borderRadius: 12,
-  fontSize: 14, color: '#2a2a2a', background: '#faf8f5', outline: 'none',
-  boxSizing: 'border-box', fontFamily: 'inherit',
-}
-
-const LABEL: React.CSSProperties = {
-  fontSize: 12, fontWeight: 600, color: '#888', display: 'block',
-  marginBottom: 6, letterSpacing: '0.3px',
-}
-
 export default function BootstrapForm() {
   const [status, setStatus] = useState<Status>({ kind: 'checking' })
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [ok, setOk] = useState<{ email: string } | null>(null)
   const [form, setForm] = useState({
-    nombre:   'Admin Principal',
-    email:    'admin@socialahorro.com.ar',
+    nombre: 'Admin Principal',
+    email: 'admin@socialahorro.com.ar',
     password: '',
   })
 
   useEffect(() => {
     fetch('/api/admin/bootstrap')
-      .then(r => r.json())
-      .then(j => {
+      .then((r) => r.json())
+      .then((j) => {
         if (j?.error === 'users_admin_no_existe_o_sin_acceso') {
           setStatus({ kind: 'schema_missing', hint: j.hint ?? '' })
         } else if (j?.bootstrapped) {
@@ -42,7 +37,9 @@ export default function BootstrapForm() {
           setStatus({ kind: 'ready' })
         }
       })
-      .catch(() => setStatus({ kind: 'schema_missing', hint: 'No pude consultar el estado.' }))
+      .catch(() =>
+        setStatus({ kind: 'schema_missing', hint: 'No pude consultar el estado.' }),
+      )
   }, [])
 
   async function submit(e: React.FormEvent) {
@@ -60,122 +57,174 @@ export default function BootstrapForm() {
         body: JSON.stringify(form),
       })
       const json = await res.json()
-      if (!res.ok) { setErr(json?.error || 'error'); return }
+      if (!res.ok) {
+        setErr(json?.error || 'error')
+        return
+      }
       setOk({ email: json.email })
-    } catch (e: any) {
-      setErr(e?.message || 'error_red')
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'error_red')
     } finally {
       setBusy(false)
     }
   }
 
   if (status.kind === 'checking') {
-    return <div style={{ fontSize: 13, color: '#aaa', textAlign: 'center' }}>Chequeando estado…</div>
+    return (
+      <div className="py-6 text-center text-sm text-muted-foreground">
+        Chequeando estado…
+      </div>
+    )
   }
 
   if (status.kind === 'schema_missing') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: '#a33', margin: 0 }}>
-          Falta aplicar migraciones
-        </h2>
-        <p style={{ fontSize: 13, color: '#555', margin: 0, lineHeight: 1.5 }}>
-          Antes de crear el primer administrador hay que correr las migraciones{' '}
-          <code>0017_fix_handle_new_user_trigger.sql</code> y{' '}
-          <code>0016_admin_hub_schema.sql</code> (en ese orden) en el SQL Editor de Supabase.
-        </p>
-        {status.hint && (
-          <p style={{ fontSize: 12, color: '#999', margin: 0 }}>{status.hint}</p>
-        )}
-        <button onClick={() => location.reload()}
-          style={{ padding: 12, background: '#726DFF', color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer' }}>
+      <div className="flex flex-col gap-4">
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertTitle>Falta aplicar migraciones</AlertTitle>
+          <AlertDescription>
+            <p className="mt-1">
+              Antes de crear el primer administrador hay que correr las migraciones{' '}
+              <code className="rounded bg-muted px-1 py-0.5 text-xs">0017_fix_handle_new_user_trigger.sql</code>{' '}
+              y{' '}
+              <code className="rounded bg-muted px-1 py-0.5 text-xs">0016_admin_hub_schema.sql</code>{' '}
+              (en ese orden) en el SQL Editor de Supabase.
+            </p>
+            {status.hint && (
+              <p className="mt-2 text-xs opacity-80">{status.hint}</p>
+            )}
+          </AlertDescription>
+        </Alert>
+        <Button onClick={() => location.reload()} className="w-full">
           Ya las corrí, revisar de nuevo
-        </button>
+        </Button>
       </div>
     )
   }
 
   if (status.kind === 'already_bootstrapped') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
-        <div style={{ fontSize: 48 }}>✅</div>
-        <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, textAlign: 'center' }}>
-          El Admin Hub ya está configurado
-        </h2>
-        <p style={{ fontSize: 13, color: '#666', textAlign: 'center', margin: 0 }}>
+      <div className="flex flex-col items-center gap-4 text-center">
+        <CheckCircle2 className="size-12 text-success" aria-hidden />
+        <h2 className="text-lg font-bold">El Admin Hub ya está configurado</h2>
+        <p className="text-sm text-muted-foreground">
           Ya existe al menos un super_admin activo. Para agregar más usuarios, iniciá sesión con uno existente.
         </p>
-        <a href="/login"
-          style={{ padding: '12px 20px', background: '#FF6D6E', color: '#fff', borderRadius: 12, fontWeight: 700, textDecoration: 'none' }}>
-          Ir al login
-        </a>
+        <Button asChild className="w-full">
+          <a href="/login">
+            Ir al login
+            <ArrowRight className="size-4" />
+          </a>
+        </Button>
       </div>
     )
   }
 
   if (ok) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
-        <div style={{ fontSize: 48 }}>🎉</div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, textAlign: 'center' }}>
-          Super admin creado
-        </h2>
-        <div style={{ fontSize: 13, color: '#555', background: '#eaf7ef', border: '0.5px solid #8fd1a8', padding: '10px 14px', borderRadius: 10, width: '100%', textAlign: 'center' }}>
-          <b>{ok.email}</b>
-        </div>
-        <p style={{ fontSize: 12, color: '#888', margin: 0, textAlign: 'center' }}>
+      <div className="flex flex-col items-center gap-4 text-center">
+        <PartyPopper className="size-12 text-primary" aria-hidden />
+        <h2 className="text-xl font-bold">Super admin creado</h2>
+        <Alert variant="success" className="text-left">
+          <CheckCircle2 className="size-4" />
+          <AlertDescription>
+            <span className="font-semibold">{ok.email}</span>
+          </AlertDescription>
+        </Alert>
+        <p className="text-xs text-muted-foreground">
           Guardá la contraseña que elegiste — no la podemos recuperar desde acá.
         </p>
-        <a href="/login"
-          style={{ padding: '12px 20px', background: '#FF6D6E', color: '#fff', borderRadius: 12, fontWeight: 700, textDecoration: 'none', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}>
-          Ir al login →
-        </a>
+        <Button asChild className="w-full">
+          <a href="/login">
+            Ir al login
+            <ArrowRight className="size-4" />
+          </a>
+        </Button>
       </div>
     )
   }
 
   // status.kind === 'ready'
   return (
-    <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <h2 style={{ fontSize: 20, fontWeight: 700, color: '#2a2a2a', margin: 0, letterSpacing: '-0.3px' }}>
-        Crear primer super_admin
-      </h2>
-      <p style={{ fontSize: 13, color: '#888', margin: 0 }}>
-        Este formulario se desactiva apenas exista un super_admin. Elegí una contraseña fuerte y anotá los datos.
-      </p>
+    <form onSubmit={submit} className="flex flex-col gap-4">
+      <div className="space-y-1">
+        <h2 className="text-lg font-bold tracking-tight">Crear primer super_admin</h2>
+        <p className="text-xs text-muted-foreground">
+          Este formulario se desactiva apenas exista un super_admin. Elegí una contraseña fuerte y anotá los datos.
+        </p>
+      </div>
 
       {err && (
-        <div style={{ background: '#fff0f0', border: '0.5px solid #FF6D6E', borderRadius: 12, padding: '10px 14px', fontSize: 13, color: '#FF6D6E' }}>
-          ⚠ {err}
-        </div>
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertDescription>{err}</AlertDescription>
+        </Alert>
       )}
 
-      <div>
-        <label style={LABEL}>NOMBRE</label>
-        <input value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })}
-          placeholder="Admin Principal" style={INPUT} />
+      <div className="space-y-1.5">
+        <Label
+          htmlFor="bootstrap-nombre"
+          className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+        >
+          Nombre
+        </Label>
+        <Input
+          id="bootstrap-nombre"
+          value={form.nombre}
+          onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+          placeholder="Admin Principal"
+        />
       </div>
 
-      <div>
-        <label style={LABEL}>EMAIL</label>
-        <input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-          placeholder="admin@socialahorro.com.ar" style={INPUT} />
+      <div className="space-y-1.5">
+        <Label
+          htmlFor="bootstrap-email"
+          className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+        >
+          Email
+        </Label>
+        <Input
+          id="bootstrap-email"
+          type="email"
+          required
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+          placeholder="admin@socialahorro.com.ar"
+          autoComplete="email"
+        />
       </div>
 
-      <div>
-        <label style={LABEL}>CONTRASEÑA (mínimo 8)</label>
-        <input type="password" required minLength={8} value={form.password}
-          onChange={e => setForm({ ...form, password: e.target.value })}
-          placeholder="••••••••" style={INPUT} />
-        <div style={{ fontSize: 11, color: '#aaa', marginTop: 6 }}>
+      <div className="space-y-1.5">
+        <Label
+          htmlFor="bootstrap-password"
+          className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+        >
+          Contraseña <span className="font-normal normal-case text-muted-foreground/80">(mínimo 8)</span>
+        </Label>
+        <Input
+          id="bootstrap-password"
+          type="password"
+          required
+          minLength={8}
+          value={form.password}
+          onChange={(e) => setForm({ ...form, password: e.target.value })}
+          placeholder="••••••••"
+          autoComplete="new-password"
+        />
+        <p className="text-[11px] text-muted-foreground">
           Sugerencia: mezclá mayúsculas, números y al menos un símbolo.
-        </div>
+        </p>
       </div>
 
-      <button type="submit" disabled={busy}
-        style={{ padding: 16, background: busy ? '#ffb3b3' : '#FF6D6E', color: '#fff', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer' }}>
-        {busy ? 'Creando…' : 'Crear super_admin →'}
-      </button>
+      <Button type="submit" disabled={busy} className="mt-1 h-12 w-full">
+        {busy ? 'Creando…' : (
+          <>
+            Crear super_admin
+            <ArrowRight className="size-4" />
+          </>
+        )}
+      </Button>
     </form>
   )
 }
