@@ -108,6 +108,17 @@ export default async function DashboardPage({
 
   const todayISO = startOfDayISO()
 
+  const kpiFromISO = fromISO ?? todayISO
+  const kpiToISO = toISO
+  const kpiScopeLabel = useDate
+    ? new Date(dateStr + 'T00:00:00').toLocaleDateString('es-AR', {
+        day: '2-digit',
+        month: 'short',
+      })
+    : scope === 'all'
+      ? 'todos'
+      : 'hoy'
+
   const [zonasRes, repsRes] = await Promise.all([
     sb
       .from('zonas_reparto')
@@ -158,6 +169,14 @@ export default async function DashboardPage({
     query = query.or(orFilters.join(','))
   }
 
+  function applyRange<T extends { gte: (col: string, v: string) => T; lte: (col: string, v: string) => T }>(
+    q: T,
+  ): T {
+    let out = kpiFromISO ? q.gte('created_at', kpiFromISO) : q
+    if (kpiToISO) out = out.lte('created_at', kpiToISO)
+    return out
+  }
+
   const [
     totalRes,
     pendientesRes,
@@ -167,31 +186,24 @@ export default async function DashboardPage({
     fueraHorarioRes,
     ordersRes,
   ] = await Promise.all([
-    sb.from('orders').select('*', { count: 'exact', head: true }).gte('created_at', todayISO),
-    sb
-      .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', todayISO)
-      .in('status', PENDIENTES_STATUSES),
-    sb
-      .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', todayISO)
-      .eq('status', 'en_camino'),
-    sb
-      .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', todayISO)
-      .eq('status', 'entregado'),
-    sb
-      .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', todayISO)
-      .eq('status', 'cancelado'),
-    sb
-      .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', todayISO)
+    applyRange(sb.from('orders').select('*', { count: 'exact', head: true })),
+    applyRange(sb.from('orders').select('*', { count: 'exact', head: true })).in(
+      'status',
+      PENDIENTES_STATUSES,
+    ),
+    applyRange(sb.from('orders').select('*', { count: 'exact', head: true })).eq(
+      'status',
+      'en_camino',
+    ),
+    applyRange(sb.from('orders').select('*', { count: 'exact', head: true })).eq(
+      'status',
+      'entregado',
+    ),
+    applyRange(sb.from('orders').select('*', { count: 'exact', head: true })).eq(
+      'status',
+      'cancelado',
+    ),
+    applyRange(sb.from('orders').select('*', { count: 'exact', head: true }))
       .eq('fuera_de_horario', true)
       .not('status', 'in', '(entregado,cancelado)'),
     query,
@@ -266,7 +278,7 @@ export default async function DashboardPage({
         title="Dashboard"
         description={<LiveClock />}
         actions={
-          <PageActions>
+          <PageActions className="justify-end">
             <GlobalSearch />
             <NewOrderNotifier />
             <Button asChild variant="outline" size="sm">
@@ -293,44 +305,48 @@ export default async function DashboardPage({
           </Alert>
         )}
 
-        {/* KPIs clickeables */}
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <KpiCard
-            label="Total hoy"
-            value={totalRes.count ?? 0}
-            href="/dashboard"
-            variant={!statusRaw && !fueraFilter ? 'default' : 'default'}
-          />
-          <KpiCard
-            label="Pendientes"
-            value={pendientesRes.count ?? 0}
-            href={makeHref({ status: 'pendientes' })}
-            variant={isPendientesFilter ? 'warning' : 'default'}
-          />
-          <KpiCard
-            label="En camino"
-            value={enCaminoRes.count ?? 0}
-            href={makeHref({ status: 'en_camino' })}
-            variant={statusFilter === 'en_camino' ? 'warning' : 'default'}
-          />
-          <KpiCard
-            label="Entregados"
-            value={entregadosRes.count ?? 0}
-            href={makeHref({ status: 'entregado' })}
-            variant={statusFilter === 'entregado' ? 'success' : 'default'}
-          />
-          <KpiCard
-            label="Cancelados"
-            value={canceladosRes.count ?? 0}
-            href={makeHref({ status: 'cancelado' })}
-            variant={statusFilter === 'cancelado' ? 'danger' : 'default'}
-          />
-          <KpiCard
-            label="Fuera de horario"
-            value={fueraHorarioRes.count ?? 0}
-            href={makeHref({ fuera: '1' })}
-            variant={fueraFilter ? 'danger' : 'default'}
-          />
+        {/* KPIs clickeables — respetan el rango activo */}
+        <section className="space-y-2">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            KPIs · {kpiScopeLabel}
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+            <KpiCard
+              label="Total"
+              value={totalRes.count ?? 0}
+              href={makeHref({})}
+            />
+            <KpiCard
+              label="Pendientes"
+              value={pendientesRes.count ?? 0}
+              href={makeHref({ status: 'pendientes' })}
+              variant={isPendientesFilter ? 'warning' : 'default'}
+            />
+            <KpiCard
+              label="En camino"
+              value={enCaminoRes.count ?? 0}
+              href={makeHref({ status: 'en_camino' })}
+              variant={statusFilter === 'en_camino' ? 'warning' : 'default'}
+            />
+            <KpiCard
+              label="Entregados"
+              value={entregadosRes.count ?? 0}
+              href={makeHref({ status: 'entregado' })}
+              variant={statusFilter === 'entregado' ? 'success' : 'default'}
+            />
+            <KpiCard
+              label="Cancelados"
+              value={canceladosRes.count ?? 0}
+              href={makeHref({ status: 'cancelado' })}
+              variant={statusFilter === 'cancelado' ? 'danger' : 'default'}
+            />
+            <KpiCard
+              label="Fuera de horario"
+              value={fueraHorarioRes.count ?? 0}
+              href={makeHref({ fuera: '1' })}
+              variant={fueraFilter ? 'danger' : 'default'}
+            />
+          </div>
         </section>
 
         {/* Tabs vista */}
