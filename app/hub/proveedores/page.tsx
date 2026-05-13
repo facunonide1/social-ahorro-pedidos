@@ -1,15 +1,37 @@
 import Link from 'next/link'
+import { Plus, ArrowRight } from 'lucide-react'
+
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { CONDICION_IVA_LABELS } from '@/lib/types/admin'
 import type { Proveedor } from '@/lib/types/admin'
-import HubSidebar from '../_components/sidebar'
-import Filters from './filters'
+
+import { HubShell } from '@/components/hub/hub-shell'
+import { PageHeader } from '@/components/shared/page-header'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { cn } from '@/lib/utils'
+
+import ProveedoresFilters from './filters'
 
 export const dynamic = 'force-dynamic'
 
 type ProveedorConStats = Proveedor & {
   facturas_count?: number
+}
+
+type ProveedorRowRaw = Proveedor & {
+  facturas_count?: { count: number }[] | null
 }
 
 export default async function ProveedoresPage({
@@ -18,7 +40,7 @@ export default async function ProveedoresPage({
   searchParams: { q?: string; categoria?: string; activo?: string }
 }) {
   const profile = await requireAdminHubAccess({
-    allowedRoles: ['super_admin','gerente','comprador','administrativo','auditor'],
+    allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'auditor'],
   })
   const sb = createClient()
 
@@ -37,119 +59,147 @@ export default async function ProveedoresPage({
   if (q) {
     const like = `%${q}%`
     query = query.or(
-      `razon_social.ilike.${like},nombre_comercial.ilike.${like},cuit.ilike.${like}`
+      `razon_social.ilike.${like},nombre_comercial.ilike.${like},cuit.ilike.${like}`,
     )
   }
   if (categoria) query = query.eq('categoria', categoria)
   if (activoFilter !== null) query = query.eq('activo', activoFilter)
 
   const { data: rawRows, error } = await query
-  const rows: ProveedorConStats[] = (rawRows ?? []).map((r: any) => ({
+  const rows: ProveedorConStats[] = ((rawRows ?? []) as ProveedorRowRaw[]).map((r) => ({
     ...r,
-    facturas_count: Array.isArray(r.facturas_count) ? (r.facturas_count[0]?.count ?? 0) : 0,
+    facturas_count: Array.isArray(r.facturas_count) ? r.facturas_count[0]?.count ?? 0 : 0,
   }))
 
-  // Lista de categorías únicas para el filtro
   const { data: catRows } = await sb
-    .from('proveedores').select('categoria').not('categoria', 'is', null)
+    .from('proveedores')
+    .select('categoria')
+    .not('categoria', 'is', null)
   const categorias = Array.from(
-    new Set((catRows ?? []).map((r: any) => r.categoria).filter(Boolean))
+    new Set(
+      ((catRows ?? []) as { categoria: string | null }[])
+        .map((r) => r.categoria)
+        .filter((v): v is string => Boolean(v)),
+    ),
   ).sort()
 
-  const canCreate = ['super_admin','gerente','comprador','administrativo'].includes(profile.rol)
+  const canCreate = ['super_admin', 'gerente', 'comprador', 'administrativo'].includes(
+    profile.rol,
+  )
+  const hasFilters = q || categoria || activoFilter !== null
 
   return (
-    <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a', display: 'flex' }}>
-      <HubSidebar profile={profile} />
+    <HubShell profile={profile}>
+      <PageHeader
+        title="Proveedores"
+        description={
+          <>
+            {rows.length} resultado{rows.length === 1 ? '' : 's'}
+            {q ? ` para "${q}"` : ''}
+          </>
+        }
+        actions={
+          canCreate ? (
+            <Button asChild>
+              <Link href="/hub/proveedores/nuevo">
+                <Plus className="size-4" />
+                Nuevo proveedor
+              </Link>
+            </Button>
+          ) : undefined
+        }
+      />
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <header style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.4px' }}>Proveedores</div>
-            <div style={{ fontSize: 12, color: '#888' }}>{rows.length} resultado{rows.length === 1 ? '' : 's'}{q ? ` para "${q}"` : ''}</div>
-          </div>
-          {canCreate && (
-            <Link href="/hub/proveedores/nuevo"
-              style={{ padding: '10px 14px', borderRadius: 10, background: '#FF6D6E', color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
-              + Nuevo proveedor
-            </Link>
-          )}
-        </header>
-
+      <div className="space-y-4 p-4 md:p-6">
         {error && (
-          <div style={{ margin: 20, padding: 14, background: '#fff0f0', border: '0.5px solid #FF6D6E', borderRadius: 12, fontSize: 13, color: '#FF6D6E' }}>
-            {error.message}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
         )}
 
-        <section style={{ padding: '16px 24px 0' }}>
-          <Filters
-            initialQ={q}
-            initialCategoria={categoria}
-            initialActivo={activoRaw ?? ''}
-            categorias={categorias}
-          />
-        </section>
+        <ProveedoresFilters
+          initialQ={q}
+          initialCategoria={categoria}
+          initialActivo={activoRaw ?? ''}
+          categorias={categorias}
+        />
 
-        <main style={{ padding: '16px 24px 24px' }}>
-          <div className="sa-list-table-wrap" style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: '#faf8f5', borderBottom: '0.5px solid #ede9e4' }}>
-                  {['Razón social','CUIT','Categoría','Condición IVA','Plazo pago','Facturas','Estado',''].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 && (
-                  <tr><td colSpan={8} style={{ padding: 28, textAlign: 'center', color: '#aaa' }}>
-                    {q || categoria || activoFilter !== null
-                      ? 'Sin coincidencias.'
+        <Card className="overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Razón social</TableHead>
+                <TableHead>CUIT</TableHead>
+                <TableHead>Categoría</TableHead>
+                <TableHead>Cond. IVA</TableHead>
+                <TableHead className="text-right">Plazo</TableHead>
+                <TableHead className="text-right">Facturas</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="w-[60px]" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
+                    {hasFilters
+                      ? 'Sin coincidencias con los filtros actuales.'
                       : 'Todavía no hay proveedores cargados.'}
-                  </td></tr>
-                )}
-                {rows.map(p => (
-                  <tr key={p.id} style={{ borderBottom: '0.5px solid #f5f1ec', opacity: p.activo ? 1 : 0.55 }}>
-                    <td style={{ padding: '10px 12px', fontWeight: 600 }}>
-                      {p.razon_social}
-                      {p.nombre_comercial && (
-                        <div style={{ fontSize: 11, color: '#888', fontWeight: 400 }}>{p.nombre_comercial}</div>
-                      )}
-                    </td>
-                    <td style={{ padding: '10px 12px', color: '#666', fontFamily: 'ui-monospace, monospace', fontSize: 12 }}>{p.cuit}</td>
-                    <td style={{ padding: '10px 12px', color: '#666' }}>{p.categoria || '—'}</td>
-                    <td style={{ padding: '10px 12px', color: '#666' }}>
-                      {p.condicion_iva ? CONDICION_IVA_LABELS[p.condicion_iva] : '—'}
-                    </td>
-                    <td style={{ padding: '10px 12px', color: '#666' }}>{p.plazo_pago_dias}d</td>
-                    <td style={{ padding: '10px 12px', color: '#2a2a2a', fontWeight: 600 }}>{p.facturas_count ?? 0}</td>
-                    <td style={{ padding: '10px 12px' }}>
-                      {p.activo ? (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#1f8a4c', background: '#eaf7ef', border: '0.5px solid #8fd1a8', padding: '2px 8px', borderRadius: 999 }}>
-                          Activo
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#888', background: '#f5f5f5', border: '0.5px solid #e2e2e2', padding: '2px 8px', borderRadius: 999 }}>
-                          Inactivo
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <Link href={`/hub/proveedores/${p.id}`}
-                        style={{ fontSize: 12, fontWeight: 600, color: '#726DFF', textDecoration: 'none' }}>
-                        Ver →
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map((p) => (
+                  <TableRow key={p.id} className={cn(!p.activo && 'opacity-60')}>
+                    <TableCell className="font-semibold">
+                      <Link
+                        href={`/hub/proveedores/${p.id}`}
+                        className="hover:underline"
+                      >
+                        {p.razon_social}
                       </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </main>
+                      {p.nombre_comercial && (
+                        <div className="text-xs font-normal text-muted-foreground">
+                          {p.nombre_comercial}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {p.cuit}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {p.categoria || '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {p.condicion_iva ? CONDICION_IVA_LABELS[p.condicion_iva] : '—'}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {p.plazo_pago_dias}d
+                    </TableCell>
+                    <TableCell className="text-right font-semibold tabular-nums">
+                      {p.facturas_count ?? 0}
+                    </TableCell>
+                    <TableCell>
+                      {p.activo ? (
+                        <Badge variant="success">Activo</Badge>
+                      ) : (
+                        <Badge variant="outline">Inactivo</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={`/hub/proveedores/${p.id}`}>
+                          Ver
+                          <ArrowRight className="size-3.5" />
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </Card>
       </div>
-    </div>
+    </HubShell>
   )
 }

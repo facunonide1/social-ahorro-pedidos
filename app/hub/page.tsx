@@ -1,8 +1,24 @@
 import Link from 'next/link'
+import {
+  Building2,
+  FileText,
+  Banknote,
+  PackageCheck,
+  Building,
+  Users,
+  Briefcase,
+  ArrowRight,
+  type LucideIcon,
+} from 'lucide-react'
+
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { ADMIN_ROLE_LABELS } from '@/lib/types/admin'
 import type { AdminRole } from '@/lib/types/admin'
-import HubSidebar from './_components/sidebar'
+
+import { HubShell } from '@/components/hub/hub-shell'
+import { PageHeader } from '@/components/shared/page-header'
+import { Card, CardContent } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,71 +26,108 @@ type SectionCard = {
   href: string
   title: string
   desc: string
-  icon: string
+  icon: LucideIcon
   roles?: AdminRole[]
-  comingSoon?: boolean
 }
 
 const SECTIONS: SectionCard[] = [
-  { href: '/hub/proveedores',  title: 'Proveedores',   desc: 'Maestro de proveedores, contactos, cuentas bancarias y documentos.', icon: '🏭', roles: ['super_admin','gerente','comprador','administrativo','auditor'] },
-  { href: '/hub/facturas',     title: 'Facturas',      desc: 'Facturas de proveedor, estado, vencimientos.',                       icon: '📄', roles: ['super_admin','gerente','administrativo','tesoreria','auditor'] },
-  { href: '/hub/pagos',        title: 'Pagos',         desc: 'Órdenes de pago y conciliación.',                                    icon: '💸', roles: ['super_admin','gerente','tesoreria','auditor'] },
-  { href: '/hub/recepciones',  title: 'Recepciones',   desc: 'Recepción de mercadería en sucursal.',                               icon: '📦', roles: ['super_admin','gerente','administrativo','sucursal','auditor'] },
-  { href: '/hub/sucursales',   title: 'Sucursales',    desc: 'Alta y edición de sucursales.',                                      icon: '🏪', roles: ['super_admin','gerente'] },
-  { href: '/hub/usuarios',     title: 'Usuarios',      desc: 'Admins del Hub y sus roles.',                                        icon: '👥', roles: ['super_admin','gerente'] },
-  { href: '/dashboard',        title: 'CRM Pedidos',   desc: 'Panel operativo de pedidos de la farmacia (app existente).',         icon: '🛵' },
+  {
+    href: '/hub/proveedores',
+    title: 'Proveedores',
+    desc: 'Maestro de proveedores, contactos, cuentas bancarias y documentos.',
+    icon: Building2,
+    roles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'auditor'],
+  },
+  {
+    href: '/hub/facturas',
+    title: 'Facturas',
+    desc: 'Facturas de proveedor, estado, vencimientos.',
+    icon: FileText,
+    roles: ['super_admin', 'gerente', 'administrativo', 'tesoreria', 'auditor'],
+  },
+  {
+    href: '/hub/pagos',
+    title: 'Pagos',
+    desc: 'Órdenes de pago y conciliación.',
+    icon: Banknote,
+    roles: ['super_admin', 'gerente', 'tesoreria', 'auditor'],
+  },
+  {
+    href: '/hub/recepciones',
+    title: 'Recepciones',
+    desc: 'Recepción de mercadería en sucursal.',
+    icon: PackageCheck,
+    roles: ['super_admin', 'gerente', 'administrativo', 'sucursal', 'auditor'],
+  },
+  {
+    href: '/hub/sucursales',
+    title: 'Sucursales',
+    desc: 'Alta y edición de sucursales.',
+    icon: Building,
+    roles: ['super_admin', 'gerente'],
+  },
+  {
+    href: '/hub/usuarios',
+    title: 'Usuarios',
+    desc: 'Admins del Hub y sus roles.',
+    icon: Users,
+    roles: ['super_admin', 'gerente'],
+  },
+  {
+    href: '/dashboard',
+    title: 'CRM Pedidos',
+    desc: 'Panel operativo de pedidos de la farmacia.',
+    icon: Briefcase,
+  },
 ]
 
 export default async function HubHome() {
   const profile = await requireAdminHubAccess()
 
+  const greeting = profile.nombre?.split(' ')[0] || profile.email
+  const visible = SECTIONS.filter((s) => !s.roles || s.roles.includes(profile.rol))
+
   return (
-    <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a', display: 'flex' }}>
-      <HubSidebar profile={profile} />
+    <HubShell profile={profile}>
+      <PageHeader
+        title={`Hola, ${greeting}`}
+        description={`${ADMIN_ROLE_LABELS[profile.rol]} · Admin Hub de Social Ahorro Farmacias`}
+      />
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <header style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4', padding: '16px 24px' }}>
-          <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.4px' }}>
-            Hola, {profile.nombre?.split(' ')[0] || profile.email} 👋
-          </div>
-          <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
-            {ADMIN_ROLE_LABELS[profile.rol]} · Admin Hub de Social Ahorro Farmacias
-          </div>
-        </header>
-
-        <main style={{ padding: '24px 24px', maxWidth: 1100 }}>
-          <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14 }}>
-            {SECTIONS.map(s => {
-              const allowed = !s.roles || s.roles.includes(profile.rol)
-              if (!allowed) return null
-              const disabled = s.comingSoon
-              const card = (
-                <div style={{
-                  background: '#fff',
-                  border: `0.5px solid ${disabled ? '#ede9e4' : '#d9d6ff'}`,
-                  borderRadius: 16, padding: 18,
-                  display: 'flex', flexDirection: 'column', gap: 8,
-                  minHeight: 140,
-                  opacity: disabled ? 0.65 : 1,
-                  position: 'relative',
-                }}>
-                  <div style={{ fontSize: 28 }}>{s.icon}</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.2px' }}>{s.title}</div>
-                  <div style={{ fontSize: 12, color: '#666', lineHeight: 1.4 }}>{s.desc}</div>
-                  {disabled && (
-                    <span style={{ position: 'absolute', top: 12, right: 12, fontSize: 9, fontWeight: 700, color: '#c6831a', background: '#fff7ec', border: '0.5px solid #edc989', padding: '2px 8px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
-                      Próximamente
-                    </span>
-                  )}
-                </div>
-              )
-              return disabled
-                ? <div key={s.href}>{card}</div>
-                : <Link key={s.href} href={s.href} style={{ textDecoration: 'none', color: 'inherit' }}>{card}</Link>
-            })}
-          </section>
-        </main>
+      <div className="mx-auto w-full max-w-5xl p-4 md:p-6">
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {visible.map((s) => (
+            <SectionLink key={s.href} section={s} />
+          ))}
+        </section>
       </div>
-    </div>
+    </HubShell>
+  )
+}
+
+function SectionLink({ section }: { section: SectionCard }) {
+  const Icon = section.icon
+  return (
+    <Link href={section.href} className="group">
+      <Card
+        className={cn(
+          'h-full transition-colors hover:border-primary/40 hover:bg-accent/30',
+        )}
+      >
+        <CardContent className="flex h-full flex-col gap-2 p-5">
+          <div className="flex size-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <Icon className="size-5" />
+          </div>
+          <div className="text-base font-semibold tracking-tight">{section.title}</div>
+          <div className="text-xs leading-relaxed text-muted-foreground">
+            {section.desc}
+          </div>
+          <div className="mt-auto flex items-center gap-1 pt-2 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+            Abrir
+            <ArrowRight className="size-3.5" />
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   )
 }
