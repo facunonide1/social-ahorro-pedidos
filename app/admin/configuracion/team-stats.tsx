@@ -1,3 +1,14 @@
+import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Card } from '@/components/ui/card'
+
 type RepStat = {
   id: string
   name: string
@@ -18,83 +29,106 @@ type ZoneStat = {
 function formatMins(m: number | null) {
   if (m === null) return '—'
   if (m < 60) return `${m} min`
-  const h = Math.floor(m / 60); const r = m % 60
+  const h = Math.floor(m / 60)
+  const r = m % 60
   return r === 0 ? `${h} h` : `${h} h ${r} min`
 }
 
-export default function TeamStats({ reps, zones }: { reps: RepStat[]; zones: ZoneStat[] }) {
+export default function TeamStats({
+  reps,
+  zones,
+}: {
+  reps: RepStat[]
+  zones: ZoneStat[]
+}) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      {/* REPARTIDORES */}
+    <div className="space-y-5">
       <div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#726DFF', letterSpacing: '0.3px', textTransform: 'uppercase', marginBottom: 8 }}>
+        <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-primary">
           Repartidores (últimos 30 días)
         </div>
         {reps.length === 0 ? (
-          <div style={{ fontSize: 13, color: '#aaa' }}>Todavía no hay repartidores activos con entregas.</div>
-        ) : (
-          <div className="sa-list-table-wrap" style={{ background: '#faf8f5', border: '0.5px solid #f0ede8', borderRadius: 12, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4' }}>
-                  {['Repartidor','Entregados','En progreso','Tiempo prom. entrega'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.3px', textTransform: 'uppercase' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {reps.map(r => (
-                  <tr key={r.id} style={{ borderBottom: '0.5px solid #f5f1ec' }}>
-                    <td style={{ padding: '10px 12px', fontWeight: 600 }}>{r.name}</td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#1f8a4c', background: '#eaf7ef', border: '0.5px solid #8fd1a8', padding: '2px 8px', borderRadius: 999 }}>
-                        {r.delivered}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 12px', color: r.in_progress > 0 ? '#2855c7' : '#aaa' }}>
-                      {r.in_progress}
-                    </td>
-                    <td style={{ padding: '10px 12px', color: '#666' }}>{formatMins(r.avg_minutes)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="text-sm text-muted-foreground">
+            Todavía no hay repartidores activos con entregas.
           </div>
+        ) : (
+          <Card className="overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Repartidor</TableHead>
+                  <TableHead className="text-right">Entregados</TableHead>
+                  <TableHead className="text-right">En progreso</TableHead>
+                  <TableHead>Tiempo prom. entrega</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reps.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-semibold">{r.name}</TableCell>
+                    <TableCell className="text-right">
+                      <Badge variant="success">{r.delivered}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-muted-foreground">
+                      {r.in_progress}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatMins(r.avg_minutes)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
         )}
       </div>
 
-      {/* ZONAS */}
       <div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#1f8a4c', letterSpacing: '0.3px', textTransform: 'uppercase', marginBottom: 8 }}>
+        <div className="mb-2 text-[10px] font-bold uppercase tracking-wider text-success">
           Zonas (últimos 30 días)
         </div>
         {zones.length === 0 ? (
-          <div style={{ fontSize: 13, color: '#aaa' }}>Sin datos de zonas en los últimos 30 días.</div>
-        ) : (
-          <div className="sa-list-table-wrap" style={{ background: '#faf8f5', border: '0.5px solid #f0ede8', borderRadius: 12, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4' }}>
-                  {['Zona','Total pedidos','Entregados','Tiempo prom. entrega'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.3px', textTransform: 'uppercase' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {zones.map(z => (
-                  <tr key={z.id ?? 'sin-zona'} style={{ borderBottom: '0.5px solid #f5f1ec' }}>
-                    <td style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ width: 10, height: 10, borderRadius: 999, background: z.color }} />
-                      <span style={{ fontWeight: 600 }}>{z.name}</span>
-                    </td>
-                    <td style={{ padding: '10px 12px' }}>{z.total}</td>
-                    <td style={{ padding: '10px 12px', color: '#1f8a4c' }}>{z.delivered}</td>
-                    <td style={{ padding: '10px 12px', color: '#666' }}>{formatMins(z.avg_minutes)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="text-sm text-muted-foreground">
+            Sin datos de zonas en los últimos 30 días.
           </div>
+        ) : (
+          <Card className="overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Zona</TableHead>
+                  <TableHead className="text-right">Total pedidos</TableHead>
+                  <TableHead className="text-right">Entregados</TableHead>
+                  <TableHead>Tiempo prom. entrega</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {zones.map((z) => (
+                  <TableRow key={z.id ?? 'sin-zona'}>
+                    <TableCell>
+                      <span className="inline-flex items-center gap-2">
+                        <span
+                          className="size-2.5 rounded-full"
+                          style={{ backgroundColor: z.color }}
+                          aria-hidden
+                        />
+                        <span className="font-semibold">{z.name}</span>
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {z.total}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums text-success">
+                      {z.delivered}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatMins(z.avg_minutes)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
         )}
       </div>
     </div>
