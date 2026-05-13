@@ -1,21 +1,16 @@
 'use client'
 
 import Link from 'next/link'
-import { Bell, Search } from 'lucide-react'
-import { toast } from 'sonner'
 
 import type { CrmUser } from '@/lib/hooks/use-crm-user'
 import type { CrmRole } from '@/components/crm/crm-nav-config'
 
-import { Button } from '@/components/ui/button'
 import { CrmMobileSidebarSheet } from '@/components/crm/crm-sidebar'
+import { CrmSearch } from '@/components/crm/crm-search'
 import { CrmUserMenu } from '@/components/crm/crm-user-menu'
+import { NotificationsBell } from '@/components/crm/notifications-bell'
 
 export function CrmTopBar({ user, role }: { user: CrmUser; role: CrmRole }) {
-  function notReady(label: string) {
-    toast.message(label, { description: 'Próximamente.' })
-  }
-
   return (
     <header
       role="banner"
@@ -33,39 +28,8 @@ export function CrmTopBar({ user, role }: { user: CrmUser; role: CrmRole }) {
         </Link>
 
         <div className="ml-auto flex items-center gap-1 md:gap-2">
-          <button
-            type="button"
-            onClick={() => notReady('Búsqueda global')}
-            className="hidden h-9 w-64 items-center gap-2 rounded-md border border-input bg-background px-3 text-xs text-muted-foreground transition-colors hover:bg-accent/40 sm:flex"
-            aria-label="Buscar"
-          >
-            <Search className="size-3.5" />
-            <span>Buscar...</span>
-            <kbd className="ml-auto rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-              ⌘K
-            </kbd>
-          </button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-9 sm:hidden"
-            aria-label="Buscar"
-            onClick={() => notReady('Búsqueda global')}
-          >
-            <Search className="size-4" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative size-9"
-            aria-label="Notificaciones"
-            onClick={() => notReady('Notificaciones')}
-          >
-            <Bell className="size-4" />
-          </Button>
-
+          <CrmSearch variant="header" />
+          <NotificationsBell userId={user.id} role={role} />
           <CrmUserMenu user={user} />
         </div>
       </div>

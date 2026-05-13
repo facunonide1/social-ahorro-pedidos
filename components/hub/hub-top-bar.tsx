@@ -4,6 +4,8 @@ import Link from 'next/link'
 
 import type { HubProfile } from '@/lib/admin-hub/auth'
 
+import { CrmSearch } from '@/components/crm/crm-search'
+import { NotificationsBell } from '@/components/crm/notifications-bell'
 import { HubMobileSidebarSheet } from '@/components/hub/hub-sidebar'
 import { HubUserMenu } from '@/components/hub/hub-user-menu'
 
@@ -25,6 +27,8 @@ export function HubTopBar({ profile }: { profile: HubProfile }) {
         </Link>
 
         <div className="ml-auto flex items-center gap-1 md:gap-2">
+          <CrmSearch variant="header" />
+          <NotificationsBell userId={profile.id} adminRole={profile.rol} />
           <HubUserMenu profile={profile} />
         </div>
       </div>

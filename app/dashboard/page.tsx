@@ -34,7 +34,6 @@ import LiveClock from './live-clock'
 import SyncButton from './sync-button'
 import NewOrderNotifier from './new-order-notifier'
 import TitleBadge from './title-badge'
-import GlobalSearch from './global-search'
 
 export const dynamic = 'force-dynamic'
 
@@ -279,7 +278,6 @@ export default async function DashboardPage({
         description={<LiveClock />}
         actions={
           <PageActions className="justify-end">
-            <GlobalSearch />
             <NewOrderNotifier />
             <Button asChild variant="outline" size="sm">
               <a href={exportHref} title="Exportar pedidos del filtro a CSV">
