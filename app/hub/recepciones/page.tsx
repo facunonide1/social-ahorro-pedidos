@@ -1,102 +1,144 @@
 import Link from 'next/link'
+import { ArrowRight, Plus } from 'lucide-react'
+
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
-import { RECEPCION_ESTADO_LABELS } from '@/lib/types/admin'
-import type { RecepcionEstado } from '@/lib/types/admin'
-import HubSidebar from '../_components/sidebar'
+import type { RecepcionMercaderia } from '@/lib/types/admin'
+
+import { HubShell } from '@/components/hub/hub-shell'
+import { RecepcionEstadoBadge } from '@/components/hub/recepcion-estado-badge'
+import { PageHeader } from '@/components/shared/page-header'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 export const dynamic = 'force-dynamic'
 
-const ESTADO_COLOR: Record<RecepcionEstado, { fg: string; bg: string; border: string }> = {
-  completa:        { fg: '#1f8a4c', bg: '#eaf7ef', border: '#8fd1a8' },
-  parcial:         { fg: '#c6831a', bg: '#fff7ec', border: '#edc989' },
-  con_diferencias: { fg: '#a33',    bg: '#fbeaea', border: '#e0a8a8' },
-  rechazada:       { fg: '#888',    bg: '#f5f5f5', border: '#e2e2e2' },
+type RecepcionRow = RecepcionMercaderia & {
+  sucursales: { nombre: string | null } | null
+  recepcion_items?: { count: number }[] | null
 }
 
 export default async function RecepcionesPage() {
   const profile = await requireAdminHubAccess({
-    allowedRoles: ['super_admin','gerente','administrativo','sucursal','auditor'],
+    allowedRoles: [
+      'super_admin',
+      'gerente',
+      'administrativo',
+      'sucursal',
+      'auditor',
+    ],
   })
   const sb = createClient()
 
-  const { data: rows, error } = await sb
+  const { data: rawRows, error } = await sb
     .from('recepciones_mercaderia')
     .select('*, sucursales(nombre), recepcion_items(count)')
     .order('fecha_recepcion', { ascending: false })
     .limit(500)
 
-  const canCreate = ['super_admin','gerente','administrativo','sucursal'].includes(profile.rol)
+  const rows = (rawRows ?? []) as RecepcionRow[]
+  const canCreate = ['super_admin', 'gerente', 'administrativo', 'sucursal'].includes(
+    profile.rol,
+  )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a', display: 'flex' }}>
-      <HubSidebar profile={profile} />
+    <HubShell profile={profile}>
+      <PageHeader
+        title="Recepciones de mercadería"
+        description={`${rows.length} recepción${rows.length === 1 ? '' : 'es'}`}
+        actions={
+          canCreate ? (
+            <Button asChild>
+              <Link href="/hub/recepciones/nueva">
+                <Plus className="size-4" />
+                Nueva recepción
+              </Link>
+            </Button>
+          ) : undefined
+        }
+      />
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <header style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.4px' }}>Recepciones de mercadería</div>
-            <div style={{ fontSize: 12, color: '#888' }}>{(rows ?? []).length} recepción{(rows ?? []).length === 1 ? '' : 'es'}</div>
-          </div>
-          {canCreate && (
-            <Link href="/hub/recepciones/nueva"
-              style={{ padding: '10px 14px', borderRadius: 10, background: '#FF6D6E', color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
-              + Nueva recepción
-            </Link>
-          )}
-        </header>
-
+      <div className="space-y-4 p-4 md:p-6">
         {error && (
-          <div style={{ margin: 20, padding: 14, background: '#fff0f0', border: '0.5px solid #FF6D6E', borderRadius: 12, fontSize: 13, color: '#FF6D6E' }}>
-            {error.message}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
         )}
 
-        <main style={{ padding: 20 }}>
-          <div className="sa-list-table-wrap" style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ background: '#faf8f5', borderBottom: '0.5px solid #ede9e4' }}>
-                  {['Remito','Fecha','Sucursal','Items','Estado',''].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '10px 12px', fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.3px', textTransform: 'uppercase' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {(rows ?? []).length === 0 && (
-                  <tr><td colSpan={6} style={{ padding: 28, textAlign: 'center', color: '#aaa' }}>Sin recepciones cargadas.</td></tr>
-                )}
-                {(rows ?? []).map((r: any) => {
-                  const c = ESTADO_COLOR[r.estado as RecepcionEstado]
-                  const itemsCount = Array.isArray(r.recepcion_items) ? (r.recepcion_items[0]?.count ?? 0) : 0
+        <Card className="overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Remito</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Sucursal</TableHead>
+                <TableHead className="text-right">Items</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="w-[60px]" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
+                    Sin recepciones cargadas.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map((r) => {
+                  const itemsCount = Array.isArray(r.recepcion_items)
+                    ? r.recepcion_items[0]?.count ?? 0
+                    : 0
                   return (
-                    <tr key={r.id} style={{ borderBottom: '0.5px solid #f5f1ec' }}>
-                      <td style={{ padding: '10px 12px', fontFamily: 'ui-monospace, monospace', fontSize: 12, fontWeight: 700 }}>
-                        {r.numero_remito || '— sin remito —'}
-                      </td>
-                      <td style={{ padding: '10px 12px', color: '#666' }}>
-                        {new Date(r.fecha_recepcion).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
-                      </td>
-                      <td style={{ padding: '10px 12px', color: '#666' }}>{r.sucursales?.nombre || '—'}</td>
-                      <td style={{ padding: '10px 12px', color: '#666' }}>{itemsCount}</td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: c.fg, background: c.bg, border: `0.5px solid ${c.border}`, padding: '3px 8px', borderRadius: 999 }}>
-                          {RECEPCION_ESTADO_LABELS[r.estado as RecepcionEstado]}
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <Link href={`/hub/recepciones/${r.id}`} style={{ fontSize: 12, fontWeight: 600, color: '#726DFF', textDecoration: 'none' }}>
-                          Ver →
+                    <TableRow key={r.id}>
+                      <TableCell className="font-mono text-xs font-bold">
+                        <Link
+                          href={`/hub/recepciones/${r.id}`}
+                          className="hover:underline"
+                        >
+                          {r.numero_remito || '— sin remito —'}
                         </Link>
-                      </td>
-                    </tr>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(r.fecha_recepcion).toLocaleString('es-AR', {
+                          dateStyle: 'short',
+                          timeStyle: 'short',
+                        })}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {r.sucursales?.nombre || '—'}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {itemsCount}
+                      </TableCell>
+                      <TableCell>
+                        <RecepcionEstadoBadge estado={r.estado} />
+                      </TableCell>
+                      <TableCell>
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={`/hub/recepciones/${r.id}`}>
+                            Ver
+                            <ArrowRight className="size-3.5" />
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
                   )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </main>
+                })
+              )}
+            </TableBody>
+          </Table>
+        </Card>
       </div>
-    </div>
+    </HubShell>
   )
 }
