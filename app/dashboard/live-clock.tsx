@@ -4,10 +4,13 @@ import { useEffect, useState } from 'react'
 
 function format(now: Date) {
   const fecha = now.toLocaleDateString('es-AR', {
-    weekday: 'long', day: 'numeric', month: 'long',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
   })
   const hora = now.toLocaleTimeString('es-AR', {
-    hour: '2-digit', minute: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
   })
   return { fecha, hora }
 }
@@ -21,11 +24,9 @@ export default function LiveClock() {
   }, [])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
-      <span style={{ fontSize: 13, fontWeight: 600, color: '#2a2a2a', textTransform: 'capitalize' }}>
-        {fecha}
-      </span>
-      <span style={{ fontSize: 11, color: '#999' }}>{hora}</span>
-    </div>
+    <span className="inline-flex items-baseline gap-1.5">
+      <span className="text-sm font-medium capitalize text-foreground">{fecha}</span>
+      <span className="text-xs text-muted-foreground tabular-nums">{hora}</span>
+    </span>
   )
 }

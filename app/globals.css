@@ -173,3 +173,13 @@
 }
 @keyframes sa-fade-in { from { opacity: 0 } to { opacity: 1 } }
 @keyframes sa-slide-in { from { transform: translateX(-100%) } to { transform: translateX(0) } }
+
+/* Express pulse — usado por OrderTipoEnvioBadge cuando tipo=express y
+   el pedido sigue activo. Pulsa el ring del badge con destructive. */
+@keyframes sa-express-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(var(--destructive) / 0.6); }
+  50%      { box-shadow: 0 0 0 4px hsl(var(--destructive) / 0); }
+}
+.sa-express-pulse {
+  animation: sa-express-pulse 1.3s ease-in-out infinite;
+}

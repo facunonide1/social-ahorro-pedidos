@@ -23,7 +23,7 @@ export type PageHeaderTab = {
 
 export interface PageHeaderProps {
   title: string
-  description?: string
+  description?: React.ReactNode
   breadcrumbs?: Breadcrumb[]
   actions?: React.ReactNode
   tabs?: PageHeaderTab[]

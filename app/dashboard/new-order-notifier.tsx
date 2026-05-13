@@ -3,9 +3,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Bell, BellOff, X } from 'lucide-react'
+
 import { createClient } from '@/lib/supabase/client'
-import { TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS, ORIGIN_LABELS } from '@/lib/types'
+import { ORIGIN_LABELS } from '@/lib/types'
 import type { TipoEnvio, OrderOrigin } from '@/lib/types'
+
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { OrderTipoEnvioBadge } from '@/components/crm/order-tipo-envio-badge'
+import { cn } from '@/lib/utils'
 
 type Incoming = {
   id: string
@@ -38,7 +46,10 @@ function playDing(audioCtx: AudioContext) {
 export default function NewOrderNotifier() {
   const router = useRouter()
   const sb = createClient()
-  const [pending, setPending] = useState<{ count: number; items: Incoming[] }>({ count: 0, items: [] })
+  const [pending, setPending] = useState<{ count: number; items: Incoming[] }>({
+    count: 0,
+    items: [],
+  })
   const [soundOn, setSoundOn] = useState(false)
   const [connected, setConnected] = useState(false)
   const audioRef = useRef<AudioContext | null>(null)
@@ -48,34 +59,59 @@ export default function NewOrderNotifier() {
   function toggleSound() {
     if (!audioRef.current) {
       try {
-        const Ctx = (window.AudioContext || (window as any).webkitAudioContext)
+        const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
         audioRef.current = new Ctx()
-      } catch {}
+      } catch {
+        /* sin audio */
+      }
     }
     const next = !soundOn
     setSoundOn(next)
-    try { localStorage.setItem(STORAGE_KEY, next ? '1' : '0') } catch {}
+    try {
+      localStorage.setItem(STORAGE_KEY, next ? '1' : '0')
+    } catch {
+      /* ignorar */
+    }
     if (next && audioRef.current) {
-      try { playDing(audioRef.current) } catch {}
+      try {
+        playDing(audioRef.current)
+      } catch {
+        /* ignorar */
+      }
     }
   }
+
+  // Restaurar preferencia de sonido al montar
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(STORAGE_KEY)
+      if (v === '1') setSoundOn(true)
+    } catch {
+      /* ignorar */
+    }
+  }, [])
 
   // Suscripción Realtime a INSERT en orders
   useEffect(() => {
     const channel = sb
       .channel('sa-orders-realtime')
-      .on('postgres_changes',
+      .on(
+        'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'orders' },
         (payload) => {
           const row = payload.new as Incoming
-          setPending(prev => ({
+          setPending((prev) => ({
             count: prev.count + 1,
             items: [row, ...prev.items].slice(0, 20),
           }))
           if (soundOnRef.current && audioRef.current) {
-            try { playDing(audioRef.current) } catch {}
+            try {
+              playDing(audioRef.current)
+            } catch {
+              /* ignorar */
+            }
           }
-        }
+        },
       )
       .subscribe((status) => {
         setConnected(status === 'SUBSCRIBED')
@@ -94,105 +130,86 @@ export default function NewOrderNotifier() {
 
   return (
     <>
-      {/* Indicador de conexión Realtime */}
-      <span title={connected ? 'Conectado en tiempo real' : 'Reconectando…'}
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          padding: '6px 10px', borderRadius: 999, fontSize: 11, fontWeight: 600,
-          background: connected ? '#eaf7ef' : '#fff7ec',
-          color:      connected ? '#1f8a4c' : '#c6831a',
-          border: `1px solid ${connected ? '#8fd1a8' : '#edc989'}`,
-        }}>
-        <span style={{
-          width: 7, height: 7, borderRadius: 999,
-          background: connected ? '#1f8a4c' : '#c6831a',
-          boxShadow: connected ? '0 0 0 2px rgba(31,138,76,0.2)' : 'none',
-        }} />
+      {/* Indicador realtime */}
+      <Badge
+        variant={connected ? 'success' : 'warning'}
+        className="gap-1.5"
+        title={connected ? 'Conectado en tiempo real' : 'Reconectando…'}
+      >
+        <span
+          className={cn(
+            'inline-block size-1.5 rounded-full',
+            connected ? 'bg-success' : 'bg-warning',
+          )}
+        />
         {connected ? 'En vivo' : 'Offline'}
-      </span>
+      </Badge>
 
-      {/* Toggle de sonido */}
-      <button onClick={toggleSound}
+      {/* Toggle sonido */}
+      <Button
+        type="button"
+        variant={soundOn ? 'secondary' : 'outline'}
+        size="sm"
+        onClick={toggleSound}
         title={soundOn ? 'Sonido activado' : 'Activar sonido de alerta'}
-        style={{
-          padding: '8px 10px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-          cursor: 'pointer', fontFamily: 'inherit',
-          background: soundOn ? '#eaf7ef' : '#fff',
-          color:      soundOn ? '#1f8a4c' : '#888',
-          border: `1.5px solid ${soundOn ? '#8fd1a8' : '#f0ede8'}`,
-        }}>
-        {soundOn ? '🔔 Alertas' : '🔕 Alertas'}
-      </button>
+      >
+        {soundOn ? <Bell className="size-4" /> : <BellOff className="size-4" />}
+        Alertas
+      </Button>
 
-      {/* Badge flotante */}
+      {/* Pop-up flotante con nuevos pedidos */}
       {pending.count > 0 && (
-        <div style={{
-          position: 'fixed', right: 20, bottom: 20, zIndex: 50,
-          background: '#fff', border: '2px solid #FF6D6E', borderRadius: 16,
-          boxShadow: '0 12px 32px rgba(255,109,110,0.25)',
-          padding: 14, minWidth: 280, maxWidth: 340,
-          display: 'flex', flexDirection: 'column', gap: 10,
-          animation: 'sa-pulse 1.6s ease-out infinite',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#FF6D6E', letterSpacing: '0.4px' }}>
-                NUEVO{pending.count === 1 ? '' : 'S'} PEDIDO{pending.count === 1 ? '' : 'S'}
+        <Card className="fixed bottom-5 right-5 z-50 w-[min(340px,calc(100vw-2.5rem))] border-2 border-primary shadow-xl shadow-primary/20 animate-in fade-in slide-in-from-bottom-4">
+          <CardContent className="space-y-3 p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                  {pending.count === 1 ? 'Nuevo pedido' : 'Nuevos pedidos'}
+                </div>
+                <div className="text-xl font-bold tracking-tight">
+                  {pending.count} {pending.count === 1 ? 'pedido entró' : 'pedidos entraron'}
+                </div>
               </div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#2a2a2a', letterSpacing: '-0.5px' }}>
-                {pending.count} {pending.count === 1 ? 'pedido entró' : 'pedidos entraron'}
-              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                onClick={() => setPending({ count: 0, items: [] })}
+              >
+                <X className="size-4" />
+              </Button>
             </div>
-            <button onClick={() => setPending({ count: 0, items: [] })}
-              style={{ background: 'transparent', border: 'none', color: '#bbb', fontSize: 18, cursor: 'pointer', padding: 4 }}
-              title="Ocultar">✕</button>
-          </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 180, overflowY: 'auto' }}>
-            {pending.items.slice(0, 5).map(it => {
-              const tc = TIPO_ENVIO_COLORS[it.tipo_envio]
-              return (
-                <Link key={it.id} href={`/pedidos/${it.id}`}
-                  style={{ textDecoration: 'none', color: 'inherit',
-                    background: '#faf8f5', border: '0.5px solid #f0ede8', borderRadius: 10,
-                    padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700 }}>{it.codigo}</span>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: tc.fg, background: tc.bg, border: `0.5px solid ${tc.border}`, padding: '1px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
-                      {TIPO_ENVIO_LABELS[it.tipo_envio]}
-                    </span>
+            <div className="flex max-h-44 flex-col gap-1.5 overflow-y-auto">
+              {pending.items.slice(0, 5).map((it) => (
+                <Link
+                  key={it.id}
+                  href={`/pedidos/${it.id}`}
+                  className="flex flex-col gap-0.5 rounded-md border border-border bg-muted/40 px-2.5 py-1.5 transition-colors hover:bg-muted"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold tabular-nums">{it.codigo}</span>
+                    <OrderTipoEnvioBadge tipo={it.tipo_envio} />
                   </div>
-                  <div style={{ fontSize: 11, color: '#888' }}>
+                  <span className="text-[11px] text-muted-foreground">
                     {it.customer_name || '—'} · {ORIGIN_LABELS[it.origin]}
-                  </div>
+                  </span>
                 </Link>
-              )
-            })}
-            {pending.count > 5 && (
-              <div style={{ fontSize: 11, color: '#999', textAlign: 'center', padding: 4 }}>
-                y {pending.count - 5} más…
-              </div>
-            )}
-          </div>
+              ))}
+              {pending.count > 5 && (
+                <div className="text-center text-[11px] text-muted-foreground">
+                  y {pending.count - 5} más…
+                </div>
+              )}
+            </div>
 
-          <button onClick={acknowledge}
-            style={{
-              padding: '10px 12px', border: 'none', borderRadius: 10,
-              background: '#FF6D6E', color: '#fff', fontSize: 13, fontWeight: 700,
-              cursor: 'pointer',
-            }}>
-            Actualizar tablero
-          </button>
-        </div>
+            <Button onClick={acknowledge} className="w-full">
+              Actualizar tablero
+            </Button>
+          </CardContent>
+        </Card>
       )}
-
-      <style>{`
-        @keyframes sa-pulse {
-          0%   { box-shadow: 0 12px 32px rgba(255,109,110,0.25); }
-          50%  { box-shadow: 0 12px 38px rgba(255,109,110,0.55); }
-          100% { box-shadow: 0 12px 32px rgba(255,109,110,0.25); }
-        }
-      `}</style>
     </>
   )
 }
