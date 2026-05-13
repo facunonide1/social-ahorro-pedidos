@@ -1,17 +1,32 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { ExternalLink, Map, MapPin, Phone, Route } from 'lucide-react'
+
 import { createClient } from '@/lib/supabase/server'
-import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
-import type { Order, UserPedidos, ZonaReparto } from '@/lib/types'
+import type { Order, UserPedidos } from '@/lib/types'
 import { formatAddress, googleMapsLink } from '@/lib/address'
 import { formatOrderNumber } from '@/lib/orders/format'
+
+import { CrmShell } from '@/components/crm/crm-shell'
+import { OrderStatusBadge } from '@/components/crm/order-status-badge'
+import { PageHeader } from '@/components/shared/page-header'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
+
 import RepartidorRowActions from './row-actions'
 
 export const dynamic = 'force-dynamic'
 
+type OrderWithZona = Order & {
+  zonas_reparto: { id: string; nombre: string; color: string } | null
+}
+
 export default async function RepartidorPage() {
   const sb = createClient()
-  const { data: { user } } = await sb.auth.getUser()
+  const {
+    data: { user },
+  } = await sb.auth.getUser()
   if (!user) redirect('/login')
 
   const { data: profile } = await sb
@@ -30,41 +45,53 @@ export default async function RepartidorPage() {
     .order('created_at', { ascending: false })
 
   const prioridad: Record<string, number> = {
-    en_camino: 0, listo: 1, en_preparacion: 2, confirmado: 3, nuevo: 4,
-    entregado: 5, cancelado: 6,
+    en_camino: 0,
+    listo: 1,
+    en_preparacion: 2,
+    confirmado: 3,
+    nuevo: 4,
+    entregado: 5,
+    cancelado: 6,
   }
-  const sorted = (orders ?? []).slice().sort(
-    (a: any, b: any) => (prioridad[a.status] ?? 99) - (prioridad[b.status] ?? 99)
+  const sorted = ((orders ?? []) as OrderWithZona[])
+    .slice()
+    .sort((a, b) => (prioridad[a.status] ?? 99) - (prioridad[b.status] ?? 99))
+
+  const pendientes = sorted.filter(
+    (o) => o.status !== 'entregado' && o.status !== 'cancelado',
+  )
+  const cerrados = sorted.filter(
+    (o) => o.status === 'entregado' || o.status === 'cancelado',
   )
 
-  const pendientes = sorted.filter((o: any) => o.status !== 'entregado' && o.status !== 'cancelado')
-  const cerrados   = sorted.filter((o: any) => o.status === 'entregado' || o.status === 'cancelado')
-
-  // Agrupo pendientes por zona para optimizar ruta
-  type Group = { zonaId: string | null; nombre: string; color: string; orders: Order[] }
+  type Group = {
+    zonaId: string | null
+    nombre: string
+    color: string
+    orders: OrderWithZona[]
+  }
   const groups = new Map<string, Group>()
-  for (const o of pendientes as any[]) {
+  for (const o of pendientes) {
     const zid = o.zona_id ?? 'sin-zona'
     if (!groups.has(zid)) {
       groups.set(zid, {
         zonaId: o.zona_id ?? null,
         nombre: o.zonas_reparto?.nombre ?? 'Sin zona asignada',
-        color:  o.zonas_reparto?.color ?? '#aaa',
+        color: o.zonas_reparto?.color ?? 'hsl(var(--muted-foreground))',
         orders: [],
       })
     }
-    groups.get(zid)!.orders.push(o as Order)
+    groups.get(zid)!.orders.push(o)
   }
-  // Orden de zonas: primero las con más pedidos
-  const groupsList = Array.from(groups.values()).sort((a, b) => b.orders.length - a.orders.length)
+  const groupsList = Array.from(groups.values()).sort(
+    (a, b) => b.orders.length - a.orders.length,
+  )
 
-  // Link de Google Maps con ruta multi-stop
-  function buildRouteLink(list: Order[]): string | null {
+  function buildRouteLink(list: OrderWithZona[]): string | null {
     const stops = list
-      .map(o => formatAddress(o.shipping_address) || formatAddress(o.billing_address))
-      .filter(Boolean)
+      .map((o) => formatAddress(o.shipping_address) || formatAddress(o.billing_address))
+      .filter(Boolean) as string[]
     if (stops.length === 0) return null
-    // https://www.google.com/maps/dir/?api=1&destination=...&waypoints=...
     const last = stops[stops.length - 1]
     const waypoints = stops.slice(0, -1).join('|')
     const params = new URLSearchParams({ api: '1', destination: last })
@@ -72,119 +99,142 @@ export default async function RepartidorPage() {
     return `https://www.google.com/maps/dir/?${params}`
   }
 
-  const totalRouteLink = buildRouteLink(pendientes as Order[])
+  const totalRouteLink = buildRouteLink(pendientes)
 
   return (
-    <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a' }}>
-      <header style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4', padding: '14px 18px', position: 'sticky', top: 0, zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.3px' }}>Mis entregas</div>
-          <div style={{ fontSize: 12, color: '#999' }}>{profile.name || profile.email} · {pendientes.length} pendiente{pendientes.length === 1 ? '' : 's'}</div>
-        </div>
-        <form action="/logout" method="post">
-          <button type="submit" style={{ padding: '8px 12px', border: '1.5px solid #f0ede8', borderRadius: 10, background: '#fff', color: '#666', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-            Salir
-          </button>
-        </form>
-      </header>
+    <CrmShell>
+      <PageHeader
+        title="Mis entregas"
+        description={
+          <>
+            {profile.name || profile.email} · {pendientes.length} pendiente
+            {pendientes.length === 1 ? '' : 's'}
+          </>
+        }
+      />
 
-      <main style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 640, margin: '0 auto' }}>
+      <div className="mx-auto w-full max-w-2xl space-y-3 p-4">
         {totalRouteLink && (
-          <a href={totalRouteLink} target="_blank" rel="noreferrer"
-            style={{ padding: '14px', borderRadius: 14, background: '#726DFF', color: '#fff', fontSize: 14, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>
-            🗺 Abrir ruta completa en Google Maps ({pendientes.length} paradas)
-          </a>
+          <Button asChild size="lg" className="w-full">
+            <a href={totalRouteLink} target="_blank" rel="noreferrer">
+              <Route className="size-5" />
+              Abrir ruta completa en Google Maps ({pendientes.length} paradas)
+            </a>
+          </Button>
         )}
 
         {pendientes.length === 0 && cerrados.length === 0 && (
-          <div style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 24, textAlign: 'center', color: '#aaa', fontSize: 14 }}>
-            No tenés entregas asignadas.
-          </div>
+          <Card>
+            <CardContent className="py-10 text-center text-sm text-muted-foreground">
+              No tenés entregas asignadas.
+            </CardContent>
+          </Card>
         )}
 
-        {groupsList.map(g => {
+        {groupsList.map((g) => {
           const routeLink = buildRouteLink(g.orders)
           return (
-            <div key={g.zonaId ?? 'sin-zona'} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-                background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 12,
-              }}>
-                <span style={{ width: 12, height: 12, borderRadius: 999, background: g.color }} />
-                <span style={{ fontSize: 13, fontWeight: 700 }}>{g.nombre}</span>
-                <span style={{ fontSize: 11, color: '#888', marginLeft: 'auto' }}>
+            <div key={g.zonaId ?? 'sin-zona'} className="flex flex-col gap-2">
+              <div className="flex items-center gap-2.5 rounded-md border border-border bg-card px-3 py-2.5">
+                <span
+                  className="size-3 shrink-0 rounded-full"
+                  style={{ background: g.color }}
+                  aria-hidden
+                />
+                <span className="text-sm font-bold">{g.nombre}</span>
+                <span className="ml-auto text-xs text-muted-foreground">
                   {g.orders.length} pedido{g.orders.length === 1 ? '' : 's'}
                 </span>
                 {routeLink && (
-                  <a href={routeLink} target="_blank" rel="noreferrer"
-                    style={{ fontSize: 11, fontWeight: 700, color: '#726DFF', textDecoration: 'none', marginLeft: 8 }}>
-                    Ruta →
-                  </a>
+                  <Button asChild variant="ghost" size="sm">
+                    <a href={routeLink} target="_blank" rel="noreferrer">
+                      <Map className="size-3.5" />
+                      Ruta
+                    </a>
+                  </Button>
                 )}
               </div>
-              {g.orders.map(o => <DeliveryCard key={o.id} order={o} />)}
+              {g.orders.map((o) => (
+                <DeliveryCard key={o.id} order={o} />
+              ))}
             </div>
           )
         })}
 
         {cerrados.length > 0 && (
-          <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px', padding: '8px 4px' }}>CERRADOS</div>
-            {cerrados.map((o: any) => <DeliveryCard key={o.id} order={o as Order} compact />)}
+          <div className="mt-4 space-y-2">
+            <div className="px-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Cerrados
+            </div>
+            {cerrados.map((o) => (
+              <DeliveryCard key={o.id} order={o} compact />
+            ))}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </CrmShell>
   )
 }
 
-function DeliveryCard({ order, compact }: { order: Order; compact?: boolean }) {
-  const c = STATUS_COLORS[order.status]
-  const addr = formatAddress(order.shipping_address) || formatAddress(order.billing_address)
-  const maps = googleMapsLink(order.shipping_address) || googleMapsLink(order.billing_address)
+function DeliveryCard({
+  order,
+  compact = false,
+}: {
+  order: OrderWithZona
+  compact?: boolean
+}) {
+  const addr =
+    formatAddress(order.shipping_address) || formatAddress(order.billing_address)
+  const maps =
+    googleMapsLink(order.shipping_address) || googleMapsLink(order.billing_address)
 
   return (
-    <div style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 14, opacity: compact ? 0.7 : 1 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 700 }}>{order.customer_name || '—'}</div>
-          <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{formatOrderNumber(order)} · ${Number(order.total).toLocaleString('es-AR')}</div>
+    <Card className={cn(compact && 'opacity-70')}>
+      <CardContent className="space-y-3 p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <div className="text-base font-bold">{order.customer_name || '—'}</div>
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              {formatOrderNumber(order)} · ${Number(order.total).toLocaleString('es-AR')}
+            </div>
+          </div>
+          <OrderStatusBadge status={order.status} />
         </div>
-        <span style={{ fontSize: 11, fontWeight: 700, color: c.fg, background: c.bg, border: `0.5px solid ${c.border}`, padding: '4px 9px', borderRadius: 999 }}>
-          {STATUS_LABELS[order.status]}
-        </span>
-      </div>
 
-      {addr && (
-        <div style={{ marginTop: 10, fontSize: 13, color: '#2a2a2a', lineHeight: 1.4 }}>
-          📍 {addr}
-        </div>
-      )}
-
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-        {maps && (
-          <a href={maps} target="_blank" rel="noreferrer"
-            style={{ flex: '1 1 120px', textAlign: 'center', padding: '12px 14px', borderRadius: 12, background: '#726DFF', color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
-            Google Maps
-          </a>
+        {addr && (
+          <div className="flex gap-1.5 text-sm leading-relaxed">
+            <MapPin className="size-4 shrink-0 text-muted-foreground" />
+            {addr}
+          </div>
         )}
-        {order.customer_phone && (
-          <a href={`tel:${order.customer_phone}`}
-            style={{ flex: '1 1 120px', textAlign: 'center', padding: '12px 14px', borderRadius: 12, background: '#f0ede8', color: '#2a2a2a', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
-            Llamar
-          </a>
-        )}
-        <Link href={`/pedidos/${order.id}`}
-          style={{ flex: '1 1 120px', textAlign: 'center', padding: '12px 14px', borderRadius: 12, background: '#fff', color: '#726DFF', fontSize: 13, fontWeight: 700, textDecoration: 'none', border: '1.5px solid #726DFF' }}>
-          Ver detalle
-        </Link>
-      </div>
 
-      {!compact && (
-        <div style={{ marginTop: 10 }}>
-          <RepartidorRowActions order={order} />
+        <div className="flex flex-wrap gap-2">
+          {maps && (
+            <Button asChild className="h-12 flex-1">
+              <a href={maps} target="_blank" rel="noreferrer">
+                <Map className="size-4" />
+                Google Maps
+              </a>
+            </Button>
+          )}
+          {order.customer_phone && (
+            <Button asChild variant="secondary" className="h-12 flex-1">
+              <a href={`tel:${order.customer_phone}`}>
+                <Phone className="size-4" />
+                Llamar
+              </a>
+            </Button>
+          )}
+          <Button asChild variant="outline" className="h-12 flex-1">
+            <Link href={`/pedidos/${order.id}`}>
+              <ExternalLink className="size-4" />
+              Detalle
+            </Link>
+          </Button>
         </div>
-      )}
-    </div>
+
+        {!compact && <RepartidorRowActions order={order} />}
+      </CardContent>
+    </Card>
   )
 }
