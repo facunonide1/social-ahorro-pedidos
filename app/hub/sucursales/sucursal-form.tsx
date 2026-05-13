@@ -2,26 +2,22 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { CheckCircle2, Loader2 } from 'lucide-react'
+
 import { createClient } from '@/lib/supabase/client'
 import type { Sucursal } from '@/lib/types/admin'
 
-const CARD: React.CSSProperties = {
-  background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16,
-  padding: 16, display: 'flex', flexDirection: 'column', gap: 12,
-}
-const LABEL: React.CSSProperties = {
-  fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.3px',
-  textTransform: 'uppercase', display: 'block', marginBottom: 6,
-}
-const INPUT: React.CSSProperties = {
-  width: '100%', padding: '10px 12px', border: '1.5px solid #f0ede8',
-  borderRadius: 12, fontSize: 14, background: '#faf8f5', color: '#2a2a2a',
-  outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
-}
-const BTN: React.CSSProperties = {
-  padding: '10px 14px', border: 'none', borderRadius: 12,
-  fontSize: 13, fontWeight: 700, cursor: 'pointer', letterSpacing: '-0.2px',
-}
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 type Draft = {
   nombre: string
@@ -38,20 +34,26 @@ type Draft = {
 
 function fromSucursal(s?: Sucursal): Draft {
   return {
-    nombre:    s?.nombre    ?? '',
-    codigo:    s?.codigo    ?? '',
+    nombre: s?.nombre ?? '',
+    codigo: s?.codigo ?? '',
     direccion: s?.direccion ?? '',
     localidad: s?.localidad ?? '',
     provincia: s?.provincia ?? '',
-    telefono:  s?.telefono  ?? '',
-    email:     s?.email     ?? '',
-    latitud:   s?.latitud != null ? String(s.latitud) : '',
-    longitud:  s?.longitud != null ? String(s.longitud) : '',
-    activa:    s?.activa ?? true,
+    telefono: s?.telefono ?? '',
+    email: s?.email ?? '',
+    latitud: s?.latitud != null ? String(s.latitud) : '',
+    longitud: s?.longitud != null ? String(s.longitud) : '',
+    activa: s?.activa ?? true,
   }
 }
 
-export default function SucursalForm({ mode, initial }: { mode: 'create' | 'edit'; initial?: Sucursal }) {
+export default function SucursalForm({
+  mode,
+  initial,
+}: {
+  mode: 'create' | 'edit'
+  initial?: Sucursal
+}) {
   const router = useRouter()
   const sb = createClient()
   const [draft, setDraft] = useState<Draft>(fromSucursal(initial))
@@ -60,32 +62,41 @@ export default function SucursalForm({ mode, initial }: { mode: 'create' | 'edit
   const [msg, setMsg] = useState<string | null>(null)
 
   function patch<K extends keyof Draft>(k: K, v: Draft[K]) {
-    setDraft(d => ({ ...d, [k]: v }))
+    setDraft((d) => ({ ...d, [k]: v }))
   }
 
   async function save() {
-    setErr(null); setMsg(null)
-    if (!draft.nombre.trim()) { setErr('El nombre es obligatorio.'); return }
+    setErr(null)
+    setMsg(null)
+    if (!draft.nombre.trim()) {
+      setErr('El nombre es obligatorio.')
+      return
+    }
     setBusy(true)
 
     const payload = {
-      nombre:    draft.nombre.trim(),
-      codigo:    draft.codigo.trim() || null,
+      nombre: draft.nombre.trim(),
+      codigo: draft.codigo.trim() || null,
       direccion: draft.direccion.trim() || null,
       localidad: draft.localidad.trim() || null,
       provincia: draft.provincia.trim() || null,
-      telefono:  draft.telefono.trim() || null,
-      email:     draft.email.trim().toLowerCase() || null,
-      latitud:   draft.latitud  ? Number(draft.latitud)  : null,
-      longitud:  draft.longitud ? Number(draft.longitud) : null,
-      activa:    draft.activa,
+      telefono: draft.telefono.trim() || null,
+      email: draft.email.trim().toLowerCase() || null,
+      latitud: draft.latitud ? Number(draft.latitud) : null,
+      longitud: draft.longitud ? Number(draft.longitud) : null,
+      activa: draft.activa,
     }
 
     if (mode === 'create') {
-      const { data, error } = await sb.from('sucursales').insert(payload).select('id').maybeSingle()
+      const { data, error } = await sb
+        .from('sucursales')
+        .insert(payload)
+        .select('id')
+        .maybeSingle<{ id: string }>()
       setBusy(false)
       if (error) {
-        if ((error as any).code === '23505') setErr('Ya existe una sucursal con ese código.')
+        const code = (error as { code?: string }).code
+        if (code === '23505') setErr('Ya existe una sucursal con ese código.')
         else setErr(error.message)
         return
       }
@@ -95,7 +106,8 @@ export default function SucursalForm({ mode, initial }: { mode: 'create' | 'edit
       const { error } = await sb.from('sucursales').update(payload).eq('id', initial.id)
       setBusy(false)
       if (error) {
-        if ((error as any).code === '23505') setErr('Ya existe una sucursal con ese código.')
+        const code = (error as { code?: string }).code
+        if (code === '23505') setErr('Ya existe una sucursal con ese código.')
         else setErr(error.message)
         return
       }
@@ -106,77 +118,135 @@ export default function SucursalForm({ mode, initial }: { mode: 'create' | 'edit
   }
 
   return (
-    <section style={CARD}>
-      {err && (
-        <div style={{ background: '#fff0f0', border: '0.5px solid #FF6D6E', borderRadius: 10, padding: 10, fontSize: 12, color: '#FF6D6E' }}>{err}</div>
-      )}
-      {msg && (
-        <div style={{ background: '#eaf7ef', border: '0.5px solid #8fd1a8', borderRadius: 10, padding: 10, fontSize: 12, color: '#1f8a4c' }}>{msg}</div>
-      )}
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px' }}>DATOS DE LA SUCURSAL</div>
-        <label style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, color: '#555', cursor: 'pointer' }}>
-          <input type="checkbox" checked={draft.activa} onChange={e => patch('activa', e.target.checked)} />
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          Datos de la sucursal
+        </CardTitle>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Checkbox
+            checked={draft.activa}
+            onCheckedChange={(v) => patch('activa', Boolean(v))}
+          />
           Activa
         </label>
-      </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {err && (
+          <Alert variant="destructive">
+            <AlertDescription>{err}</AlertDescription>
+          </Alert>
+        )}
+        {msg && (
+          <Alert variant="success">
+            <CheckCircle2 className="size-4" />
+            <AlertDescription>{msg}</AlertDescription>
+          </Alert>
+        )}
 
-      <div className="sa-form-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
-        <div>
-          <label style={LABEL}>Nombre *</label>
-          <input value={draft.nombre} onChange={e => patch('nombre', e.target.value)} placeholder="Ituzaingó Centro" style={INPUT} />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr]">
+          <Field label="Nombre *">
+            <Input
+              value={draft.nombre}
+              onChange={(e) => patch('nombre', e.target.value)}
+              placeholder="Ituzaingó Centro"
+            />
+          </Field>
+          <Field label="Código interno">
+            <Input
+              value={draft.codigo}
+              onChange={(e) => patch('codigo', e.target.value)}
+              placeholder="SA-01"
+            />
+          </Field>
         </div>
-        <div>
-          <label style={LABEL}>Código interno</label>
-          <input value={draft.codigo} onChange={e => patch('codigo', e.target.value)} placeholder="SA-01" style={INPUT} />
-        </div>
-      </div>
 
-      <div>
-        <label style={LABEL}>Dirección</label>
-        <input value={draft.direccion} onChange={e => patch('direccion', e.target.value)} placeholder="Av. Rivadavia 1234" style={INPUT} />
-      </div>
+        <Field label="Dirección">
+          <Input
+            value={draft.direccion}
+            onChange={(e) => patch('direccion', e.target.value)}
+            placeholder="Av. Rivadavia 1234"
+          />
+        </Field>
 
-      <div className="sa-form-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12 }}>
-        <div>
-          <label style={LABEL}>Localidad</label>
-          <input value={draft.localidad} onChange={e => patch('localidad', e.target.value)} style={INPUT} />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr]">
+          <Field label="Localidad">
+            <Input
+              value={draft.localidad}
+              onChange={(e) => patch('localidad', e.target.value)}
+            />
+          </Field>
+          <Field label="Provincia">
+            <Input
+              value={draft.provincia}
+              onChange={(e) => patch('provincia', e.target.value)}
+            />
+          </Field>
         </div>
-        <div>
-          <label style={LABEL}>Provincia</label>
-          <input value={draft.provincia} onChange={e => patch('provincia', e.target.value)} style={INPUT} />
-        </div>
-      </div>
 
-      <div className="sa-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <div>
-          <label style={LABEL}>Teléfono</label>
-          <input value={draft.telefono} onChange={e => patch('telefono', e.target.value)} style={INPUT} />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Teléfono">
+            <Input
+              value={draft.telefono}
+              onChange={(e) => patch('telefono', e.target.value)}
+            />
+          </Field>
+          <Field label="Email">
+            <Input
+              type="email"
+              value={draft.email}
+              onChange={(e) => patch('email', e.target.value)}
+            />
+          </Field>
         </div>
-        <div>
-          <label style={LABEL}>Email</label>
-          <input value={draft.email} onChange={e => patch('email', e.target.value)} style={INPUT} />
-        </div>
-      </div>
 
-      <div className="sa-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <div>
-          <label style={LABEL}>Latitud (opcional)</label>
-          <input type="number" step="any" value={draft.latitud} onChange={e => patch('latitud', e.target.value)} placeholder="-34.6536" style={INPUT} />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="Latitud (opcional)">
+            <Input
+              type="number"
+              step="any"
+              value={draft.latitud}
+              onChange={(e) => patch('latitud', e.target.value)}
+              placeholder="-34.6536"
+            />
+          </Field>
+          <Field label="Longitud (opcional)">
+            <Input
+              type="number"
+              step="any"
+              value={draft.longitud}
+              onChange={(e) => patch('longitud', e.target.value)}
+              placeholder="-58.6783"
+            />
+          </Field>
         </div>
-        <div>
-          <label style={LABEL}>Longitud (opcional)</label>
-          <input type="number" step="any" value={draft.longitud} onChange={e => patch('longitud', e.target.value)} placeholder="-58.6783" style={INPUT} />
-        </div>
-      </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-        <button onClick={save} disabled={busy}
-          style={{ ...BTN, background: '#FF6D6E', color: '#fff', opacity: busy ? 0.6 : 1, cursor: busy ? 'wait' : 'pointer' }}>
-          {busy ? 'Guardando…' : (mode === 'create' ? 'Crear sucursal' : 'Guardar cambios')}
-        </button>
-      </div>
-    </section>
+        <div className="flex justify-end pt-1">
+          <Button onClick={save} disabled={busy}>
+            {busy ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Guardando…
+              </>
+            ) : mode === 'create' ? (
+              'Crear sucursal'
+            ) : (
+              'Guardar cambios'
+            )}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+        {label}
+      </Label>
+      {children}
+    </div>
   )
 }

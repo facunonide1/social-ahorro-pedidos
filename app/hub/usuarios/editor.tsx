@@ -2,73 +2,119 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { CheckCircle2, MapPin, Plus, X } from 'lucide-react'
+
 import { ADMIN_ROLE_LABELS } from '@/lib/types/admin'
 import type { AdminRole, Sucursal } from '@/lib/types/admin'
 import type { UsuarioRow } from './page'
 
-const BTN: React.CSSProperties = {
-  padding: '8px 12px', border: 'none', borderRadius: 10,
-  fontSize: 12, fontWeight: 700, cursor: 'pointer', letterSpacing: '-0.2px',
-}
-const INPUT: React.CSSProperties = {
-  width: '100%', padding: '8px 10px', border: '1.5px solid #f0ede8',
-  borderRadius: 10, fontSize: 13, background: '#faf8f5', color: '#2a2a2a',
-  outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+
+const NONE = '__none__'
+
+const ALL_ROLES: AdminRole[] = [
+  'super_admin',
+  'gerente',
+  'comprador',
+  'administrativo',
+  'tesoreria',
+  'auditor',
+  'sucursal',
+]
+
+const ROLE_BADGE_VARIANT: Record<AdminRole, React.ComponentProps<typeof Badge>['variant']> = {
+  super_admin: 'destructive',
+  gerente: 'info',
+  comprador: 'info',
+  administrativo: 'success',
+  tesoreria: 'warning',
+  auditor: 'outline',
+  sucursal: 'secondary',
 }
 
-const ALL_ROLES: AdminRole[] = ['super_admin','gerente','comprador','administrativo','tesoreria','auditor','sucursal']
+type CreatingState = {
+  email: string
+  nombre: string
+  password: string
+  rol: AdminRole
+  sucursal_id: string
+}
 
-const ROLE_COLORS: Record<AdminRole, { fg: string; bg: string; border: string }> = {
-  super_admin:    { fg: '#FF6D6E', bg: '#fff0f0', border: '#FF6D6E' },
-  gerente:        { fg: '#726DFF', bg: '#eeedff', border: '#726DFF' },
-  comprador:      { fg: '#2855c7', bg: '#e9f0ff', border: '#9cb6ee' },
-  administrativo: { fg: '#1f8a4c', bg: '#eaf7ef', border: '#8fd1a8' },
-  tesoreria:      { fg: '#c6831a', bg: '#fff7ec', border: '#edc989' },
-  auditor:        { fg: '#555',    bg: '#f5f5f5', border: '#e2e2e2' },
-  sucursal:       { fg: '#a33',    bg: '#fbeaea', border: '#e0a8a8' },
+function emptyCreating(): CreatingState {
+  return {
+    email: '',
+    nombre: '',
+    password: '',
+    rol: 'administrativo',
+    sucursal_id: '',
+  }
 }
 
 export default function UsuariosEditor({
-  initialUsers, sucursales, currentUserId,
+  initialUsers,
+  sucursales,
+  currentUserId,
 }: {
   initialUsers: UsuarioRow[]
-  sucursales: Pick<Sucursal,'id'|'nombre'|'activa'>[]
+  sucursales: Pick<Sucursal, 'id' | 'nombre' | 'activa'>[]
   currentUserId: string
 }) {
   const router = useRouter()
   const [users, setUsers] = useState<UsuarioRow[]>(initialUsers)
-  const [creating, setCreating] = useState<{ email: string; nombre: string; password: string; rol: AdminRole; sucursal_id: string } | null>(null)
+  const [creating, setCreating] = useState<CreatingState | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
 
   async function createUser() {
     if (!creating) return
-    setBusy(true); setErr(null); setMsg(null)
+    setBusy(true)
+    setErr(null)
+    setMsg(null)
     try {
       const res = await fetch('/api/hub/usuarios', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: creating.email, password: creating.password, nombre: creating.nombre,
+          email: creating.email,
+          password: creating.password,
+          nombre: creating.nombre,
           rol: creating.rol,
           sucursal_id: creating.rol === 'sucursal' ? creating.sucursal_id : null,
         }),
       })
       const json = await res.json()
-      if (!res.ok) { setErr(json?.error || 'error'); return }
+      if (!res.ok) {
+        setErr(json?.error || 'error')
+        return
+      }
       setMsg(`Usuario ${json.email} creado.`)
       setCreating(null)
       router.refresh()
-    } catch (e: any) {
-      setErr(e?.message || 'error_red')
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : 'error_red')
     } finally {
       setBusy(false)
       setTimeout(() => setMsg(null), 4000)
     }
   }
 
-  async function patch(u: UsuarioRow, body: { rol?: AdminRole; sucursal_id?: string | null; activo?: boolean }) {
+  async function patch(
+    u: UsuarioRow,
+    body: { rol?: AdminRole; sucursal_id?: string | null; activo?: boolean },
+  ) {
     setErr(null)
     const res = await fetch(`/api/hub/usuarios/${u.id}`, {
       method: 'PATCH',
@@ -76,8 +122,12 @@ export default function UsuariosEditor({
       body: JSON.stringify(body),
     })
     const json = await res.json()
-    if (!res.ok) { setErr(json?.error || 'error'); return }
-    if (json.user) setUsers(arr => arr.map(x => x.id === u.id ? { ...x, ...json.user } : x))
+    if (!res.ok) {
+      setErr(json?.error || 'error')
+      return
+    }
+    if (json.user)
+      setUsers((arr) => arr.map((x) => (x.id === u.id ? { ...x, ...json.user } : x)))
     router.refresh()
   }
 
@@ -85,124 +135,286 @@ export default function UsuariosEditor({
     if (!confirm(`¿Eliminar a ${u.nombre || u.email}? No se puede deshacer.`)) return
     setErr(null)
     const res = await fetch(`/api/hub/usuarios/${u.id}`, { method: 'DELETE' })
-    const json = await res.json()
-    if (!res.ok) { setErr(json?.error || 'error'); return }
-    setUsers(arr => arr.filter(x => x.id !== u.id))
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      setErr(json?.error || 'error')
+      return
+    }
+    setUsers((arr) => arr.filter((x) => x.id !== u.id))
     router.refresh()
   }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {err && <div style={{ background: '#fff0f0', border: '0.5px solid #FF6D6E', borderRadius: 10, padding: 10, fontSize: 12, color: '#FF6D6E' }}>{err}</div>}
-      {msg && <div style={{ background: '#eaf7ef', border: '0.5px solid #8fd1a8', borderRadius: 10, padding: 10, fontSize: 12, color: '#1f8a4c' }}>{msg}</div>}
+  const sucursalesActivas = sucursales.filter((s) => s.activa)
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button onClick={() => setCreating(creating ? null : { email: '', nombre: '', password: '', rol: 'administrativo', sucursal_id: '' })}
-          style={{ ...BTN, background: creating ? '#f0ede8' : '#FF6D6E', color: creating ? '#666' : '#fff', padding: '10px 14px' }}>
-          {creating ? 'Cancelar' : '+ Nuevo usuario'}
-        </button>
+  return (
+    <div className="space-y-3">
+      {err && (
+        <Alert variant="destructive">
+          <AlertDescription>{err}</AlertDescription>
+        </Alert>
+      )}
+      {msg && (
+        <Alert variant="success">
+          <CheckCircle2 className="size-4" />
+          <AlertDescription>{msg}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="flex justify-end">
+        <Button
+          variant={creating ? 'outline' : 'default'}
+          onClick={() => setCreating(creating ? null : emptyCreating())}
+        >
+          {creating ? (
+            'Cancelar'
+          ) : (
+            <>
+              <Plus className="size-4" />
+              Nuevo usuario
+            </>
+          )}
+        </Button>
       </div>
 
       {creating && (
-        <div style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 14, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#2a2a2a' }}>Crear usuario</div>
-          <div className="sa-form-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr', gap: 10 }}>
-            <input placeholder="Email" type="email" value={creating.email} onChange={e => setCreating({ ...creating, email: e.target.value })} style={INPUT} />
-            <input placeholder="Nombre" value={creating.nombre} onChange={e => setCreating({ ...creating, nombre: e.target.value })} style={INPUT} />
-            <select value={creating.rol} onChange={e => setCreating({ ...creating, rol: e.target.value as AdminRole })} style={INPUT}>
-              {ALL_ROLES.map(r => <option key={r} value={r}>{ADMIN_ROLE_LABELS[r]}</option>)}
-            </select>
-          </div>
-          <div className="sa-form-grid" style={{ display: 'grid', gridTemplateColumns: creating.rol === 'sucursal' ? '1fr 1fr' : '1fr', gap: 10 }}>
-            <input placeholder="Contraseña (mín 8)" type="password" value={creating.password}
-              onChange={e => setCreating({ ...creating, password: e.target.value })} style={INPUT} />
-            {creating.rol === 'sucursal' && (
-              <select value={creating.sucursal_id} onChange={e => setCreating({ ...creating, sucursal_id: e.target.value })} style={INPUT}>
-                <option value="">Sucursal asignada…</option>
-                {sucursales.filter(s => s.activa).map(s => (
-                  <option key={s.id} value={s.id}>{s.nombre}</option>
-                ))}
-              </select>
-            )}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button onClick={createUser} disabled={busy}
-              style={{ ...BTN, background: '#FF6D6E', color: '#fff' }}>
-              {busy ? 'Creando…' : 'Crear'}
-            </button>
-          </div>
-        </div>
+        <Card>
+          <CardContent className="space-y-3 p-4">
+            <div className="text-sm font-semibold">Crear usuario</div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_2fr_1fr]">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Email
+                </Label>
+                <Input
+                  type="email"
+                  value={creating.email}
+                  onChange={(e) => setCreating({ ...creating, email: e.target.value })}
+                  placeholder="usuario@socialahorro.com"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Nombre
+                </Label>
+                <Input
+                  value={creating.nombre}
+                  onChange={(e) => setCreating({ ...creating, nombre: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Rol
+                </Label>
+                <Select
+                  value={creating.rol}
+                  onValueChange={(v) => setCreating({ ...creating, rol: v as AdminRole })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ALL_ROLES.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {ADMIN_ROLE_LABELS[r]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div
+              className={
+                creating.rol === 'sucursal'
+                  ? 'grid grid-cols-1 gap-3 sm:grid-cols-2'
+                  : 'grid grid-cols-1 gap-3'
+              }
+            >
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Contraseña (mín. 8)
+                </Label>
+                <Input
+                  type="password"
+                  value={creating.password}
+                  onChange={(e) =>
+                    setCreating({ ...creating, password: e.target.value })
+                  }
+                />
+              </div>
+              {creating.rol === 'sucursal' && (
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Sucursal asignada
+                  </Label>
+                  <Select
+                    value={creating.sucursal_id || NONE}
+                    onValueChange={(v) =>
+                      setCreating({
+                        ...creating,
+                        sucursal_id: v === NONE ? '' : v,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>—</SelectItem>
+                      {sucursalesActivas.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.nombre}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={createUser} disabled={busy} size="sm">
+                {busy ? 'Creando…' : 'Crear'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="space-y-2">
         {users.length === 0 && (
-          <div style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 14, padding: 24, textAlign: 'center', color: '#aaa' }}>
-            Sin usuarios.
-          </div>
+          <Card>
+            <CardContent className="py-10 text-center text-sm text-muted-foreground">
+              Sin usuarios.
+            </CardContent>
+          </Card>
         )}
-        {users.map(u => {
-          const rc = ROLE_COLORS[u.rol]
-          const isSelf = u.id === currentUserId
-          return (
-            <div key={u.id} style={{
-              display: 'grid', gridTemplateColumns: '1fr auto auto auto auto', gap: 10, alignItems: 'center',
-              background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 12, padding: '10px 12px',
-              opacity: u.activo ? 1 : 0.55,
-            }}>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>
-                  {u.nombre || u.email}
-                  {isSelf && <span style={{ fontSize: 10, color: '#726DFF', marginLeft: 6, fontWeight: 700, letterSpacing: '0.3px' }}>VOS</span>}
-                  {!u.activo && <span style={{ fontSize: 11, color: '#aaa', marginLeft: 6 }}>(inactivo)</span>}
-                </div>
-                <div style={{ fontSize: 12, color: '#888' }}>{u.email}</div>
-                {u.sucursal_nombre && <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>📍 {u.sucursal_nombre}</div>}
-              </div>
-              <select value={u.rol}
-                disabled={isSelf}
-                onChange={e => patch(u, { rol: e.target.value as AdminRole })}
-                title={isSelf ? 'No podés cambiar tu propio rol' : ''}
-                style={{
-                  padding: '6px 10px', fontSize: 11, fontWeight: 700,
-                  background: rc.bg, color: rc.fg, border: `1.5px solid ${rc.border}`,
-                  borderRadius: 999, outline: 'none',
-                  cursor: isSelf ? 'not-allowed' : 'pointer',
-                  opacity: isSelf ? 0.55 : 1,
-                }}>
-                {ALL_ROLES.map(r => <option key={r} value={r}>{ADMIN_ROLE_LABELS[r]}</option>)}
-              </select>
-              {u.rol === 'sucursal' ? (
-                <select value={u.sucursal_id ?? ''}
-                  disabled={isSelf}
-                  onChange={e => patch(u, { sucursal_id: e.target.value || null })}
-                  style={{ ...INPUT, padding: '6px 10px', fontSize: 12 }}>
-                  <option value="">— Sin sucursal —</option>
-                  {sucursales.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-                </select>
-              ) : <div />}
-              <button onClick={() => patch(u, { activo: !u.activo })}
-                disabled={isSelf}
-                title={isSelf ? 'No podés desactivarte a vos mismo' : ''}
-                style={{ ...BTN, background: '#f0ede8', color: '#666',
-                  opacity: isSelf ? 0.4 : 1, cursor: isSelf ? 'not-allowed' : 'pointer' }}>
-                {u.activo ? 'Desactivar' : 'Activar'}
-              </button>
-              <button onClick={() => remove(u)}
-                disabled={isSelf}
-                style={{ ...BTN, background: '#fff', color: isSelf ? '#ccc' : '#a33',
-                  border: '1.5px solid #f0ede8',
-                  cursor: isSelf ? 'not-allowed' : 'pointer' }}>
-                ✕
-              </button>
-            </div>
-          )
-        })}
+        {users.map((u) => (
+          <UserRow
+            key={u.id}
+            user={u}
+            isSelf={u.id === currentUserId}
+            sucursales={sucursales}
+            onPatch={patch}
+            onRemove={remove}
+          />
+        ))}
       </div>
 
-      <div style={{ fontSize: 11, color: '#aaa', lineHeight: 1.5 }}>
-        Para resetear la contraseña de alguien, usá el panel Authentication de Supabase
-        (no exponemos endpoint para evitar tomar la cuenta de otros admins).
-      </div>
+      <p className="pt-2 text-xs text-muted-foreground">
+        Para resetear la contraseña de alguien, usá el panel Authentication de
+        Supabase (no exponemos endpoint para evitar tomar la cuenta de otros
+        admins).
+      </p>
     </div>
+  )
+}
+
+function UserRow({
+  user: u,
+  isSelf,
+  sucursales,
+  onPatch,
+  onRemove,
+}: {
+  user: UsuarioRow
+  isSelf: boolean
+  sucursales: Pick<Sucursal, 'id' | 'nombre' | 'activa'>[]
+  onPatch: (
+    u: UsuarioRow,
+    body: { rol?: AdminRole; sucursal_id?: string | null; activo?: boolean },
+  ) => void | Promise<void>
+  onRemove: (u: UsuarioRow) => void | Promise<void>
+}) {
+  const variant = ROLE_BADGE_VARIANT[u.rol]
+  return (
+    <Card className={!u.activo ? 'opacity-60' : undefined}>
+      <CardContent className="grid grid-cols-1 items-center gap-3 p-3 sm:grid-cols-[1fr_auto_auto_auto]">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+            {u.nombre || u.email}
+            {isSelf && (
+              <Badge variant="info" className="text-[10px]">
+                vos
+              </Badge>
+            )}
+            {!u.activo && (
+              <Badge variant="outline" className="text-[10px]">
+                inactivo
+              </Badge>
+            )}
+            <Badge variant={variant} className="text-[10px] capitalize">
+              {ADMIN_ROLE_LABELS[u.rol]}
+            </Badge>
+          </div>
+          <div className="mt-0.5 text-xs text-muted-foreground">{u.email}</div>
+          {u.sucursal_nombre && (
+            <div className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <MapPin className="size-3" />
+              {u.sucursal_nombre}
+            </div>
+          )}
+        </div>
+
+        <Select
+          value={u.rol}
+          disabled={isSelf}
+          onValueChange={(v) => onPatch(u, { rol: v as AdminRole })}
+        >
+          <SelectTrigger className="w-[160px]" title={isSelf ? 'No podés cambiar tu propio rol' : ''}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {ALL_ROLES.map((r) => (
+              <SelectItem key={r} value={r}>
+                {ADMIN_ROLE_LABELS[r]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {u.rol === 'sucursal' ? (
+          <Select
+            value={u.sucursal_id || NONE}
+            disabled={isSelf}
+            onValueChange={(v) => onPatch(u, { sucursal_id: v === NONE ? null : v })}
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="— Sin sucursal —" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>— Sin sucursal —</SelectItem>
+              {sucursales.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <span />
+        )}
+
+        <div className="flex gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isSelf}
+            onClick={() => onPatch(u, { activo: !u.activo })}
+            title={isSelf ? 'No podés desactivarte a vos mismo' : ''}
+          >
+            {u.activo ? 'Desactivar' : 'Activar'}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            disabled={isSelf}
+            onClick={() => onRemove(u)}
+            aria-label="Eliminar usuario"
+            className="text-destructive hover:text-destructive"
+          >
+            <X className="size-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

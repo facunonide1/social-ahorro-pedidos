@@ -1,13 +1,24 @@
 import Link from 'next/link'
+import { Mail, MapPin, Phone, Plus } from 'lucide-react'
+
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import type { Sucursal } from '@/lib/types/admin'
-import HubSidebar from '../_components/sidebar'
+
+import { HubShell } from '@/components/hub/hub-shell'
+import { PageHeader } from '@/components/shared/page-header'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
 export default async function SucursalesPage() {
-  const profile = await requireAdminHubAccess({ allowedRoles: ['super_admin','gerente'] })
+  const profile = await requireAdminHubAccess({
+    allowedRoles: ['super_admin', 'gerente'],
+  })
   const sb = createClient()
 
   const { data: sucursales, error } = await sb
@@ -17,70 +28,105 @@ export default async function SucursalesPage() {
     .order('nombre', { ascending: true })
     .returns<Sucursal[]>()
 
+  const list = sucursales ?? []
+
   return (
-    <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a', display: 'flex' }}>
-      <HubSidebar profile={profile} />
+    <HubShell profile={profile}>
+      <PageHeader
+        title="Sucursales"
+        description={`${list.length} sucursal${list.length === 1 ? '' : 'es'}`}
+        actions={
+          <Button asChild>
+            <Link href="/hub/sucursales/nueva">
+              <Plus className="size-4" />
+              Nueva sucursal
+            </Link>
+          </Button>
+        }
+      />
 
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <header style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-          <div>
-            <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.4px' }}>Sucursales</div>
-            <div style={{ fontSize: 12, color: '#888' }}>{(sucursales ?? []).length} sucursal{(sucursales ?? []).length === 1 ? '' : 'es'}</div>
-          </div>
-          <Link href="/hub/sucursales/nueva"
-            style={{ padding: '10px 14px', borderRadius: 10, background: '#FF6D6E', color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
-            + Nueva sucursal
-          </Link>
-        </header>
-
+      <div className="mx-auto w-full max-w-5xl space-y-3 p-4 md:p-6">
         {error && (
-          <div style={{ margin: 20, padding: 14, background: '#fff0f0', border: '0.5px solid #FF6D6E', borderRadius: 12, fontSize: 13, color: '#FF6D6E' }}>
-            {error.message}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{error.message}</AlertDescription>
+          </Alert>
         )}
 
-        <main style={{ padding: 20, maxWidth: 980, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {(sucursales ?? []).length === 0 && !error && (
-            <div style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 28, textAlign: 'center', color: '#aaa', fontSize: 14 }}>
+        {list.length === 0 && !error && (
+          <Card>
+            <CardContent className="py-10 text-center text-sm text-muted-foreground">
               Todavía no hay sucursales cargadas.
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {list.map((s) => (
+            <SucursalCard key={s.id} sucursal={s} />
+          ))}
+        </div>
+      </div>
+    </HubShell>
+  )
+}
+
+function SucursalCard({ sucursal: s }: { sucursal: Sucursal }) {
+  const direccion = [s.direccion, s.localidad, s.provincia].filter(Boolean).join(', ')
+
+  return (
+    <Link href={`/hub/sucursales/${s.id}`} className="group">
+      <Card
+        className={cn(
+          'h-full transition-colors hover:border-primary/40 hover:bg-accent/30',
+          !s.activa && 'opacity-60',
+        )}
+      >
+        <CardContent className="space-y-2 p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="text-base font-semibold">{s.nombre}</div>
+              {s.codigo && (
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  Código {s.codigo}
+                </div>
+              )}
+            </div>
+            {s.activa ? (
+              <Badge variant="success">Activa</Badge>
+            ) : (
+              <Badge variant="outline">Inactiva</Badge>
+            )}
+          </div>
+
+          {direccion ? (
+            <div className="flex gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="size-3.5 shrink-0" />
+              <span className="leading-relaxed">{direccion}</span>
+            </div>
+          ) : (
+            <div className="text-xs italic text-muted-foreground">
+              Sin dirección cargada
             </div>
           )}
 
-          {(sucursales ?? []).map(s => (
-            <Link key={s.id} href={`/hub/sucursales/${s.id}`}
-              style={{ textDecoration: 'none', color: 'inherit',
-                background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 14,
-                padding: '14px 16px', display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, alignItems: 'center',
-                opacity: s.activa ? 1 : 0.55 }}>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700 }}>
-                  {s.nombre}
-                  {s.codigo && <span style={{ fontSize: 11, color: '#888', fontWeight: 500, marginLeft: 8 }}>· {s.codigo}</span>}
-                </div>
-                <div style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
-                  {[s.direccion, s.localidad, s.provincia].filter(Boolean).join(', ') || 'sin dirección cargada'}
-                </div>
-                {(s.telefono || s.email) && (
-                  <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
-                    {[s.telefono, s.email].filter(Boolean).join(' · ')}
-                  </div>
-                )}
-              </div>
-              <div>
-                {s.activa ? (
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#1f8a4c', background: '#eaf7ef', border: '0.5px solid #8fd1a8', padding: '2px 8px', borderRadius: 999 }}>
-                    Activa
-                  </span>
-                ) : (
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#888', background: '#f5f5f5', border: '0.5px solid #e2e2e2', padding: '2px 8px', borderRadius: 999 }}>
-                    Inactiva
-                  </span>
-                )}
-              </div>
-            </Link>
-          ))}
-        </main>
-      </div>
-    </div>
+          {(s.telefono || s.email) && (
+            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+              {s.telefono && (
+                <span className="inline-flex items-center gap-1">
+                  <Phone className="size-3" />
+                  {s.telefono}
+                </span>
+              )}
+              {s.email && (
+                <span className="inline-flex items-center gap-1">
+                  <Mail className="size-3" />
+                  {s.email}
+                </span>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </Link>
   )
 }
