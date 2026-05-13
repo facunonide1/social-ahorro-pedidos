@@ -2,6 +2,9 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { Search } from 'lucide-react'
+
+import { Input } from '@/components/ui/input'
 
 export default function ClientesFilters({ initialQ }: { initialQ: string }) {
   const router = useRouter()
@@ -12,18 +15,20 @@ export default function ClientesFilters({ initialQ }: { initialQ: string }) {
     e.preventDefault()
     const params = new URLSearchParams()
     if (q.trim()) params.set('q', q.trim())
-    startTransition(() => router.push(`/clientes${params.toString() ? '?' + params : ''}`))
+    startTransition(() =>
+      router.push(`/clientes${params.toString() ? '?' + params : ''}`),
+    )
   }
 
   return (
-    <form onSubmit={submit}>
-      <input value={q} onChange={e => setQ(e.target.value)}
+    <form onSubmit={submit} className="relative w-full sm:w-72">
+      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
         placeholder="Buscar nombre, DNI, teléfono o email…"
-        style={{
-          padding: '9px 12px', border: '1.5px solid #f0ede8', borderRadius: 10,
-          fontSize: 13, background: '#fff', outline: 'none', color: '#2a2a2a',
-          minWidth: 260, fontFamily: 'inherit',
-        }} />
+        className="pl-9"
+      />
     </form>
   )
 }
