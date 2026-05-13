@@ -1,11 +1,38 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
+import { AlertTriangle, Copy, ExternalLink, Printer } from 'lucide-react'
+
 import { createClient } from '@/lib/supabase/server'
-import { STATUS_LABELS, STATUS_COLORS, STATUS_ORDER, ORIGIN_LABELS, TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS } from '@/lib/types'
-import type { Order, OrderStatus, UserPedidos, OrderStatusHistory, ZonaReparto, WhatsappMessage, OrderIncident, Customer } from '@/lib/types'
+import { ORIGIN_LABELS } from '@/lib/types'
+import type {
+  Order,
+  UserPedidos,
+  OrderStatusHistory,
+  ZonaReparto,
+  WhatsappMessage,
+  OrderIncident,
+  Customer,
+} from '@/lib/types'
 import { formatAddress, googleMapsLink } from '@/lib/address'
 import { formatOrderNumber } from '@/lib/orders/format'
 import { minutesBetween, formatDuration } from '@/lib/orders/timing'
+
+import { CrmShell } from '@/components/crm/crm-shell'
+import { OrderStatusBadge } from '@/components/crm/order-status-badge'
+import { OrderTipoEnvioBadge } from '@/components/crm/order-tipo-envio-badge'
+import { PageHeader } from '@/components/shared/page-header'
+import { PageActions } from '@/components/shared/page-actions'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+
 import OrderActions from './actions'
 import WooSyncBanner from './woo-sync-banner'
 import WhatsappMessagesList from './whatsapp-messages'
@@ -17,7 +44,9 @@ export const dynamic = 'force-dynamic'
 
 export default async function OrderDetailPage({ params }: { params: { id: string } }) {
   const sb = createClient()
-  const { data: { user } } = await sb.auth.getUser()
+  const {
+    data: { user },
+  } = await sb.auth.getUser()
   if (!user) redirect('/login')
 
   const { data: profile } = await sb
@@ -56,19 +85,25 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     .order('created_at', { ascending: false })
     .returns<OrderIncident[]>()
 
-  // Customer + cuántos pedidos tiene en total (para badge NUEVO/RECURRENTE/VIP)
   const { data: customer } = order.customer_id
     ? await sb.from('customers').select('*').eq('id', order.customer_id).maybeSingle<Customer>()
     : { data: null }
   const { count: customerOrdersCount } = order.customer_id
-    ? await sb.from('orders').select('id', { count: 'exact', head: true }).eq('customer_id', order.customer_id)
+    ? await sb
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('customer_id', order.customer_id)
     : { count: null }
 
-  const { data: repartidores } = profile.role === 'admin' || profile.role === 'operador'
-    ? await sb.from('users_pedidos').select('id, name, email, role, active').eq('role', 'repartidor').eq('active', true)
-    : { data: [] as Pick<UserPedidos,'id'|'name'|'email'|'role'|'active'>[] }
+  const { data: repartidores } =
+    profile.role === 'admin' || profile.role === 'operador'
+      ? await sb
+          .from('users_pedidos')
+          .select('id, name, email, role, active')
+          .eq('role', 'repartidor')
+          .eq('active', true)
+      : { data: [] as Pick<UserPedidos, 'id' | 'name' | 'email' | 'role' | 'active'>[] }
 
-  // Sugerencia: el repartidor más frecuente en los últimos pedidos entregados de la zona.
   let suggestedRepartidorId: string | null = null
   if (order.zona_id && (profile.role === 'admin' || profile.role === 'operador')) {
     const { data: historico } = await sb
@@ -86,176 +121,246 @@ export default async function OrderDetailPage({ params }: { params: { id: string
     }
     let max = 0
     for (const [id, n] of counts) {
-      if (n > max) { max = n; suggestedRepartidorId = id }
+      if (n > max) {
+        max = n
+        suggestedRepartidorId = id
+      }
     }
   }
 
-  const { data: zonas } = profile.role === 'admin' || profile.role === 'operador'
-    ? await sb.from('zonas_reparto').select('id, nombre, color, activa').order('activa', { ascending: false }).order('nombre', { ascending: true })
-    : { data: [] as Pick<ZonaReparto,'id'|'nombre'|'color'|'activa'>[] }
+  const { data: zonas } =
+    profile.role === 'admin' || profile.role === 'operador'
+      ? await sb
+          .from('zonas_reparto')
+          .select('id, nombre, color, activa')
+          .order('activa', { ascending: false })
+          .order('nombre', { ascending: true })
+      : { data: [] as Pick<ZonaReparto, 'id' | 'nombre' | 'color' | 'activa'>[] }
 
-  const userIds = Array.from(new Set([
-    ...(history ?? []).map(h => h.changed_by),
-    ...(messages ?? []).map(m => m.sent_by),
-    ...(incidents ?? []).map(i => i.registrado_by),
-  ].filter(Boolean))) as string[]
+  const userIds = Array.from(
+    new Set(
+      [
+        ...(history ?? []).map((h) => h.changed_by),
+        ...(messages ?? []).map((m) => m.sent_by),
+        ...(incidents ?? []).map((i) => i.registrado_by),
+      ].filter(Boolean),
+    ),
+  ) as string[]
 
   const { data: changers } = userIds.length
     ? await sb.from('users_pedidos').select('id, name, email').in('id', userIds)
-    : { data: [] as Pick<UserPedidos,'id'|'name'|'email'>[] }
+    : { data: [] as Pick<UserPedidos, 'id' | 'name' | 'email'>[] }
 
-  const changerMap = new Map((changers ?? []).map(c => [c.id, c.name || c.email]))
+  const changerMap = new Map((changers ?? []).map((c) => [c.id, c.name || c.email]))
 
-  const c = STATUS_COLORS[order.status]
   const shipping = order.shipping_address
   const mapsLink = googleMapsLink(shipping)
   const addressStr = formatAddress(shipping) || formatAddress(order.billing_address)
 
-  return (
-    <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a' }}>
-      <header style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-        <Link href={profile.role === 'repartidor' ? '/repartidor' : '/dashboard'} style={{ textDecoration: 'none', color: '#726DFF', fontSize: 14, fontWeight: 600 }}>← Volver</Link>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.3px' }}>Pedido {formatOrderNumber(order)}</div>
-          <div style={{ fontSize: 12, color: '#999' }}>
-            {ORIGIN_LABELS[order.origin]} · {order.woo_created_at ? new Date(order.woo_created_at).toLocaleString('es-AR') : new Date(order.created_at).toLocaleString('es-AR')}
-          </div>
-        </div>
-        {(profile.role === 'admin' || profile.role === 'operador') && (
-          <Link href={`/pedidos/nuevo?from=${order.id}`}
-            style={{ padding: '6px 10px', fontSize: 12, fontWeight: 700, color: '#726DFF', background: '#eeedff', border: '1.5px solid #d9d6ff', borderRadius: 10, textDecoration: 'none' }}>
-            ⎘ Repetir
-          </Link>
-        )}
-        <Link href={`/pedidos/${order.id}/remito`}
-          style={{ padding: '6px 10px', fontSize: 12, fontWeight: 700, color: '#555', background: '#fff', border: '1.5px solid #f0ede8', borderRadius: 10, textDecoration: 'none' }}>
-          🖨 Remito
-        </Link>
-        {(() => {
-          const tc = TIPO_ENVIO_COLORS[order.tipo_envio]
-          return (
-            <span style={{ fontSize: 11, fontWeight: 700, color: tc.fg, background: tc.bg, border: `0.5px solid ${tc.border}`, padding: '4px 9px', borderRadius: 999, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-              {TIPO_ENVIO_LABELS[order.tipo_envio]}
-            </span>
-          )
-        })()}
-        {order.fuera_de_horario && (
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#c6831a', background: '#fff7ec', border: '0.5px solid #edc989', padding: '4px 9px', borderRadius: 999 }}>
-            Fuera de horario
-          </span>
-        )}
-        {(incidents ?? []).length > 0 && (
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#a33', background: '#fbeaea', border: '0.5px solid #e0a8a8', padding: '4px 9px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
-            Incidencia
-          </span>
-        )}
-        <span style={{ fontSize: 12, fontWeight: 700, color: c.fg, background: c.bg, border: `0.5px solid ${c.border}`, padding: '5px 10px', borderRadius: 999 }}>
-          {STATUS_LABELS[order.status]}
-        </span>
-      </header>
+  const backHref = profile.role === 'repartidor' ? '/repartidor' : '/pedidos'
 
-      <main style={{ padding: 20, display: 'grid', gap: 16, maxWidth: 900, margin: '0 auto' }}>
+  const customerBadge = (() => {
+    if (customerOrdersCount === null || customerOrdersCount === undefined) return null
+    if (customerOrdersCount >= 10)
+      return (
+        <Badge variant="warning" className="text-[10px] uppercase tracking-wide">
+          VIP · {customerOrdersCount} pedidos
+        </Badge>
+      )
+    if (customerOrdersCount >= 2)
+      return (
+        <Badge variant="info" className="text-[10px] uppercase tracking-wide">
+          Recurrente · {customerOrdersCount} pedidos
+        </Badge>
+      )
+    if (customerOrdersCount === 1)
+      return (
+        <Badge variant="success" className="text-[10px] uppercase tracking-wide">
+          Primera compra
+        </Badge>
+      )
+    return null
+  })()
+
+  return (
+    <CrmShell>
+      <PageHeader
+        title={`Pedido ${formatOrderNumber(order)}`}
+        description={
+          <>
+            {ORIGIN_LABELS[order.origin]} ·{' '}
+            {order.woo_created_at
+              ? new Date(order.woo_created_at).toLocaleString('es-AR')
+              : new Date(order.created_at).toLocaleString('es-AR')}
+          </>
+        }
+        breadcrumbs={[
+          { label: 'Pedidos', href: backHref },
+          { label: formatOrderNumber(order) },
+        ]}
+        actions={
+          <PageActions>
+            <OrderStatusBadge status={order.status} />
+            <OrderTipoEnvioBadge tipo={order.tipo_envio} status={order.status} />
+            {order.fuera_de_horario && (
+              <Badge variant="warning" className="text-[10px] uppercase tracking-wide">
+                Fuera de horario
+              </Badge>
+            )}
+            {(incidents ?? []).length > 0 && (
+              <Badge variant="destructive" className="text-[10px] uppercase tracking-wide">
+                Incidencia
+              </Badge>
+            )}
+            {(profile.role === 'admin' || profile.role === 'operador') && (
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/pedidos/nuevo?from=${order.id}`}>
+                  <Copy className="size-4" />
+                  Repetir
+                </Link>
+              </Button>
+            )}
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/pedidos/${order.id}/remito`}>
+                <Printer className="size-4" />
+                Remito
+              </Link>
+            </Button>
+          </PageActions>
+        }
+      />
+
+      <div className="mx-auto w-full max-w-4xl space-y-4 p-4 md:p-6">
         <WooSyncBanner order={order} />
 
-        {/* BLACKLIST BANNER */}
         {customer?.tags?.includes('blacklist') && (
-          <section style={{ background: '#fbeaea', border: '2px solid #a33', borderRadius: 16, padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ fontSize: 22 }}>⚠️</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#a33', letterSpacing: '0.4px' }}>CLIENTE EN LISTA NEGRA</div>
+          <Alert variant="destructive">
+            <AlertTriangle className="size-4" />
+            <AlertTitle>Cliente en lista negra</AlertTitle>
+            <AlertDescription>
               {customer.notes && (
-                <div style={{ fontSize: 13, color: '#2a2a2a', marginTop: 4, whiteSpace: 'pre-wrap' }}>{customer.notes}</div>
+                <p className="mt-1 whitespace-pre-wrap">{customer.notes}</p>
               )}
-            </div>
-            <Link href={`/clientes/${customer.id}`} style={{ fontSize: 12, fontWeight: 700, color: '#a33', textDecoration: 'underline' }}>
-              Ver ficha
-            </Link>
-          </section>
+              <Link
+                href={`/clientes/${customer.id}`}
+                className="mt-2 inline-flex items-center gap-1 text-sm font-semibold underline"
+              >
+                Ver ficha del cliente
+                <ExternalLink className="size-3.5" />
+              </Link>
+            </AlertDescription>
+          </Alert>
         )}
 
-        {/* CLIENTE + DIRECCION */}
-        <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px' }}>CLIENTE</div>
+        {/* CLIENTE + DIRECCIÓN */}
+        <Card>
+          <CardHeader className="flex-row items-start justify-between gap-2 space-y-0">
+            <div>
+              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Cliente
+              </CardTitle>
+            </div>
             {order.customer_id && (
-              <Link href={`/clientes/${order.customer_id}`}
-                style={{ fontSize: 12, fontWeight: 600, color: '#726DFF', textDecoration: 'none' }}>
-                Ver ficha →
-              </Link>
+              <Button asChild variant="ghost" size="sm">
+                <Link href={`/clientes/${order.customer_id}`}>
+                  Ver ficha
+                  <ExternalLink className="size-3.5" />
+                </Link>
+              </Button>
             )}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 16, fontWeight: 600 }}>{order.customer_name || '—'}</span>
-            {customerOrdersCount !== null && (() => {
-              const n = customerOrdersCount
-              if (n >= 10) return <span style={{ fontSize: 10, fontWeight: 700, color: '#c6831a', background: '#fff7ec', border: '0.5px solid #edc989', padding: '2px 8px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>VIP · {n} pedidos</span>
-              if (n >= 2)  return <span style={{ fontSize: 10, fontWeight: 700, color: '#726DFF', background: '#eeedff', border: '0.5px solid #d9d6ff', padding: '2px 8px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>Recurrente · {n} pedidos</span>
-              if (n === 1) return <span style={{ fontSize: 10, fontWeight: 700, color: '#1f8a4c', background: '#eaf7ef', border: '0.5px solid #8fd1a8', padding: '2px 8px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>Primera compra</span>
-              return null
-            })()}
-          </div>
-          <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
-            {order.customer_phone || 'Sin teléfono'} {order.customer_email ? `· ${order.customer_email}` : ''}
-          </div>
-          {order.customer_dni && (
-            <div style={{ fontSize: 13, color: '#666', marginTop: 2 }}>
-              DNI {order.customer_dni}
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-base font-semibold">{order.customer_name || '—'}</span>
+              {customerBadge}
             </div>
-          )}
-          {addressStr && (
-            <div style={{ marginTop: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px', marginBottom: 4 }}>DIRECCIÓN</div>
-              <div style={{ fontSize: 13, color: '#2a2a2a' }}>{addressStr}</div>
-              {/* Mapa embebido (Google Maps no requiere API key en modo output=embed) */}
-              <div style={{ marginTop: 10, borderRadius: 12, overflow: 'hidden', border: '0.5px solid #ede9e4' }}>
-                <iframe
-                  src={`https://www.google.com/maps?q=${encodeURIComponent(addressStr)}&output=embed`}
-                  width="100%" height="220" loading="lazy" referrerPolicy="no-referrer-when-downgrade"
-                  style={{ border: 0, display: 'block' }}
-                />
+            <div className="text-sm text-muted-foreground">
+              {order.customer_phone || 'Sin teléfono'}
+              {order.customer_email && ` · ${order.customer_email}`}
+              {order.customer_dni && ` · DNI ${order.customer_dni}`}
+            </div>
+
+            {addressStr && (
+              <div className="space-y-2">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Dirección
+                </div>
+                <div className="text-sm">{addressStr}</div>
+                <div className="overflow-hidden rounded-md border border-border">
+                  <iframe
+                    title="Mapa de la dirección"
+                    src={`https://www.google.com/maps?q=${encodeURIComponent(addressStr)}&output=embed`}
+                    width="100%"
+                    height={220}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    className="block border-0"
+                  />
+                </div>
+                {mapsLink && (
+                  <a
+                    href={mapsLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
+                  >
+                    Abrir en Google Maps
+                    <ExternalLink className="size-3.5" />
+                  </a>
+                )}
               </div>
-              {mapsLink && (
-                <a href={mapsLink} target="_blank" rel="noreferrer"
-                  style={{ display: 'inline-block', marginTop: 8, fontSize: 13, fontWeight: 600, color: '#726DFF', textDecoration: 'none' }}>
-                  Abrir en Google Maps ↗
-                </a>
-              )}
-            </div>
-          )}
-          {order.notes && (
-            <div style={{ marginTop: 12, padding: 10, background: '#fff7ec', border: '0.5px solid #edc989', borderRadius: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#c6831a', letterSpacing: '0.4px', marginBottom: 4 }}>NOTA DEL CLIENTE</div>
-              <div style={{ fontSize: 13, color: '#2a2a2a' }}>{order.notes}</div>
-            </div>
-          )}
-        </section>
+            )}
+
+            {order.notes && (
+              <Alert variant="warning">
+                <AlertTitle className="text-xs">Nota del cliente</AlertTitle>
+                <AlertDescription>{order.notes}</AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
 
         {/* ITEMS */}
-        <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px' }}>ITEMS ({order.items.length})</div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {order.items.map((it, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '10px 0', borderBottom: i < order.items.length - 1 ? '0.5px solid #f0ede8' : 'none' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{it.name}</div>
-                  {it.sku && <div style={{ fontSize: 11, color: '#aaa' }}>SKU: {it.sku}</div>}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Items ({order.items.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-col divide-y divide-border">
+              {order.items.map((it, i) => (
+                <div key={i} className="flex justify-between gap-3 py-2.5">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{it.name}</div>
+                    {it.sku && (
+                      <div className="text-[11px] text-muted-foreground">SKU: {it.sku}</div>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-semibold tabular-nums">×{it.qty}</div>
+                    <div className="text-[11px] text-muted-foreground tabular-nums">
+                      ${Number(it.price).toLocaleString('es-AR')}
+                    </div>
+                  </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>×{it.qty}</div>
-                  <div style={{ fontSize: 11, color: '#888' }}>${Number(it.price).toLocaleString('es-AR')}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, borderTop: '0.5px solid #f0ede8' }}>
-            <div style={{ fontSize: 12, color: '#888' }}>{order.payment_method || 'Pago no especificado'}</div>
-            <div style={{ fontSize: 16, fontWeight: 700 }}>${Number(order.total).toLocaleString('es-AR')}</div>
-          </div>
+              ))}
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                {order.payment_method || 'Pago no especificado'}
+              </span>
+              <span className="text-base font-bold tabular-nums">
+                ${Number(order.total).toLocaleString('es-AR')}
+              </span>
+            </div>
 
-          {(profile.role === 'admin' || profile.role === 'operador') && (
-            <ItemsEditor order={order} />
-          )}
-        </section>
+            {(profile.role === 'admin' || profile.role === 'operador') && (
+              <ItemsEditor order={order} />
+            )}
+          </CardContent>
+        </Card>
 
         {/* ACCIONES */}
         <OrderActions
@@ -275,9 +380,12 @@ export default async function OrderDetailPage({ params }: { params: { id: string
 
         {/* COMPROBANTE DE ENTREGA */}
         {(() => {
-          const canEdit = profile.role === 'admin' || profile.role === 'operador' ||
+          const canEdit =
+            profile.role === 'admin' ||
+            profile.role === 'operador' ||
             (profile.role === 'repartidor' && order.assigned_to === profile.id)
-          const relevant = order.tipo_envio !== 'retiro' && ['en_camino','entregado'].includes(order.status)
+          const relevant =
+            order.tipo_envio !== 'retiro' && ['en_camino', 'entregado'].includes(order.status)
           if (!canEdit && !order.delivery_proof_url) return null
           if (!relevant && !order.delivery_proof_url) return null
           return (
@@ -293,94 +401,91 @@ export default async function OrderDetailPage({ params }: { params: { id: string
         {(() => {
           const entrada = order.woo_created_at || order.created_at
           const hitos: Array<{ label: string; ts: string | null; prev: string | null }> = [
-            { label: 'Entró',         ts: entrada,              prev: null             },
-            { label: 'Confirmado',    ts: order.confirmed_at,   prev: entrada          },
-            { label: 'Listo',         ts: order.ready_at,       prev: order.confirmed_at ?? entrada },
-            { label: 'Entregado',     ts: order.delivered_at,   prev: order.ready_at ?? order.confirmed_at ?? entrada },
+            { label: 'Entró', ts: entrada, prev: null },
+            { label: 'Confirmado', ts: order.confirmed_at, prev: entrada },
+            { label: 'Listo', ts: order.ready_at, prev: order.confirmed_at ?? entrada },
+            {
+              label: 'Entregado',
+              ts: order.delivered_at,
+              prev: order.ready_at ?? order.confirmed_at ?? entrada,
+            },
           ]
           const totalMin = minutesBetween(entrada, order.delivered_at)
           return (
-            <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px' }}>TIEMPOS</div>
+            <Card>
+              <CardHeader className="flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Tiempos
+                </CardTitle>
                 {totalMin !== null && (
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#1f8a4c', background: '#eaf7ef', border: '0.5px solid #8fd1a8', padding: '3px 8px', borderRadius: 999 }}>
-                    Total: {formatDuration(totalMin)}
-                  </span>
+                  <Badge variant="success">Total: {formatDuration(totalMin)}</Badge>
                 )}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr auto', gap: '6px 14px', fontSize: 13 }}>
-                {hitos.map((h, i) => {
-                  const delta = minutesBetween(h.prev, h.ts)
-                  return (
-                    <div key={h.label} style={{ display: 'contents' }}>
-                      <div style={{ color: '#888', fontWeight: 600 }}>{h.label}</div>
-                      <div style={{ color: h.ts ? '#2a2a2a' : '#bbb' }}>
-                        {h.ts ? new Date(h.ts).toLocaleString('es-AR') : 'pendiente'}
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-[auto_1fr_auto] gap-x-4 gap-y-1.5 text-sm">
+                  {hitos.map((h, i) => {
+                    const delta = minutesBetween(h.prev, h.ts)
+                    return (
+                      <div key={h.label} className="contents">
+                        <div className="font-semibold text-muted-foreground">{h.label}</div>
+                        <div className={h.ts ? '' : 'text-muted-foreground/60'}>
+                          {h.ts ? new Date(h.ts).toLocaleString('es-AR') : 'pendiente'}
+                        </div>
+                        <div className="whitespace-nowrap text-xs text-muted-foreground">
+                          {i > 0 && delta !== null ? `+${formatDuration(delta)}` : ''}
+                        </div>
                       </div>
-                      <div style={{ color: '#aaa', fontSize: 11, whiteSpace: 'nowrap' }}>
-                        {i > 0 && delta !== null ? `+${formatDuration(delta)}` : ''}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           )
         })()}
 
-        {/* TIMELINE VISUAL */}
-        <section style={{ background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px', marginBottom: 12 }}>TIMELINE</div>
-          {(history ?? []).length === 0 ? (
-            <div style={{ fontSize: 13, color: '#bbb' }}>Sin movimientos</div>
-          ) : (
-            <div style={{ position: 'relative', paddingLeft: 30 }}>
-              {/* Línea vertical */}
-              <div style={{ position: 'absolute', left: 13, top: 6, bottom: 6, width: 2, background: '#ede9e4' }} />
-              {([...(history ?? [])].reverse()).map((h: OrderStatusHistory) => {
-                const hc = STATUS_COLORS[h.status]
-                const icon =
-                  h.status === 'nuevo'          ? '📥' :
-                  h.status === 'confirmado'     ? '✓'  :
-                  h.status === 'en_preparacion' ? '🛠️' :
-                  h.status === 'listo'          ? '📦' :
-                  h.status === 'en_camino'      ? '🛵' :
-                  h.status === 'entregado'      ? '✅' :
-                  h.status === 'cancelado'      ? '✕'  : '•'
-                return (
-                  <div key={h.id} style={{ position: 'relative', paddingBottom: 16 }}>
-                    <div style={{
-                      position: 'absolute', left: -30, top: 0, width: 28, height: 28, borderRadius: 999,
-                      background: hc.bg, border: `2px solid ${hc.fg}`, color: hc.fg,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 13, fontWeight: 700,
-                    }}>
-                      {icon}
+        {/* TIMELINE */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Timeline
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(history ?? []).length === 0 ? (
+              <div className="text-sm text-muted-foreground">Sin movimientos</div>
+            ) : (
+              <div className="relative pl-7">
+                <div className="absolute left-2.5 top-2 bottom-2 w-0.5 bg-border" />
+                {[...(history ?? [])].reverse().map((h: OrderStatusHistory) => (
+                  <div key={h.id} className="relative pb-4 last:pb-0">
+                    <div className="absolute -left-7 top-0 flex size-6 items-center justify-center rounded-full border-2 border-primary bg-primary/10 text-xs font-bold text-primary">
+                      •
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: hc.fg }}>{STATUS_LABELS[h.status]}</div>
-                    <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
+                    <OrderStatusBadge status={h.status} />
+                    <div className="mt-1 text-[11px] text-muted-foreground">
                       {new Date(h.created_at).toLocaleString('es-AR')}
-                      {h.changed_by && changerMap.has(h.changed_by) && ` · ${changerMap.get(h.changed_by)}`}
+                      {h.changed_by &&
+                        changerMap.has(h.changed_by) &&
+                        ` · ${changerMap.get(h.changed_by)}`}
                     </div>
                     {h.note && (
-                      <div style={{ fontSize: 13, color: '#2a2a2a', marginTop: 6, padding: 8, background: '#faf8f5', borderRadius: 8, border: '0.5px solid #f0ede8' }}>
+                      <div className="mt-2 rounded-md border border-border bg-muted/40 p-2 text-sm">
                         {h.note}
                       </div>
                     )}
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </section>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <WhatsappMessagesList
           orderId={order.id}
           messages={messages ?? []}
           users={changers ?? []}
         />
-      </main>
-    </div>
+      </div>
+    </CrmShell>
   )
 }
