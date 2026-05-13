@@ -15,6 +15,8 @@ const alertVariants = cva(
           'border-success/40 bg-success/5 text-success [&>svg]:text-success',
         warning:
           'border-warning/40 bg-warning/5 text-warning [&>svg]:text-warning',
+        info:
+          'border-info/40 bg-info/5 text-info [&>svg]:text-info',
       },
     },
     defaultVariants: {

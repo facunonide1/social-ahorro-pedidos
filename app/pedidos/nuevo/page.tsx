@@ -1,7 +1,12 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
+
 import { createClient } from '@/lib/supabase/server'
 import type { Order, UserPedidos, ZonaReparto } from '@/lib/types'
+
+import { CrmShell } from '@/components/crm/crm-shell'
+import { PageHeader } from '@/components/shared/page-header'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+
 import NuevoPedidoForm from './form'
 
 export const dynamic = 'force-dynamic'
@@ -12,7 +17,9 @@ export default async function NuevoPedidoPage({
   searchParams: { from?: string }
 }) {
   const sb = createClient()
-  const { data: { user } } = await sb.auth.getUser()
+  const {
+    data: { user },
+  } = await sb.auth.getUser()
   if (!user) redirect('/login')
 
   const { data: profile } = await sb
@@ -29,35 +36,36 @@ export default async function NuevoPedidoPage({
     .select('id, nombre, color, activa')
     .eq('activa', true)
     .order('nombre', { ascending: true })
-    .returns<Pick<ZonaReparto, 'id'|'nombre'|'color'|'activa'>[]>()
+    .returns<Pick<ZonaReparto, 'id' | 'nombre' | 'color' | 'activa'>[]>()
 
-  // Modo "repetir pedido": traigo datos del pedido origen para precargar
   let source: Order | null = null
   if (searchParams.from) {
-    const { data } = await sb.from('orders').select('*').eq('id', searchParams.from).maybeSingle<Order>()
+    const { data } = await sb
+      .from('orders')
+      .select('*')
+      .eq('id', searchParams.from)
+      .maybeSingle<Order>()
     source = data ?? null
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#faf8f5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#2a2a2a' }}>
-      <header style={{ background: '#fff', borderBottom: '0.5px solid #ede9e4', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-        <Link href="/dashboard" style={{ textDecoration: 'none', color: '#726DFF', fontSize: 14, fontWeight: 600 }}>
-          ← Volver
-        </Link>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.3px' }}>Nuevo pedido manual</div>
-          <div style={{ fontSize: 12, color: '#999' }}>Para pedidos que entran por WhatsApp, teléfono u otros canales.</div>
-        </div>
-      </header>
-
-      <main style={{ padding: 20, maxWidth: 780, margin: '0 auto' }}>
+    <CrmShell>
+      <PageHeader
+        title="Nuevo pedido manual"
+        description="Para pedidos que entran por WhatsApp, teléfono u otros canales."
+        breadcrumbs={[{ label: 'Pedidos', href: '/pedidos' }, { label: 'Nuevo' }]}
+      />
+      <div className="mx-auto w-full max-w-3xl space-y-4 p-4 md:p-6">
         {source && (
-          <div style={{ background: '#eeedff', border: '0.5px solid #d9d6ff', borderRadius: 12, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#726DFF' }}>
-            Repitiendo pedido <b>{source.codigo}</b>. Los datos se precargaron; podés ajustar lo que haga falta antes de confirmar.
-          </div>
+          <Alert variant="info">
+            <AlertDescription>
+              Repitiendo pedido <b>{source.codigo}</b>. Los datos se precargaron; podés
+              ajustar lo que haga falta antes de confirmar.
+            </AlertDescription>
+          </Alert>
         )}
         <NuevoPedidoForm zonas={zonas ?? []} source={source} />
-      </main>
-    </div>
+      </div>
+    </CrmShell>
   )
 }

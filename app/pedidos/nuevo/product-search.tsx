@@ -1,9 +1,19 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { Loader2 } from 'lucide-react'
+
 import type { ProductSuggestion } from '@/app/api/products/search/route'
 
-export default function ProductSearch({ onPick }: { onPick: (p: ProductSuggestion) => void }) {
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+
+export default function ProductSearch({
+  onPick,
+}: {
+  onPick: (p: ProductSuggestion) => void
+}) {
   const [q, setQ] = useState('')
   const [items, setItems] = useState<ProductSuggestion[]>([])
   const [open, setOpen] = useState(false)
@@ -12,23 +22,35 @@ export default function ProductSearch({ onPick }: { onPick: (p: ProductSuggestio
 
   useEffect(() => {
     const query = q.trim()
-    if (query.length < 2) { setItems([]); setLoading(false); return }
+    if (query.length < 2) {
+      setItems([])
+      setLoading(false)
+      return
+    }
     setLoading(true)
     const abort = new AbortController()
     const handle = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/products/search?q=${encodeURIComponent(query)}`, { signal: abort.signal })
-        if (!res.ok) { setItems([]); return }
+        const res = await fetch(`/api/products/search?q=${encodeURIComponent(query)}`, {
+          signal: abort.signal,
+        })
+        if (!res.ok) {
+          setItems([])
+          return
+        }
         const data: ProductSuggestion[] = await res.json()
         setItems(Array.isArray(data) ? data : [])
         setOpen(true)
       } catch {
-        // abort o red caída: ignoro
+        /* abort/red */
       } finally {
         setLoading(false)
       }
     }, 250)
-    return () => { clearTimeout(handle); abort.abort() }
+    return () => {
+      clearTimeout(handle)
+      abort.abort()
+    }
   }, [q])
 
   useEffect(() => {
@@ -48,71 +70,61 @@ export default function ProductSearch({ onPick }: { onPick: (p: ProductSuggestio
   }
 
   return (
-    <div ref={wrapperRef} style={{ position: 'relative' }}>
-      <label style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.3px', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+    <div ref={wrapperRef} className="relative space-y-1.5">
+      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
         Buscar producto del catálogo Woo
-      </label>
-      <input
-        value={q}
-        onChange={e => setQ(e.target.value)}
-        onFocus={() => items.length > 0 && setOpen(true)}
-        placeholder="Nombre, SKU…"
-        style={{
-          width: '100%', padding: '10px 12px', border: '1.5px solid #f0ede8',
-          borderRadius: 12, fontSize: 14, background: '#faf8f5', color: '#2a2a2a',
-          outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
-        }}
-      />
-      {loading && (
-        <div style={{ position: 'absolute', right: 12, top: 36, fontSize: 11, color: '#999' }}>
-          buscando…
-        </div>
-      )}
+      </Label>
+      <div className="relative">
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onFocus={() => items.length > 0 && setOpen(true)}
+          placeholder="Nombre, SKU…"
+        />
+        {loading && (
+          <Loader2 className="absolute right-3 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
+        )}
+      </div>
 
       {open && items.length > 0 && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 20,
-          background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 12,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.08)', maxHeight: 360, overflowY: 'auto',
-        }}>
-          {items.map((p, i) => {
+        <div className="absolute left-0 right-0 top-full z-20 mt-1.5 max-h-[360px] overflow-y-auto rounded-md border border-border bg-popover shadow-lg">
+          {items.map((p) => {
             const outOfStock = p.stock === 'outofstock'
             return (
-              <button key={p.id} type="button" onClick={() => pick(p)}
-                style={{
-                  width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none',
-                  background: 'transparent', cursor: 'pointer',
-                  borderBottom: i < items.length - 1 ? '0.5px solid #f5f1ec' : 'none',
-                  display: 'flex', gap: 10, alignItems: 'center',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#faf8f5')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => pick(p)}
+                className="flex w-full items-center gap-3 border-b border-border px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-accent"
+              >
                 {p.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.image} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', border: '0.5px solid #ede9e4', flexShrink: 0 }} />
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={p.image}
+                    alt=""
+                    className="size-9 shrink-0 rounded-md border border-border object-cover"
+                  />
                 ) : (
-                  <div style={{ width: 36, height: 36, borderRadius: 8, background: '#faf8f5', border: '0.5px solid #ede9e4', flexShrink: 0 }} />
+                  <div className="size-9 shrink-0 rounded-md border border-border bg-muted" />
                 )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#2a2a2a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {p.name}
-                    </span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#2a2a2a', whiteSpace: 'nowrap' }}>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-sm font-semibold">{p.name}</span>
+                    <span className="whitespace-nowrap text-sm font-bold tabular-nums">
                       ${p.price.toLocaleString('es-AR')}
                     </span>
                   </div>
-                  <div style={{ fontSize: 11, color: '#888', display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
+                  <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
                     {p.sku && <span>SKU {p.sku}</span>}
                     {outOfStock && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: '#a33', background: '#fbeaea', border: '0.5px solid #e0a8a8', padding: '1px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                      <Badge variant="destructive" className="text-[10px] uppercase tracking-wide">
                         Sin stock
-                      </span>
+                      </Badge>
                     )}
                     {p.stock === 'onbackorder' && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: '#c6831a', background: '#fff7ec', border: '0.5px solid #edc989', padding: '1px 6px', borderRadius: 999, letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                      <Badge variant="warning" className="text-[10px] uppercase tracking-wide">
                         Backorder
-                      </span>
+                      </Badge>
                     )}
                   </div>
                 </div>
@@ -123,11 +135,7 @@ export default function ProductSearch({ onPick }: { onPick: (p: ProductSuggestio
       )}
 
       {open && !loading && q.trim().length >= 2 && items.length === 0 && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 20,
-          background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 12, padding: 12,
-          fontSize: 12, color: '#aaa',
-        }}>
+        <div className="absolute left-0 right-0 top-full z-20 mt-1.5 rounded-md border border-border bg-popover p-3 text-xs text-muted-foreground">
           Sin resultados en el catálogo. Cargá el item manualmente abajo.
         </div>
       )}

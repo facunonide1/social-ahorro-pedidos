@@ -1,9 +1,20 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { Loader2, MapPin } from 'lucide-react'
+
 import type { CustomerSuggestion } from '@/app/api/customers/search/route'
 
-export default function CustomerSearch({ onPick }: { onPick: (c: CustomerSuggestion) => void }) {
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
+
+export default function CustomerSearch({
+  onPick,
+}: {
+  onPick: (c: CustomerSuggestion) => void
+}) {
   const [q, setQ] = useState('')
   const [items, setItems] = useState<CustomerSuggestion[]>([])
   const [open, setOpen] = useState(false)
@@ -12,23 +23,35 @@ export default function CustomerSearch({ onPick }: { onPick: (c: CustomerSuggest
 
   useEffect(() => {
     const query = q.trim()
-    if (query.length < 2) { setItems([]); setLoading(false); return }
+    if (query.length < 2) {
+      setItems([])
+      setLoading(false)
+      return
+    }
     setLoading(true)
     const abort = new AbortController()
     const handle = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/customers/search?q=${encodeURIComponent(query)}`, { signal: abort.signal })
-        if (!res.ok) { setItems([]); return }
+        const res = await fetch(`/api/customers/search?q=${encodeURIComponent(query)}`, {
+          signal: abort.signal,
+        })
+        if (!res.ok) {
+          setItems([])
+          return
+        }
         const data: CustomerSuggestion[] = await res.json()
         setItems(Array.isArray(data) ? data : [])
         setOpen(true)
       } catch {
-        // ignoro abortos y errores de red, no spameo al user
+        /* abort/red */
       } finally {
         setLoading(false)
       }
     }, 250)
-    return () => { clearTimeout(handle); abort.abort() }
+    return () => {
+      clearTimeout(handle)
+      abort.abort()
+    }
   }, [q])
 
   useEffect(() => {
@@ -48,62 +71,51 @@ export default function CustomerSearch({ onPick }: { onPick: (c: CustomerSuggest
   }
 
   return (
-    <div ref={wrapperRef} style={{ position: 'relative' }}>
-      <label style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.3px', textTransform: 'uppercase', display: 'block', marginBottom: 6 }}>
+    <div ref={wrapperRef} className="relative space-y-1.5">
+      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
         Buscar cliente existente
-      </label>
-      <input
-        value={q}
-        onChange={e => setQ(e.target.value)}
-        onFocus={() => items.length > 0 && setOpen(true)}
-        placeholder="Escribí nombre, DNI, teléfono o email…"
-        style={{
-          width: '100%', padding: '10px 12px', border: '1.5px solid #f0ede8',
-          borderRadius: 12, fontSize: 14, background: '#faf8f5', color: '#2a2a2a',
-          outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
-        }}
-      />
-      {loading && (
-        <div style={{ position: 'absolute', right: 12, top: 36, fontSize: 11, color: '#999' }}>
-          buscando…
-        </div>
-      )}
+      </Label>
+      <div className="relative">
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onFocus={() => items.length > 0 && setOpen(true)}
+          placeholder="Escribí nombre, DNI, teléfono o email…"
+        />
+        {loading && (
+          <Loader2 className="absolute right-3 top-1/2 size-3.5 -translate-y-1/2 animate-spin text-muted-foreground" />
+        )}
+      </div>
 
       {open && items.length > 0 && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 20,
-          background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 12,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.08)', maxHeight: 320, overflowY: 'auto',
-        }}>
+        <div className="absolute left-0 right-0 top-full z-20 mt-1.5 max-h-80 overflow-y-auto rounded-md border border-border bg-popover shadow-lg">
           {items.map((c, i) => (
-            <button key={i} type="button" onClick={() => pick(c)}
-              style={{
-                width: '100%', textAlign: 'left', padding: '10px 12px', border: 'none',
-                background: 'transparent', cursor: 'pointer', borderBottom: i < items.length - 1 ? '0.5px solid #f5f1ec' : 'none',
-                display: 'flex', flexDirection: 'column', gap: 2,
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#faf8f5')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#2a2a2a' }}>{c.name || '(sin nombre)'}</span>
-                <span style={{
-                  fontSize: 10, fontWeight: 700, letterSpacing: '0.3px', padding: '2px 8px', borderRadius: 999,
-                  background: c.source === 'woo' ? '#eeedff' : '#eaf7ef',
-                  color:     c.source === 'woo' ? '#726DFF' : '#1f8a4c',
-                }}>
+            <button
+              key={i}
+              type="button"
+              onClick={() => pick(c)}
+              className={cn(
+                'flex w-full flex-col gap-0.5 border-b border-border px-3 py-2.5 text-left transition-colors last:border-0 hover:bg-accent',
+              )}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold">{c.name || '(sin nombre)'}</span>
+                <Badge
+                  variant={c.source === 'woo' ? 'info' : 'success'}
+                  className="text-[10px] uppercase tracking-wide"
+                >
                   {c.source === 'woo' ? 'WOO' : 'LOCAL'}
-                </span>
+                </Badge>
               </div>
-              <div style={{ fontSize: 11, color: '#888' }}>
-                {[
-                  c.dni   ? `DNI ${c.dni}` : null,
-                  c.phone ?? null,
-                  c.email ?? null,
-                ].filter(Boolean).join(' · ') || 'sin datos de contacto'}
+              <div className="text-[11px] text-muted-foreground">
+                {[c.dni ? `DNI ${c.dni}` : null, c.phone ?? null, c.email ?? null]
+                  .filter(Boolean)
+                  .join(' · ') || 'sin datos de contacto'}
               </div>
               {c.address?.address_1 && (
-                <div style={{ fontSize: 11, color: '#aaa' }}>
-                  📍 {[c.address.address_1, c.address.city].filter(Boolean).join(', ')}
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground/80">
+                  <MapPin className="size-3" />
+                  {[c.address.address_1, c.address.city].filter(Boolean).join(', ')}
                 </div>
               )}
             </button>
@@ -112,11 +124,7 @@ export default function CustomerSearch({ onPick }: { onPick: (c: CustomerSuggest
       )}
 
       {open && !loading && q.trim().length >= 2 && items.length === 0 && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 20,
-          background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 12, padding: 12,
-          fontSize: 12, color: '#aaa',
-        }}>
+        <div className="absolute left-0 right-0 top-full z-20 mt-1.5 rounded-md border border-border bg-popover p-3 text-xs text-muted-foreground">
           Sin coincidencias. Cargá los datos manualmente abajo.
         </div>
       )}

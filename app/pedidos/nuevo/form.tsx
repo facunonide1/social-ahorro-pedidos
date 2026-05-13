@@ -2,47 +2,63 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { ArrowRight, Loader2, Plus, X } from 'lucide-react'
+
 import { createClient } from '@/lib/supabase/client'
-import { ORIGIN_LABELS, TIPO_ENVIO_LABELS, TIPO_ENVIO_COLORS } from '@/lib/types'
+import { ORIGIN_LABELS, TIPO_ENVIO_LABELS } from '@/lib/types'
 import type { Order, OrderOrigin, TipoEnvio, ZonaReparto } from '@/lib/types'
+
 import CustomerSearch from './customer-search'
 import ProductSearch from './product-search'
 import type { CustomerSuggestion } from '@/app/api/customers/search/route'
 import type { ProductSuggestion } from '@/app/api/products/search/route'
 
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+
 type ItemDraft = { name: string; qty: string; price: string; sku: string }
-
-const CARD: React.CSSProperties = {
-  background: '#fff', border: '0.5px solid #ede9e4', borderRadius: 16, padding: 16,
-  display: 'flex', flexDirection: 'column', gap: 12,
-}
-
-const LABEL: React.CSSProperties = {
-  fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.3px',
-  textTransform: 'uppercase', display: 'block', marginBottom: 6,
-}
-
-const INPUT: React.CSSProperties = {
-  width: '100%', padding: '10px 12px', border: '1.5px solid #f0ede8',
-  borderRadius: 12, fontSize: 14, background: '#faf8f5', color: '#2a2a2a',
-  outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
-}
-
-const BTN: React.CSSProperties = {
-  padding: '10px 14px', border: 'none', borderRadius: 12, fontSize: 13,
-  fontWeight: 700, cursor: 'pointer', letterSpacing: '-0.2px',
-}
 
 function emptyItem(): ItemDraft {
   return { name: '', qty: '1', price: '', sku: '' }
 }
 
-const MANUAL_ORIGINS: Exclude<OrderOrigin, 'woo'>[] = ['whatsapp', 'telefono', 'instagram', 'otro']
+const MANUAL_ORIGINS: Exclude<OrderOrigin, 'woo'>[] = [
+  'whatsapp',
+  'telefono',
+  'instagram',
+  'otro',
+]
+
+type ShippingAddress = {
+  address_1?: string
+  address_2?: string
+  city?: string
+  state?: string
+  postcode?: string
+}
 
 export default function NuevoPedidoForm({
-  zonas, source,
+  zonas,
+  source,
 }: {
-  zonas: Pick<ZonaReparto, 'id'|'nombre'|'color'|'activa'>[]
+  zonas: Pick<ZonaReparto, 'id' | 'nombre' | 'color' | 'activa'>[]
   source?: Order | null
 }) {
   const router = useRouter()
@@ -50,13 +66,14 @@ export default function NuevoPedidoForm({
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
 
-  // Datos derivados del pedido origen, si estamos "repitiendo"
   const srcOriginManual: Exclude<OrderOrigin, 'woo'> =
-    (source && source.origin !== 'woo') ? source.origin : 'whatsapp'
-  const srcAddr = (source?.shipping_address ?? source?.billing_address ?? {}) as any
-  const srcItems: ItemDraft[] = (source?.items ?? []).map(it => ({
+    source && source.origin !== 'woo' ? source.origin : 'whatsapp'
+  const srcAddr: ShippingAddress = (source?.shipping_address ??
+    source?.billing_address ??
+    {}) as ShippingAddress
+  const srcItems: ItemDraft[] = (source?.items ?? []).map((it) => ({
     name: it.name ?? '',
-    qty:  String(it.qty ?? 1),
+    qty: String(it.qty ?? 1),
     price: String(it.price ?? 0),
     sku: it.sku ?? '',
   }))
@@ -64,69 +81,74 @@ export default function NuevoPedidoForm({
   const [origin, setOrigin] = useState<Exclude<OrderOrigin, 'woo'>>(srcOriginManual)
   const [tipoEnvio, setTipoEnvio] = useState<TipoEnvio>(source?.tipo_envio ?? 'programado')
   const [customer, setCustomer] = useState({
-    name:  source?.customer_name  ?? '',
+    name: source?.customer_name ?? '',
     phone: source?.customer_phone ?? '',
     email: source?.customer_email ?? '',
-    dni:   source?.customer_dni   ?? '',
+    dni: source?.customer_dni ?? '',
   })
   const [address, setAddress] = useState({
     address_1: srcAddr.address_1 ?? '',
     address_2: srcAddr.address_2 ?? '',
-    city:      srcAddr.city      ?? '',
-    state:     srcAddr.state     ?? '',
-    postcode:  srcAddr.postcode  ?? '',
+    city: srcAddr.city ?? '',
+    state: srcAddr.state ?? '',
+    postcode: srcAddr.postcode ?? '',
   })
   const [zonaId, setZonaId] = useState<string>(source?.zona_id ?? '')
   const [paymentMethod, setPaymentMethod] = useState(source?.payment_method ?? '')
   const [notes, setNotes] = useState(source?.notes ?? '')
-  const [items, setItems] = useState<ItemDraft[]>(srcItems.length > 0 ? srcItems : [emptyItem()])
+  const [items, setItems] = useState<ItemDraft[]>(
+    srcItems.length > 0 ? srcItems : [emptyItem()],
+  )
 
-  const total = useMemo(() => items.reduce((acc, it) => {
-    const q = Number(it.qty) || 0
-    const p = Number(it.price) || 0
-    return acc + q * p
-  }, 0), [items])
+  const total = useMemo(
+    () =>
+      items.reduce((acc, it) => {
+        const q = Number(it.qty) || 0
+        const p = Number(it.price) || 0
+        return acc + q * p
+      }, 0),
+    [items],
+  )
 
   function pickCustomer(c: CustomerSuggestion) {
     setCustomer({
-      name:  c.name  || '',
+      name: c.name || '',
       phone: c.phone || '',
       email: c.email || '',
-      dni:   c.dni   || '',
+      dni: c.dni || '',
     })
     const a = c.address || {}
     setAddress({
       address_1: a.address_1 || '',
       address_2: a.address_2 || '',
-      city:      a.city      || '',
-      state:     a.state     || '',
-      postcode:  a.postcode  || '',
+      city: a.city || '',
+      state: a.state || '',
+      postcode: a.postcode || '',
     })
   }
 
   function patchItem(i: number, patch: Partial<ItemDraft>) {
-    setItems(arr => arr.map((it, idx) => idx === i ? { ...it, ...patch } : it))
+    setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)))
   }
-  function addItem() { setItems(arr => [...arr, emptyItem()]) }
+  function addItem() {
+    setItems((arr) => [...arr, emptyItem()])
+  }
   function removeItem(i: number) {
-    setItems(arr => arr.length === 1 ? arr : arr.filter((_, idx) => idx !== i))
+    setItems((arr) => (arr.length === 1 ? arr : arr.filter((_, idx) => idx !== i)))
   }
 
-  /**
-   * Agrega un item desde el catálogo de Woo. Si ya existe un item con el
-   * mismo SKU o nombre, en vez de duplicarlo le aumenta la cantidad.
-   * Si la primera fila está vacía, la usa en vez de agregar una nueva.
-   */
   function addProductItem(p: ProductSuggestion) {
-    setItems(arr => {
-      const match = arr.findIndex(it =>
-        (p.sku && it.sku.trim() === p.sku) ||
-        (!p.sku && it.name.trim().toLowerCase() === p.name.toLowerCase())
+    setItems((arr) => {
+      const match = arr.findIndex(
+        (it) =>
+          (p.sku && it.sku.trim() === p.sku) ||
+          (!p.sku && it.name.trim().toLowerCase() === p.name.toLowerCase()),
       )
       if (match !== -1) {
-        return arr.map((it, idx) => idx === match
-          ? { ...it, qty: String((Number(it.qty) || 0) + 1) }
-          : it
+        return arr.map((it, idx) =>
+          idx === match
+            ? { ...it, qty: String((Number(it.qty) || 0) + 1) }
+            : it,
         )
       }
       const draft: ItemDraft = {
@@ -135,9 +157,9 @@ export default function NuevoPedidoForm({
         price: String(p.price || 0),
         sku: p.sku ?? '',
       }
-      const firstEmpty = arr.findIndex(it => !it.name.trim() && !it.sku.trim())
+      const firstEmpty = arr.findIndex((it) => !it.name.trim() && !it.sku.trim())
       if (firstEmpty !== -1) {
-        return arr.map((it, idx) => idx === firstEmpty ? draft : it)
+        return arr.map((it, idx) => (idx === firstEmpty ? draft : it))
       }
       return [...arr, draft]
     })
@@ -145,35 +167,42 @@ export default function NuevoPedidoForm({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    setBusy(true); setErr(null)
+    setBusy(true)
+    setErr(null)
 
     const cleanItems = items
-      .map(it => ({
+      .map((it) => ({
         name: it.name.trim(),
         qty: Number(it.qty) || 0,
         price: Number(it.price) || 0,
         sku: it.sku.trim() || undefined,
       }))
-      .filter(it => it.name && it.qty > 0)
+      .filter((it) => it.name && it.qty > 0)
 
     if (cleanItems.length === 0) {
-      setBusy(false); setErr('Agregá al menos un item con nombre y cantidad.'); return
+      setBusy(false)
+      setErr('Agregá al menos un item con nombre y cantidad.')
+      return
     }
     if (!customer.name.trim() && !customer.phone.trim()) {
-      setBusy(false); setErr('Poné al menos nombre o teléfono del cliente.'); return
+      setBusy(false)
+      setErr('Poné al menos nombre o teléfono del cliente.')
+      return
     }
 
-    const shipping = Object.values(address).some(v => v.trim()) ? {
-      first_name: customer.name.trim().split(' ')[0] || '',
-      last_name: customer.name.trim().split(' ').slice(1).join(' ') || '',
-      address_1: address.address_1.trim() || undefined,
-      address_2: address.address_2.trim() || undefined,
-      city: address.city.trim() || undefined,
-      state: address.state.trim() || undefined,
-      postcode: address.postcode.trim() || undefined,
-      phone: customer.phone.trim() || undefined,
-      email: customer.email.trim() || undefined,
-    } : null
+    const shipping = Object.values(address).some((v) => v.trim())
+      ? {
+          first_name: customer.name.trim().split(' ')[0] || '',
+          last_name: customer.name.trim().split(' ').slice(1).join(' ') || '',
+          address_1: address.address_1.trim() || undefined,
+          address_2: address.address_2.trim() || undefined,
+          city: address.city.trim() || undefined,
+          state: address.state.trim() || undefined,
+          postcode: address.postcode.trim() || undefined,
+          phone: customer.phone.trim() || undefined,
+          email: customer.email.trim() || undefined,
+        }
+      : null
 
     const { data, error } = await sb.rpc('create_manual_order', {
       p_origin: origin,
@@ -192,7 +221,10 @@ export default function NuevoPedidoForm({
 
     setBusy(false)
 
-    if (error) { setErr(error.message); return }
+    if (error) {
+      setErr(error.message)
+      return
+    }
     const created = Array.isArray(data) ? data[0] : data
     if (created?.id) {
       router.push(`/pedidos/${created.id}`)
@@ -204,209 +236,338 @@ export default function NuevoPedidoForm({
   }
 
   return (
-    <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <form onSubmit={submit} className="space-y-4">
       {err && (
-        <div style={{ background: '#fff0f0', border: '0.5px solid #FF6D6E', borderRadius: 12, padding: 12, fontSize: 13, color: '#FF6D6E' }}>
-          {err}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{err}</AlertDescription>
+        </Alert>
       )}
 
-      {/* CANAL DE ORIGEN */}
-      <section style={CARD}>
-        <div>
-          <label style={LABEL}>Canal de origen</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {MANUAL_ORIGINS.map(o => {
-              const selected = origin === o
-              return (
-                <button key={o} type="button" onClick={() => setOrigin(o)}
-                  style={{
-                    ...BTN,
-                    background: selected ? '#FF6D6E' : '#fff',
-                    color: selected ? '#fff' : '#666',
-                    border: selected ? 'none' : '1.5px solid #f0ede8',
-                  }}>
+      {/* Canal + Tipo */}
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <div className="space-y-2">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Canal de origen
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {MANUAL_ORIGINS.map((o) => (
+                <Button
+                  key={o}
+                  type="button"
+                  variant={origin === o ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setOrigin(o)}
+                >
                   {ORIGIN_LABELS[o]}
-                </button>
-              )
-            })}
+                </Button>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              El número del pedido se genera automáticamente según el canal (WSP-001,
+              TEL-001, etc.).
+            </p>
           </div>
-          <div style={{ fontSize: 11, color: '#aaa', marginTop: 6 }}>
-            El número del pedido se genera automáticamente según el canal (WSP-001, TEL-001, etc.).
-          </div>
-        </div>
 
-        <div>
-          <label style={LABEL}>Tipo de envío</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {(['express','programado','retiro'] as TipoEnvio[]).map(t => {
-              const selected = tipoEnvio === t
-              const c = TIPO_ENVIO_COLORS[t]
-              return (
-                <button key={t} type="button" onClick={() => setTipoEnvio(t)}
-                  style={{
-                    ...BTN,
-                    background: selected ? c.fg : '#fff',
-                    color: selected ? '#fff' : c.fg,
-                    border: selected ? 'none' : `1.5px solid ${c.border}`,
-                  }}>
+          <div className="space-y-2">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Tipo de envío
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {(['express', 'programado', 'retiro'] as TipoEnvio[]).map((t) => (
+                <Button
+                  key={t}
+                  type="button"
+                  variant={tipoEnvio === t ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTipoEnvio(t)}
+                >
                   {TIPO_ENVIO_LABELS[t]}
-                </button>
-              )
-            })}
+                </Button>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
-      {/* CLIENTE */}
-      <section style={CARD}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px' }}>CLIENTE</div>
-        <CustomerSearch onPick={pickCustomer} />
-        <div>
-          <label style={LABEL}>Nombre completo</label>
-          <input value={customer.name} onChange={e => setCustomer({ ...customer, name: e.target.value })}
-            placeholder="Juan Pérez" style={INPUT} />
-        </div>
-        <div className="sa-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <label style={LABEL}>Teléfono</label>
-            <input value={customer.phone} onChange={e => setCustomer({ ...customer, phone: e.target.value })}
-              placeholder="+54 9 11 5555-5555" style={INPUT} />
+      {/* Cliente */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Cliente
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <CustomerSearch onPick={pickCustomer} />
+          <div className="space-y-1.5">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Nombre completo
+            </Label>
+            <Input
+              value={customer.name}
+              onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
+              placeholder="Juan Pérez"
+            />
           </div>
-          <div>
-            <label style={LABEL}>DNI</label>
-            <input value={customer.dni} onChange={e => setCustomer({ ...customer, dni: e.target.value })}
-              placeholder="12345678" style={INPUT} />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Teléfono
+              </Label>
+              <Input
+                value={customer.phone}
+                onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
+                placeholder="+54 9 11 5555-5555"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                DNI
+              </Label>
+              <Input
+                value={customer.dni}
+                onChange={(e) => setCustomer({ ...customer, dni: e.target.value })}
+                placeholder="12345678"
+              />
+            </div>
           </div>
-        </div>
-        <div>
-          <label style={LABEL}>Email</label>
-          <input type="email" value={customer.email} onChange={e => setCustomer({ ...customer, email: e.target.value })}
-            placeholder="cliente@mail.com" style={INPUT} />
-        </div>
-      </section>
+          <div className="space-y-1.5">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Email
+            </Label>
+            <Input
+              type="email"
+              value={customer.email}
+              onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
+              placeholder="cliente@mail.com"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* DIRECCIÓN */}
-      <section style={CARD}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px' }}>DIRECCIÓN DE ENVÍO</div>
-        <div>
-          <label style={LABEL}>Calle y número</label>
-          <input value={address.address_1} onChange={e => setAddress({ ...address, address_1: e.target.value })}
-            placeholder="Av. Siempre Viva 742" style={INPUT} />
-        </div>
-        <div>
-          <label style={LABEL}>Piso / Depto / Referencias</label>
-          <input value={address.address_2} onChange={e => setAddress({ ...address, address_2: e.target.value })}
-            placeholder="3° B · timbre rojo" style={INPUT} />
-        </div>
-        <div className="sa-form-grid" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12 }}>
-          <div>
-            <label style={LABEL}>Ciudad</label>
-            <input value={address.city} onChange={e => setAddress({ ...address, city: e.target.value })}
-              style={INPUT} />
+      {/* Dirección */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Dirección de envío
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Calle y número
+            </Label>
+            <Input
+              value={address.address_1}
+              onChange={(e) => setAddress({ ...address, address_1: e.target.value })}
+              placeholder="Av. Siempre Viva 742"
+            />
           </div>
-          <div>
-            <label style={LABEL}>Provincia</label>
-            <input value={address.state} onChange={e => setAddress({ ...address, state: e.target.value })}
-              style={INPUT} />
+          <div className="space-y-1.5">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Piso / Depto / Referencias
+            </Label>
+            <Input
+              value={address.address_2}
+              onChange={(e) => setAddress({ ...address, address_2: e.target.value })}
+              placeholder="3° B · timbre rojo"
+            />
           </div>
-          <div>
-            <label style={LABEL}>CP</label>
-            <input value={address.postcode} onChange={e => setAddress({ ...address, postcode: e.target.value })}
-              style={INPUT} />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[2fr_1fr_1fr]">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Ciudad
+              </Label>
+              <Input
+                value={address.city}
+                onChange={(e) => setAddress({ ...address, city: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Provincia
+              </Label>
+              <Input
+                value={address.state}
+                onChange={(e) => setAddress({ ...address, state: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                CP
+              </Label>
+              <Input
+                value={address.postcode}
+                onChange={(e) => setAddress({ ...address, postcode: e.target.value })}
+              />
+            </div>
           </div>
-        </div>
-        <div>
-          <label style={LABEL}>Zona de reparto</label>
-          <select value={zonaId} onChange={e => setZonaId(e.target.value)} style={INPUT}>
-            <option value="">— Sin zona —</option>
-            {zonas.map(z => (
-              <option key={z.id} value={z.id}>{z.nombre}</option>
+          <div className="space-y-1.5">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Zona de reparto
+            </Label>
+            <Select
+              value={zonaId || 'none'}
+              onValueChange={(v) => setZonaId(v === 'none' ? '' : v)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sin zona" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— Sin zona —</SelectItem>
+                {zonas.map((z) => (
+                  <SelectItem key={z.id} value={z.id}>
+                    {z.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {zonas.length === 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                Todavía no hay zonas creadas. Un admin puede crearlas en Config.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Items */}
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Items
+          </CardTitle>
+          <Button type="button" variant="outline" size="sm" onClick={addItem}>
+            <Plus className="size-4" />
+            Agregar manual
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <ProductSearch onPick={addProductItem} />
+          <div className="space-y-2">
+            {items.map((it, i) => (
+              <div
+                key={i}
+                className="grid gap-2 sm:grid-cols-[3fr_0.7fr_1fr_1fr_auto] sa-items-row"
+              >
+                <div>
+                  {i === 0 && (
+                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Producto
+                    </Label>
+                  )}
+                  <Input
+                    value={it.name}
+                    onChange={(e) => patchItem(i, { name: e.target.value })}
+                    placeholder="Descripción"
+                  />
+                </div>
+                <div>
+                  {i === 0 && (
+                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Cant.
+                    </Label>
+                  )}
+                  <Input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={it.qty}
+                    onChange={(e) => patchItem(i, { qty: e.target.value })}
+                  />
+                </div>
+                <div>
+                  {i === 0 && (
+                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Precio unit.
+                    </Label>
+                  )}
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={it.price}
+                    onChange={(e) => patchItem(i, { price: e.target.value })}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="sa-items-sku">
+                  {i === 0 && (
+                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      SKU
+                    </Label>
+                  )}
+                  <Input
+                    value={it.sku}
+                    onChange={(e) => patchItem(i, { sku: e.target.value })}
+                    placeholder="—"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => removeItem(i)}
+                  disabled={items.length === 1}
+                  className={i === 0 ? 'mt-[22px]' : ''}
+                  aria-label={`Quitar item ${i + 1}`}
+                >
+                  <X className="size-4 text-destructive" />
+                </Button>
+              </div>
             ))}
-          </select>
-          {zonas.length === 0 && (
-            <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>
-              Todavía no hay zonas creadas. Un admin puede crearlas en ⚙ Config.
-            </div>
+          </div>
+          <Separator />
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Total calculado</span>
+            <span className="text-base font-bold tabular-nums">
+              ${total.toLocaleString('es-AR')}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Pago + Notas */}
+      <Card>
+        <CardContent className="space-y-3 p-4">
+          <div className="space-y-1.5">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Método de pago
+            </Label>
+            <Input
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+              placeholder="Efectivo, transferencia, …"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Notas
+            </Label>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Indicaciones del cliente, horarios, etc."
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end">
+        <Button type="submit" disabled={busy} size="lg">
+          {busy ? (
+            <>
+              <Loader2 className="size-4 animate-spin" />
+              Creando…
+            </>
+          ) : (
+            <>
+              Crear pedido
+              <ArrowRight className="size-4" />
+            </>
           )}
-        </div>
-      </section>
-
-      {/* ITEMS */}
-      <section style={CARD}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#888', letterSpacing: '0.4px' }}>ITEMS</div>
-          <button type="button" onClick={addItem}
-            style={{ ...BTN, background: '#f0ede8', color: '#666' }}>
-            + Agregar manual
-          </button>
-        </div>
-
-        <ProductSearch onPick={addProductItem} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {items.map((it, i) => (
-            <div key={i} className="sa-items-row" style={{ display: 'grid', gridTemplateColumns: '3fr 0.7fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
-              <div>
-                <label style={LABEL}>Producto</label>
-                <input value={it.name} onChange={e => patchItem(i, { name: e.target.value })}
-                  placeholder="Descripción" style={INPUT} />
-              </div>
-              <div>
-                <label style={LABEL}>Cant.</label>
-                <input type="number" min="0" step="1" value={it.qty}
-                  onChange={e => patchItem(i, { qty: e.target.value })} style={INPUT} />
-              </div>
-              <div>
-                <label style={LABEL}>Precio unit.</label>
-                <input type="number" min="0" step="0.01" value={it.price}
-                  onChange={e => patchItem(i, { price: e.target.value })} placeholder="0" style={INPUT} />
-              </div>
-              <div className="sa-items-sku">
-                <label style={LABEL}>SKU</label>
-                <input value={it.sku} onChange={e => patchItem(i, { sku: e.target.value })}
-                  placeholder="—" style={INPUT} />
-              </div>
-              <button type="button" onClick={() => removeItem(i)} disabled={items.length === 1}
-                style={{
-                  ...BTN, background: '#fff', color: '#a33',
-                  border: '1.5px solid #f0ede8',
-                  opacity: items.length === 1 ? 0.4 : 1,
-                  cursor: items.length === 1 ? 'not-allowed' : 'pointer',
-                }}>
-                ✕
-              </button>
-            </div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, borderTop: '0.5px solid #f0ede8' }}>
-          <div style={{ fontSize: 12, color: '#888' }}>Total calculado</div>
-          <div style={{ fontSize: 16, fontWeight: 700 }}>${total.toLocaleString('es-AR')}</div>
-        </div>
-      </section>
-
-      {/* PAGO + NOTAS */}
-      <section style={CARD}>
-        <div>
-          <label style={LABEL}>Método de pago</label>
-          <input value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}
-            placeholder="Efectivo, transferencia, …" style={INPUT} />
-        </div>
-        <div>
-          <label style={LABEL}>Notas</label>
-          <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
-            placeholder="Indicaciones del cliente, horarios, etc."
-            style={{ ...INPUT, resize: 'vertical' }} />
-        </div>
-      </section>
-
-      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-        <button type="submit" disabled={busy}
-          style={{
-            ...BTN, background: '#FF6D6E', color: '#fff', padding: '12px 20px',
-            fontSize: 14, opacity: busy ? 0.6 : 1, cursor: busy ? 'wait' : 'pointer',
-          }}>
-          {busy ? 'Creando…' : 'Crear pedido →'}
-        </button>
+        </Button>
       </div>
     </form>
   )
