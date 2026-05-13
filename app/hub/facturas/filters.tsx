@@ -2,17 +2,38 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { Search } from 'lucide-react'
+
 import { FACTURA_ESTADO_LABELS } from '@/lib/types/admin'
 import type { FacturaEstado } from '@/lib/types/admin'
 
-const INPUT: React.CSSProperties = {
-  padding: '9px 12px', border: '1.5px solid #f0ede8', borderRadius: 10,
-  fontSize: 13, background: '#fff', outline: 'none', color: '#2a2a2a',
-}
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { cn } from '@/lib/utils'
+
+const ALL = '__all__'
+
+const QUICK_FILTERS: { value: string; label: string }[] = [
+  { value: '', label: 'Todas' },
+  { value: 'hoy', label: 'Vencen hoy' },
+  { value: 'semana', label: 'Esta semana' },
+  { value: 'vencidas', label: 'Vencidas' },
+]
 
 export default function FacturasFilters({
-  initialQ, initialEstado, initialProveedor, initialVence,
-  estados, proveedores,
+  initialQ,
+  initialEstado,
+  initialProveedor,
+  initialVence,
+  estados,
+  proveedores,
 }: {
   initialQ: string
   initialEstado: string
@@ -28,53 +49,99 @@ export default function FacturasFilters({
   const [vence, setVence] = useState(initialVence)
   const [, startTransition] = useTransition()
 
-  function apply(next: Partial<{ q: string; estado: string; proveedor: string; vence: string }>) {
+  function apply(
+    next: Partial<{ q: string; estado: string; proveedor: string; vence: string }>,
+  ) {
     const p = new URLSearchParams()
     const nq = next.q !== undefined ? next.q : q
     const ne = next.estado !== undefined ? next.estado : estado
     const np = next.proveedor !== undefined ? next.proveedor : proveedor
     const nv = next.vence !== undefined ? next.vence : vence
-    if (nq) p.set('q', nq)
+    if (nq.trim()) p.set('q', nq.trim())
     if (ne) p.set('estado', ne)
     if (np) p.set('proveedor', np)
     if (nv) p.set('vence', nv)
-    startTransition(() => router.push(`/hub/facturas${p.toString() ? '?' + p : ''}`))
+    startTransition(() =>
+      router.push(`/hub/facturas${p.toString() ? '?' + p : ''}`),
+    )
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {[['','Todas'], ['hoy','Vencen hoy'], ['semana','Esta semana'], ['vencidas','Vencidas']].map(([v, label]) => {
-          const active = vence === v
-          return (
-            <button key={v} onClick={() => { setVence(v); apply({ vence: v }) }}
-              style={{
-                padding: '7px 12px', borderRadius: 999, fontSize: 12, fontWeight: 700,
-                cursor: 'pointer', border: '1.5px solid',
-                background: active ? '#FF6D6E' : '#fff',
-                color: active ? '#fff' : '#666',
-                borderColor: active ? '#FF6D6E' : '#f0ede8',
-              }}>
-              {label}
-            </button>
-          )
-        })}
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {QUICK_FILTERS.map(({ value, label }) => (
+          <Button
+            key={value}
+            type="button"
+            size="sm"
+            variant={vence === value ? 'default' : 'outline'}
+            className={cn('rounded-full')}
+            onClick={() => {
+              setVence(value)
+              apply({ vence: value })
+            }}
+          >
+            {label}
+          </Button>
+        ))}
       </div>
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <form onSubmit={e => { e.preventDefault(); apply({ q }) }} style={{ flex: '1 1 220px' }}>
-          <input value={q} onChange={e => setQ(e.target.value)}
+      <div className="flex flex-wrap items-center gap-2">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            apply({ q })
+          }}
+          className="relative min-w-[220px] flex-1"
+        >
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar punto de venta o número…"
-            style={{ ...INPUT, width: '100%' }} />
+            className="pl-9"
+          />
         </form>
-        <select value={estado} onChange={e => { setEstado(e.target.value); apply({ estado: e.target.value }) }} style={INPUT}>
-          <option value="">Todos los estados</option>
-          {estados.map(s => <option key={s} value={s}>{FACTURA_ESTADO_LABELS[s]}</option>)}
-        </select>
-        <select value={proveedor} onChange={e => { setProveedor(e.target.value); apply({ proveedor: e.target.value }) }} style={INPUT}>
-          <option value="">Todos los proveedores</option>
-          {proveedores.map(p => <option key={p.id} value={p.id}>{p.razon_social}</option>)}
-        </select>
+        <Select
+          value={estado || ALL}
+          onValueChange={(v) => {
+            const next = v === ALL ? '' : v
+            setEstado(next)
+            apply({ estado: next })
+          }}
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Todos los estados" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Todos los estados</SelectItem>
+            {estados.map((s) => (
+              <SelectItem key={s} value={s}>
+                {FACTURA_ESTADO_LABELS[s]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={proveedor || ALL}
+          onValueChange={(v) => {
+            const next = v === ALL ? '' : v
+            setProveedor(next)
+            apply({ proveedor: next })
+          }}
+        >
+          <SelectTrigger className="w-[220px]">
+            <SelectValue placeholder="Todos los proveedores" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Todos los proveedores</SelectItem>
+            {proveedores.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.razon_social}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   )
