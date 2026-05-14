@@ -423,3 +423,147 @@ export type NotificacionAdmin = {
   created_at: string
   read_at: string | null
 }
+
+// ============ FINANZAS (migrations 0020-0023) ============
+
+export type TipoCuentaPropia = 'caja_ahorro' | 'cuenta_corriente'
+export type Moneda = 'ARS' | 'USD'
+export type TipoMovimientoBancario =
+  | 'ingreso'
+  | 'egreso'
+  | 'transferencia'
+  | 'ajuste'
+
+export const TIPO_MOVIMIENTO_LABELS: Record<TipoMovimientoBancario, string> = {
+  ingreso: 'Ingreso',
+  egreso: 'Egreso',
+  transferencia: 'Transferencia',
+  ajuste: 'Ajuste',
+}
+
+export type CuentaBancariaPropia = {
+  id: string
+  nombre: string
+  banco: string
+  tipo_cuenta: TipoCuentaPropia
+  cbu: string | null
+  alias: string | null
+  moneda: Moneda
+  activa: boolean
+  observaciones: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type CuentaBancariaConSaldo = CuentaBancariaPropia & {
+  saldo_actual: number
+  ultimo_movimiento_fecha: string | null
+}
+
+export type MovimientoBancario = {
+  id: string
+  cuenta_bancaria_id: string
+  fecha: string
+  tipo: TipoMovimientoBancario
+  categoria: string | null
+  monto: number
+  descripcion: string | null
+  referencia: string | null
+  comprobante_url: string | null
+  conciliado: boolean
+  pago_id: string | null
+  created_at: string
+  created_by: string | null
+}
+
+export type TipoCheque = 'emitido' | 'recibido'
+export type EstadoCheque =
+  | 'emitido'
+  | 'en_cartera'
+  | 'depositado'
+  | 'cobrado'
+  | 'rechazado'
+  | 'anulado'
+
+export const ESTADO_CHEQUE_LABELS: Record<EstadoCheque, string> = {
+  emitido: 'Emitido',
+  en_cartera: 'En cartera',
+  depositado: 'Depositado',
+  cobrado: 'Cobrado',
+  rechazado: 'Rechazado',
+  anulado: 'Anulado',
+}
+
+export type Cheque = {
+  id: string
+  tipo: TipoCheque
+  numero: string
+  banco: string
+  cuenta: string | null
+  monto: number
+  fecha_emision: string
+  fecha_cobro_estimada: string | null
+  estado: EstadoCheque
+  beneficiario_o_emisor: string | null
+  proveedor_id: string | null
+  cliente_id: string | null
+  cuenta_bancaria_id: string | null
+  observaciones: string | null
+  created_at: string
+  created_by: string | null
+}
+
+export type TipoImpuesto =
+  | 'iva'
+  | 'iibb'
+  | 'ganancias'
+  | 'cargas_sociales'
+  | 'monotributo'
+  | 'otros'
+export type EstadoImpuesto = 'pendiente' | 'presentado' | 'pagado' | 'vencido'
+
+export const TIPO_IMPUESTO_LABELS: Record<TipoImpuesto, string> = {
+  iva: 'IVA',
+  iibb: 'Ingresos Brutos',
+  ganancias: 'Ganancias',
+  cargas_sociales: 'Cargas sociales',
+  monotributo: 'Monotributo',
+  otros: 'Otros',
+}
+
+export const ESTADO_IMPUESTO_LABELS: Record<EstadoImpuesto, string> = {
+  pendiente: 'Pendiente',
+  presentado: 'Presentado',
+  pagado: 'Pagado',
+  vencido: 'Vencido',
+}
+
+export type ImpuestoObligacion = {
+  id: string
+  tipo: TipoImpuesto
+  periodo: string
+  descripcion: string | null
+  fecha_vencimiento: string
+  monto_estimado: number | null
+  monto_real: number | null
+  estado: EstadoImpuesto
+  comprobante_url: string | null
+  notas: string | null
+  pago_id: string | null
+  created_at: string
+  created_by: string | null
+}
+
+export type ExtractoLineaPendiente = {
+  id: string
+  cuenta_bancaria_id: string
+  fecha: string
+  monto: number
+  descripcion: string | null
+  referencia: string | null
+  ingresada_en_extracto: string
+  matched_movimiento_id: string | null
+  estado: 'pendiente' | 'match_sugerido' | 'conciliado' | 'ignorado'
+  created_at: string
+  created_by: string | null
+}

@@ -8,6 +8,11 @@ import {
   Users,
   Briefcase,
   Wallet,
+  Landmark,
+  TrendingUp,
+  Scale,
+  ReceiptText,
+  CalendarClock,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -64,6 +69,36 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
         href: '/hub/pagos',
         icon: Banknote,
         roles: ['super_admin', 'gerente', 'tesoreria', 'auditor'],
+      },
+      {
+        label: 'Cuentas bancarias',
+        href: '/hub/finanzas/cuentas',
+        icon: Landmark,
+        roles: ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'auditor'],
+      },
+      {
+        label: 'Cash flow',
+        href: '/hub/finanzas/cash-flow',
+        icon: TrendingUp,
+        roles: ['super_admin', 'gerente', 'tesoreria', 'auditor'],
+      },
+      {
+        label: 'Conciliación',
+        href: '/hub/finanzas/conciliacion',
+        icon: Scale,
+        roles: ['super_admin', 'gerente', 'tesoreria'],
+      },
+      {
+        label: 'Cheques',
+        href: '/hub/finanzas/cheques',
+        icon: ReceiptText,
+        roles: ['super_admin', 'gerente', 'tesoreria', 'auditor'],
+      },
+      {
+        label: 'Impuestos',
+        href: '/hub/finanzas/impuestos',
+        icon: CalendarClock,
+        roles: ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'auditor'],
       },
     ],
   },
