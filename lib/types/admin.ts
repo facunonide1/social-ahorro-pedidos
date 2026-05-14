@@ -567,3 +567,146 @@ export type ExtractoLineaPendiente = {
   created_at: string
   created_by: string | null
 }
+
+// ============ OPERACIONES / STOCK (migrations 0024-0025) ============
+
+export type Producto = {
+  id: string
+  codigo_interno: string | null
+  codigo_barras: string | null
+  nombre: string
+  descripcion: string | null
+  categoria: string | null
+  laboratorio: string | null
+  presentacion: string | null
+  precio_costo: number | null
+  precio_venta_sugerido: number | null
+  iva_alicuota: number
+  activo: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type StockSucursal = {
+  id: string
+  producto_id: string
+  sucursal_id: string
+  cantidad_actual: number
+  stock_minimo: number
+  stock_maximo: number | null
+  ubicacion: string | null
+  ultima_actualizacion: string
+}
+
+export type TipoMovimientoStock =
+  | 'entrada'
+  | 'salida'
+  | 'ajuste'
+  | 'transferencia'
+  | 'vencido'
+  | 'devolucion'
+  | 'inventario_alta'
+  | 'inventario_baja'
+
+export type MovimientoStock = {
+  id: string
+  producto_id: string
+  sucursal_id: string
+  tipo: TipoMovimientoStock
+  cantidad: number
+  motivo: string | null
+  referencia_tipo: string | null
+  referencia_id: string | null
+  fecha: string
+  created_by: string | null
+  created_at: string
+}
+
+export type LoteProducto = {
+  id: string
+  producto_id: string
+  sucursal_id: string
+  numero_lote: string | null
+  fecha_vencimiento: string
+  cantidad_actual: number
+  recepcion_id: string | null
+  created_at: string
+}
+
+export type EstadoTransferencia =
+  | 'solicitada'
+  | 'aprobada'
+  | 'en_transito'
+  | 'recibida'
+  | 'cancelada'
+
+export const ESTADO_TRANSFERENCIA_LABELS: Record<EstadoTransferencia, string> = {
+  solicitada: 'Solicitada',
+  aprobada: 'Aprobada',
+  en_transito: 'En tránsito',
+  recibida: 'Recibida',
+  cancelada: 'Cancelada',
+}
+
+export type TransferenciaSucursal = {
+  id: string
+  sucursal_origen_id: string
+  sucursal_destino_id: string
+  estado: EstadoTransferencia
+  fecha_solicitud: string
+  fecha_envio: string | null
+  fecha_recepcion: string | null
+  solicitado_por: string | null
+  aprobado_por: string | null
+  observaciones: string | null
+  created_at: string
+}
+
+export type EstadoInventario = 'en_curso' | 'cerrado'
+
+export type InventarioFisico = {
+  id: string
+  sucursal_id: string
+  fecha_inventario: string
+  estado: EstadoInventario
+  responsable_id: string | null
+  total_items_contados: number
+  diferencias_detectadas: number
+  observaciones: string | null
+  created_at: string
+  closed_at: string | null
+}
+
+export type EstadoDevolucionProveedor =
+  | 'registrada'
+  | 'enviada'
+  | 'nota_credito_recibida'
+  | 'cerrada'
+export type MotivoDevolucion = 'vencimiento' | 'dano' | 'error_pedido' | 'otro'
+
+export const ESTADO_DEVOLUCION_LABELS: Record<EstadoDevolucionProveedor, string> = {
+  registrada: 'Registrada',
+  enviada: 'Enviada',
+  nota_credito_recibida: 'Nota de crédito recibida',
+  cerrada: 'Cerrada',
+}
+
+export const MOTIVO_DEVOLUCION_LABELS: Record<MotivoDevolucion, string> = {
+  vencimiento: 'Vencimiento',
+  dano: 'Daño',
+  error_pedido: 'Error de pedido',
+  otro: 'Otro',
+}
+
+export type DevolucionProveedor = {
+  id: string
+  proveedor_id: string
+  sucursal_id: string
+  fecha: string
+  motivo: MotivoDevolucion
+  estado: EstadoDevolucionProveedor
+  numero_remito_devolucion: string | null
+  observaciones: string | null
+  created_at: string
+  created_by: string | null
+}

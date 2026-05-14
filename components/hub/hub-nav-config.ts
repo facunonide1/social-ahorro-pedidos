@@ -13,6 +13,11 @@ import {
   Scale,
   ReceiptText,
   CalendarClock,
+  Boxes,
+  CalendarX,
+  ArrowLeftRight,
+  ClipboardCheck,
+  Undo2,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -52,6 +57,41 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
         href: '/hub/recepciones',
         icon: PackageCheck,
         roles: ['super_admin', 'gerente', 'administrativo', 'sucursal', 'auditor'],
+      },
+      {
+        label: 'Devoluciones',
+        href: '/hub/compras/devoluciones',
+        icon: Undo2,
+        roles: ['super_admin', 'gerente', 'comprador', 'administrativo'],
+      },
+    ],
+  },
+  {
+    label: 'Operaciones',
+    items: [
+      {
+        label: 'Stock',
+        href: '/hub/operaciones/stock',
+        icon: Boxes,
+        roles: ['super_admin', 'gerente', 'administrativo', 'sucursal', 'comprador', 'auditor'],
+      },
+      {
+        label: 'Vencimientos',
+        href: '/hub/operaciones/vencimientos',
+        icon: CalendarX,
+        roles: ['super_admin', 'gerente', 'administrativo', 'sucursal', 'auditor'],
+      },
+      {
+        label: 'Transferencias',
+        href: '/hub/operaciones/transferencias',
+        icon: ArrowLeftRight,
+        roles: ['super_admin', 'gerente', 'administrativo', 'sucursal'],
+      },
+      {
+        label: 'Inventarios',
+        href: '/hub/operaciones/inventarios',
+        icon: ClipboardCheck,
+        roles: ['super_admin', 'gerente', 'administrativo', 'sucursal'],
       },
     ],
   },
