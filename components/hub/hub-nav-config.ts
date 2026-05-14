@@ -19,6 +19,7 @@ import {
   ClipboardCheck,
   Undo2,
   Sparkles,
+  ScanLine,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -151,6 +152,12 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
         href: '/hub/ia/resumen',
         icon: Sparkles,
         roles: ['super_admin', 'gerente', 'auditor'],
+      },
+      {
+        label: 'Validación de tickets',
+        href: '/hub/ia/tickets',
+        icon: ScanLine,
+        roles: ['super_admin', 'gerente', 'administrativo'],
       },
     ],
   },

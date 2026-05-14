@@ -710,3 +710,40 @@ export type DevolucionProveedor = {
   created_at: string
   created_by: string | null
 }
+
+// ============ IA / TICKETS (migration 0027) ============
+
+export type EstadoTicketValidacion =
+  | 'pendiente'
+  | 'auto_validado'
+  | 'manual_aprobado'
+  | 'rechazado'
+  | 'dudoso'
+
+export const ESTADO_TICKET_LABELS: Record<EstadoTicketValidacion, string> = {
+  pendiente: 'Pendiente',
+  auto_validado: 'Validado automático',
+  manual_aprobado: 'Aprobado',
+  rechazado: 'Rechazado',
+  dudoso: 'Dudoso',
+}
+
+export type TicketValidacion = {
+  id: string
+  cliente_dni: string | null
+  cliente_telefono: string | null
+  cliente_id: string | null
+  foto_url: string
+  hash_imagen: string | null
+  fecha_carga: string
+  fecha_ticket_extraida: string | null
+  total_extraido: number | null
+  sucursal_extraida: string | null
+  numero_ticket_extraido: string | null
+  raw_ocr: Record<string, any> | null
+  estado: EstadoTicketValidacion
+  puntos_asignados: number | null
+  validado_por: string | null
+  validado_at: string | null
+  observaciones: string | null
+}
