@@ -18,6 +18,7 @@ import {
   ArrowLeftRight,
   ClipboardCheck,
   Undo2,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -139,6 +140,17 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
         href: '/hub/finanzas/impuestos',
         icon: CalendarClock,
         roles: ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'auditor'],
+      },
+    ],
+  },
+  {
+    label: 'IA',
+    items: [
+      {
+        label: 'Resumen diario',
+        href: '/hub/ia/resumen',
+        icon: Sparkles,
+        roles: ['super_admin', 'gerente', 'auditor'],
       },
     ],
   },
