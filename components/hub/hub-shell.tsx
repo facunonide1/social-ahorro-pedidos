@@ -2,6 +2,7 @@ import { type ReactNode } from 'react'
 
 import type { HubProfile } from '@/lib/admin-hub/auth'
 
+import { AiChatDock } from '@/components/ai/ai-chat-dock'
 import { HubSidebar } from '@/components/hub/hub-sidebar'
 import { HubTopBar } from '@/components/hub/hub-top-bar'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -28,6 +29,7 @@ export function HubShell({
           <HubSidebar role={profile.rol} />
           <main className="flex-1 overflow-x-hidden">{children}</main>
         </div>
+        <AiChatDock />
       </div>
     </TooltipProvider>
   )
