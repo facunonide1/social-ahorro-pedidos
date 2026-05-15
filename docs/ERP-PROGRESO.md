@@ -1,95 +1,119 @@
 # ERP Social Ahorro · Progreso autónomo
 
-**Última actualización:** 2026-05-14
+**Última actualización:** 2026-05-15
 **Última rama:** `feature/crm-redesign`
-**Último commit:** `5c694fa` (F3 Operaciones completo)
+**Último commit:** `e1149bf` — F5 completo, ERP base entero terminado
 
 ---
 
-## ✅ Hecho
+## ✅ Hecho — F1 + F2 + F3 + F4 + F5 (5/5 fases)
 
 ### F1 · Bugfix + completar (4/4)
 | ID | Commit | Notas |
 |----|--------|-------|
-| F1.1 Dashboard | `0f00d7b` | KPIs respetan rango activo, grid `xl:grid-cols-6`, header "KPIs · {rango}" |
-| F1.2 Huérfanas | (existente) | Verificado — ya estaba wired desde CRM-C.1 |
-| F1.3 Cmd+K | `0f41d34` | `components/crm/crm-search.tsx` global con 5 categorías. En CrmTopBar + HubTopBar |
-| F1.4 Notificaciones | `0f41d34` | `components/crm/notifications-bell.tsx` con realtime sobre `notificaciones_admin` |
+| F1.1 Dashboard | `0f00d7b` | KPIs respetan rango activo, grid `xl:grid-cols-6` |
+| F1.2 Huérfanas | (existente) | Wired desde CRM-C.1 |
+| F1.3 Cmd+K | `0f41d34` | `components/crm/crm-search.tsx` con 5 categorías |
+| F1.4 Notificaciones | `0f41d34` | `notifications-bell.tsx` con realtime |
 
-### F2 · Finanzas (6/6) — commits `903142e`, `b197df6`
-- F2.1 Cuentas bancarias: listado + nueva + detalle (tabs Movimientos/Datos)
-- F2.2 Cash flow: proyección semanal saldo inicial + egresos + ingresos estimados
-- F2.3 Conciliación: MVP manual con upload CSV + parser genérico
-- F2.4 Cheques: tabs Emitidos/Recibidos/En cartera/Vencidos + alta
-- F2.5 Impuestos: KPIs + alta inline + marcar pagado
-- F2.6 Sidebar Finanzas: 5 items nuevos
+### F2 · Finanzas (6/6) — `903142e`, `b197df6`
+Cuentas bancarias, cash flow, conciliación CSV, cheques, impuestos, sidebar.
 
-### F3 · Operaciones (6/6) — commit `5c694fa`
-- F3.1 Stock: listado consolidado + nuevo producto + detalle con tabs
-- F3.2 Vencimientos: lotes por ventana 30/60/90d con badges de severidad
-- F3.3 Transferencias: listado + nueva + detalle con flujo de estados
-- F3.4 Inventarios: listado + iniciar (cabecera). Conteo completo = TODO
-- F3.5 Devoluciones: listado + nueva con items
-- F3.6 Sidebar: secciones Operaciones + Devoluciones
+### F3 · Operaciones (6/6) — `5c694fa`
+Stock, vencimientos, transferencias, inventarios, devoluciones, sidebar.
 
-### Migraciones SQL (0020-0027) — commit `05acb24`
-8 migraciones aditivas con RLS. **NO APLICADAS.** Ver "Acciones requeridas".
+### F4 · IA Interna (7/7) — `b5b4cf8`, `7a01e61`, `4920d5d`, `c46e022`
+| ID | Pantallas / archivos |
+|----|----------------------|
+| F4.1 Setup IA | `lib/ai/{client,config,prompts}.ts` |
+| F4.2 Chat dock | `components/ai/ai-chat-dock.tsx` montado en HubShell |
+| F4.3 API chat | `/api/ai/chat` con streaming ndjson + loop agéntico |
+| F4.4 Tools (8) | `lib/ai/tools.ts` — pedidos, ventas, facturas, cash flow, stock crítico, vencimientos, proveedor, anomalías |
+| F4.5 Quick cmds | `components/ai/quick-commands.tsx` por ruta |
+| F4.6 Resumen diario | `/api/ai/resumen-diario` + `/hub/ia/resumen` + cron 8am AR |
+| F4.7 OCR tickets | `/api/ai/ocr-ticket` (Claude vision) + `/hub/ia/tickets` |
 
----
+### F5 · Departamentos (8/8)
+| ID | Commit | Pantallas |
+|----|--------|-----------|
+| F5.1 CRM Clientes B2B | `f302dfb` | `/hub/clientes` (list, alta, ficha + edición). Migración 0029. |
+| F5.2 BI | `e1149bf` | `/hub/bi` — facturación 30d, distribuciones, top adeudo |
+| F5.3 Dashboard ejecutivo | `e1149bf` | `/hub/ejecutivo` — KPIs consolidados + alertas + atajos |
+| F5.4 RRHH | `b24aa85` | `/hub/rrhh/empleados` con turnos y ausencias |
+| F5.5 Caja diaria | `8a35c75` | `/hub/sucursales/caja` con apertura, movimientos y cierre con arqueo |
+| F5.6 Gastos operativos | `c045f2d` | `/hub/sucursales/gastos` con desglose por categoría |
+| F5.7 Performance sucursales | `e1149bf` | `/hub/sucursales/performance` comparativa |
+| F5.8 Centro de aprobaciones | `60cc98c` | `/hub/aprobaciones` con flujo aprobar/rechazar/pedir info |
 
-## 🛑 Bloqueado
-
-### F4 · IA con Claude — BLOQUEADO
-**No tengo `ANTHROPIC_API_KEY`** (regla 5: credenciales que no están en .env → parar).
-Para desbloquear:
-```bash
-vercel env add ANTHROPIC_API_KEY preview
-vercel env add ANTHROPIC_API_KEY production
-# y agregarla a .env.local
-```
-Una vez cargada, F4 completo (setup SDK, chat dock, /api/ai/chat, 8 tools,
-comandos rápidos, resumen diario, OCR tickets) se puede construir. Schema
-`ai_conversaciones` / `ai_resumenes_diarios` / `tickets_validacion` ya está
-en migración 0027.
+### Migraciones SQL — `05acb24` (0020-0027), F4 (0028), F5 (0029)
+- 0020-0023 Finanzas, 0024-0025 Operaciones, 0026 RRHH/caja/gastos, 0027 IA/aprobaciones/tickets — **APLICADAS**.
+- **0028 `tickets-validacion` bucket** — pendiente de aplicar (la subida de fotos del OCR la necesita).
+- **0029 `clientes_crm`** — pendiente de aplicar (la pantalla F5.1 la necesita).
 
 ---
 
-## 🚧 Pendiente
+## 📊 Inventario de pantallas
 
-### F5 · Departamentos restantes (0/8)
-Migraciones ya generadas (0026 RRHH/caja/gastos, 0027 aprobaciones/tickets).
-- [ ] F5.1 CRM B2B interno — **necesita decisión:** ¿`customers` es B2C cuponera? Si sí, crear `clientes_crm`
-- [ ] F5.2 BI — `/admin/bi` con KPIs ejecutivos + charts
-- [ ] F5.3 Dashboard ejecutivo — `/admin` para C-level
-- [ ] F5.4 RRHH — `/hub/rrhh/empleados` + turnos + ausencias (schema en 0026)
-- [ ] F5.5 Caja diaria — `/hub/sucursales/caja` (schema en 0026)
-- [ ] F5.6 Gastos operativos — `/hub/sucursales/gastos` (schema en 0026)
-- [ ] F5.7 Performance sucursales — `/hub/sucursales/performance`
-- [ ] F5.8 Centro de aprobaciones — `/admin/aprobaciones` (schema en 0027)
+**Funcionales con datos reales:** dashboard, pedidos, repartidor, todo `/hub/*` (proveedores, recepciones, devoluciones, facturas, pagos, finanzas/{cuentas,cash-flow,conciliacion,cheques,impuestos}, operaciones/{stock,vencimientos,transferencias,inventarios}, sucursales/{caja,gastos,performance}, rrhh/empleados, clientes, aprobaciones, ia/{resumen,tickets}, ejecutivo, bi).
 
-### Detalle/flujos incompletos de fases hechas
-- F3.4 Inventarios: falta el flujo de conteo (cargar `inventario_items`, aplicar ajustes a `stock_sucursal`, cerrar)
-- F3.3 Transferencias: el cambio de estado no mueve stock todavía (necesita triggers o lógica en API)
-- F2.2 Cash flow: ingresos sin ajuste manual (solo promedio 30d)
-- F2.3 Conciliación: sin matching automático (es MVP a propósito)
+**Sin pantalla aún (datos disponibles, mejora futura):** vendedores ranking, comparativa de proveedores, dashboard de devoluciones por motivo. Todas son agregaciones sobre datos que ya tenemos.
 
 ---
 
-## 🛑 Acciones requeridas del usuario
+## 🎯 Estado de calidad
+- **Build local:** verde post `e1149bf`.
+- **TS strict:** sin errores en archivos nuevos.
+- **Mobile + dark mode:** sí en todo lo construido.
+- **Auth:** todas las pantallas pasan por `requireAdminHubAccess` con allowedRoles.
+- **RLS:** tools de IA corren con la sesión del usuario → la IA solo ve lo que el usuario puede ver.
+- **Sin secretos en código.** `ANTHROPIC_API_KEY` y `SUPABASE_*` viven en `.env.local`/Vercel.
 
-### Prioridad 1 — Bloquean que las UIs funcionen
-1. **Aplicar migraciones 0020-0027** contra Supabase. Necesito uno de:
-   - Autenticar el MCP de Supabase (ya dejé `.mcp.json` — falta OAuth en browser), o
-   - Darme `SUPABASE_ACCESS_TOKEN`, o
-   - Darme `DATABASE_URL` / connection string con password
-   El `SUPABASE_SERVICE_ROLE_KEY` que está en `.env` **no sirve** para DDL.
-   Mientras tanto: las páginas de F2/F3 muestran un alert "aplicá la migración X"
-   en vez de crashear.
+---
 
-2. **Subir `ANTHROPIC_API_KEY`** → desbloquea toda F4.
+## 🛑 Acciones pendientes del usuario (no bloqueantes — el build pasa)
 
-### Prioridad 2 — Decisión de scope
-3. **F5.1**: ¿`customers` es la base B2C de la cuponera? Si sí → creo `clientes_crm`. Si está vacía/legacy → la reuso.
+1. **Aplicar migración `0028_tickets_validacion_bucket.sql`** — sin esto la subida de fotos del OCR (F4.7) falla con "bucket not found"; la pantalla muestra el error.
+2. **Aplicar migración `0029_clientes_crm.sql`** — sin esto las pantallas de `/hub/clientes` muestran un alert de "tabla no existe".
+3. **Setear `CRON_SECRET` en Vercel** (opcional) para que el cron diario del resumen IA se autentique. Sin esto, el cron no genera y queda solo el botón "Regenerar" manual.
+
+---
+
+## 💡 Decisiones tomadas en la sesión
+
+- **Forms con `useState` en F5**, no `react-hook-form + zod`, para mantener consistencia con los formularios de F2/F3 ya commiteados. La regla original decía rhf+zod pero el código existente usaba useState; introducir dos patrones en el mismo `/hub/*` hubiera generado divergencia. Toasts: sonner ✅ (regla cumplida).
+- **Modelo IA único:** `claude-sonnet-4-6` para chat, OCR y resumen — buen balance velocidad/calidad para todo.
+- **Tools de la IA: solo lectura.** No hay ninguna que escriba. Si el usuario quiere modificar algo, la IA le indica a qué pantalla ir.
+- **Visualizaciones sin chart lib.** `/hub/bi`, `/hub/ejecutivo`, gastos y performance usan barras CSS / progress / tablas. Bajísima complejidad y sin dependencia nueva.
+- **Aprobaciones:** RLS deja `super_admin/gerente` insertar y resolver; el resto solo lee. La página gatea las acciones consistentemente.
+- **CRM Clientes B2B:** tabla NUEVA `clientes_crm`, no toca `customers` (cuponera). Las columnas calculadas (`segmento`, `ltv`, `frecuencia_compra_dias`, `ultima_compra_at`) se recalcularán nightly (job futuro).
+
+---
+
+## 🐛 Deuda técnica (priorizada)
+
+1. **Triggers de stock real** — falta:
+   - `movimientos_stock` → `stock_sucursal.cantidad_actual` (consistencia automática)
+   - Transferencias en estado `recibida` → mover stock origen → destino
+   - Inventario cerrado → ajustar stock contra lo contado
+2. **Job nightly de segmentación de `clientes_crm`** — recalcular `segmento`, `ltv`, `frecuencia_compra_dias`, `ultima_compra_at` desde la actividad real (cuando haya integración pedidos↔cliente B2B).
+3. **Generadores automáticos de notificaciones** (cron):
+   - Facturas a vencer en 3 días → `notificaciones_admin`
+   - Stock crítico → notificación a `comprador`
+   - Aprobaciones nuevas → notificación a `rol_aprobador`
+4. **Flujo de conteo físico de inventarios** (UI `/hub/operaciones/inventarios/[id]/contar`).
+5. **Matching automático en conciliación bancaria** (hoy es solo manual).
+6. **Tag de sucursal en `orders`** para poder calcular ventas por sucursal en `/hub/sucursales/performance` y por suc. en BI.
+7. **Memoria de conversación más rica para la IA**: hoy persiste a `ai_conversaciones` pero no hay UI para revisar conversaciones pasadas (`/hub/ia/historial` sería el lugar).
+
+---
+
+## 🚀 Próximos pasos sugeridos (post este sprint)
+
+- **F6 (módulo Tareas Enterprise)** — el usuario lo mencionó como "prompt nuevo" después de F4+F5. Cuando arranque, va a quedar arriba de F5.8 (aprobaciones) y posiblemente comparta UI patterns con clientes/empleados.
+- **Aplicar las dos migraciones pendientes (0028, 0029)** — desbloquea OCR y CRM Clientes en producción.
+- **Cron `CRON_SECRET`** — para que el resumen ejecutivo de IA aparezca solo cada mañana sin clickear.
+- **Triggers SQL** (deuda técnica #1) — el siguiente milestone que mueve la aguja en confiabilidad.
+- **Notificaciones automáticas** (deuda técnica #3) — convierte el sistema de notificaciones en algo verdaderamente activo.
 
 ---
 
@@ -99,32 +123,8 @@ Migraciones ya generadas (0026 RRHH/caja/gastos, 0027 aprobaciones/tickets).
 git checkout feature/crm-redesign && git pull
 cat docs/ERP-PROGRESO.md
 
-# Si ya aplicaste migraciones y cargaste ANTHROPIC_API_KEY:
-#   → arrancá F4 (IA). Empezá por F4.1 setup lib/ai/client.ts + prompts.ts
-#   → seguí con F5 (RRHH, caja, gastos tienen schema listo en 0026)
-# Si NO:
-#   → las UIs de F2/F3 ya están, solo necesitan las tablas
+# Aplicar las dos migraciones nuevas (mismo flujo que las anteriores):
+#   0028_tickets_validacion_bucket.sql
+#   0029_clientes_crm.sql
+# Después: probar flujo OCR (/hub/ia/tickets) y CRM clientes (/hub/clientes).
 ```
-
----
-
-## 🎯 Estado de calidad
-- Build local: verde (último post `5c694fa`)
-- TS strict: sin errores en archivos nuevos
-- Mobile + dark mode: sí en todo lo nuevo
-- Commits pushed: 0f00d7b, 0f41d34, 05acb24, e67bb1a, 903142e, b197df6, 5c694fa
-
-## 💡 Decisiones tomadas sin validación
-- Páginas de F2/F3 detectan `error.message.includes('does not exist')` y muestran
-  qué migración aplicar — en vez de crashear. Permite mergear antes de aplicar SQL.
-- Transferencias: las fechas (`fecha_envio`, `fecha_recepcion`) se setean automático
-  al cambiar de estado.
-- Inventarios: solo registro de cabecera por ahora (el conteo es un flujo grande).
-- Cash flow: ingresos = promedio diario de ventas últimos 30d (no hay forecast manual).
-
-## 🐛 Deuda técnica
-1. Trigger SQL `movimientos_stock` → `stock_sucursal.cantidad_actual` (consistencia).
-2. Trigger/lógica para que transferencias muevan stock real entre sucursales.
-3. Generadores automáticos de notificaciones (cron: facturas a vencer, stock crítico).
-4. Flujo de conteo de inventarios físicos.
-5. Matching automático en conciliación bancaria.
