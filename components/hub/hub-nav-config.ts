@@ -21,6 +21,7 @@ import {
   Sparkles,
   ScanLine,
   Contact,
+  UserCog,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -153,6 +154,17 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
         href: '/hub/finanzas/impuestos',
         icon: CalendarClock,
         roles: ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'auditor'],
+      },
+    ],
+  },
+  {
+    label: 'RRHH',
+    items: [
+      {
+        label: 'Empleados',
+        href: '/hub/rrhh/empleados',
+        icon: UserCog,
+        roles: ['super_admin', 'gerente', 'administrativo', 'auditor'],
       },
     ],
   },

@@ -795,6 +795,181 @@ export const SEGMENTO_CLIENTE_LABELS: Record<SegmentoCliente, string> = {
   vip: 'VIP',
 }
 
+// ============ RRHH (migration 0026) ============
+
+export type TipoAusencia = 'vacaciones' | 'enfermedad' | 'licencia' | 'falta'
+
+export const TIPO_AUSENCIA_LABELS: Record<TipoAusencia, string> = {
+  vacaciones: 'Vacaciones',
+  enfermedad: 'Enfermedad',
+  licencia: 'Licencia',
+  falta: 'Falta',
+}
+
+export type Empleado = {
+  id: string
+  dni: string | null
+  nombre_completo: string
+  fecha_nacimiento: string | null
+  telefono: string | null
+  email: string | null
+  sucursal_id: string | null
+  puesto: string | null
+  fecha_ingreso: string | null
+  fecha_egreso: string | null
+  salario_base: number | null
+  activo: boolean
+  observaciones: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type EmpleadoTurno = {
+  id: string
+  empleado_id: string
+  fecha: string
+  hora_entrada: string | null
+  hora_salida: string | null
+  horas_trabajadas: number | null
+  observaciones: string | null
+  created_at: string
+}
+
+export type EmpleadoAusencia = {
+  id: string
+  empleado_id: string
+  tipo: TipoAusencia
+  fecha_desde: string
+  fecha_hasta: string
+  justificada: boolean
+  observaciones: string | null
+  created_at: string
+}
+
+// ============ CAJA DIARIA (migration 0026) ============
+
+export type EstadoCaja = 'abierta' | 'cerrada'
+
+export const ESTADO_CAJA_LABELS: Record<EstadoCaja, string> = {
+  abierta: 'Abierta',
+  cerrada: 'Cerrada',
+}
+
+export type CajaDiaria = {
+  id: string
+  sucursal_id: string
+  fecha: string
+  saldo_inicial: number
+  total_ingresos: number
+  total_egresos: number
+  saldo_final_sistema: number
+  saldo_final_contado: number | null
+  diferencia: number | null
+  estado: EstadoCaja
+  responsable_id: string | null
+  observaciones: string | null
+  created_at: string
+  closed_at: string | null
+}
+
+export type TipoMovimientoCaja = 'ingreso' | 'egreso'
+
+export type MovimientoCaja = {
+  id: string
+  caja_id: string
+  tipo: TipoMovimientoCaja
+  categoria: string | null
+  monto: number
+  descripcion: string | null
+  comprobante: string | null
+  created_at: string
+  created_by: string | null
+}
+
+// ============ GASTOS OPERATIVOS (migration 0026) ============
+
+export type CategoriaGasto =
+  | 'alquiler'
+  | 'servicios'
+  | 'sueldos'
+  | 'mantenimiento'
+  | 'limpieza'
+  | 'insumos'
+  | 'otros'
+
+export const CATEGORIA_GASTO_LABELS: Record<CategoriaGasto, string> = {
+  alquiler: 'Alquiler',
+  servicios: 'Servicios',
+  sueldos: 'Sueldos',
+  mantenimiento: 'Mantenimiento',
+  limpieza: 'Limpieza',
+  insumos: 'Insumos',
+  otros: 'Otros',
+}
+
+export type GastoOperativo = {
+  id: string
+  sucursal_id: string | null
+  categoria: CategoriaGasto
+  descripcion: string
+  monto: number
+  fecha: string
+  proveedor: string | null
+  comprobante_url: string | null
+  periodo: string | null
+  pagado: boolean
+  pago_id: string | null
+  created_at: string
+  created_by: string | null
+}
+
+// ============ APROBACIONES (migration 0027) ============
+
+export type TipoAprobacion =
+  | 'pago_alto'
+  | 'nuevo_proveedor'
+  | 'campania'
+  | 'transferencia'
+  | 'devolucion_grande'
+  | 'otro'
+export type EstadoAprobacion =
+  | 'pendiente'
+  | 'aprobada'
+  | 'rechazada'
+  | 'solicita_info'
+
+export const TIPO_APROBACION_LABELS: Record<TipoAprobacion, string> = {
+  pago_alto: 'Pago de monto alto',
+  nuevo_proveedor: 'Alta de proveedor',
+  campania: 'Campaña',
+  transferencia: 'Transferencia',
+  devolucion_grande: 'Devolución grande',
+  otro: 'Otro',
+}
+
+export const ESTADO_APROBACION_LABELS: Record<EstadoAprobacion, string> = {
+  pendiente: 'Pendiente',
+  aprobada: 'Aprobada',
+  rechazada: 'Rechazada',
+  solicita_info: 'Solicita info',
+}
+
+export type Aprobacion = {
+  id: string
+  tipo: TipoAprobacion
+  entidad_tipo: string | null
+  entidad_id: string | null
+  solicitante_id: string | null
+  aprobador_id: string | null
+  rol_aprobador: AdminRole | null
+  monto_afectado: number | null
+  descripcion: string | null
+  estado: EstadoAprobacion
+  comentarios: string | null
+  created_at: string
+  resolved_at: string | null
+}
+
 export type ClienteCrm = {
   id: string
   tipo_cliente: TipoClienteCrm
