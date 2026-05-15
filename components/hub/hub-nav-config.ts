@@ -22,6 +22,7 @@ import {
   ScanLine,
   Contact,
   UserCog,
+  CheckSquare,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -196,6 +197,16 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
         href: '/hub/rrhh/empleados',
         icon: UserCog,
         roles: ['super_admin', 'gerente', 'administrativo', 'auditor'],
+      },
+    ],
+  },
+  {
+    label: 'Aprobaciones',
+    items: [
+      {
+        label: 'Centro de aprobaciones',
+        href: '/hub/aprobaciones',
+        icon: CheckSquare,
       },
     ],
   },
