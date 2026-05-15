@@ -173,6 +173,19 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
           'auditor',
         ],
       },
+      {
+        label: 'Gastos operativos',
+        href: '/hub/sucursales/gastos',
+        icon: ReceiptText,
+        roles: [
+          'super_admin',
+          'gerente',
+          'administrativo',
+          'tesoreria',
+          'sucursal',
+          'auditor',
+        ],
+      },
     ],
   },
   {
