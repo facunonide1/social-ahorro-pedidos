@@ -58,6 +58,20 @@ export const NAVEGACION_DEPARTAMENTAL: Record<Departamento, DepartamentoNav> = {
     ],
   },
 
+  equipo: {
+    ...DEPARTAMENTOS_INFO.equipo,
+    rolesPermitidos: ROLES_TODOS,
+    submenu: [
+      { label: 'Tareas',          path: '/admin/tareas',          icon: 'ListChecks',     badge: 'tareasPendientes', estado: 'activo' },
+      { label: 'Mi panel',        path: '/admin/mi-panel',        icon: 'LayoutDashboard', estado: 'activo' },
+      { label: 'Mi equipo',       path: '/admin/mi-equipo',       icon: 'UsersRound',     rolesRequeridos: ['super_admin','gerente','sucursal','administrativo','auditor'], estado: 'activo' },
+      { label: 'Empleados',       path: '/admin/empleados',       icon: 'UserSquare2',    rolesRequeridos: ['super_admin','gerente','administrativo','auditor'], estado: 'activo' },
+      { label: 'Objetivos',       path: '/admin/objetivos',       icon: 'Target',         rolesRequeridos: ['super_admin','gerente','administrativo','auditor'], estado: 'activo' },
+      { label: 'Ranking',         path: '/admin/ranking',         icon: 'Trophy',         estado: 'activo' },
+      { label: 'Reportes tareas', path: '/admin/tareas/reportes', icon: 'FileBarChart',   rolesRequeridos: ['super_admin','gerente','auditor'], estado: 'activo' },
+    ],
+  },
+
   compras: {
     ...DEPARTAMENTOS_INFO.compras,
     rolesPermitidos: ROLES_COMPRAS,

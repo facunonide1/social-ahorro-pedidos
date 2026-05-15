@@ -40,6 +40,15 @@ export const DEPARTAMENTOS_INFO: Record<Departamento, DeptInfo> = {
     estado: 'activo',
     descripcion: 'Dashboard global, aprobaciones críticas y reportes consolidados.',
   },
+  equipo: {
+    id: 'equipo',
+    label: 'Equipo',
+    icon: 'Users2',
+    path: '/admin/tareas',
+    color: 'bg-teal-500',
+    estado: 'activo',
+    descripcion: 'Tareas, panel personal, equipo, objetivos y ranking.',
+  },
   compras: {
     id: 'compras',
     label: 'Compras',
@@ -119,6 +128,7 @@ export const DEPARTAMENTOS_INFO: Record<Departamento, DeptInfo> = {
 /** Lista ordenada para iteración (top-nav, etc.). */
 export const DEPARTAMENTOS_ORDER: Departamento[] = [
   'ejecutivo',
+  'equipo',
   'compras',
   'finanzas',
   'sucursales',

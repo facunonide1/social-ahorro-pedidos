@@ -157,7 +157,7 @@ export function AiChatDock() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label={open ? 'Cerrar asistente IA' : 'Abrir asistente IA'}
+        aria-label={open ? 'Cerrar NORA' : 'Abrir NORA'}
         className={cn(
           'fixed bottom-4 right-4 z-40 flex size-12 items-center justify-center rounded-full shadow-lg transition-all',
           'bg-primary text-primary-foreground hover:scale-105 active:scale-95',
@@ -171,7 +171,7 @@ export function AiChatDock() {
       {open && (
         <div
           role="dialog"
-          aria-label="Asistente IA"
+          aria-label="NORA · Asistente"
           className={cn(
             'fixed z-40 flex flex-col overflow-hidden border border-border bg-card shadow-2xl',
             'inset-x-0 bottom-0 top-14 rounded-none',
@@ -185,11 +185,9 @@ export function AiChatDock() {
                 <Bot className="size-4" />
               </div>
               <div>
-                <div className="text-sm font-semibold leading-none">
-                  Asistente IA
-                </div>
+                <div className="text-sm font-semibold leading-none">NORA</div>
                 <div className="mt-0.5 text-[10px] text-muted-foreground">
-                  Datos en vivo del ERP
+                  Asistente del ERP · datos en vivo
                 </div>
               </div>
             </div>
@@ -225,8 +223,9 @@ export function AiChatDock() {
             {messages.length === 0 && (
               <div className="space-y-3">
                 <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
-                  Preguntame sobre pedidos, ventas, finanzas o stock. Consulto
-                  los datos reales del ERP en el momento.
+                  Hola, soy NORA, tu asistente de Social Ahorro. ¿En qué te
+                  ayudo? Puedo consultar tareas, pedidos, ventas, finanzas o
+                  stock con datos en vivo.
                 </div>
                 <div className="space-y-1.5">
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">

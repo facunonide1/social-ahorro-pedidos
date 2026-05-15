@@ -90,6 +90,7 @@ export type AdminRole =
  */
 export type Departamento =
   | 'ejecutivo'
+  | 'equipo'
   | 'compras'
   | 'finanzas'
   | 'operaciones'
@@ -166,6 +167,7 @@ export const NOTIFICACION_PRIORIDAD_LABELS: Record<NotificacionPrioridad, string
 
 export const DEPARTAMENTO_LABELS: Record<Departamento, string> = {
   ejecutivo:    'Ejecutivo',
+  equipo:       'Equipo',
   compras:      'Compras',
   finanzas:     'Finanzas',
   operaciones:  'Operaciones',
@@ -185,13 +187,13 @@ export const DEPARTAMENTO_LABELS: Record<Departamento, string> = {
  * la migración.
  */
 export const ROL_A_DEPARTAMENTOS_LEGACY: Record<AdminRole, Departamento[]> = {
-  super_admin:    ['ejecutivo','compras','finanzas','operaciones','sucursales','comercial','clientes','rrhh','bi'],
-  gerente:        ['ejecutivo','compras','finanzas','operaciones','sucursales','comercial','clientes','rrhh','bi'],
-  auditor:        ['ejecutivo','compras','finanzas','operaciones','sucursales','comercial','clientes','rrhh','bi'],
-  comprador:      ['compras'],
-  administrativo: ['finanzas'],
-  tesoreria:      ['finanzas'],
-  sucursal:       ['sucursales'],
+  super_admin:    ['ejecutivo','equipo','compras','finanzas','operaciones','sucursales','comercial','clientes','rrhh','bi'],
+  gerente:        ['ejecutivo','equipo','compras','finanzas','operaciones','sucursales','comercial','clientes','rrhh','bi'],
+  auditor:        ['ejecutivo','equipo','compras','finanzas','operaciones','sucursales','comercial','clientes','rrhh','bi'],
+  comprador:      ['equipo','compras'],
+  administrativo: ['equipo','finanzas'],
+  tesoreria:      ['equipo','finanzas'],
+  sucursal:       ['equipo','sucursales'],
 }
 
 /**
