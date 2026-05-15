@@ -747,3 +747,82 @@ export type TicketValidacion = {
   validado_at: string | null
   observaciones: string | null
 }
+
+// ============ CRM CLIENTES B2B (migration 0029) ============
+
+export type TipoClienteCrm =
+  | 'mayorista'
+  | 'corporativo'
+  | 'institucional'
+  | 'particular_vip'
+
+export type CondicionPagoCrm =
+  | 'contado'
+  | '7d'
+  | '15d'
+  | '30d'
+  | '60d'
+  | '90d'
+
+export type SegmentoCliente =
+  | 'nuevo'
+  | 'activo'
+  | 'en_riesgo'
+  | 'dormido'
+  | 'vip'
+
+export const TIPO_CLIENTE_CRM_LABELS: Record<TipoClienteCrm, string> = {
+  mayorista: 'Mayorista',
+  corporativo: 'Corporativo',
+  institucional: 'Institucional',
+  particular_vip: 'Particular VIP',
+}
+
+export const CONDICION_PAGO_CRM_LABELS: Record<CondicionPagoCrm, string> = {
+  contado: 'Contado',
+  '7d': '7 días',
+  '15d': '15 días',
+  '30d': '30 días',
+  '60d': '60 días',
+  '90d': '90 días',
+}
+
+export const SEGMENTO_CLIENTE_LABELS: Record<SegmentoCliente, string> = {
+  nuevo: 'Nuevo',
+  activo: 'Activo',
+  en_riesgo: 'En riesgo',
+  dormido: 'Dormido',
+  vip: 'VIP',
+}
+
+export type ClienteCrm = {
+  id: string
+  tipo_cliente: TipoClienteCrm
+  razon_social: string
+  nombre_fantasia: string | null
+  cuit: string | null
+  dni: string | null
+  email: string | null
+  telefono: string | null
+  direccion_completa: string | null
+  localidad: string | null
+  provincia: string | null
+  codigo_postal: string | null
+  sucursal_asignada_id: string | null
+  vendedor_asignado_id: string | null
+  condicion_iva: CondicionIva | null
+  condicion_pago: CondicionPagoCrm
+  limite_credito: number
+  descuento_general_pct: number
+  activo: boolean
+  segmento: SegmentoCliente
+  ltv: number
+  frecuencia_compra_dias: number | null
+  ultima_compra_at: string | null
+  puntos_acumulados: number
+  notas: string | null
+  tags: string[]
+  created_at: string
+  updated_at: string
+  created_by: string | null
+}

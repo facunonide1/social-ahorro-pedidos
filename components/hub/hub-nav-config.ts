@@ -20,6 +20,7 @@ import {
   Undo2,
   Sparkles,
   ScanLine,
+  Contact,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -94,6 +95,17 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
         href: '/hub/operaciones/inventarios',
         icon: ClipboardCheck,
         roles: ['super_admin', 'gerente', 'administrativo', 'sucursal'],
+      },
+    ],
+  },
+  {
+    label: 'Comercial',
+    items: [
+      {
+        label: 'Clientes B2B',
+        href: '/hub/clientes',
+        icon: Contact,
+        roles: ['super_admin', 'gerente', 'administrativo', 'comprador', 'auditor'],
       },
     ],
   },
