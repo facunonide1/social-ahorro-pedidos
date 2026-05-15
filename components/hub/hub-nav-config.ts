@@ -23,6 +23,8 @@ import {
   Contact,
   UserCog,
   CheckSquare,
+  BarChart3,
+  Activity,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -46,6 +48,18 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
     label: 'General',
     items: [
       { label: 'Inicio', href: '/hub', icon: Home },
+      {
+        label: 'Dashboard ejecutivo',
+        href: '/hub/ejecutivo',
+        icon: TrendingUp,
+        roles: ['super_admin', 'gerente', 'auditor'],
+      },
+      {
+        label: 'BI',
+        href: '/hub/bi',
+        icon: BarChart3,
+        roles: ['super_admin', 'gerente', 'auditor'],
+      },
     ],
   },
   {
@@ -186,6 +200,12 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
           'sucursal',
           'auditor',
         ],
+      },
+      {
+        label: 'Performance',
+        href: '/hub/sucursales/performance',
+        icon: Activity,
+        roles: ['super_admin', 'gerente', 'auditor'],
       },
     ],
   },
