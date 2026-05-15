@@ -158,6 +158,24 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
     ],
   },
   {
+    label: 'Sucursales',
+    items: [
+      {
+        label: 'Caja diaria',
+        href: '/hub/sucursales/caja',
+        icon: Wallet,
+        roles: [
+          'super_admin',
+          'gerente',
+          'administrativo',
+          'tesoreria',
+          'sucursal',
+          'auditor',
+        ],
+      },
+    ],
+  },
+  {
     label: 'RRHH',
     items: [
       {
