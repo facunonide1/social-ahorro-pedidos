@@ -116,6 +116,7 @@ export async function POST(req: NextRequest) {
               sb,
               block.name,
               (block.input as Record<string, any>) ?? {},
+              { userId: user.id, rol: profile.rol },
             )
             toolResults.push({
               type: 'tool_result',

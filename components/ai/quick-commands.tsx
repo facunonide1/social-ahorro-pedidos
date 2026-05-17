@@ -33,8 +33,33 @@ const DEFAULT = [
   '¿Qué facturas vencen pronto?',
 ]
 
+const MI_PANEL = [
+  '¿Qué tengo que hacer hoy?',
+  '¿Cómo voy con mis objetivos?',
+  'Creame una tarea de cierre de caja para mañana',
+]
+
+const MI_EQUIPO = [
+  'Resumen del equipo de hoy',
+  '¿Quién está más cargado de tareas?',
+  '¿Qué tareas del equipo están atrasadas?',
+]
+
+const TAREAS = [
+  'Listame mis tareas pendientes',
+  'Priorizá mis tareas',
+  '¿Qué tareas vencen esta semana?',
+]
+
 export function quickCommandsForPath(pathname: string): string[] {
-  if (pathname.includes('/finanzas') || pathname.includes('/facturas') || pathname.includes('/pagos'))
+  if (pathname.includes('/mi-panel')) return MI_PANEL
+  if (pathname.includes('/mi-equipo')) return MI_EQUIPO
+  if (pathname.includes('/tareas')) return TAREAS
+  if (
+    pathname.includes('/finanzas') ||
+    pathname.includes('/facturas') ||
+    pathname.includes('/pagos')
+  )
     return FINANZAS
   if (pathname.includes('/operaciones') || pathname.includes('/stock'))
     return OPERACIONES

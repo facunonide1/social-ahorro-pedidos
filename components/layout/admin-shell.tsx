@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useSucursalStore } from '@/lib/stores/sucursal-store'
 import { useNotificationsStore } from '@/lib/stores/notifications-store'
 import { deptFromPath } from '@/lib/utils/departamento-from-path'
+import { AiChatDock } from '@/components/ai/ai-chat-dock'
 import { TopNav } from '@/components/layout/top-nav'
 import { Sidebar } from '@/components/layout/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -58,6 +59,7 @@ export function AdminShell({
           <Sidebar deptActivo={deptActivo} />
           <main className="flex-1 overflow-x-hidden">{children}</main>
         </div>
+        <AiChatDock />
       </div>
     </TooltipProvider>
   )
