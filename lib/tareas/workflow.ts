@@ -380,6 +380,17 @@ export async function ejecutarAccion(
     })
   }
 
+  // Gamificación: si quedó completada, otorgar puntos + evaluar badges.
+  if (updated.estado === 'completada' && estadoAnterior !== 'completada') {
+    try {
+      const { alCompletarse } = await import('@/lib/tareas/gamification')
+      await alCompletarse(sb, updated, tipo)
+    } catch {
+      // No bloqueamos el cierre si falla el scoring; se puede recalcular
+      // con el cron nightly.
+    }
+  }
+
   return { ok: true, tarea: updated }
 }
 
