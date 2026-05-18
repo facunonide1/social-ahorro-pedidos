@@ -73,6 +73,26 @@ export function TaskComments({
     }
     setComentarios((arr) => [...arr, data])
     setTexto('')
+
+    // Notif a mencionados
+    if (menciones.length > 0) {
+      try {
+        const { notificarMenciones } = await import('@/lib/tareas/notificaciones')
+        const tarea = await sb
+          .from('tareas')
+          .select('titulo')
+          .eq('id', tareaId)
+          .maybeSingle<{ titulo: string }>()
+        await notificarMenciones(sb, {
+          tareaId,
+          tareaTitulo: tarea.data?.titulo || 'una tarea',
+          mencionadores: menciones,
+          emisor: currentUserId,
+        })
+      } catch {
+        /* best-effort */
+      }
+    }
   }
 
   return (

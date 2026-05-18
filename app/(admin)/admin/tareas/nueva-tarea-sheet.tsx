@@ -157,6 +157,19 @@ export function NuevaTareaSheet({
       estado_nuevo: { estado: form.responsable_id ? 'asignada' : 'pendiente' },
     })
 
+    // Notif al responsable asignado (si hay)
+    if (form.responsable_id) {
+      const { notificarAsignacion } = await import('@/lib/tareas/notificaciones')
+      const { data: tareaCompleta } = await sb
+        .from('tareas')
+        .select('*')
+        .eq('id', data.id)
+        .maybeSingle()
+      if (tareaCompleta) {
+        await notificarAsignacion(sb, tareaCompleta as never)
+      }
+    }
+
     toast.success('Tarea creada.')
     setOpen(false)
     setTipoId('')

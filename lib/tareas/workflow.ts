@@ -391,6 +391,22 @@ export async function ejecutarAccion(
     }
   }
 
+  // Notificaciones de cambio de fase del workflow.
+  if (estadoAnterior !== updated.estado) {
+    try {
+      const { notificarVerificacion, notificarAprobacion } = await import(
+        '@/lib/tareas/notificaciones'
+      )
+      if (updated.estado === 'en_verificacion') {
+        await notificarVerificacion(sb, updated)
+      } else if (updated.estado === 'en_aprobacion') {
+        await notificarAprobacion(sb, updated)
+      }
+    } catch {
+      /* notifs son best-effort */
+    }
+  }
+
   return { ok: true, tarea: updated }
 }
 
