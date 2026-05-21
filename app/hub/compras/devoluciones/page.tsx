@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { ArrowRight, Plus } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
@@ -101,13 +101,14 @@ export default async function DevolucionesPage() {
                 <TableHead>Motivo</TableHead>
                 <TableHead>Remito</TableHead>
                 <TableHead>Estado</TableHead>
+                <TableHead className="w-[60px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={7}
                     className="py-12 text-center text-sm text-muted-foreground"
                   >
                     Sin devoluciones registradas.
@@ -133,6 +134,14 @@ export default async function DevolucionesPage() {
                       <Badge variant={ESTADO_VARIANT[r.estado]}>
                         {ESTADO_DEVOLUCION_LABELS[r.estado]}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={`/hub/compras/devoluciones/${r.id}`}>
+                          Ver
+                          <ArrowRight className="size-3.5" />
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
