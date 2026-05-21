@@ -679,6 +679,16 @@ export type InventarioFisico = {
   closed_at: string | null
 }
 
+export type InventarioItem = {
+  id: string
+  inventario_id: string
+  producto_id: string
+  stock_sistema: number
+  stock_contado: number | null
+  diferencia: number | null
+  motivo_diferencia: string | null
+}
+
 export type EstadoDevolucionProveedor =
   | 'registrada'
   | 'enviada'

@@ -1,3 +1,6 @@
+import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
+
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import type { InventarioFisico } from '@/lib/types/admin'
@@ -6,6 +9,7 @@ import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
   Table,
@@ -80,13 +84,14 @@ export default async function InventariosPage() {
                 <TableHead className="text-right">Items contados</TableHead>
                 <TableHead className="text-right">Diferencias</TableHead>
                 <TableHead>Estado</TableHead>
+                <TableHead className="w-[60px]" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     className="py-12 text-center text-sm text-muted-foreground"
                   >
                     Sin inventarios registrados.
@@ -120,18 +125,20 @@ export default async function InventariosPage() {
                         {r.estado === 'cerrado' ? 'Cerrado' : 'En curso'}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href={`/hub/operaciones/inventarios/${r.id}`}>
+                          {r.estado === 'cerrado' ? 'Ver' : 'Contar'}
+                          <ArrowRight className="size-3.5" />
+                        </Link>
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
         </Card>
-
-        <p className="text-xs text-muted-foreground">
-          El flujo completo de conteo (cargar cantidades contadas, aplicar
-          ajustes al stock) se documenta en <code>docs/ERP-PROGRESO.md</code>.
-          Por ahora se registra la cabecera del inventario.
-        </p>
       </div>
     </HubShell>
   )
