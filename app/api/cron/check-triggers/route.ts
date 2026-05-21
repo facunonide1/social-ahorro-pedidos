@@ -11,11 +11,13 @@ export const runtime = 'nodejs'
  * Cron hourly — evalúa triggers automáticos configurados en
  * tareas_triggers_auto y crea tareas cuando hay match.
  *
- * v1: implementa 3 eventos críticos. El resto queda como "checked
- * pero sin generar" hasta que se conecten al evento real:
- *   - factura_proxima_vencer (impl)
- *   - factura_vencida_sin_pagar (impl)
- *   - caja_no_cerrada_eod (impl)
+ * Eventos implementados (el resto queda como "checked pero sin generar"
+ * hasta que se conecten al evento real):
+ *   - factura_proxima_vencer
+ *   - factura_vencida_sin_pagar
+ *   - caja_no_cerrada_eod
+ *   - stock_critico_detectado
+ *   - lote_proximo_vencer
  *   - resto → noop
  *
  * Devuelve un resumen para diagnóstico.
@@ -165,6 +167,51 @@ async function detectarEventos(
         titulo: `Caja del ${c.fecha} quedó abierta`,
         descripcion: 'Cerrá la caja del día anterior con el arqueo correspondiente.',
         sucursal_id: c.sucursal_id,
+      }))
+    }
+    case 'stock_critico_detectado': {
+      // PostgREST no compara columna vs columna; traemos los que tienen
+      // mínimo definido y filtramos en memoria.
+      const { data } = await sb
+        .from('stock_sucursal')
+        .select(
+          'id, producto_id, sucursal_id, cantidad_actual, stock_minimo, productos(nombre), sucursales(nombre)',
+        )
+        .gt('stock_minimo', 0)
+        .limit(500)
+      return (data ?? [])
+        .filter(
+          (s: any) => Number(s.cantidad_actual) <= Number(s.stock_minimo),
+        )
+        .map((s: any) => ({
+          entidad_tipo: 'stock',
+          entidad_id: s.id,
+          entidad_url: `/hub/operaciones/stock/${s.producto_id}`,
+          titulo: `Stock crítico: ${pickOne<any>(s.productos)?.nombre ?? 'producto'} en ${pickOne<any>(s.sucursales)?.nombre ?? 'sucursal'}`,
+          descripcion: `Quedan ${Number(s.cantidad_actual).toLocaleString('es-AR')} (mínimo ${Number(s.stock_minimo).toLocaleString('es-AR')}). Reponer.`,
+          sucursal_id: s.sucursal_id,
+        }))
+    }
+    case 'lote_proximo_vencer': {
+      const dias = Number((condiciones as any)?.dias_previos ?? 30)
+      const limite = new Date()
+      limite.setDate(limite.getDate() + dias)
+      const { data } = await sb
+        .from('lotes_productos')
+        .select(
+          'id, producto_id, sucursal_id, numero_lote, fecha_vencimiento, cantidad_actual, productos(nombre), sucursales(nombre)',
+        )
+        .lte('fecha_vencimiento', limite.toISOString().slice(0, 10))
+        .gte('fecha_vencimiento', hoy)
+        .gt('cantidad_actual', 0)
+        .limit(200)
+      return (data ?? []).map((l: any) => ({
+        entidad_tipo: 'lote',
+        entidad_id: l.id,
+        entidad_url: '/hub/operaciones/vencimientos',
+        titulo: `Lote ${l.numero_lote ?? ''} de ${pickOne<any>(l.productos)?.nombre ?? 'producto'} vence ${new Date(l.fecha_vencimiento).toLocaleDateString('es-AR')}`,
+        descripcion: `${Number(l.cantidad_actual).toLocaleString('es-AR')} unidades en ${pickOne<any>(l.sucursales)?.nombre ?? 'sucursal'}.`,
+        sucursal_id: l.sucursal_id,
       }))
     }
     default:
