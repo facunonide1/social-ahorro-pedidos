@@ -1,8 +1,15 @@
 # ERP Social Ahorro · Progreso autónomo
 
-**Última actualización:** 2026-05-18
-**Última rama:** `feature/crm-redesign`
-**Último commit:** `a8e935d` — F6 Tareas Enterprise + NORA
+**Última actualización:** 2026-05-21
+**Rama productiva:** `main` (feature/crm-redesign mergeada — prod al día)
+**Último commit:** `356709e` — triggers de stock crítico y lote por vencer
+
+> Sesión 2026-05-19→21: se mergeó todo F1–F6 a `main` y se desplegó a
+> producción (`vercel deploy --prod`). Se arreglaron los crons al plan Hobby
+> (daily). Se completó F3.4 (conteo + cierre de inventario con ajuste de
+> stock vía RPC `cerrar_inventario_fisico`), F3.5 (detalle de devolución con
+> avance de estado) y se conectaron 2 eventos de check-triggers
+> (`stock_critico_detectado`, `lote_proximo_vencer`).
 
 ---
 
@@ -43,14 +50,30 @@
 
 ## 🛑 Acciones pendientes del usuario (no bloqueantes — el build pasa)
 
-1. **Aplicar migraciones nuevas** — ver `supabase/migrations/README.md`:
-   - `0028_tickets_validacion_bucket.sql` (F4.7 OCR)
-   - `0029_clientes_crm.sql` (F5.1 CRM B2B)
-   - `0030_tareas_enterprise_empleados.sql` (F6.1 — desbloquea TODO el módulo Equipo)
-   - `0031_seed_tipos_tareas.sql` (F6.3 seed de tipos)
-2. **Linkear empleados con users**: `update empleados set user_id = ... where dni = ...;`. Sin esto, el scoring/objetivos/mi-panel no encuentran al empleado del user logueado.
-3. **Setear `CRON_SECRET` en Vercel** para que los crons se autentiquen. Sin esto se quedan en 401.
-4. (Opcional) Agregar `public/icon-192.png` y `public/icon-512.png` para que la PWA muestre el install prompt.
+> Las migraciones `0028`–`0032` ya están aplicadas en Supabase (proyecto
+> `hrjxjbirajbsurobqdca`). Esto es lo que queda y depende de vos:
+
+1. **Setear `CRON_SECRET` en Vercel** (Settings → Environment Variables).
+   Sin esto los 5 crons —incluido `check-triggers`— responden 401 y nunca
+   corren. **Bloquea** que los triggers automáticos generen tareas.
+2. **Configurar los triggers en `tareas_triggers_auto`** — para que
+   `stock_critico_detectado` y `lote_proximo_vencer` (recién implementados)
+   generen tareas, tiene que existir una fila activa con ese `evento` y un
+   `tipo_tarea_id` (ej. tarea de reposición). El builder visual sigue
+   read-only, así que se cargan por SQL.
+3. **Linkear empleados con users**: `update empleados set user_id = ... where dni = ...;`.
+   Sin esto el scoring/objetivos/mi-panel no encuentran al empleado del user logueado.
+4. **Cargar productos y stock** (Operaciones → Stock). Sin datos en
+   `productos`/`stock_sucursal`/`lotes_productos`, el inventario físico y los
+   triggers de stock no tienen sobre qué operar.
+5. **Decisión de seguridad: RLS en `coupons`/`offers`** — hoy están con RLS
+   deshabilitado (advisor crítico de Supabase). Habilitarlo sin policies
+   rompe la cuponera pública; hay que diseñar las policies primero.
+6. (Opcional) **Upgrade a Vercel Pro** para volver los crons a sub-diarios
+   (`marcar-vencidas` cada 30', `check-triggers` horario). Hoy son daily por
+   el límite del plan Hobby.
+7. (Opcional) Agregar `public/icon-192.png` y `public/icon-512.png` para el
+   install prompt de la PWA.
 
 ---
 
@@ -82,7 +105,7 @@
 1. **F6.10 evidencias completas** — `tareas-evidencias` bucket + 11 componentes (foto cámara, firma canvas, checklist, GPS, QR, archivo, monto arqueo, duración, nota, foto termómetro, firma digital). El workflow ya valida que estén las evidencias requeridas; falta el flujo de captura/upload.
 2. **F6.11+F6.12 builder visual completo** — alta/edición de tipos con campos custom + builder de triggers visual ("cuando … y … entonces …"). Las pantallas listado ya están; falta el editor.
 3. **F6.17 escalamiento de notificaciones** — hoy se notifica al responsable. Faltan reglas de escalamiento al supervisor cuando la tarea está próxima a vencer.
-4. **Eventos no implementados de check-triggers**: pago_pendiente_aprobacion, pedido_atrasado, stock_critico_detectado, lote_proximo_vencer, diferencia_recepcion, conciliacion_pendiente, empleado_ausente, empleado_no_ficho_apertura, cliente_vip_sin_compra_60d, habilitacion_proxima_vencer, matricula_proxima_vencer, temperatura_fuera_rango. La tabla `tareas_triggers_auto` ya los acepta — solo falta agregar el case en `detectarEventos`.
+4. **Eventos de check-triggers aún sin conectar**: pago_pendiente_aprobacion, pedido_atrasado, diferencia_recepcion, conciliacion_pendiente, empleado_ausente, empleado_no_ficho_apertura, cliente_vip_sin_compra_60d, habilitacion_proxima_vencer, matricula_proxima_vencer, temperatura_fuera_rango. Ya implementados: factura_proxima_vencer, factura_vencida_sin_pagar, caja_no_cerrada_eod, **stock_critico_detectado**, **lote_proximo_vencer**. Falta agregar el case de cada uno en `detectarEventos`.
 5. **Badges con streak/compliance** — `super_responsable` (SLA 30 días seguidos) y `compliance` (todas las regulatorias del mes) — su cálculo necesita ventanas históricas que hoy `evaluarBadges` no implementa.
 6. **Drag-and-drop kanban + vista calendario** en `/admin/tareas` — hoy solo lista. Requiere @dnd-kit y un reordenamiento por columnas.
 7. **Tag de sucursal en `orders`** (heredado de F5) — sin esto las ventas por sucursal en BI siguen sin poder calcularse.
