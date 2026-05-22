@@ -156,6 +156,34 @@ function pickOne<T>(v: T | T[] | null | undefined): T | null {
 }
 
 /**
+ * Recalcula el nivel RPG del empleado del user (0033). Si subió de nivel,
+ * devuelve la info del nuevo nivel para notificar; si no, null.
+ */
+export async function recalcularNivel(
+  sb: Sb,
+  userId: string,
+): Promise<{ nivel: number; nombre: string; titulo: string; beneficios: string[] } | null> {
+  const { data: emp } = await sb
+    .from('empleados')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle<{ id: string }>()
+  if (!emp) return null
+
+  const { data, error } = await sb.rpc('recalcular_nivel_empleado', {
+    p_empleado: emp.id,
+  })
+  if (error || !data || !(data as any).subio) return null
+  const d = data as any
+  return {
+    nivel: d.nivel,
+    nombre: d.nombre,
+    titulo: d.titulo,
+    beneficios: Array.isArray(d.beneficios) ? d.beneficios : [],
+  }
+}
+
+/**
  * Hook todo-en-uno: cuando una tarea pasa a 'completada' definitiva,
  * otorga puntos + evalúa badges. Genera notificaciones para badges nuevos.
  */
@@ -168,7 +196,6 @@ export async function alCompletarse(
   const afectados = await otorgarPuntos(sb, tarea, tipo)
   for (const uid of afectados) {
     const nuevos = await evaluarBadges(sb, uid)
-    if (nuevos.length === 0) continue
     // Notificación de badge ganado
     for (const codigo of nuevos) {
       await sb.from('notificaciones_admin').insert({
@@ -178,6 +205,22 @@ export async function alCompletarse(
         mensaje: codigo,
         prioridad: 'media',
         url_accion: '/admin/mi-panel?tab=badges',
+      })
+    }
+
+    // Recálculo de nivel RPG: si subió, notificación celebratoria.
+    const subida = await recalcularNivel(sb, uid)
+    if (subida) {
+      const benef = subida.beneficios.length
+        ? ` Desbloqueaste: ${subida.beneficios.join(', ')}.`
+        : ''
+      await sb.from('notificaciones_admin').insert({
+        user_id: uid,
+        tipo: 'info',
+        titulo: `¡Subiste a ${subida.nombre}!`,
+        mensaje: `Ya sos ${subida.titulo}.${benef}`,
+        prioridad: 'alta',
+        url_accion: '/admin/mi-panel',
       })
     }
   }
