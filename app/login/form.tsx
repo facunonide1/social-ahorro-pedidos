@@ -9,7 +9,7 @@ import { AlertCircle, ArrowRight, Loader2 } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/client'
 
-import { AuthShell } from '@/components/crm/auth-shell'
+import { NoraLogo } from '@/components/nora/nora-logo'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -45,7 +45,7 @@ export default function LoginForm() {
 
   const [authError, setAuthError] = useState(
     search.get('error') === 'sin_permiso'
-      ? 'Esta cuenta no tiene acceso al CRM'
+      ? 'Esta cuenta no tiene acceso al panel'
       : '',
   )
   const [mfa, setMfa] = useState<null | { factorId: string; challengeId: string }>(null)
@@ -121,21 +121,43 @@ export default function LoginForm() {
   const mfaBusy = mfaForm.formState.isSubmitting
 
   return (
-    <AuthShell
-      subtitle={
-        mfa
-          ? 'Ingresá el código de 6 dígitos de tu app autenticadora'
-          : 'Accedé a tu cuenta del panel interno'
-      }
-    >
-      <div className="mb-5 space-y-1.5">
-        <h2 className="text-xl font-bold tracking-tight">
-          {mfa ? 'Verificación 2FA' : 'Iniciar sesión'}
-        </h2>
-        <p className="text-xs text-muted-foreground">
-          {mfa ? 'Necesitamos confirmar tu identidad' : 'Acceso restringido a usuarios autorizados'}
+    <div className="grid min-h-screen lg:grid-cols-2">
+      {/* Panel marketing (oculto en mobile) */}
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-nora via-nora to-mint p-10 text-white lg:flex">
+        <div className="flex items-center gap-2 font-bold tracking-tight">
+          <NoraLogo size="md" />
+          NORA HQ
+        </div>
+        <div className="max-w-md">
+          <h1 className="font-display text-4xl font-semibold leading-tight">
+            Tu centro de mando inteligente
+          </h1>
+          <p className="mt-3 text-sm text-white/80">
+            Powered by NORA · IA para tu cadena
+          </p>
+        </div>
+        <p className="text-[11px] text-white/60">
+          Social Ahorro Farmacias · {new Date().getFullYear()}
         </p>
       </div>
+
+      {/* Form */}
+      <div className="flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <div className="mb-6 flex items-center gap-2 font-bold tracking-tight lg:hidden">
+            <NoraLogo size="md" />
+            NORA HQ
+          </div>
+          <div className="mb-5 space-y-1.5">
+            <h2 className="text-xl font-bold tracking-tight">
+              {mfa ? 'Verificación 2FA' : 'Iniciar sesión'}
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              {mfa
+                ? 'Ingresá el código de 6 dígitos de tu app autenticadora'
+                : 'Accedé a tu cuenta del panel interno'}
+            </p>
+          </div>
 
       {authError && (
         <Alert variant="destructive" className="mb-4">
@@ -250,9 +272,11 @@ export default function LoginForm() {
         </Form>
       )}
 
-      <p className="mt-6 text-center text-[11px] text-muted-foreground">
-        Social Ahorro · {new Date().getFullYear()}
-      </p>
-    </AuthShell>
+          <p className="mt-6 text-center text-[11px] text-muted-foreground">
+            Social Ahorro · {new Date().getFullYear()}
+          </p>
+        </div>
+      </div>
+    </div>
   )
 }
