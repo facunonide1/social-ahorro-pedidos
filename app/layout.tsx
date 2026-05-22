@@ -1,9 +1,18 @@
 import type { Metadata, Viewport } from 'next'
+import { GeistSans } from 'geist/font/sans'
+import { GeistMono } from 'geist/font/mono'
+import { Fraunces } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 import { ThemeProvider } from '@/components/theme-provider'
 import { PwaRegister } from '@/components/pwa-register'
 import './globals.css'
+
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  variable: '--font-fraunces',
+  display: 'swap',
+})
 
 export const dynamic = 'force-dynamic'
 
@@ -31,8 +40,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es" suppressHydrationWarning>
-      <body className="min-h-screen bg-background text-foreground antialiased">
+    <html
+      lang="es"
+      suppressHydrationWarning
+      className={`${GeistSans.variable} ${GeistMono.variable} ${fraunces.variable}`}
+    >
+      <body className="min-h-screen bg-background text-foreground antialiased font-sans">
         <ThemeProvider>
           <NuqsAdapter>
             {children}

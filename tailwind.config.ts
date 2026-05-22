@@ -94,8 +94,9 @@ const config: Config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        sans: ['var(--font-sans)', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
-        mono: ['var(--font-mono)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        sans: ['var(--font-geist-sans)', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-geist-mono)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+        display: ['var(--font-fraunces)', 'Georgia', 'serif'],
       },
       keyframes: {
         'accordion-down': {
