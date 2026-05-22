@@ -10,6 +10,7 @@ import { NAVEGACION_DEPARTAMENTAL } from '@/lib/constants/navegacion'
 import type { DepartamentoNav } from '@/lib/constants/navegacion'
 import { DEPARTAMENTOS_ORDER } from '@/lib/constants/departamentos'
 import { deptFromPath } from '@/lib/utils/departamento-from-path'
+import { NoraLogo } from '@/components/nora/nora-logo'
 import type { Departamento } from '@/lib/types/admin'
 import type { HubProfile } from '@/lib/admin-hub/auth'
 
@@ -65,13 +66,13 @@ export function TopNav({ profile }: { profile: HubProfile }) {
           href="/admin"
           className="flex items-center gap-2 text-sm font-bold tracking-tight"
         >
-          <span className="size-2.5 rounded-full bg-primary" aria-hidden />
-          <span className="hidden sm:inline">Social Ahorro</span>
+          <NoraLogo size="sm" />
+          <span className="hidden sm:inline">NORA HQ</span>
           <Badge
             variant="outline"
-            className="hidden border-border/60 px-1.5 py-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:inline-flex"
+            className="hidden border-border/60 px-1.5 py-0 text-[10px] font-medium tracking-wide text-muted-foreground lg:inline-flex"
           >
-            ERP
+            Tu centro de mando
           </Badge>
         </Link>
 

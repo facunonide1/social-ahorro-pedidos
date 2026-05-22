@@ -77,6 +77,16 @@ const config: Config = {
           border: 'hsl(var(--sidebar-border))',
           ring: 'hsl(var(--sidebar-ring))',
         },
+        nora: {
+          DEFAULT: 'hsl(var(--nora))',
+          foreground: 'hsl(var(--nora-foreground))',
+          bg: 'hsl(var(--nora-bg))',
+          deep: 'hsl(var(--nora-deep))',
+        },
+        mint: {
+          DEFAULT: 'hsl(var(--mint))',
+          foreground: 'hsl(var(--mint-foreground))',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -100,11 +110,20 @@ const config: Config = {
           from: { opacity: '0' },
           to: { opacity: '1' },
         },
+        'nora-pulse': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+          '50%': { transform: 'scale(1.3)', opacity: '0.6' },
+        },
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'fade-in': 'fade-in 0.15s ease-out',
+        'nora-pulse': 'nora-pulse 2s ease-in-out infinite',
+        shimmer: 'shimmer 1.5s infinite',
       },
     },
   },

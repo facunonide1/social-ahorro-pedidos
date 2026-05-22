@@ -1,8 +1,18 @@
+import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { AdminShell } from '@/components/layout/admin-shell'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: { default: 'NORA HQ', template: '%s · NORA HQ' },
+  description: 'El centro de mando inteligente de Social Ahorro',
+}
+
+export const viewport: Viewport = {
+  themeColor: '#7c3aed',
+}
 
 /**
  * Layout raíz del nuevo Admin ERP `(admin)/*`.

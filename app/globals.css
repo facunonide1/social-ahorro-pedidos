@@ -25,30 +25,38 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 4%;
 
-    /* Brand semantics — azul corporativo unificado para todo el repo */
-    --primary: 217 91% 60%;          /* #2563EB azul */
+    /* Brand semantics — NORA HQ Deep Tech (violeta profundo) */
+    --primary: 263 70% 50%;          /* violeta */
     --primary-foreground: 0 0% 100%;
     --secondary: 240 5% 96%;
     --secondary-foreground: 240 6% 10%;
 
-    /* Neutrals */
+    /* Neutrals — accent queda neutral (shadcn lo usa para hovers de menús) */
     --muted: 240 5% 96%;
     --muted-foreground: 240 4% 46%;
     --accent: 240 5% 96%;
     --accent-foreground: 240 6% 10%;
     --border: 240 6% 90%;
     --input: 240 6% 90%;
-    --ring: 217 91% 60%;             /* focus ring azul */
+    --ring: 263 70% 50%;             /* focus ring violeta */
 
     /* Status */
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --info: 199 89% 48%;
+    --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
+
+    /* NORA brand tokens */
+    --nora: 263 70% 50%;
+    --nora-foreground: 0 0% 100%;
+    --nora-bg: 263 70% 97%;
+    --nora-deep: 263 70% 30%;
+    --mint: 158 64% 52%;             /* verde menta — acento de marca */
+    --mint-foreground: 158 64% 12%;
 
     /* Sidebar (light, sobrio) */
     --sidebar: 240 5% 98%;
@@ -56,7 +64,7 @@
     --sidebar-accent: 240 5% 94%;
     --sidebar-accent-foreground: 240 6% 10%;
     --sidebar-border: 240 6% 90%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-ring: 263 70% 50%;
 
     --radius: 0.5rem;
 
@@ -75,8 +83,8 @@
     --popover: 240 8% 6%;
     --popover-foreground: 0 0% 95%;
 
-    --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 263 70% 65%;
+    --primary-foreground: 263 70% 10%;
     --secondary: 240 6% 12%;
     --secondary-foreground: 0 0% 95%;
 
@@ -86,23 +94,31 @@
     --accent-foreground: 0 0% 95%;
     --border: 240 6% 14%;
     --input: 240 6% 14%;
-    --ring: 217 91% 60%;
+    --ring: 263 70% 65%;
 
-    --destructive: 0 63% 45%;
+    --destructive: 0 84% 50%;
     --destructive-foreground: 0 0% 100%;
-    --success: 142 70% 45%;
+    --success: 142 76% 46%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 55%;
+    --warning: 38 92% 60%;
     --warning-foreground: 0 0% 100%;
-    --info: 199 89% 55%;
+    --info: 217 91% 60%;
     --info-foreground: 0 0% 100%;
+
+    /* NORA brand tokens (dark) */
+    --nora: 263 70% 65%;
+    --nora-foreground: 0 0% 100%;
+    --nora-bg: 263 70% 12%;
+    --nora-deep: 263 70% 80%;
+    --mint: 158 64% 62%;
+    --mint-foreground: 158 64% 95%;
 
     --sidebar: 240 8% 5%;
     --sidebar-foreground: 0 0% 95%;
     --sidebar-accent: 240 6% 10%;
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 240 6% 12%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-ring: 263 70% 65%;
   }
 }
 

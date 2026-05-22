@@ -187,7 +187,7 @@ export function AiChatDock() {
               <div>
                 <div className="text-sm font-semibold leading-none">NORA</div>
                 <div className="mt-0.5 text-[10px] text-muted-foreground">
-                  Asistente del ERP · datos en vivo
+                  NORA HQ · datos en vivo
                 </div>
               </div>
             </div>
@@ -223,7 +223,7 @@ export function AiChatDock() {
             {messages.length === 0 && (
               <div className="space-y-3">
                 <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
-                  Hola, soy NORA, tu asistente de Social Ahorro. ¿En qué te
+                  Hola, soy NORA, tu asistente de NORA HQ. ¿En qué te
                   ayudo? Puedo consultar tareas, pedidos, ventas, finanzas o
                   stock con datos en vivo.
                 </div>
