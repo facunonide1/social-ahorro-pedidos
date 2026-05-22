@@ -8,10 +8,14 @@
 > F6.5.2 paleta Deep Tech (violeta/menta), F6.5.3 tipografía (Geist+Fraunces),
 > F6.5.4 componentes NORA, F6.5.7 login split, F6.5.8 microinteracciones,
 > F6.5.9 NORA Mode, F6.5.10 docs (`docs/IDENTIDAD-NORA-HQ.md`, `docs/CHANGELOG.md`).
-> **Diferido** (features grandes, su propia tanda): F6.5.5 upgrade de pantallas
-> y F6.5.6 diferenciales IA (verificación visual, coach diario, niveles RPG,
-> anomalías, tareas por lenguaje natural) — necesitan migraciones + endpoints IA.
-> Tag: `pre-rebrand-checkpoint` (estado previo) → `v0.6.5-nora-hq`.
+> **F6.5.6 diferenciales (2ª pasada)** ✅ entregados 4 de 5: verificación visual
+> por IA (`/api/nora/verify-evidence` + migración `0034`), coach IA diario
+> (`/api/nora/employee-coaching/[id]`), sistema de niveles RPG (migración `0033`
+> con 9 niveles + recálculo automático en gamification), parse-task NL
+> (`/api/nora/parse-task`).
+> **Diferido**: F6.5.5 wiring de UI (faltan endpoints `daily-briefing` y
+> `predictions`); Diferencial 5 anomalías (necesita tracking histórico SLA).
+> Tags: `pre-rebrand-checkpoint` → `v0.6.5-nora-hq`.
 
 > Sesión 2026-05-19→21: se mergeó todo F1–F6 a `main` y se desplegó a
 > producción (`vercel deploy --prod`). Se arreglaron los crons al plan Hobby

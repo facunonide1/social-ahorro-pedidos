@@ -22,16 +22,27 @@ regresiones en F1–F6.
   gated a super_admin/gerente.
 - **F6.5.10 · Documentación** — `docs/IDENTIDAD-NORA-HQ.md` + este changelog.
 
-### Diferido (trabajo de features grande — requiere migraciones + endpoints IA)
-- **F6.5.5 · Upgrade pantallas críticas** — Mission Control, mi-panel, tareas y
-  detalle a nivel premium. Depende de los endpoints de F6.5.6.
-- **F6.5.6 · Diferenciales únicos** — verificación visual por IA (vision),
-  coach IA diario, sistema de niveles RPG (tablas `niveles_empleados`,
-  `empleados_historial_niveles`, columna `ia_prompt_verificacion`), detección
-  de anomalías, creación de tareas por lenguaje natural. Son endpoints IA +
-  migraciones nuevas: se hacen en una pasada dedicada para no romper build.
+### F6.5.6 · Diferenciales únicos (segunda pasada)
 
-> Motivo del diferimiento: las reglas de la fase exigen build verde y cero
-> regresiones entre commits. F6.5.5/5.6 son features sustanciales (5 endpoints
-> IA + migraciones + recálculo de niveles) que merecen su propia tanda testeada,
-> no un cierre apurado. La base de identidad/diseño ya quedó lista para montarlas.
+- **Diferencial 1 — Verificación visual por IA** ✅ migración `0034`
+  (`ia_prompt_verificacion` + `verificacion_ia` en `tipos_tareas` con seed de
+  prompts para limpieza/cadena de frío/apertura) + `lib/ai/verify-evidence.ts`
+  + `POST /api/nora/verify-evidence` (Claude vision, traza como comentario).
+- **Diferencial 2 — Coach IA personal diario** ✅ `GET /api/nora/employee-coaching/[id]`
+  con datos reales (score, nivel actual + siguiente, tareas hoy, ranking sucursal).
+- **Diferencial 3 — Sistema de niveles RPG** ✅ migración `0033` con tabla
+  `niveles_empleados` (9 niveles seedeados Aprendiz→Leyenda),
+  `empleados_historial_niveles`, columna `nivel_actual_id`, RPC
+  `recalcular_nivel_empleado()`, integración en `gamification.alCompletarse`
+  con notificación de subida + componente `NivelBadge`.
+- **Diferencial 4 — NORA omnipresente** ✅ ya cubierto por `AiChatDock` (F4) +
+  `lib/nora/context.ts` (F6.5.4).
+- **Diferencial 6 — Tareas por lenguaje natural** ✅ `POST /api/nora/parse-task`
+  convierte descripción libre en draft estructurado (elige IDs reales del catálogo).
+
+### Diferido (necesita su pasada dedicada)
+- **F6.5.5 · Upgrade pantallas críticas** — Mission Control, mi-panel, tareas
+  premium. Los endpoints (verify-evidence, coaching, parse-task) ya están —
+  falta wiring de UI + 2 endpoints más: `daily-briefing` y `predictions`.
+- **F6.5.6 · Diferencial 5 — Detección de anomalías** — necesita tracking
+  histórico de SLA diario (no existe hoy) para detectar tendencias.
