@@ -10,6 +10,7 @@ import {
   Moon,
   Sun,
   MonitorSmartphone,
+  Sparkles,
   Rows3,
   Rows2,
   Rows4,
@@ -50,6 +51,7 @@ export function UserMenu({ profile }: { profile: HubProfile }) {
   const { theme, setTheme } = useTheme()
   const densidad = useUIStore((s) => s.densidad)
   const setDensidad = useUIStore((s) => s.setDensidad)
+  const canNoraMode = ['super_admin', 'gerente'].includes(profile.rol)
 
   async function handleLogout() {
     const sb = createClient()
@@ -99,10 +101,10 @@ export function UserMenu({ profile }: { profile: HubProfile }) {
 
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
-            {theme === 'dark' ? <Moon className="size-4" /> : theme === 'light' ? <Sun className="size-4" /> : <MonitorSmartphone className="size-4" />}
-            Tema
+            {theme === 'nora' ? <Sparkles className="size-4 text-nora" /> : theme === 'dark' ? <Moon className="size-4" /> : theme === 'light' ? <Sun className="size-4" /> : <MonitorSmartphone className="size-4" />}
+            Preferencia visual
             <span className="ml-auto text-xs text-muted-foreground capitalize">
-              {theme === 'system' ? 'sistema' : theme === 'dark' ? 'oscuro' : 'claro'}
+              {theme === 'system' ? 'sistema' : theme === 'dark' ? 'oscuro' : theme === 'nora' ? 'NORA Mode' : 'claro'}
             </span>
           </DropdownMenuSubTrigger>
           <DropdownMenuPortal>
@@ -122,6 +124,13 @@ export function UserMenu({ profile }: { profile: HubProfile }) {
                 <span>Sistema</span>
                 {theme === 'system' && <span className="ml-auto text-xs">●</span>}
               </DropdownMenuItem>
+              {canNoraMode && (
+                <DropdownMenuItem onSelect={() => setTheme('nora')}>
+                  <Sparkles className="size-4 text-nora" />
+                  <span>NORA Mode</span>
+                  {theme === 'nora' && <span className="ml-auto text-xs">●</span>}
+                </DropdownMenuItem>
+              )}
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
         </DropdownMenuSub>
