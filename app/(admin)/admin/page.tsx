@@ -6,6 +6,7 @@ import {
 } from '@/lib/constants/navegacion'
 import { DEPARTAMENTOS_ORDER } from '@/lib/constants/departamentos'
 import { DepartmentCard } from '@/components/layout/department-card'
+import { NoraBriefingCard } from './nora-briefing-card'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,17 +26,33 @@ export default async function AdminDashboardPage() {
   const esTransversal = ROLES_TRANSVERSALES.includes(profile.rol)
   const deps = departamentosPermitidos(profile.rol)
     .sort((a, b) => DEPARTAMENTOS_ORDER.indexOf(a.id) - DEPARTAMENTOS_ORDER.indexOf(b.id))
+  const fecha = new Date().toLocaleDateString('es-AR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-6 md:px-6 md:py-8">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Hola, {nombre} 👋</h1>
+        <div className="text-[11px] font-medium uppercase tracking-[0.5px] text-muted-foreground">
+          Mission control · {fecha}
+        </div>
+        <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
+          Hola, {nombre}
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {esTransversal
-            ? 'Bienvenido al ERP. El dashboard ejecutivo se va a llenar con KPIs y reportes en las próximas sub-tandas.'
-            : 'Bienvenido al ERP. Elegí un departamento para arrancar.'}
+            ? 'Centro de mando inteligente. Abajo el briefing del día.'
+            : 'Centro de mando. Elegí un departamento para arrancar.'}
         </p>
       </header>
+
+      {esTransversal && (
+        <div className="mb-6">
+          <NoraBriefingCard />
+        </div>
+      )}
 
       <section
         className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
