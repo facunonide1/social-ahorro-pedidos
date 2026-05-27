@@ -16,6 +16,8 @@ import { EmpleadoAvatar } from '@/components/empleados/empleado-avatar'
 import { ScoreProgress } from '@/components/empleados/score-progress'
 import { BadgesGallery } from '@/components/empleados/badge-display'
 
+import { NoraCoachingSection } from './nora-coaching-section'
+
 export const dynamic = 'force-dynamic'
 
 type Tab = 'hoy' | 'objetivos' | 'tareas' | 'badges' | 'legajo'
@@ -203,6 +205,9 @@ export default async function MiPanelPage({
         </section>
 
         {/* Tab content */}
+        {tab === 'hoy' && empleado && (
+          <NoraCoachingSection empleadoId={empleado.id} />
+        )}
         {tab === 'hoy' && (
           <TabHoy tareas={tareasHoy} usersMap={usersMap} />
         )}
