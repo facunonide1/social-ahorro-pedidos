@@ -7,6 +7,7 @@ import {
 import { DEPARTAMENTOS_ORDER } from '@/lib/constants/departamentos'
 import { DepartmentCard } from '@/components/layout/department-card'
 import { NoraBriefingCard } from './nora-briefing-card'
+import { NoraPredictionsCard } from './nora-predictions-card'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,8 +50,9 @@ export default async function AdminDashboardPage() {
       </header>
 
       {esTransversal && (
-        <div className="mb-6">
+        <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <NoraBriefingCard />
+          <NoraPredictionsCard />
         </div>
       )}
 

@@ -40,9 +40,16 @@ regresiones en F1–F6.
 - **Diferencial 6 — Tareas por lenguaje natural** ✅ `POST /api/nora/parse-task`
   convierte descripción libre en draft estructurado (elige IDs reales del catálogo).
 
+### F6.5.5 · Upgrade pantallas críticas (en progreso)
+- **Mission Control con briefing IA** ✅ `GET /api/nora/daily-briefing` + `NoraBriefingCard`.
+- **Coaching IA en mi-panel** ✅ `NoraCoachingSection` sobre `/api/nora/employee-coaching/[id]`.
+- **Predicciones a futuro** ✅ `GET /api/nora/predictions` (mira hacia adelante:
+  merma de lotes con valor en riesgo, tareas que vencen en 48h, quiebres de
+  stock, presión de caja) + `NoraPredictionsCard` con severidad/área/acción,
+  montada junto al briefing en Mission Control.
+
 ### Diferido (necesita su pasada dedicada)
-- **F6.5.5 · Upgrade pantallas críticas** — Mission Control, mi-panel, tareas
-  premium. Los endpoints (verify-evidence, coaching, parse-task) ya están —
-  falta wiring de UI + 2 endpoints más: `daily-briefing` y `predictions`.
+- **F6.5.5 · Tareas premium** — falta el upgrade visual de `/admin/tareas`
+  (kanban drag-and-drop, vista calendario) — ver deuda técnica #6 en ERP-PROGRESO.
 - **F6.5.6 · Diferencial 5 — Detección de anomalías** — necesita tracking
   histórico de SLA diario (no existe hoy) para detectar tendencias.
