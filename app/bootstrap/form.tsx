@@ -134,7 +134,7 @@ export default function BootstrapForm() {
     return (
       <div className="flex flex-col items-center gap-4 text-center">
         <CheckCircle2 className="size-12 text-success" aria-hidden />
-        <h2 className="text-lg font-bold">El Admin Hub ya está configurado</h2>
+        <h2 className="text-lg font-bold">NORA HQ ya está configurado</h2>
         <p className="text-sm text-muted-foreground">
           Ya existe al menos un super_admin activo. Para agregar más usuarios, iniciá sesión con uno existente.
         </p>

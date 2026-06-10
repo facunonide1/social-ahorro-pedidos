@@ -54,7 +54,7 @@ const NAVEGACION: QuickAction[] = [
   { id: 'n-pedidos', label: 'Pedidos', href: '/pedidos', icon: ClipboardList },
   { id: 'n-clientes', label: 'Clientes', href: '/clientes', icon: Users },
   { id: 'n-repartidor', label: 'Repartidor', href: '/repartidor', icon: Truck },
-  { id: 'n-hub', label: 'Admin Hub', href: '/hub', icon: Home },
+  { id: 'n-hub', label: 'NORA HQ', href: '/hub', icon: Home },
   { id: 'n-proveedores', label: 'Proveedores', href: '/hub/proveedores', icon: Building2 },
   { id: 'n-facturas', label: 'Facturas', href: '/hub/facturas', icon: FileText },
   { id: 'n-pagos', label: 'Pagos', href: '/hub/pagos', icon: Banknote },

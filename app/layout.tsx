@@ -17,12 +17,12 @@ const fraunces = Fraunces({
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Social Ahorro · ERP',
-  description: 'ERP interno de Social Ahorro Farmacias',
-  applicationName: 'SA ERP',
+  title: { default: 'NORA HQ', template: '%s · NORA HQ' },
+  description: 'NORA HQ — el centro de mando inteligente de Social Ahorro Farmacias',
+  applicationName: 'NORA HQ',
   appleWebApp: {
     capable: true,
-    title: 'SA ERP',
+    title: 'NORA HQ',
     statusBarStyle: 'black-translucent',
   },
 }

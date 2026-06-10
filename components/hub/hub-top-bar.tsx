@@ -1,13 +1,12 @@
 'use client'
 
-import Link from 'next/link'
-
 import type { HubProfile } from '@/lib/admin-hub/auth'
 
 import { CrmSearch } from '@/components/crm/crm-search'
 import { NotificationsBell } from '@/components/crm/notifications-bell'
 import { HubMobileSidebarSheet } from '@/components/hub/hub-sidebar'
 import { HubUserMenu } from '@/components/hub/hub-user-menu'
+import { NoraBrand } from '@/components/nora/nora-brand'
 
 export function HubTopBar({ profile }: { profile: HubProfile }) {
   return (
@@ -18,13 +17,7 @@ export function HubTopBar({ profile }: { profile: HubProfile }) {
       <div className="flex h-14 items-center gap-2 px-3 md:gap-4 md:px-4">
         <HubMobileSidebarSheet role={profile.rol} />
 
-        <Link
-          href="/hub"
-          className="flex items-center gap-2 text-sm font-bold tracking-tight"
-        >
-          <span className="size-2.5 rounded-full bg-primary" aria-hidden />
-          <span>SA Hub</span>
-        </Link>
+        <NoraBrand size="sm" />
 
         <div className="ml-auto flex items-center gap-2 md:gap-3">
           <CrmSearch variant="header" />

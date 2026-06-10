@@ -53,7 +53,7 @@ export default async function UsuariosPage() {
   return (
     <HubShell profile={profile}>
       <PageHeader
-        title="Usuarios del Admin Hub"
+        title="Usuarios de NORA HQ"
         description={`${enriched.length} usuario${enriched.length === 1 ? '' : 's'}`}
       />
 
