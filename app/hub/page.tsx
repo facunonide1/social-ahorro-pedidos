@@ -14,6 +14,7 @@ import {
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { ADMIN_ROLE_LABELS } from '@/lib/types/admin'
 import type { AdminRole } from '@/lib/types/admin'
+import { saludoHora } from '@/lib/utils/saludo'
 
 import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
@@ -84,14 +85,13 @@ const SECTIONS: SectionCard[] = [
 export default async function HubHome() {
   const profile = await requireAdminHubAccess()
 
-  const greeting = profile.nombre?.split(' ')[0] || profile.email
   const visible = SECTIONS.filter((s) => !s.roles || s.roles.includes(profile.rol))
 
   return (
     <HubShell profile={profile}>
       <PageHeader
-        title={`Hola, ${greeting}`}
-        description={`${ADMIN_ROLE_LABELS[profile.rol]} · Admin Hub de Social Ahorro Farmacias`}
+        title={saludoHora(profile.nombre, profile.email)}
+        description={`${ADMIN_ROLE_LABELS[profile.rol]} · NORA HQ`}
       />
 
       <div className="mx-auto w-full max-w-5xl p-4 md:p-6">

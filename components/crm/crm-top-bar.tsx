@@ -27,7 +27,7 @@ export function CrmTopBar({ user, role }: { user: CrmUser; role: CrmRole }) {
           <span>SA Pedidos</span>
         </Link>
 
-        <div className="ml-auto flex items-center gap-1 md:gap-2">
+        <div className="ml-auto flex items-center gap-2 md:gap-3">
           <CrmSearch variant="header" />
           <NotificationsBell userId={user.id} role={role} />
           <CrmUserMenu user={user} />

@@ -134,12 +134,12 @@ export function CrmSearch({ variant = 'header' }: { variant?: Variant }) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="hidden h-9 w-64 items-center gap-2 rounded-md border border-input bg-background px-3 text-xs text-muted-foreground transition-colors hover:bg-accent/40 sm:flex"
-          aria-label="Buscar"
+          className="hidden h-9 w-56 shrink-0 items-center gap-2 rounded-md border border-input bg-background px-3 text-xs text-muted-foreground transition-colors hover:bg-accent/40 lg:flex"
+          aria-label="Buscar pedidos, clientes o proveedores"
         >
-          <Search className="size-3.5" />
-          <span>Buscar pedidos, clientes, proveedores…</span>
-          <kbd className="ml-auto rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+          <Search className="size-3.5 shrink-0" />
+          <span className="truncate whitespace-nowrap">Buscar…</span>
+          <kbd className="ml-auto shrink-0 rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
             ⌘K
           </kbd>
         </button>
@@ -163,7 +163,7 @@ export function CrmSearch({ variant = 'header' }: { variant?: Variant }) {
           type="button"
           variant="ghost"
           size="icon"
-          className="size-9 sm:hidden"
+          className="size-9 lg:hidden"
           aria-label="Buscar"
           onClick={() => setOpen(true)}
         >

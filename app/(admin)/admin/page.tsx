@@ -1,5 +1,6 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
-import { ROLES_TRANSVERSALES } from '@/lib/types/admin'
+import { ROLES_TRANSVERSALES, ADMIN_ROLE_LABELS } from '@/lib/types/admin'
+import { saludoHora } from '@/lib/utils/saludo'
 import {
   NAVEGACION_DEPARTAMENTAL,
   departamentosPermitidos,
@@ -23,7 +24,6 @@ export const dynamic = 'force-dynamic'
  */
 export default async function AdminDashboardPage() {
   const profile = await requireAdminHubAccess()
-  const nombre = profile.nombre?.split(' ')[0] || profile.email.split('@')[0]
   const esTransversal = ROLES_TRANSVERSALES.includes(profile.rol)
   const deps = departamentosPermitidos(profile.rol)
     .sort((a, b) => DEPARTAMENTOS_ORDER.indexOf(a.id) - DEPARTAMENTOS_ORDER.indexOf(b.id))
@@ -40,12 +40,10 @@ export default async function AdminDashboardPage() {
           Mission control · {fecha}
         </div>
         <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
-          Hola, {nombre}
+          {saludoHora(profile.nombre, profile.email)}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {esTransversal
-            ? 'Centro de mando inteligente. Abajo el briefing del día.'
-            : 'Centro de mando. Elegí un departamento para arrancar.'}
+          {ADMIN_ROLE_LABELS[profile.rol]} · NORA HQ
         </p>
       </header>
 
