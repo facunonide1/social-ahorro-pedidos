@@ -12,7 +12,6 @@ import {
 
 import {
   visibleSectionsFor,
-  adminHubLinkVisibleFor,
   type CrmNavItem,
   type CrmNavSection,
   type CrmRole,
@@ -71,7 +70,6 @@ export function CrmSidebar({ role }: { role: CrmRole }) {
   }
 
   const sections = visibleSectionsFor(role)
-  const showAdminHub = adminHubLinkVisibleFor(role)
 
   return (
     <aside
@@ -91,18 +89,6 @@ export function CrmSidebar({ role }: { role: CrmRole }) {
             collapsed={collapsed}
           />
         ))}
-
-        {showAdminHub && (
-          <div className="mt-2 border-t border-sidebar-border pt-2">
-            <SidebarLink
-              item={{ label: 'Admin Hub (nuevo)', href: '/admin', icon: ExtLinkIcon as CrmNavItem['icon'] }}
-              active={false}
-              collapsed={collapsed}
-              external
-              hint="Versión nueva en preview"
-            />
-          </div>
-        )}
       </nav>
 
       <div className="border-t border-sidebar-border p-2">
@@ -219,7 +205,6 @@ function SidebarLink({
 export function CrmMobileSidebarSheet({ role }: { role: CrmRole }) {
   const pathname = usePathname() || ''
   const sections = visibleSectionsFor(role)
-  const showAdminHub = adminHubLinkVisibleFor(role)
 
   return (
     <Sheet>
@@ -258,20 +243,6 @@ export function CrmMobileSidebarSheet({ role }: { role: CrmRole }) {
               </ul>
             </div>
           ))}
-
-          {showAdminHub && (
-            <div className="border-t border-sidebar-border pt-2">
-              <MobileLink
-                item={{
-                  label: 'Admin Hub (nuevo)',
-                  href: '/admin',
-                  icon: ExtLinkIcon as CrmNavItem['icon'],
-                }}
-                active={false}
-                external
-              />
-            </div>
-          )}
         </nav>
       </SheetContent>
     </Sheet>

@@ -1,17 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { Menu, ExternalLink as ExtLinkIcon } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { Menu } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { usePermissions } from '@/lib/hooks/use-permissions'
-import { NAVEGACION_DEPARTAMENTAL } from '@/lib/constants/navegacion'
-import type { DepartamentoNav } from '@/lib/constants/navegacion'
-import { DEPARTAMENTOS_ORDER } from '@/lib/constants/departamentos'
-import { deptFromPath } from '@/lib/utils/departamento-from-path'
-import { NoraLogo } from '@/components/nora/nora-logo'
-import type { Departamento } from '@/lib/types/admin'
+import { navegacionParaRol, type NavGrupo } from '@/lib/constants/navegacion'
+import { NoraBrand } from '@/components/nora/nora-brand'
 import type { HubProfile } from '@/lib/admin-hub/auth'
 
 import { Button } from '@/components/ui/button'
@@ -23,12 +19,6 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import { Icon } from '@/components/icon'
 
 import { SucursalSelector } from '@/components/layout/sucursal-selector'
@@ -38,15 +28,15 @@ import { NotificationsTrigger } from '@/components/layout/notifications-trigger'
 import { UserMenu } from '@/components/layout/user-menu'
 import { cn } from '@/lib/utils'
 
+/**
+ * Top bar de NORA HQ (F6.5.T3).
+ *
+ * Los 8 pilares viven ahora en el Sidebar (desktop) y en el drawer mobile.
+ * El top bar queda con marca + selectores + búsqueda + notificaciones + user.
+ */
 export function TopNav({ profile }: { profile: HubProfile }) {
-  const pathname = usePathname() || '/admin'
-  const deptActivo = deptFromPath(pathname)
   const { rol } = usePermissions()
-
-  // Lista de deptos ordenados según DEPARTAMENTOS_ORDER, filtrados por rol.
-  const items = DEPARTAMENTOS_ORDER
-    .map((id) => NAVEGACION_DEPARTAMENTAL[id])
-    .filter((d) => rol && d.rolesPermitidos.includes(rol))
+  const grupos = navegacionParaRol(rol)
 
   return (
     <header
@@ -55,50 +45,20 @@ export function TopNav({ profile }: { profile: HubProfile }) {
     >
       <div className="flex h-14 items-center gap-2 px-3 md:gap-4 md:px-4">
         {/* Hamburguesa mobile */}
-        <MobileNavSheet
-          deptActivo={deptActivo}
-          items={items}
-          profile={profile}
-        />
+        <MobileNavSheet grupos={grupos} profile={profile} />
 
-        {/* Logo */}
-        <Link
-          href="/admin"
-          className="flex items-center gap-2 text-sm font-bold tracking-tight"
-        >
-          <NoraLogo size="sm" />
-          <span className="hidden sm:inline">NORA HQ</span>
+        {/* Marca */}
+        <div className="flex items-center gap-2">
+          <NoraBrand size="sm" />
           <Badge
             variant="outline"
-            className="hidden border-border/60 px-1.5 py-0 text-[10px] font-medium tracking-wide text-muted-foreground lg:inline-flex"
+            className="hidden border-border/60 px-1.5 py-0 text-[10px] font-medium tracking-wide text-muted-foreground xl:inline-flex"
           >
             Tu centro de mando
           </Badge>
-        </Link>
+        </div>
 
-        {/* Departamentos (desktop) */}
-        <nav role="navigation" aria-label="Departamentos" className="ml-2 hidden flex-1 lg:block">
-          <TooltipProvider delayDuration={200}>
-            <ul className="flex items-center gap-1">
-              {items.map((d) => (
-                <li key={d.id}>
-                  <DeptButton
-                    id={d.id}
-                    activo={deptActivo === d.id}
-                    label={d.label}
-                    icon={d.icon}
-                    path={d.path}
-                    estado={d.estado}
-                    descripcion={d.descripcion}
-                    externalUrl={d.externalUrl}
-                  />
-                </li>
-              ))}
-            </ul>
-          </TooltipProvider>
-        </nav>
-
-        <div className="flex flex-1 items-center justify-end gap-1 md:gap-2 lg:flex-none">
+        <div className="ml-auto flex items-center gap-2 md:gap-3">
           <div className="hidden md:block">
             <SucursalSelector />
           </div>
@@ -116,98 +76,15 @@ export function TopNav({ profile }: { profile: HubProfile }) {
   )
 }
 
-function DeptButton({
-  id,
-  activo,
-  label,
-  icon,
-  path,
-  estado,
-  descripcion,
-  externalUrl,
-}: {
-  id: Departamento
-  activo: boolean
-  label: string
-  icon: string
-  path: string
-  estado: 'activo' | 'placeholder' | 'fase2' | 'externo'
-  descripcion: string
-  externalUrl?: string
-}) {
-  const isExterno = estado === 'externo'
-  const isFase2   = estado === 'fase2'
-  const isPlace   = estado === 'placeholder'
-
-  const className = cn(
-    'group relative inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium transition-colors',
-    activo
-      ? 'bg-accent text-accent-foreground'
-      : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
-    (isFase2 || isExterno) && !activo && 'opacity-70',
-  )
-
-  const content = (
-    <>
-      <Icon name={icon} className="size-3.5" />
-      <span>{label}</span>
-      {isExterno && <ExtLinkIcon className="size-3 opacity-60" />}
-      {isFase2 && (
-        <span className="ml-0.5 rounded bg-muted px-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-          Pronto
-        </span>
-      )}
-    </>
-  )
-
-  const node = isExterno && externalUrl ? (
-    <a
-      href={externalUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={className}
-    >
-      {content}
-    </a>
-  ) : isPlace || isFase2 ? (
-    <button
-      type="button"
-      className={className}
-      onClick={() => toast.message(label, {
-        description: isFase2
-          ? 'Departamento disponible en fase 2.'
-          : 'En construcción.',
-      })}
-    >
-      {content}
-    </button>
-  ) : (
-    <Link href={path} className={className} aria-current={activo ? 'page' : undefined}>
-      {content}
-    </Link>
-  )
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{node}</TooltipTrigger>
-      <TooltipContent side="bottom">
-        <span className="font-medium">{label}</span>
-        <span className="ml-1 text-muted-foreground/80">·</span>
-        <span className="ml-1 opacity-90">{descripcion}</span>
-      </TooltipContent>
-    </Tooltip>
-  )
-}
-
 function MobileNavSheet({
-  deptActivo,
-  items,
+  grupos,
   profile,
 }: {
-  deptActivo: Departamento
-  items: DepartamentoNav[]
+  grupos: NavGrupo[]
   profile: HubProfile
 }) {
+  const pathname = usePathname() || '/admin'
+
   return (
     <Sheet>
       <SheetTrigger asChild>
@@ -220,17 +97,36 @@ function MobileNavSheet({
           <Menu className="size-4" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-72 p-0">
+      <SheetContent side="left" className="w-72 overflow-y-auto p-0">
         <div className="border-b border-border p-4">
-          <SheetTitle className="text-base">Departamentos</SheetTitle>
+          <SheetTitle className="text-base">NORA HQ</SheetTitle>
           <SheetDescription className="text-xs">
             {profile.nombre || profile.email}
           </SheetDescription>
         </div>
 
-        <nav className="flex flex-col gap-1 p-2" role="navigation">
-          {items.map((d) => (
-            <DeptListItem key={d.id} d={d} activo={deptActivo === d.id} />
+        <nav className="flex flex-col gap-3 p-3" role="navigation">
+          {grupos.map((g) => (
+            <div key={g.grupo}>
+              <div className="mb-1 px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                {g.grupo}
+              </div>
+              <div className="flex flex-col gap-0.5">
+                {g.items.map((it) => (
+                  <NavListItem
+                    key={it.href}
+                    href={it.href}
+                    label={it.label}
+                    icon={it.icon}
+                    estado={it.estado ?? 'activo'}
+                    activo={
+                      pathname === it.href ||
+                      pathname.startsWith(it.href + '/')
+                    }
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 
@@ -253,51 +149,53 @@ function MobileNavSheet({
   )
 }
 
-function DeptListItem({
-  d,
+function NavListItem({
+  href,
+  label,
+  icon,
+  estado,
   activo,
 }: {
-  d: DepartamentoNav
+  href: string
+  label: string
+  icon: string
+  estado: 'activo' | 'placeholder' | 'fase2' | 'externo'
   activo: boolean
 }) {
-  const isExterno = d.estado === 'externo'
-  const isFase2   = d.estado === 'fase2'
-  const isPlace   = d.estado === 'placeholder'
-
+  const disabled = estado === 'fase2' || estado === 'placeholder'
   const cls = cn(
     'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
     activo
-      ? 'bg-accent text-accent-foreground'
+      ? 'bg-nora-bg font-medium text-primary'
       : 'text-foreground hover:bg-accent/60',
-    (isFase2 || isExterno) && 'opacity-75',
+    disabled && 'text-muted-foreground/70',
   )
   const inner = (
     <>
-      <Icon name={d.icon} className="size-4" />
-      <span className="flex-1">{d.label}</span>
-      {isExterno && <ExtLinkIcon className="size-3.5 opacity-60" />}
-      {isFase2 && (
+      <Icon name={icon} className="size-4 shrink-0" />
+      <span className="flex-1">{label}</span>
+      {estado === 'fase2' && (
         <span className="rounded bg-muted px-1.5 text-[9px] font-bold uppercase text-muted-foreground">
           Pronto
         </span>
       )}
     </>
   )
-  if (isExterno && d.externalUrl) {
+  if (estado === 'externo') {
     return (
-      <a href={d.externalUrl} target="_blank" rel="noopener noreferrer" className={cls}>
+      <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>
         {inner}
       </a>
     )
   }
-  if (isFase2 || isPlace) {
+  if (disabled) {
     return (
       <button
         type="button"
         className={cls}
         onClick={() =>
-          toast.message(d.label, {
-            description: isFase2 ? 'Disponible en fase 2.' : 'En construcción.',
+          toast.message(label, {
+            description: estado === 'fase2' ? 'Disponible en fase 2.' : 'En construcción.',
           })
         }
       >
@@ -306,7 +204,7 @@ function DeptListItem({
     )
   }
   return (
-    <Link href={d.path} className={cls}>
+    <Link href={href} className={cls}>
       {inner}
     </Link>
   )
