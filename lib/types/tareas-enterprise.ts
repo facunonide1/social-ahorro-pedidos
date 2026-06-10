@@ -65,6 +65,69 @@ export const CATEGORIA_LABELS: Record<TareaCategoria, string> = {
   otro: 'Otro',
 }
 
+export type EvidenciaTipo =
+  | 'foto'
+  | 'firma'
+  | 'checklist'
+  | 'gps'
+  | 'qr'
+  | 'monto_arqueo'
+  | 'foto_termometro'
+  | 'archivo'
+  | 'nota'
+
+export const EVIDENCIA_TIPOS: EvidenciaTipo[] = [
+  'foto', 'firma', 'checklist', 'gps', 'qr',
+  'monto_arqueo', 'foto_termometro', 'archivo', 'nota',
+]
+
+export const EVIDENCIA_LABELS: Record<EvidenciaTipo, string> = {
+  foto: 'Foto',
+  firma: 'Firma',
+  checklist: 'Checklist',
+  gps: 'GPS',
+  qr: 'QR',
+  monto_arqueo: 'Monto arqueo',
+  foto_termometro: 'Foto termómetro',
+  archivo: 'Archivo',
+  nota: 'Nota',
+}
+
+export type TareaPrioridad = 'baja' | 'media' | 'alta' | 'critica'
+
+export const PRIORIDAD_LABELS: Record<TareaPrioridad, string> = {
+  baja: 'Baja',
+  media: 'Media',
+  alta: 'Alta',
+  critica: 'Crítica',
+}
+
+/** Tipo de tarea con las columnas de 0037 incluidas. */
+export type TipoTareaFull = {
+  id: string
+  codigo: string
+  nombre: string
+  descripcion: string | null
+  categoria: TareaCategoria
+  icono: string | null
+  color: string | null
+  prioridad_default: TareaPrioridad
+  sla_horas: number | null
+  verificacion_humana: boolean
+  verificacion_ia: boolean
+  ia_prompt_verificacion: string | null
+  evidencia_requerida: string[]
+  checklist_items: string[] | null
+  puntos_completar: number
+  plantilla_titulo: string | null
+  plantilla_descripcion: string | null
+  alcance: TipoTareaAlcance
+  sucursales_ids: string[] | null
+  permite_recurrencia: boolean
+  es_auto_generable: boolean
+  activo: boolean
+}
+
 export type TurnoSucursal = {
   id: string
   sucursal_id: string

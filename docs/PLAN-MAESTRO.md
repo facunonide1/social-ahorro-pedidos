@@ -203,7 +203,7 @@ generar-agenda/escalamiento/metricas-nightly/reporte-semanal.
 | 0 | Auditoría/inventario | ✅ (acá arriba) |
 | T1 | Schema definitivo (migración ALTER+CREATE) | ✅ (0037 aplicada) |
 | T2 | Admin turnos + supervisores | ✅ |
-| T3 | Tipos de tareas CRUD + seed 16 | ⬜ |
+| T3 | Tipos de tareas CRUD + seed 16 | ✅ (0038 aplicada) |
 | T4 | Motor recurrencias + agenda + crons | ⬜ |
 | T5 | Bandeja + pool + reclamar | ⬜ |
 | T6 | Ejecución + evidencias + workflow | ⬜ |
@@ -268,7 +268,23 @@ la fase F6-T (módulo de tareas), por pedido del usuario.
 ---
 
 ## 👉 PRÓXIMA ACCIÓN (F6-T)
-**T3 · Tipos de tareas CRUD + seed 16.** `/admin/configuracion/tipos-tareas` ya
+**T4 · Motor de recurrencias + agenda.** (1) `app/api/cron/generar-agenda/route.ts`
+(05:00 AR): lee `tareas_recurrencias` activas → las que tocan HOY (patron/dias_
+semana/dia_mes) → crea `tareas` con asignacion_tipo/turno/sucursal/hora_limite/
+fecha_vencimiento. Idempotente (no duplicar por recurrencia+día: chequear existencia
+por recurrencia_id + rango del día). Auth: header `x-cron-secret`/CRON_SECRET o
+super_admin. (2) `vercel.json`: generar-agenda 05:00, escalamiento cada 30min,
+metricas-nightly 02:00, reporte-semanal lunes 07:00 (registrar paths aunque los
+crons se construyan en T8/T9/T12). (3) Botón super_admin "Regenerar agenda de hoy"
+en /admin/tareas (llama al endpoint). (4) CRUD recurrencias en
+`/admin/configuracion/recurrencias` (listar/pausar/editar/eliminar) + toggle
+"repetir" en el form de tarea (T5). Recurrencias usan columnas 0037
+(asignacion_tipo, turno_id, usuario_fijo_id, hora_limite). Luego T5–T15.
+
+> NOTA T3: CRUD de tipos vía API admin (`/api/admin/tipos-tareas` POST + [id]
+> PATCH, gate super_admin/gerente). Form con evidencias multi + checklist builder
+> + prompt IA. 16 tipos farmacia seedeados (0038, on conflict do update). 25 tipos
+> totales activos. `/admin/configuracion/tipos-tareas` ya
 existe (listado read-only de F6). Completar a CRUD: form con básicos, apariencia
 (icono/color), alcance global/por_sucursal (+sucursales_ids), workflow
 (verificacion_humana + verificacion_ia + ia_prompt_verificacion), evidencias
