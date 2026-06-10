@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, MessageSquare } from 'lucide-react'
 
 import { NoraCard } from '@/components/nora/nora-card'
 import { NoraTyping } from '@/components/nora/nora-typing'
@@ -69,16 +69,27 @@ export function NoraBriefingCard() {
     <NoraCard
       contexto="briefing del día"
       actions={
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          onClick={load}
-        >
-          <RefreshCw className={busy ? 'size-3.5 animate-spin' : 'size-3.5'} />
-          Regenerar
-        </Button>
+        <>
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            onClick={() => window.dispatchEvent(new Event('nora:open'))}
+          >
+            <MessageSquare className="size-3.5" />
+            Conversar con NORA
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={load}
+          >
+            <RefreshCw className={busy ? 'size-3.5 animate-spin' : 'size-3.5'} />
+            Regenerar
+          </Button>
+        </>
       }
     >
       <p className="whitespace-pre-wrap">{data.mensaje}</p>

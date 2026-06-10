@@ -47,6 +47,14 @@ export function AiChatDock() {
     if (open) inputRef.current?.focus()
   }, [open])
 
+  // Permite abrir el dock desde cualquier parte (ej. Mission Control →
+  // "Conversar con NORA") vía window.dispatchEvent(new Event('nora:open')).
+  useEffect(() => {
+    const onOpen = () => setOpen(true)
+    window.addEventListener('nora:open', onOpen)
+    return () => window.removeEventListener('nora:open', onOpen)
+  }, [])
+
   async function send(text: string) {
     const trimmed = text.trim()
     if (!trimmed || streaming) return
