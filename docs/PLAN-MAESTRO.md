@@ -141,6 +141,84 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
+## 🧩 FASE 6-T · MÓDULO DE TAREAS ENTERPRISE + AUDITORÍA + DEMO (sesión actual)
+
+### PASO 0 · Inventario auditoría F6 (qué existe / qué falta / contradicciones)
+
+**Existe en DB (migr. 0030/0031/0033/0034):**
+- `tareas` (workflow responsable/verificador/aprobador_final, evidencias jsonb,
+  recurrencia_id, puntos_obtenidos, tiempo_resolucion_horas…)
+- `tipos_tareas` (categoria, evidencia_requerida, niveles_workflow,
+  ia_prompt_verificacion, verificacion_ia, puntos_completar, plantillas…)
+- `tareas_recurrencias` (patron/dias_semana/dia_mes/hora_creacion,
+  responsable_default_id, sucursal_id…), `tareas_triggers_auto`,
+  `tareas_comentarios` (menciones), `tareas_historial`, `tareas_adjuntos`
+- `empleados` (+score_total, nivel_actual_id, badges_obtenidos, sucursales_acceso),
+  `empleados_badges` (10 seed), `niveles_empleados` (9 seed ✅),
+  `empleados_objetivos` (kpis jsonb, score_pct, estado), `empleados_kpis_catalogo`,
+  `empleados_historial_niveles`, `empleados_evaluaciones`
+- Enums: `tarea_estado` (pendiente/asignada/en_progreso/en_verificacion/
+  en_aprobacion/bloqueada/completada/descartada/vencida/rechazada),
+  `tarea_origen` (auto_sistema/manual/plantilla/recurrencia),
+  `tarea_categoria` (…+limpieza/seguridad/inventario, **falta cadena_frio**),
+  `tarea_prioridad`, `tarea_historial_accion`
+- Buckets: covers, delivery-proofs, proveedor-documentos, tickets-validacion
+  (**faltan** tareas-evidencias, comprobantes)
+
+**Código existente:** `app/(admin)/admin/tareas/{page,[id],reportes,bandeja-client,
+nueva-tarea-sheet}`, mi-panel, mi-equipo, objetivos, ranking, empleados ·
+`components/tareas/*` (task-card, workflow-stepper, comments, history-timeline,
+quick-actions, badges, relacionadas) · `components/empleados/*` ·
+`lib/tareas/{workflow,gamification,notificaciones}.ts` · crons
+{marcar-vencidas, recurrencias, calcular-objetivos, check-triggers} ·
+endpoints nora {parse-task, verify-evidence, employee-coaching}.
+
+**FALTA (crear):** `turnos_sucursal`, `supervisores_tareas`, las 4 tablas de
+métricas snapshot (`empleados/sucursales/supervisores_metricas_diarias`,
+`tipos_tareas_metricas_mensuales`), buckets tareas-evidencias + comprobantes,
+tabla `adjuntos` polimórfica (T13), `lib/tareas/metricas.ts`, pantallas
+configuracion/{turnos,supervisores,recurrencias}, /admin/verificaciones, crons
+generar-agenda/escalamiento/metricas-nightly/reporte-semanal.
+
+**CONTRADICCIONES con el diseño nuevo (este diseño MANDA → ALTER, no duplicar):**
+- `tareas`: el modelo nuevo usa **asignación híbrida** (asignacion_tipo
+  usuario_especifico/pool_turno/pool_sucursal/rol + turno_id + reclamada_por/at)
+  vs el viejo responsable/verificador/aprobador. → ALTER agrega columnas nuevas,
+  conservando las viejas (no romper bandeja/workflow actuales).
+  Faltan: verificacion_humana, verificada_por/at, pre_verificacion_ia,
+  rechazos_count, hora_limite, tiempo_resolucion_min, demora_min,
+  escalamiento_nivel, puntos_otorgados, creado_por_nombre. estado +`reclamada`,
+  origen +`auto_recurrencia`/`nora`.
+- `tipos_tareas`: faltan alcance(global/por_sucursal)+sucursales_ids,
+  verificacion_humana, checklist_items. categoria +`cadena_frio`.
+- `tareas_recurrencias`: faltan asignacion_tipo, turno_id, usuario_fijo_id,
+  hora_limite, titulo_override (existe titulo_plantilla → reusar).
+- `empleados_objetivos`: faltan proyeccion_pct, comentario_nora.
+- Decisión: **score/nivel viven en `empleados`** (ya existe score_total +
+  nivel_actual_id), NO en users_admin.
+
+### Sub-tandas F6-T
+| # | Sub-tanda | Estado |
+|---|-----------|--------|
+| 0 | Auditoría/inventario | ✅ (acá arriba) |
+| T1 | Schema definitivo (migración ALTER+CREATE) | ⬜ |
+| T2 | Admin turnos + supervisores | ⬜ |
+| T3 | Tipos de tareas CRUD + seed 16 | ⬜ |
+| T4 | Motor recurrencias + agenda + crons | ⬜ |
+| T5 | Bandeja + pool + reclamar | ⬜ |
+| T6 | Ejecución + evidencias + workflow | ⬜ |
+| T7 | Cola de verificación supervisor | ⬜ |
+| T8 | Escalamiento + notificaciones | ⬜ |
+| T9 | Motor de métricas | ⬜ |
+| T10 | Scorecards y objetivos UI | ⬜ |
+| T11 | Gamificación | ⬜ |
+| T12 | NORA en tareas | ⬜ |
+| T13 | Auditoría gaps + adjuntos/comprobantes | ⬜ |
+| T14 | Datos demo | ⬜ |
+| T15 | Cierre + tag v0.7-tareas-completo | ⬜ |
+
+---
+
 ## 🧱 DECISIONES TOMADAS (no re-preguntar)
 - NORA HQ es **orquestador**: lee datos externos vía integraciones, gestiona
   operación/equipo/finanzas/compliance/marketing/IA. No factura.
