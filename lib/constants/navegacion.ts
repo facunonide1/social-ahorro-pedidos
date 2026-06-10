@@ -279,7 +279,7 @@ export const NAVEGACION: NavGrupo[] = [
     items: [
       { label: 'Sucursales',            href: '/hub/sucursales',                       icon: 'Store' },
       { label: 'Usuarios y permisos',   href: '/admin/configuracion/usuarios',         icon: 'Shield' },
-      { label: 'Catálogo de productos', href: '/admin/configuracion/catalogo',         icon: 'Package',   estado: 'placeholder' },
+      { label: 'Catálogo de productos', href: '/admin/configuracion/catalogo',         icon: 'Package' },
       { label: 'Tipos de tareas',       href: '/admin/configuracion/tipos-tareas',     icon: 'ListChecks' },
       { label: 'Triggers automáticos',  href: '/admin/configuracion/triggers-tareas',  icon: 'Zap' },
       { label: 'Integraciones / APIs',  href: '/admin/configuracion/integraciones',    icon: 'Plug',      estado: 'placeholder' },

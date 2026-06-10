@@ -49,7 +49,7 @@ con `sucursal_id` en todo para escalar.
 | **T3** | Reorganización del sidebar — 8 pilares | ✅ |
 | **T4** | Mission Control en `/admin` (greeting, KPIs, quick actions, sucursales live, predicciones) | ✅ |
 | **T5** | Usuarios y permisos `/admin/configuracion/usuarios` (+ migración `permisos_custom`) | ✅ (migración 0035 aplicada) |
-| **T6** | Catálogo de productos `/admin/configuracion/catalogo` (+ migración `0031`) + importador CSV | ⬜ |
+| **T6** | Catálogo de productos `/admin/configuracion/catalogo` + importador CSV | ✅ (migración 0036 aplicada) |
 | **T7** | ⭐ Gestor de APIs / Integraciones `/admin/configuracion/integraciones` (+ migración + runner + adapter WooCommerce real + cron) | ⬜ |
 | **T8** | Model router de IA `/admin/configuracion/ia` (+ tabla `ia_config` + `getModelFor`) | ⬜ |
 | **T9** | Polish (empty states, breadcrumbs, mobile 375px, sacar redundancias) | ⬜ |
@@ -93,6 +93,20 @@ con `sucursal_id` en todo para escalar.
   apunta al `/hub/sucursales` real.
 - ⚠️ Pendiente coherencia: `/hub` y CRM `/dashboard` siguen con su shell/sidebar
   propio; la unificación total a `NoraSidebar` queda como follow-up (no bloqueante).
+
+### Detalle T6 ✅
+- Migración `0036_catalogo_productos.sql` (tabla `productos_catalogo` + enum
+  categoría + RLS users_admin activo + trigger updated_at) — **aplicada vía MCP**.
+- `lib/types/catalogo.ts`: tipo + categorías + labels + `VademecumData`.
+- `/admin/configuracion/catalogo` (super_admin): tabla + filtros (categoría,
+  laboratorio, receta, psicotrópico) + search (nombre/SKU/barras) + alta/edición
+  (form completo + vademécum 4 campos) vía supabase browser. Foto = URL por ahora
+  (upload a bucket queda como mejora futura).
+- `/admin/configuracion/catalogo/importar`: parser CSV propio (comillas/`,`/`;`/CRLF),
+  auto-mapeo de columnas, preview, modo de conflicto por SKU
+  (saltear/actualizar/abortar) → `POST /api/admin/catalogo/importar` (gate
+  super_admin, normaliza categoría/boolean/número, dedup por SKU, upsert/insert).
+- Ítem del sidebar a 'activo'.
 
 ### Detalle T5 ✅
 - Migración `0035_users_admin_permisos.sql` (col `permisos_custom jsonb`) —
@@ -154,7 +168,22 @@ Heredados de F6 (ver ERP-PROGRESO.md): `CRON_SECRET` en Vercel, configurar
 ---
 
 ## 👉 PRÓXIMA ACCIÓN
-**T6 · Catálogo de productos `/admin/configuracion/catalogo`.** (1) Migración
+**T7 ⭐ · Gestor de APIs / Integraciones `/admin/configuracion/integraciones`.**
+(1) Migración `0037_integraciones.sql`: tablas `integraciones` (codigo, nombre,
+tipo [api_rest/db_directa/csv_programado/webhook], estado, config jsonb [solo
+refs a env vars, NUNCA secrets], ultima_sincronizacion, activa, timestamps),
+`integraciones_logs`, `integraciones_mapeos` + seed (SIFACO, WooCommerce, AFIP,
+Mercado Pago, WhatsApp Business, Telegram, Hikvision, Email/Resend) + RLS
+super_admin. Aplicar vía MCP. (2) Grid de cards con estado/dot/última sync +
+acciones Configurar/Test/Logs/Activar. (3) Wizard 4 pasos. (4)
+`lib/integraciones/runner.ts` con interfaz (testConnection/sync/getLogs) +
+adapter pattern; **adapter WooCommerce REAL** (env WOOCOMMERCE_URL/CONSUMER_KEY/
+SECRET; reusar sync existente en `lib/woo/sync.ts`, no romperlo); resto stubs
+"pendiente". (5) Cron `/api/cron/run-integrations` (cada 15min, según frecuencia).
+Pasar ítem sidebar a 'activo'. Luego T8 (model router), T9 (polish), T10 (docs+tag).
+
+### Sub-tandas previas
+**T5 · Usuarios y permisos** ✅ · **T6 · Catálogo + importador CSV** ✅ (ver detalle arriba). (1) Migración
 `0036_catalogo_productos.sql`: tabla `productos_catalogo` (sku unique,
 codigo_barras, nombre, descripcion, categoria enum
 [medicamento/perfumeria/cuidado_personal/dermocosmetica/maternidad/ortopedia/otros],
