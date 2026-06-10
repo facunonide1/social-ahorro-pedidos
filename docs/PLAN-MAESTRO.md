@@ -48,7 +48,7 @@ con `sucursal_id` en todo para escalar.
 | **T2** | Completar rebrand NORA HQ (renames, `NoraBrand`, paleta, metadata) | ✅ |
 | **T3** | Reorganización del sidebar — 8 pilares | ✅ |
 | **T4** | Mission Control en `/admin` (greeting, KPIs, quick actions, sucursales live, predicciones) | ✅ |
-| **T5** | Usuarios y permisos `/admin/configuracion/usuarios` (+ migración `permisos_custom`) | ⬜ |
+| **T5** | Usuarios y permisos `/admin/configuracion/usuarios` (+ migración `permisos_custom`) | ✅ (migración 0035 aplicada) |
 | **T6** | Catálogo de productos `/admin/configuracion/catalogo` (+ migración `0031`) + importador CSV | ⬜ |
 | **T7** | ⭐ Gestor de APIs / Integraciones `/admin/configuracion/integraciones` (+ migración + runner + adapter WooCommerce real + cron) | ⬜ |
 | **T8** | Model router de IA `/admin/configuracion/ia` (+ tabla `ia_config` + `getModelFor`) | ⬜ |
@@ -93,6 +93,21 @@ con `sucursal_id` en todo para escalar.
   apunta al `/hub/sucursales` real.
 - ⚠️ Pendiente coherencia: `/hub` y CRM `/dashboard` siguen con su shell/sidebar
   propio; la unificación total a `NoraSidebar` queda como follow-up (no bloqueante).
+
+### Detalle T5 ✅
+- Migración `0035_users_admin_permisos.sql` (col `permisos_custom jsonb`) —
+  **aplicada vía MCP Supabase** (no pendiente).
+- `lib/types/permisos.ts`: 7 módulos × 5 acciones, presets por rol,
+  `permisosEfectivos(rol, custom)` + `puede(...)`.
+- `lib/supabase/admin-users.ts`: `updateAdminUser` (rol/sucursal/activo/permisos/
+  nombre) + `permisos_custom` en alta.
+- API `POST /api/admin/usuarios` + `PATCH /api/admin/usuarios/[id]` (gate
+  super_admin; salvaguarda anti-autobloqueo). Reusa `createAdminUser`
+  (flag `is_admin_hub:true`).
+- Página `/admin/configuracion/usuarios` (super_admin): tabla enriquecida con
+  auth (nombre/email/último login) + cliente con alta/edición y matriz de
+  permisos (toggle "personalizar" → guarda matriz completa en `permisos_custom`).
+- Ítem del sidebar pasó a 'activo'.
 
 ### Detalle T4 ✅
 - `app/(admin)/admin/page.tsx` reescrito a Mission Control: header con saludo,
@@ -139,7 +154,23 @@ Heredados de F6 (ver ERP-PROGRESO.md): `CRON_SECRET` en Vercel, configurar
 ---
 
 ## 👉 PRÓXIMA ACCIÓN
-**T5 · Usuarios y permisos `/admin/configuracion/usuarios`.** (1) Migración
+**T6 · Catálogo de productos `/admin/configuracion/catalogo`.** (1) Migración
+`0036_catalogo_productos.sql`: tabla `productos_catalogo` (sku unique,
+codigo_barras, nombre, descripcion, categoria enum
+[medicamento/perfumeria/cuidado_personal/dermocosmetica/maternidad/ortopedia/otros],
+subcategoria, laboratorio, presentacion, droga_principal, requiere_receta,
+es_psicotropico, es_refrigerado, foto_url, vademecum_data jsonb, precio_sugerido,
+precio_costo_promedio, margen_pct, comision_empleado_pct, sustitutos_ids uuid[],
+droguerias_preferidas text[], stock_minimo_global int, activo, timestamps,
+created_by) + RLS admin/employee. Aplicar vía MCP. (2) Listado DataTable +
+filtros (categoría, laboratorio, receta, psicotrópico) + search nombre/SKU/barras.
+(3) Form alta/edición (upload foto + editor vademécum). (4) `/importar`: CSV drop
+zone + mapeo columnas→campos + preview + conflictos por SKU (skip/actualizar/
+abortar). Pasar ítem sidebar a 'activo'. Luego T7 ⭐ (integraciones), T8 (model
+router), T9 (polish), T10 (docs+tag).
+
+### Sub-tandas previas
+**T5 · Usuarios y permisos** ✅ (ver detalle arriba). (1) Migración
 `0031_users_admin_permisos.sql`: agregar columna `permisos_custom jsonb default
 '{}'` a `users_admin` (intentar aplicar vía MCP Supabase; si no, listar en
 PENDIENTE). (2) Página server `requireAdminHubAccess({allowedRoles:['super_admin']})`

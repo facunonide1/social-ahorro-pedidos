@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import type { AdminRole } from '@/lib/types/admin'
+import type { PermisosCustom } from '@/lib/types/permisos'
 
 export type CreateAdminUserInput = {
   email: string
@@ -7,6 +8,15 @@ export type CreateAdminUserInput = {
   rol: AdminRole
   nombre: string
   sucursal_id?: string | null
+  permisos_custom?: PermisosCustom
+}
+
+export type UpdateAdminUserInput = {
+  rol?: AdminRole
+  sucursal_id?: string | null
+  activo?: boolean
+  permisos_custom?: PermisosCustom
+  nombre?: string
 }
 
 export type CreateAdminUserResult =
@@ -75,6 +85,7 @@ export async function createAdminUser(
     rol,
     sucursal_id: sucursal_id ?? null,
     activo: true,
+    permisos_custom: input.permisos_custom ?? {},
   })
 
   if (insErr) {
@@ -88,6 +99,37 @@ export async function createAdminUser(
   }
 
   return { ok: true, userId, email, rol }
+}
+
+/**
+ * Actualiza un admin: rol, sucursal, activo, permisos y/o nombre.
+ * El nombre vive en auth.users.user_metadata; el resto en users_admin.
+ */
+export async function updateAdminUser(
+  userId: string,
+  input: UpdateAdminUserInput,
+): Promise<{ ok: boolean; error?: string }> {
+  const admin = createAdminClient()
+
+  const patch: Record<string, unknown> = {}
+  if (input.rol !== undefined) patch.rol = input.rol
+  if (input.sucursal_id !== undefined) patch.sucursal_id = input.sucursal_id
+  if (input.activo !== undefined) patch.activo = input.activo
+  if (input.permisos_custom !== undefined) patch.permisos_custom = input.permisos_custom
+
+  if (Object.keys(patch).length > 0) {
+    const { error } = await admin.from('users_admin').update(patch).eq('id', userId)
+    if (error) return { ok: false, error: error.message }
+  }
+
+  if (input.nombre !== undefined) {
+    const { error } = await admin.auth.admin.updateUserById(userId, {
+      user_metadata: { nombre: input.nombre.trim() || null },
+    })
+    if (error) return { ok: false, error: error.message }
+  }
+
+  return { ok: true }
 }
 
 /**

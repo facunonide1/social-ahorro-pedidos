@@ -278,7 +278,7 @@ export const NAVEGACION: NavGrupo[] = [
     soloSuperAdmin: true,
     items: [
       { label: 'Sucursales',            href: '/hub/sucursales',                       icon: 'Store' },
-      { label: 'Usuarios y permisos',   href: '/admin/configuracion/usuarios',         icon: 'Shield',    estado: 'placeholder' },
+      { label: 'Usuarios y permisos',   href: '/admin/configuracion/usuarios',         icon: 'Shield' },
       { label: 'Catálogo de productos', href: '/admin/configuracion/catalogo',         icon: 'Package',   estado: 'placeholder' },
       { label: 'Tipos de tareas',       href: '/admin/configuracion/tipos-tareas',     icon: 'ListChecks' },
       { label: 'Triggers automáticos',  href: '/admin/configuracion/triggers-tareas',  icon: 'Zap' },
