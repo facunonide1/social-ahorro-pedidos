@@ -215,8 +215,9 @@ ya existe en NAVEGACION (estado placeholder → pasar a 'activo' al terminar).
 Después T6 (catálogo+migración 0032), T7 ⭐ (integraciones), T8 (model router),
 T9 (polish), T10 (docs+tag).
 
-> **Nota de sesión:** T1–T4 completadas y pusheadas en esta sesión
-> (`1467a21`, `e3e1c8c`, `70b3459`, + commit T4). Retomar T5 con contexto fresco. Reemplazar el dashboard actual
+> **Nota de sesión:** T1–T6 completadas y pusheadas (`1467a21`, `e3e1c8c`,
+> `70b3459`, `899857a`, `7bac8f5`, `4d9e5cf`). Migraciones `0035` y `0036`
+> aplicadas vía MCP. Build verde (67/67). Retomar **T7** con contexto fresco. Reemplazar el dashboard actual
 (`app/(admin)/admin/page.tsx`, hoy grilla de departamentos) por:
 (a) `NoraGreetingCard` (bg `--nora-bg`, saludo + resumen, botón "Conversar con
 NORA" abre el dock); (b) grid 4 KPIs del día (ventas+delta, tickets+promedio,
