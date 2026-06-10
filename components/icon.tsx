@@ -86,6 +86,7 @@ import {
   Bot,
   FileSearch,
   Settings,
+  Repeat,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -175,6 +176,7 @@ const REGISTRY: Record<string, LucideIcon> = {
   Bot,
   FileSearch,
   Settings,
+  Repeat,
 }
 
 /**

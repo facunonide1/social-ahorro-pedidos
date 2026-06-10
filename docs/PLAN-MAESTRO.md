@@ -204,7 +204,7 @@ generar-agenda/escalamiento/metricas-nightly/reporte-semanal.
 | T1 | Schema definitivo (migración ALTER+CREATE) | ✅ (0037 aplicada) |
 | T2 | Admin turnos + supervisores | ✅ |
 | T3 | Tipos de tareas CRUD + seed 16 | ✅ (0038 aplicada) |
-| T4 | Motor recurrencias + agenda + crons | ⬜ |
+| T4 | Motor recurrencias + agenda + crons | ✅ |
 | T5 | Bandeja + pool + reclamar | ⬜ |
 | T6 | Ejecución + evidencias + workflow | ⬜ |
 | T7 | Cola de verificación supervisor | ⬜ |
@@ -268,7 +268,28 @@ la fase F6-T (módulo de tareas), por pedido del usuario.
 ---
 
 ## 👉 PRÓXIMA ACCIÓN (F6-T)
-**T4 · Motor de recurrencias + agenda.** (1) `app/api/cron/generar-agenda/route.ts`
+**T5 · Bandeja + pool + reclamar.** Reescribir `/admin/tareas` (hoy bandeja F6
+viejo modelo) a tabs por rol: "Mi día" (asignadas+reclamadas hoy, progreso),
+"Pool de mi turno" (pool_turno del turno actual + pool_sucursal, con botón "La
+hago yo" → reclamo atómico: update tareas set responsable_id, reclamada_por,
+reclamada_at, estado='reclamada' where id=? and reclamada_por is null → si 0 filas,
+ya la tomó otro), "Mi sucursal" (supervisor/encargado), "Todas" (super_admin).
+Vistas Lista/Kanban. TaskCard nueva (prioridad, "Asignada por {nombre}" si
+creado_por super/gerente, POOL pill, countdown color, iconos evidencia). Botón
+"+ Nueva tarea" (sheet form completo + bloque "Crear con NORA" → /api/nora/parse-task)
+y montar `RegenerarAgendaButton` (super_admin) en el header. Necesita: helper para
+saber el turno actual del user (por hora vs turnos_sucursal de su sucursal) y el
+empleado del user. Reusar/extender `components/tareas/task-card.tsx`,
+`bandeja-client.tsx`, `nueva-tarea-sheet.tsx`. Luego T6 (ejecución+evidencias),
+T7 (cola verificación), T8 (escalamiento), T9–T15.
+
+> NOTA T4: cron `generar-agenda` (GET cron-secret / POST super_admin), idempotente
+> por recurrencia+día, dispara por patrón (diaria/semanal·dias/mensual·dia/única).
+> `vercel.json` daily por plan Hobby (generar-agenda 08:00 UTC = 05:00 AR; se sacó
+> el cron `recurrencias` legacy del schedule, el archivo queda pero no se agenda).
+> CRUD recurrencias en `/admin/configuracion/recurrencias` + RegenerarAgendaButton.
+> Escalamiento/métricas/reporte-semanal: sus crons se agregan en T8/T9/T12 (daily
+> por Hobby; el de 30min y el semanal quedan documentados como ideal-Pro). (1) `app/api/cron/generar-agenda/route.ts`
 (05:00 AR): lee `tareas_recurrencias` activas → las que tocan HOY (patron/dias_
 semana/dia_mes) → crea `tareas` con asignacion_tipo/turno/sucursal/hora_limite/
 fecha_vencimiento. Idempotente (no duplicar por recurrencia+día: chequear existencia
