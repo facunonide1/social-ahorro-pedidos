@@ -201,7 +201,7 @@ generar-agenda/escalamiento/metricas-nightly/reporte-semanal.
 | # | Sub-tanda | Estado |
 |---|-----------|--------|
 | 0 | Auditoría/inventario | ✅ (acá arriba) |
-| T1 | Schema definitivo (migración ALTER+CREATE) | ⬜ |
+| T1 | Schema definitivo (migración ALTER+CREATE) | ✅ (0037 aplicada) |
 | T2 | Admin turnos + supervisores | ⬜ |
 | T3 | Tipos de tareas CRUD + seed 16 | ⬜ |
 | T4 | Motor recurrencias + agenda + crons | ⬜ |
@@ -261,7 +261,21 @@ SECRET; reusar sync existente en `lib/woo/sync.ts`, no romperlo); resto stubs
 Pasar ítem sidebar a 'activo'. Luego T8 (model router), T9 (polish), T10 (docs+tag).
 
 ### Sub-tandas previas
-**T5 · Usuarios y permisos** ✅ · **T6 · Catálogo + importador CSV** ✅ (ver detalle arriba). (1) Migración
+**T5 · Usuarios y permisos** ✅ · **T6 · Catálogo + importador CSV** ✅.
+**F6.5 T7 (integraciones) y T8 (model router) quedaron DIFERIDOS** detrás de
+la fase F6-T (módulo de tareas), por pedido del usuario.
+
+---
+
+## 👉 PRÓXIMA ACCIÓN (F6-T)
+**T2 · Admin de turnos y supervisores.** `/admin/configuracion/turnos` (selector
+sucursal → cards de turnos + form con chips de días, validación de solapamiento
+warning) y `/admin/configuracion/supervisores` (tabla + form sucursal→user→
+categorías + resumen "hoy supervisan…" con vacantes en warning). API o supabase
+browser con RLS ya creada (super_admin/gerente escriben). Migración 0037
+**aplicada** (turnos_sucursal, supervisores_tareas + 8 turnos seed). Ítems de
+sidebar nuevos en grupo Administración. Luego T3 (tipos+seed 16), T4 (recurrencias
++ generar-agenda + crons), T5–T15. (1) Migración
 `0036_catalogo_productos.sql`: tabla `productos_catalogo` (sku unique,
 codigo_barras, nombre, descripcion, categoria enum
 [medicamento/perfumeria/cuidado_personal/dermocosmetica/maternidad/ortopedia/otros],
