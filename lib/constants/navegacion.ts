@@ -281,6 +281,8 @@ export const NAVEGACION: NavGrupo[] = [
       { label: 'Usuarios y permisos',   href: '/admin/configuracion/usuarios',         icon: 'Shield' },
       { label: 'Catálogo de productos', href: '/admin/configuracion/catalogo',         icon: 'Package' },
       { label: 'Tipos de tareas',       href: '/admin/configuracion/tipos-tareas',     icon: 'ListChecks' },
+      { label: 'Turnos',                href: '/admin/configuracion/turnos',           icon: 'Clock' },
+      { label: 'Supervisores',          href: '/admin/configuracion/supervisores',     icon: 'UserCheck' },
       { label: 'Triggers automáticos',  href: '/admin/configuracion/triggers-tareas',  icon: 'Zap' },
       { label: 'Integraciones / APIs',  href: '/admin/configuracion/integraciones',    icon: 'Plug',      estado: 'placeholder' },
       { label: 'Configuración IA',      href: '/admin/configuracion/ia',               icon: 'Bot',       estado: 'placeholder' },

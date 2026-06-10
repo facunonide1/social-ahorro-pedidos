@@ -202,7 +202,7 @@ generar-agenda/escalamiento/metricas-nightly/reporte-semanal.
 |---|-----------|--------|
 | 0 | Auditoría/inventario | ✅ (acá arriba) |
 | T1 | Schema definitivo (migración ALTER+CREATE) | ✅ (0037 aplicada) |
-| T2 | Admin turnos + supervisores | ⬜ |
+| T2 | Admin turnos + supervisores | ✅ |
 | T3 | Tipos de tareas CRUD + seed 16 | ⬜ |
 | T4 | Motor recurrencias + agenda + crons | ⬜ |
 | T5 | Bandeja + pool + reclamar | ⬜ |
@@ -268,7 +268,20 @@ la fase F6-T (módulo de tareas), por pedido del usuario.
 ---
 
 ## 👉 PRÓXIMA ACCIÓN (F6-T)
-**T2 · Admin de turnos y supervisores.** `/admin/configuracion/turnos` (selector
+**T3 · Tipos de tareas CRUD + seed 16.** `/admin/configuracion/tipos-tareas` ya
+existe (listado read-only de F6). Completar a CRUD: form con básicos, apariencia
+(icono/color), alcance global/por_sucursal (+sucursales_ids), workflow
+(verificacion_humana + verificacion_ia + ia_prompt_verificacion), evidencias
+multi-select (foto/firma/checklist/gps/qr/monto_arqueo/foto_termometro/archivo/nota),
+checklist builder, puntos, plantillas. Migración seed `0038_seed_tipos_farmacia.sql`
+con los 16 tipos (apertura/cierre/caja/cadena_frío/limpiezas/psicotrópicos/
+góndolas/recepción/conciliación/depósito/mantenimiento/capacitación/VIP/libre) —
+usar `on conflict (codigo) do update`. Aplicar vía MCP. Tipos usan columnas de
+0037 (alcance, verificacion_humana, checklist_items). Luego T4 (recurrencias +
+generar-agenda + crons), T5–T15.
+
+> NOTA T2: turnos y supervisores escriben vía supabase browser (RLS 0037:
+> super_admin/gerente). Solapamiento de turnos = warning, no bloquea. `/admin/configuracion/turnos` (selector
 sucursal → cards de turnos + form con chips de días, validación de solapamiento
 warning) y `/admin/configuracion/supervisores` (tabla + form sucursal→user→
 categorías + resumen "hoy supervisan…" con vacantes en warning). API o supabase
