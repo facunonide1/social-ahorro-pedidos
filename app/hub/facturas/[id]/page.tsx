@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { Comprobantes } from '@/components/shared/comprobantes'
 
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
@@ -326,6 +327,8 @@ export default async function FacturaDetailPage({
             </AlertDescription>
           </Alert>
         )}
+
+        <Comprobantes entidadTipo="factura" entidadId={params.id} />
       </div>
     </HubShell>
   )

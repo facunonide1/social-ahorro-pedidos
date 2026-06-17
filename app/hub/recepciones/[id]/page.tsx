@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { Comprobantes } from '@/components/shared/comprobantes'
 
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
@@ -205,6 +206,8 @@ export default async function RecepcionDetailPage({
             </AlertDescription>
           </Alert>
         )}
+
+        <Comprobantes entidadTipo="recepcion" entidadId={params.id} titulo="Remito firmado / fotos" />
       </div>
     </HubShell>
   )

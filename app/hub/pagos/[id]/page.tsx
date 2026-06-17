@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { Comprobantes } from '@/components/shared/comprobantes'
 import { ArrowRight, ExternalLink } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/server'
@@ -249,6 +250,7 @@ export default async function PagoDetailPage({
             </AlertDescription>
           </Alert>
         )}
+        <Comprobantes entidadTipo="pago" entidadId={params.id} />
       </div>
     </HubShell>
   )

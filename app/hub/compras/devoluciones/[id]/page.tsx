@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { Comprobantes } from '@/components/shared/comprobantes'
 
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
@@ -202,6 +203,8 @@ export default async function DevolucionDetailPage({
             </CardContent>
           </Card>
         )}
+
+        <Comprobantes entidadTipo="devolucion" entidadId={params.id} titulo="Fotos mercadería / remito" />
       </div>
     </HubShell>
   )
