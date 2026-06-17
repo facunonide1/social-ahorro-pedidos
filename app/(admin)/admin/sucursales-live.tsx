@@ -14,6 +14,9 @@ type SucursalLive = {
   facturado_dia: number
   empleados_activos: number
   tickets_dia: number
+  tareas_total?: number
+  tareas_completadas?: number
+  tareas_pct?: number | null
   alerta: string | null
 }
 
@@ -98,7 +101,16 @@ export function SucursalesLive() {
                 <Users className="size-3" />
                 {s.empleados_activos} activos
               </span>
-              <span className="tabular-nums">{s.tickets_dia} tickets</span>
+              {s.tareas_total != null && s.tareas_total > 0 && (
+                <span
+                  className={cn(
+                    'tabular-nums font-medium',
+                    (s.tareas_pct ?? 100) < 70 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground',
+                  )}
+                >
+                  Tareas {s.tareas_completadas}/{s.tareas_total} · {s.tareas_pct ?? 0}%
+                </span>
+              )}
             </div>
 
             {s.alerta && (

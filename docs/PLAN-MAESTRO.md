@@ -209,8 +209,8 @@ generar-agenda/escalamiento/metricas-nightly/reporte-semanal.
 | T6 | Ejecución + evidencias + workflow | ✅ |
 | T7 | Cola de verificación supervisor | ✅ |
 | T8 | Escalamiento + notificaciones | ✅ |
-| T9 | Motor de métricas | ⬜ |
-| T10 | Scorecards y objetivos UI | ⬜ |
+| T9 | Motor de métricas | ✅ |
+| T10 | Scorecards y objetivos UI | 🔄 (Mission Control hecho; scorecards/charts sobre F6) |
 | T11 | Gamificación | ⬜ |
 | T12 | NORA en tareas | ⬜ |
 | T13 | Auditoría gaps + adjuntos/comprobantes | ⬜ |

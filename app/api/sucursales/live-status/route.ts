@@ -13,6 +13,9 @@ type SucursalLive = {
   facturado_dia: number
   empleados_activos: number
   tickets_dia: number
+  tareas_total?: number
+  tareas_completadas?: number
+  tareas_pct?: number | null
   alerta: string | null
 }
 
@@ -59,16 +62,48 @@ export async function GET(_req: NextRequest) {
       empPorSuc.set(e.sucursal_id, (empPorSuc.get(e.sucursal_id) ?? 0) + 1)
     }
 
-    const result: SucursalLive[] = sucs.map((s) => ({
-      sucursal_id: s.id,
-      nombre: s.nombre,
-      codigo: s.codigo,
-      health: 'verde',
-      facturado_dia: 0,
-      empleados_activos: empPorSuc.get(s.id) ?? 0,
-      tickets_dia: 0,
-      alerta: null,
-    }))
+    // Tareas de hoy por sucursal (cumplimiento + escalamientos nivel 3)
+    const fechaAR = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+    }).format(new Date())
+    const ini = `${fechaAR}T00:00:00-03:00`
+    const fin = `${fechaAR}T23:59:59-03:00`
+    const { data: tareasHoy } = await adm
+      .from('tareas')
+      .select('sucursal_id, estado, escalamiento_nivel')
+      .gte('fecha_vencimiento', ini)
+      .lte('fecha_vencimiento', fin)
+      .limit(5000)
+
+    const tareasPorSuc = new Map<string, { total: number; completadas: number; escaladas: number }>()
+    for (const t of (tareasHoy ?? []) as { sucursal_id: string | null; estado: string; escalamiento_nivel: number | null }[]) {
+      if (!t.sucursal_id) continue
+      const a = tareasPorSuc.get(t.sucursal_id) ?? { total: 0, completadas: 0, escaladas: 0 }
+      a.total++
+      if (t.estado === 'completada') a.completadas++
+      if ((t.escalamiento_nivel ?? 0) >= 3) a.escaladas++
+      tareasPorSuc.set(t.sucursal_id, a)
+    }
+
+    const result: SucursalLive[] = sucs.map((s) => {
+      const tx = tareasPorSuc.get(s.id) ?? { total: 0, completadas: 0, escaladas: 0 }
+      const pct = tx.total > 0 ? Math.round((tx.completadas / tx.total) * 100) : null
+      const health: SucursalLive['health'] =
+        tx.escaladas > 0 ? 'rojo' : pct != null && pct < 70 ? 'amarillo' : 'verde'
+      return {
+        sucursal_id: s.id,
+        nombre: s.nombre,
+        codigo: s.codigo,
+        health,
+        facturado_dia: 0,
+        empleados_activos: empPorSuc.get(s.id) ?? 0,
+        tickets_dia: 0,
+        tareas_total: tx.total,
+        tareas_completadas: tx.completadas,
+        tareas_pct: pct,
+        alerta: tx.escaladas > 0 ? `${tx.escaladas} tarea${tx.escaladas === 1 ? '' : 's'} escalada${tx.escaladas === 1 ? '' : 's'}` : null,
+      }
+    })
 
     return NextResponse.json({ ok: true, sucursales: result })
   } catch {
