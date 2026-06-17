@@ -205,7 +205,7 @@ generar-agenda/escalamiento/metricas-nightly/reporte-semanal.
 | T2 | Admin turnos + supervisores | ✅ |
 | T3 | Tipos de tareas CRUD + seed 16 | ✅ (0038 aplicada) |
 | T4 | Motor recurrencias + agenda + crons | ✅ |
-| T5 | Bandeja + pool + reclamar | ⬜ |
+| T5 | Bandeja + pool + reclamar | ✅ |
 | T6 | Ejecución + evidencias + workflow | ⬜ |
 | T7 | Cola de verificación supervisor | ⬜ |
 | T8 | Escalamiento + notificaciones | ⬜ |
@@ -268,7 +268,26 @@ la fase F6-T (módulo de tareas), por pedido del usuario.
 ---
 
 ## 👉 PRÓXIMA ACCIÓN (F6-T)
-**T5 · Bandeja + pool + reclamar.** Reescribir `/admin/tareas` (hoy bandeja F6
+**T6 · Ejecución + evidencias + workflow.** Detalle `/admin/tareas/[id]` (existe
+de F6, viejo modelo) → 2 columnas: izq descripción + checklist interactivo +
+evidencias + comentarios; der workflow stepper + info + historial. Máquina de
+estados en `lib/tareas/workflow.ts` (extender): reclamada→en_progreso→[evidencias
+completas]→pre-verif NORA→en_verificacion (si verificacion_humana) / completada
+(si NORA aprueba y no humana). Al completar: tiempos (tiempo_resolucion_min,
+demora_min), puntos (100%, 60% si hubo rechazo), badges, nivel. Componentes
+`components/tareas/evidence/`: foto (capture camera + compresión), firma (canvas),
+checklist, gps (geolocation + distancia <300m a sucursal), monto_arqueo,
+foto_termometro, archivo, nota. Subida a bucket `tareas-evidencias`
+`{tarea_id}/{tipo}-{ts}`. Completar tarea simple ≤3 taps. Luego T7 (cola
+verificación), T8 (escalamiento), T9–T15.
+
+> NOTA T5: `/admin/tareas` reescrita a 4 tabs (Mi día / Pool de mi turno / Mi
+> sucursal / Todas) modelo nuevo. Reclamo atómico en `POST /api/tareas/[id]/reclamar`
+> (UPDATE condicionado a reclamada_por IS NULL → si 0 filas, 409 "ya la tomó X").
+> Cards con countdown color, "Asignada por", POOL pill, "La hago yo". Progreso del
+> día. `bandeja-client.tsx` (viejo) queda sin uso (no se borró). Kanban + filtros
+> avanzados diferidos (no hay @dnd-kit) — documentado. `NuevaTareaSheet` (F6) se
+> reusa; el bloque "Crear con NORA" se integra en T12. Reescribir `/admin/tareas` (hoy bandeja F6
 viejo modelo) a tabs por rol: "Mi día" (asignadas+reclamadas hoy, progreso),
 "Pool de mi turno" (pool_turno del turno actual + pool_sucursal, con botón "La
 hago yo" → reclamo atómico: update tareas set responsable_id, reclamada_por,
