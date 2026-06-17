@@ -211,7 +211,7 @@ generar-agenda/escalamiento/metricas-nightly/reporte-semanal.
 | T8 | Escalamiento + notificaciones | ✅ |
 | T9 | Motor de métricas | ✅ |
 | T10 | Scorecards y objetivos UI | 🔄 (Mission Control hecho; scorecards/charts sobre F6) |
-| T11 | Gamificación | ⬜ |
+| T11 | Gamificación | ✅ (cableada en T6 + ranking F6) |
 | T12 | NORA en tareas | ⬜ |
 | T13 | Auditoría gaps + adjuntos/comprobantes | ⬜ |
 | T14 | Datos demo | ⬜ |
@@ -268,39 +268,35 @@ la fase F6-T (módulo de tareas), por pedido del usuario.
 ---
 
 ## 👉 PRÓXIMA ACCIÓN (F6-T)
-**T6 · Ejecución + evidencias + workflow.** Detalle `/admin/tareas/[id]` (existe
-de F6, viejo modelo) → 2 columnas: izq descripción + checklist interactivo +
-evidencias + comentarios; der workflow stepper + info + historial. Máquina de
-estados en `lib/tareas/workflow.ts` (extender): reclamada→en_progreso→[evidencias
-completas]→pre-verif NORA→en_verificacion (si verificacion_humana) / completada
-(si NORA aprueba y no humana). Al completar: tiempos (tiempo_resolucion_min,
-demora_min), puntos (100%, 60% si hubo rechazo), badges, nivel. Componentes
-`components/tareas/evidence/`: foto (capture camera + compresión), firma (canvas),
-checklist, gps (geolocation + distancia <300m a sucursal), monto_arqueo,
-foto_termometro, archivo, nota. Subida a bucket `tareas-evidencias`
-`{tarea_id}/{tipo}-{ts}`. Completar tarea simple ≤3 taps. Luego T7 (cola
-verificación), T8 (escalamiento), T9–T15.
+**T12 · NORA en tareas.** Agregar tools en `lib/ai/tools.ts`: `crear_tarea`
+(preview→confirmación), `listar_tareas`, `reclamar_tarea` (reusa
+`/api/tareas/[id]/reclamar`), `estado_cumplimiento(scope,id,periodo)` (lee
+snapshots T9), `quien_esta_en_riesgo` (proyección<80% de empleados_objetivos),
+`resumen_cola_verificacion`. `parse-task` y `verify-evidence` YA existen (F6) —
+falta: wirear verify-evidence automático al subir la última evidencia (en
+`task-execution-panel`/`/api/tareas/[id]/accion`), y el bloque "Crear con NORA"
+en `NuevaTareaSheet`. Cron `reporte-semanal` (lunes, daily-aprox por Hobby) →
+`ai_resumenes` + notif. Detección de patrones en `metricas-nightly`.
 
-> NOTA T5: `/admin/tareas` reescrita a 4 tabs (Mi día / Pool de mi turno / Mi
-> sucursal / Todas) modelo nuevo. Reclamo atómico en `POST /api/tareas/[id]/reclamar`
-> (UPDATE condicionado a reclamada_por IS NULL → si 0 filas, 409 "ya la tomó X").
-> Cards con countdown color, "Asignada por", POOL pill, "La hago yo". Progreso del
-> día. `bandeja-client.tsx` (viejo) queda sin uso (no se borró). Kanban + filtros
-> avanzados diferidos (no hay @dnd-kit) — documentado. `NuevaTareaSheet` (F6) se
-> reusa; el bloque "Crear con NORA" se integra en T12. Reescribir `/admin/tareas` (hoy bandeja F6
-viejo modelo) a tabs por rol: "Mi día" (asignadas+reclamadas hoy, progreso),
-"Pool de mi turno" (pool_turno del turno actual + pool_sucursal, con botón "La
-hago yo" → reclamo atómico: update tareas set responsable_id, reclamada_por,
-reclamada_at, estado='reclamada' where id=? and reclamada_por is null → si 0 filas,
-ya la tomó otro), "Mi sucursal" (supervisor/encargado), "Todas" (super_admin).
-Vistas Lista/Kanban. TaskCard nueva (prioridad, "Asignada por {nombre}" si
-creado_por super/gerente, POOL pill, countdown color, iconos evidencia). Botón
-"+ Nueva tarea" (sheet form completo + bloque "Crear con NORA" → /api/nora/parse-task)
-y montar `RegenerarAgendaButton` (super_admin) en el header. Necesita: helper para
-saber el turno actual del user (por hora vs turnos_sucursal de su sucursal) y el
-empleado del user. Reusar/extender `components/tareas/task-card.tsx`,
-`bandeja-client.tsx`, `nueva-tarea-sheet.tsx`. Luego T6 (ejecución+evidencias),
-T7 (cola verificación), T8 (escalamiento), T9–T15.
+Después: **T13 ⭐ Auditoría integral del ERP + adjuntos/comprobantes** (tabla
+`adjuntos` polimórfica + bucket comprobantes [ya creado en 0037] +
+`<ComprobanteUploader/>`/`<ComprobantesList/>` en facturas/pagos/recepciones/
+gastos/cheques/devoluciones + `docs/AUDITORIA-GAPS.md` + fixes) — GRANDE, fresca.
+**T14 ⭐ Datos demo 60 días** (columna `es_demo` + `scripts/seed-demo.ts` +
+endpoints cargar/borrar en config general) — GRANDE, fresca.
+**T15 Cierre** (`docs/OBJETIVOS-NORA-HQ.md`, reconciliar este plan + ERP-PROGRESO,
+tag `v0.7-tareas-completo`).
+
+> ESTADO F6-T: T1–T10 ✅ · T11 (gamificación) ✅ por cableado: el workflow
+> (`/api/tareas/[id]/accion` → `premiar()` → `gamification.alCompletarse`) ya
+> otorga puntos, evalúa badges (10 seed) y recalcula nivel con notificación de
+> subida; `/admin/ranking` (F6) muestra el ranking. Badges de racha/compliance
+> necesitan ventana histórica (deuda F6, diferido). T12–T15 pendientes.
+
+> NOTA T10: Mission Control muestra "Tareas C/T · %" por sucursal con health
+> (amarillo <70%, rojo si hay escalado nivel 3) vía `/api/sucursales/live-status`.
+> Scorecards/sparklines detallados se apoyan en mi-panel/mi-equipo/reportes (F6)
+> + snapshots T9; charts con barras inline (decisión F6 "sin chart lib").
 
 > NOTA T4: cron `generar-agenda` (GET cron-secret / POST super_admin), idempotente
 > por recurrencia+día, dispara por patrón (diaria/semanal·dias/mensual·dia/única).
