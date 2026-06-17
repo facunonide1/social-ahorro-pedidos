@@ -289,7 +289,7 @@ export const NAVEGACION: NavGrupo[] = [
       { label: 'Integraciones / APIs',  href: '/admin/configuracion/integraciones',    icon: 'Plug',      estado: 'placeholder' },
       { label: 'Configuración IA',      href: '/admin/configuracion/ia',               icon: 'Bot',       estado: 'placeholder' },
       { label: 'Auditoría',             href: '/admin/configuracion/auditoria',        icon: 'FileSearch', estado: 'placeholder' },
-      { label: 'Configuración general', href: '/admin/configuracion/general',          icon: 'Settings',  estado: 'placeholder' },
+      { label: 'Configuración general', href: '/admin/configuracion/general',          icon: 'Settings' },
     ],
   },
 ]

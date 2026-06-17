@@ -214,7 +214,7 @@ generar-agenda/escalamiento/metricas-nightly/reporte-semanal.
 | T11 | Gamificación | ✅ (cableada en T6 + ranking F6) |
 | T12 | NORA en tareas | ✅ (pre-verif IA auto + reporte semanal) |
 | T13 | Auditoría gaps + adjuntos/comprobantes | ✅ (0039; 4/6 entidades + gaps doc) |
-| T14 | Datos demo | ⬜ |
+| T14 | Datos demo | ✅ (es_demo 0040; seed tareas+métricas cargado) |
 | T15 | Cierre + tag v0.7-tareas-completo | ⬜ |
 
 ---
