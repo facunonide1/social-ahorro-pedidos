@@ -206,9 +206,9 @@ generar-agenda/escalamiento/metricas-nightly/reporte-semanal.
 | T3 | Tipos de tareas CRUD + seed 16 | ✅ (0038 aplicada) |
 | T4 | Motor recurrencias + agenda + crons | ✅ |
 | T5 | Bandeja + pool + reclamar | ✅ |
-| T6 | Ejecución + evidencias + workflow | ⬜ |
-| T7 | Cola de verificación supervisor | ⬜ |
-| T8 | Escalamiento + notificaciones | ⬜ |
+| T6 | Ejecución + evidencias + workflow | ✅ |
+| T7 | Cola de verificación supervisor | ✅ |
+| T8 | Escalamiento + notificaciones | ✅ |
 | T9 | Motor de métricas | ⬜ |
 | T10 | Scorecards y objetivos UI | ⬜ |
 | T11 | Gamificación | ⬜ |

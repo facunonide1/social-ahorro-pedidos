@@ -3,6 +3,7 @@
     { "path": "/api/ai/resumen-diario",       "schedule": "0 11 * * *" },
     { "path": "/api/cron/generar-agenda",     "schedule": "0 8 * * *" },
     { "path": "/api/cron/marcar-vencidas",    "schedule": "0 12 * * *" },
+    { "path": "/api/cron/escalamiento",       "schedule": "30 12 * * *" },
     { "path": "/api/cron/calcular-objetivos", "schedule": "0 2 * * *" },
     { "path": "/api/cron/check-triggers",     "schedule": "0 9 * * *" }
   ]
