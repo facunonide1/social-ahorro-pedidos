@@ -21,7 +21,7 @@ import {
   SlaIndicator,
 } from '@/components/tareas/task-badges'
 import { WorkflowStepper } from '@/components/tareas/workflow-stepper'
-import { TaskQuickActions } from '@/components/tareas/task-quick-actions'
+import { TaskExecutionPanel } from '@/components/tareas/task-execution-panel'
 import { TaskComments } from '@/components/tareas/task-comments'
 import { TaskHistoryTimeline } from '@/components/tareas/task-history-timeline'
 import { EmpleadoAvatar } from '@/components/empleados/empleado-avatar'
@@ -91,6 +91,23 @@ export default async function TareaDetallePage({
     return u?.nombre || u?.email || uid.slice(0, 8)
   }
 
+  // Workflow v2: responsable + supervisor
+  const tareaAny = tarea as any
+  const esResponsable = tareaAny.responsable_id === profile.id
+  const gerencia = profile.rol === 'super_admin' || profile.rol === 'gerente'
+  let esSupervisor = gerencia
+  if (!esSupervisor && tareaAny.sucursal_id) {
+    const { data: sup } = await sb
+      .from('supervisores_tareas')
+      .select('id')
+      .eq('sucursal_id', tareaAny.sucursal_id)
+      .eq('user_id', profile.id)
+      .eq('activo', true)
+      .maybeSingle()
+    esSupervisor = Boolean(sup)
+  }
+  const tipoAny = tipo as any
+
   return (
     <>
       <PageHeader
@@ -117,11 +134,15 @@ export default async function TareaDetallePage({
                 estado={tarea.estado}
                 niveles={(tipo?.niveles_workflow ?? 1) as 1 | 2 | 3}
               />
-              <TaskQuickActions
-                tarea={tarea}
-                tipo={tipo ?? null}
-                currentUserId={profile.id}
-                currentUserRol={profile.rol}
+              <TaskExecutionPanel
+                tareaId={tarea.id}
+                estado={tarea.estado}
+                esResponsable={esResponsable}
+                esSupervisor={esSupervisor}
+                requeridas={(tipoAny?.evidencia_requerida ?? []) as string[]}
+                checklistItems={(tipoAny?.checklist_items ?? null) as string[] | null}
+                verificacionHumana={tareaAny.verificacion_humana !== false}
+                preVerificacion={tareaAny.pre_verificacion_ia ?? null}
               />
             </CardContent>
           </Card>
