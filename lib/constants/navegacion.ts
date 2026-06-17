@@ -217,6 +217,7 @@ export const NAVEGACION: NavGrupo[] = [
       { label: 'Mi panel',       href: '/admin/mi-panel',                 icon: 'User' },
       { label: 'Mi equipo',      href: '/admin/mi-equipo',                icon: 'UsersRound', rolesPermitidos: ROLES_SUPERVISOR },
       { label: 'Tareas',         href: '/admin/tareas',                   icon: 'ListChecks', badge: 'tareasPendientes' },
+      { label: 'Verificaciones', href: '/admin/verificaciones',           icon: 'CheckCircle2', badge: 'verificacionesPendientes' },
       { label: 'Pedidos / CRM',  href: '/dashboard',                      icon: 'Package' },
       { label: 'Stock',          href: '/hub/operaciones/stock',          icon: 'Boxes' },
       { label: 'Vencimientos',   href: '/hub/operaciones/vencimientos',   icon: 'CalendarClock' },
