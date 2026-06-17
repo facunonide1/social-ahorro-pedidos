@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { evidenciasFaltantes, estadoAlCompletar, type EvidenciaItem } from '@/lib/tareas/workflow-v2'
 import { alCompletarse } from '@/lib/tareas/gamification'
+import { verificarEvidencia, isSupportedEvidenceMediaType } from '@/lib/ai/verify-evidence'
+import { hasAnthropicKey } from '@/lib/ai/client'
 import type { AdminRole } from '@/lib/types/admin'
 
 export const dynamic = 'force-dynamic'
@@ -85,9 +87,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ error: `Faltan evidencias: ${faltan.join(', ')}` }, { status: 400 })
     }
 
-    const destino = estadoAlCompletar(tarea.verificacion_humana !== false)
-    const patch: Record<string, unknown> = { evidencias, estado: destino }
+    // Pre-verificación IA (NORA) sobre la primera foto, si el tipo lo pide.
+    const preIA = await preVerificarIA(adm, tipo, evidencias)
+    const humana = tarea.verificacion_humana !== false
 
+    // Si NORA sola (sin verificación humana) y rechaza → vuelve a en_progreso.
+    if (!humana && preIA && preIA.resultado === 'rechazada') {
+      await adm.from('tareas').update({ evidencias, pre_verificacion_ia: preIA }).eq('id', tarea.id)
+      return NextResponse.json({ ok: true, estado: 'en_progreso', nora: preIA })
+    }
+
+    const destino = estadoAlCompletar(humana)
+    const patch: Record<string, unknown> = { evidencias, estado: destino }
+    if (preIA) patch.pre_verificacion_ia = preIA
     if (destino === 'completada') {
       Object.assign(patch, calcCompletar(tarea, now))
     }
@@ -97,7 +109,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (destino === 'completada') {
       await premiar(adm, tarea.id)
     }
-    return NextResponse.json({ ok: true, estado: destino })
+    return NextResponse.json({ ok: true, estado: destino, nora: preIA })
   }
 
   // ---- APROBAR (supervisor) ----
@@ -160,6 +172,50 @@ function calcCompletar(tarea: any, now: Date) {
     fecha_completada: now.toISOString(),
     tiempo_resolucion_min,
     demora_min,
+  }
+}
+
+/**
+ * Pre-verificación IA de NORA sobre la primera evidencia con foto.
+ * Best-effort: si falla o no hay foto/prompt/key, devuelve null → verificación
+ * humana normal.
+ */
+async function preVerificarIA(
+  adm: any,
+  tipo: any,
+  evidencias: EvidenciaItem[],
+): Promise<{ resultado: string; motivo: string; analizado_at: string } | null> {
+  try {
+    if (!hasAnthropicKey()) return null
+    if (!tipo?.verificacion_ia) return null
+    const prompt = tipo?.ia_prompt_verificacion
+    if (!prompt) return null
+
+    const foto = evidencias.find(
+      (e) => ['foto', 'foto_termometro', 'archivo'].includes(e.tipo) && e.url && !e.url.startsWith('http'),
+    )
+    if (!foto?.url) return null
+
+    const ext = (foto.url.split('.').pop() || 'jpg').toLowerCase()
+    const media = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg'
+    if (!isSupportedEvidenceMediaType(media)) return null
+
+    const { data: signed } = await adm.storage.from('tareas-evidencias').createSignedUrl(foto.url, 600)
+    if (!signed?.signedUrl) return null
+    const res = await fetch(signed.signedUrl)
+    if (!res.ok) return null
+    const buf = Buffer.from(await res.arrayBuffer())
+    const base64 = buf.toString('base64')
+
+    const promptFull = foto.valor ? `${prompt}\n(Dato declarado: ${foto.valor})` : prompt
+    const verdict = await verificarEvidencia(base64, media, promptFull)
+    return {
+      resultado: verdict.aprobado ? 'aprobada' : 'rechazada',
+      motivo: verdict.razon,
+      analizado_at: new Date().toISOString(),
+    }
+  } catch {
+    return null
   }
 }
 

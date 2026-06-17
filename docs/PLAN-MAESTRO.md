@@ -212,7 +212,7 @@ generar-agenda/escalamiento/metricas-nightly/reporte-semanal.
 | T9 | Motor de métricas | ✅ |
 | T10 | Scorecards y objetivos UI | 🔄 (Mission Control hecho; scorecards/charts sobre F6) |
 | T11 | Gamificación | ✅ (cableada en T6 + ranking F6) |
-| T12 | NORA en tareas | ⬜ |
+| T12 | NORA en tareas | ✅ (pre-verif IA auto + reporte semanal) |
 | T13 | Auditoría gaps + adjuntos/comprobantes | ⬜ |
 | T14 | Datos demo | ⬜ |
 | T15 | Cierre + tag v0.7-tareas-completo | ⬜ |

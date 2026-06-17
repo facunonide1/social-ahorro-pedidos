@@ -5,6 +5,7 @@
     { "path": "/api/cron/marcar-vencidas",    "schedule": "0 12 * * *" },
     { "path": "/api/cron/escalamiento",       "schedule": "30 12 * * *" },
     { "path": "/api/cron/metricas-nightly",   "schedule": "0 3 * * *" },
+    { "path": "/api/cron/reporte-semanal",    "schedule": "0 10 * * 1" },
     { "path": "/api/cron/calcular-objetivos", "schedule": "0 2 * * *" },
     { "path": "/api/cron/check-triggers",     "schedule": "0 9 * * *" }
   ]
