@@ -134,12 +134,14 @@ export default function Conteo({
       setErr(upErr.message)
       return
     }
-    const { error: rpcErr } = await sb.rpc('cerrar_inventario_fisico', {
-      p_inventario: inventarioId,
+    const res = await fetch('/api/inventario/cerrar-inventario', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ inventario_id: inventarioId }),
     })
+    const j = await res.json()
     setBusy(null)
-    if (rpcErr) {
-      setErr(rpcErr.message)
+    if (!res.ok) {
+      setErr(j?.error || 'No se pudo cerrar')
       return
     }
     router.refresh()

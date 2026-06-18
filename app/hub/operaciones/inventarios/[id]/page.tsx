@@ -32,12 +32,12 @@ type InvDetail = InventarioFisico & {
 
 type StockLine = {
   producto_id: string
-  cantidad_actual: number
-  productos: { nombre: string | null; codigo_interno: string | null } | null
+  cantidad: number
+  productos_catalogo: { nombre: string | null; sku: string | null } | null
 }
 
 type ItemRow = InventarioItem & {
-  productos: { nombre: string | null; codigo_interno: string | null } | null
+  productos_catalogo: { nombre: string | null; sku: string | null } | null
 }
 
 export default async function InventarioDetailPage({
@@ -61,12 +61,12 @@ export default async function InventarioDetailPage({
 
   const [stockRes, itemsRes] = await Promise.all([
     sb
-      .from('stock_sucursal')
-      .select('producto_id, cantidad_actual, productos(nombre, codigo_interno)')
+      .from('stock_items')
+      .select('producto_id, cantidad, productos_catalogo(nombre, sku)')
       .eq('sucursal_id', inv.sucursal_id),
     sb
       .from('inventario_items')
-      .select('*, productos(nombre, codigo_interno)')
+      .select('*, productos_catalogo(nombre, sku)')
       .eq('inventario_id', inv.id),
   ])
 
@@ -85,9 +85,9 @@ export default async function InventarioDetailPage({
     const saved = itemByProducto.get(s.producto_id)
     return {
       producto_id: s.producto_id,
-      nombre: s.productos?.nombre || '—',
-      codigo: s.productos?.codigo_interno ?? null,
-      stock_sistema: saved ? Number(saved.stock_sistema) : Number(s.cantidad_actual),
+      nombre: s.productos_catalogo?.nombre || '—',
+      codigo: s.productos_catalogo?.sku ?? null,
+      stock_sistema: saved ? Number(saved.stock_sistema) : Number(s.cantidad),
       stock_contado: saved?.stock_contado != null ? Number(saved.stock_contado) : null,
     }
   })
@@ -96,8 +96,8 @@ export default async function InventarioDetailPage({
     if (!enStock.has(it.producto_id)) {
       rows.push({
         producto_id: it.producto_id,
-        nombre: it.productos?.nombre || '—',
-        codigo: it.productos?.codigo_interno ?? null,
+        nombre: it.productos_catalogo?.nombre || '—',
+        codigo: it.productos_catalogo?.sku ?? null,
         stock_sistema: Number(it.stock_sistema),
         stock_contado: it.stock_contado != null ? Number(it.stock_contado) : null,
       })
@@ -157,8 +157,8 @@ export default async function InventarioDetailPage({
                     items
                       .slice()
                       .sort((a, b) =>
-                        (a.productos?.nombre || '').localeCompare(
-                          b.productos?.nombre || '',
+                        (a.productos_catalogo?.nombre || '').localeCompare(
+                          b.productos_catalogo?.nombre || '',
                           'es',
                         ),
                       )
@@ -167,7 +167,7 @@ export default async function InventarioDetailPage({
                         return (
                           <TableRow key={it.id}>
                             <TableCell className="font-medium">
-                              {it.productos?.nombre || '—'}
+                              {it.productos_catalogo?.nombre || '—'}
                             </TableCell>
                             <TableCell className="text-right tabular-nums text-muted-foreground">
                               {Number(it.stock_sistema).toLocaleString('es-AR')}

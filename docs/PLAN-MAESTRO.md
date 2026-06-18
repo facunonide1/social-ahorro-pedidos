@@ -31,7 +31,7 @@ por diferencia, análisis y disparadores de tareas. Ver auditoría previa en
 | T8 · Alertas ⭐ (9 tipos + stock fantasma) | ✅ |
 | T9 · Vencimientos (acciones transferir/devolver/ofertar) | ✅ |
 | T10 · Transferencias + redistribución (mueven stock) | ✅ |
-| T11 · Inventarios (4 sucursales reales) | ⬜ |
+| T11 · Inventarios (4 sucursales reales) | ✅ |
 | T12 · CrearTareaRapida + recepción→stock + NORA tools + demo + tag v0.8 | ⬜ |
 
 ### 👉 PRÓXIMA ACCIÓN: **T11 · Inventarios (rehacer)** (`/hub/operaciones/inventarios`). Usar las 4 sucursales reales (sacar "Sucursal Central" demo). Conteo lee stock_items + productos_catalogo (no stock_sucursal). "Cerrar y ajustar stock" inserta movimientos tipo `conteo` (delta = contado − sistema) → trigger deriva stock_items (NO usar la RPC vieja cerrar_inventario_fisico que toca stock_sucursal). KPIs Coinciden/Con diferencia/Faltante en $. Botón "Tarea: recontar". Export Excel. Luego T12: CrearTareaRapida (transversal, sheet 2 taps, cablear en alertas/vencimientos/inventarios/reposición/stock) + recepción→stock (movimiento recepcion + lotes) + NORA tools (get_stock/get_vencimientos/get_mas_vendidos/get_sugerencia_reposicion/get_dinero_dormido/crear_transferencia) + Mission Control card inventario + demo 60 días (60+ productos, stock 4 suc, 12 lotes escalonados, 60d movimientos venta, 3 imports, 2 transferencias, alertas, 1 inventario) + tag v0.8-operaciones-completo + docs.
