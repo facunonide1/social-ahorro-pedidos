@@ -193,6 +193,12 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
         roles: ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'auditor'],
       },
       {
+        label: 'Caja',
+        href: '/hub/finanzas/caja',
+        icon: Wallet,
+        roles: ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'sucursal', 'auditor'],
+      },
+      {
         label: 'Cuentas bancarias',
         href: '/hub/finanzas/cuentas',
         icon: Landmark,
