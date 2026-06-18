@@ -19,7 +19,7 @@ con `sucursal_id` en todo para escalar.
 | T1 · Schema (0044: ALTER proveedores/facturas/pagos + gastos_fijos, caja multinivel [turnos/general/movimientos+trigger saldo], conciliacion, config import, enums) | ✅ aplicada |
 | T2 · Tablero · T3 Proveedores+ctacte · T4 Documentos · T5 Pagos⭐ · T6 Gastos fijos · T7 Caja multinivel⭐ · T8 Cuentas+conciliación · T9 Cheques+impuestos · T10 Calendario⭐ · T11 NORA+alertas+demo+tag v0.9 | ⬜ |
 
-### 👉 PRÓXIMA ACCIÓN: **T2 · Tablero `/hub/finanzas`** — 4 KPIs (deuda
+### 👉 PRÓXIMA ACCIÓN: **T3 · Proveedores + cuenta corriente** (`/hub/finanzas/proveedores`). Ficha con datos+CBU/alias+forma de pago+condición+bonif volumen+desc pronto pago+score+KPIs (le debés/comprado 90d/entregas tarde). Tab "Cuenta corriente": saldo = documentos (signo por tipo_documento, nota_credito resta) − pagos; movimientos; export Excel. Botones Nueva factura/Ver cta cte/Documentos. Reusa proveedores (0044). Sigue T4 documentos, T5 pagos⭐, T6-T11.
 proveedores, vencido, vence esta semana, saldo bancos) + NoraCard + tabla de
 próximos vencimientos unificada (facturas+gastos_fijos+impuestos+cheques) con
 botón Pagar. Menú Finanzas (10 secciones) se wirea por pantalla. Decisiones:
