@@ -139,7 +139,7 @@ export function ClienteForm({
         return
       }
       toast.success('Cliente actualizado.')
-      router.push(`/hub/clientes/${cliente.id}`)
+      router.push(`/admin/clientes/${cliente.id}`)
       router.refresh()
       return
     }
@@ -155,7 +155,7 @@ export function ClienteForm({
       return
     }
     toast.success('Cliente creado.')
-    router.push(`/hub/clientes/${data.id}`)
+    router.push(`/admin/clientes/${data.id}`)
     router.refresh()
   }
 

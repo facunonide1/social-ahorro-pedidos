@@ -107,8 +107,8 @@ export default function ProductoForm({
       }
       router.push(
         data?.id
-          ? `/hub/operaciones/stock/${data.id}`
-          : '/hub/operaciones/stock',
+          ? `/admin/operaciones/stock/${data.id}`
+          : '/admin/operaciones/stock',
       )
       router.refresh()
     } else if (initial) {

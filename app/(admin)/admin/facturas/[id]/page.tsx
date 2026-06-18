@@ -140,7 +140,7 @@ export default async function FacturaDetailPage({
           </span>
         }
         breadcrumbs={[
-          { label: 'Facturas', href: '/hub/facturas' },
+          { label: 'Facturas', href: '/admin/facturas' },
           { label: comprobante },
         ]}
         actions={
@@ -297,7 +297,7 @@ export default async function FacturaDetailPage({
                 >
                   <div className="min-w-0">
                     <Link
-                      href={a.pago ? `/hub/pagos/${a.pago.id}` : '#'}
+                      href={a.pago ? `/admin/pagos/${a.pago.id}` : '#'}
                       className="text-sm font-semibold text-primary hover:underline"
                     >
                       {a.pago?.numero_orden_pago || '(sin nro)'}

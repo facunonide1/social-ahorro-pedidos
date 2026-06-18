@@ -166,7 +166,7 @@ export function UserMenu({ profile }: { profile: HubProfile }) {
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem onSelect={() => router.push('/hub')} className={cn('gap-2')}>
+        <DropdownMenuItem onSelect={() => router.push('/admin')} className={cn('gap-2')}>
           <ExternalLink className="size-4" />
           <div className="flex flex-col">
             <span>Hub clásico</span>

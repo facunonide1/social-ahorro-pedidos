@@ -92,7 +92,7 @@ export default async function TransferenciasPage() {
         description={`${rows.length} transferencia${rows.length === 1 ? '' : 's'}`}
         actions={
           <Button asChild>
-            <Link href="/hub/operaciones/transferencias/nueva">
+            <Link href="/admin/operaciones/transferencias/nueva">
               <Plus className="size-4" />
               Nueva transferencia
             </Link>
@@ -125,7 +125,7 @@ export default async function TransferenciasPage() {
               {redis.slice(0, 6).map((s, i) => (
                 <li key={i} className="flex items-center justify-between gap-2 text-sm">
                   <span><b>{s.cantidad}u</b> de {s.producto} · {s.desde} → {s.hacia}</span>
-                  <Button asChild size="sm" variant="outline" className="h-7 text-xs"><Link href="/hub/operaciones/transferencias/nueva">Crear</Link></Button>
+                  <Button asChild size="sm" variant="outline" className="h-7 text-xs"><Link href="/admin/operaciones/transferencias/nueva">Crear</Link></Button>
                 </li>
               ))}
             </ul>
@@ -172,7 +172,7 @@ export default async function TransferenciasPage() {
                     </TableCell>
                     <TableCell>
                       <Button asChild variant="ghost" size="sm">
-                        <Link href={`/hub/operaciones/transferencias/${r.id}`}>
+                        <Link href={`/admin/operaciones/transferencias/${r.id}`}>
                           Ver
                           <ArrowRight className="size-3.5" />
                         </Link>

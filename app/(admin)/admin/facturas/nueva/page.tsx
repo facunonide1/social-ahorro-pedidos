@@ -27,7 +27,7 @@ export default async function NuevaFacturaPage() {
       <PageHeader
         title="Nueva factura"
         breadcrumbs={[
-          { label: 'Facturas', href: '/hub/facturas' },
+          { label: 'Facturas', href: '/admin/facturas' },
           { label: 'Nueva' },
         ]}
       />

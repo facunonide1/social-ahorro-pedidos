@@ -94,7 +94,7 @@ export default async function DevolucionDetailPage({
         title={`Devolución · ${d.proveedores?.razon_social || '—'}`}
         description={`${new Date(d.fecha).toLocaleDateString('es-AR')} · ${MOTIVO_DEVOLUCION_LABELS[d.motivo]}`}
         breadcrumbs={[
-          { label: 'Devoluciones', href: '/hub/compras/devoluciones' },
+          { label: 'Devoluciones', href: '/admin/compras/devoluciones' },
           { label: 'Detalle' },
         ]}
         actions={

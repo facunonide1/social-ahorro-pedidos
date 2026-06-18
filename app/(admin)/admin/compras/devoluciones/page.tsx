@@ -64,7 +64,7 @@ export default async function DevolucionesPage() {
         description={`${rows.length} devolución${rows.length === 1 ? '' : 'es'}`}
         actions={
           <Button asChild>
-            <Link href="/hub/compras/devoluciones/nueva">
+            <Link href="/admin/compras/devoluciones/nueva">
               <Plus className="size-4" />
               Nueva devolución
             </Link>
@@ -136,7 +136,7 @@ export default async function DevolucionesPage() {
                     </TableCell>
                     <TableCell>
                       <Button asChild variant="ghost" size="sm">
-                        <Link href={`/hub/compras/devoluciones/${r.id}`}>
+                        <Link href={`/admin/compras/devoluciones/${r.id}`}>
                           Ver
                           <ArrowRight className="size-3.5" />
                         </Link>

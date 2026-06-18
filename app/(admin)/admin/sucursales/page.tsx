@@ -36,7 +36,7 @@ export default async function SucursalesPage() {
         description={`${list.length} sucursal${list.length === 1 ? '' : 'es'}`}
         actions={
           <Button asChild>
-            <Link href="/hub/sucursales/nueva">
+            <Link href="/admin/sucursales/nueva">
               <Plus className="size-4" />
               Nueva sucursal
             </Link>
@@ -73,7 +73,7 @@ function SucursalCard({ sucursal: s }: { sucursal: Sucursal }) {
   const direccion = [s.direccion, s.localidad, s.provincia].filter(Boolean).join(', ')
 
   return (
-    <Link href={`/hub/sucursales/${s.id}`} className="group">
+    <Link href={`/admin/sucursales/${s.id}`} className="group">
       <Card
         className={cn(
           'h-full transition-colors hover:border-primary/40 hover:bg-accent/30',

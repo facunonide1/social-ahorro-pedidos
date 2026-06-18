@@ -125,7 +125,7 @@ export default async function CajaDiariaPage() {
                 {cajas.map((c) => (
                   <li key={c.id}>
                     <Link
-                      href={`/hub/sucursales/caja/${c.id}`}
+                      href={`/admin/sucursales/caja/${c.id}`}
                       className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-accent/40"
                     >
                       <div className="min-w-0">

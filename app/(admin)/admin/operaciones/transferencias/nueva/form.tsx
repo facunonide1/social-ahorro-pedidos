@@ -94,7 +94,7 @@ export default function TransferenciaForm({
       })),
     )
     setBusy(false)
-    router.push(`/hub/operaciones/transferencias/${trans.id}`)
+    router.push(`/admin/operaciones/transferencias/${trans.id}`)
     router.refresh()
   }
 

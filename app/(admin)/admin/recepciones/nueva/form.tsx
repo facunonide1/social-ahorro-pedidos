@@ -158,7 +158,7 @@ export default function NuevaRecepcionForm({
       setErr(json.hint || json.error || 'No se pudo guardar la recepción.')
       return
     }
-    router.push(`/hub/recepciones/${json.recepcionId}`)
+    router.push(`/admin/recepciones/${json.recepcionId}`)
     router.refresh()
   }
 

@@ -90,7 +90,7 @@ export function EmpleadoForm({
         return
       }
       toast.success('Empleado actualizado.')
-      router.push(`/hub/rrhh/empleados/${empleado.id}`)
+      router.push(`/admin/rrhh/empleados/${empleado.id}`)
       router.refresh()
       return
     }
@@ -106,7 +106,7 @@ export function EmpleadoForm({
       return
     }
     toast.success('Empleado creado.')
-    router.push(`/hub/rrhh/empleados/${data.id}`)
+    router.push(`/admin/rrhh/empleados/${data.id}`)
     router.refresh()
   }
 

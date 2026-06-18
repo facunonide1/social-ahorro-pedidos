@@ -112,7 +112,7 @@ export default async function PagoDetailPage({
           </span>
         }
         breadcrumbs={[
-          { label: 'Pagos', href: '/hub/pagos' },
+          { label: 'Pagos', href: '/admin/pagos' },
           { label: numeroOP },
         ]}
         actions={<PagoEstadoBadge estado={p.estado} />}
@@ -226,7 +226,7 @@ export default async function PagoDetailPage({
                         </TableCell>
                         <TableCell>
                           <Button asChild variant="ghost" size="sm">
-                            <Link href={`/hub/facturas/${f.id}`}>
+                            <Link href={`/admin/facturas/${f.id}`}>
                               Ver
                               <ArrowRight className="size-3.5" />
                             </Link>

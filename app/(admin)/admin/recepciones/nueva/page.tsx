@@ -25,7 +25,7 @@ export default async function NuevaRecepcionPage() {
         title="Nueva recepción"
         description="Cargá los items y las cantidades. El estado se calcula automáticamente."
         breadcrumbs={[
-          { label: 'Recepciones', href: '/hub/recepciones' },
+          { label: 'Recepciones', href: '/admin/recepciones' },
           { label: 'Nueva' },
         ]}
       />

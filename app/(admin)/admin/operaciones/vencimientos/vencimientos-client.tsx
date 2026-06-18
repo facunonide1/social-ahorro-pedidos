@@ -111,7 +111,7 @@ export function VencimientosClient({ rows, riesgoTotal }: { rows: LoteRow[]; rie
 function AccionBtn({ r }: { r: LoteRow }) {
   if (r.accion === 'ok') return <span className="text-xs text-emerald-600 dark:text-emerald-400">Se vende a tiempo</span>
   if (r.accion === 'baja') return <span className="text-xs text-rose-600 dark:text-rose-400">Dar de baja</span>
-  if (r.accion === 'transferir') return <Button asChild size="sm" variant="outline" className="h-7 text-xs"><Link href="/hub/operaciones/transferencias/nueva"><ArrowRightLeft className="size-3.5" /> Transferir a {r.targetSucNombre}</Link></Button>
-  if (r.accion === 'devolver') return <Button asChild size="sm" variant="outline" className="h-7 text-xs"><Link href="/hub/compras/devoluciones/nueva"><Undo2 className="size-3.5" /> Devolver al proveedor</Link></Button>
+  if (r.accion === 'transferir') return <Button asChild size="sm" variant="outline" className="h-7 text-xs"><Link href="/admin/operaciones/transferencias/nueva"><ArrowRightLeft className="size-3.5" /> Transferir a {r.targetSucNombre}</Link></Button>
+  if (r.accion === 'devolver') return <Button asChild size="sm" variant="outline" className="h-7 text-xs"><Link href="/admin/compras/devoluciones/nueva"><Undo2 className="size-3.5" /> Devolver al proveedor</Link></Button>
   return <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => toast.message(`Ofertar −${r.descuento}%`, { description: 'La publicación a la cuponera se integra en una pasada dedicada.' })}><Tag className="size-3.5" /> Ofertar −{r.descuento}%</Button>
 }

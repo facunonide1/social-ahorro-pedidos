@@ -87,7 +87,7 @@ export default async function TransferenciaDetailPage({
         title={`${t.origen?.nombre || '—'} → ${t.destino?.nombre || '—'}`}
         description={`Solicitada el ${new Date(t.fecha_solicitud).toLocaleDateString('es-AR')}`}
         breadcrumbs={[
-          { label: 'Transferencias', href: '/hub/operaciones/transferencias' },
+          { label: 'Transferencias', href: '/admin/operaciones/transferencias' },
           { label: 'Detalle' },
         ]}
         actions={

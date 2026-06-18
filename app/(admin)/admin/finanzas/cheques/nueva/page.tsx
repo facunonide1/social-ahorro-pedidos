@@ -31,7 +31,7 @@ export default async function NuevoChequePage() {
       <PageHeader
         title="Nuevo cheque"
         breadcrumbs={[
-          { label: 'Cheques', href: '/hub/finanzas/cheques' },
+          { label: 'Cheques', href: '/admin/finanzas/cheques' },
           { label: 'Nuevo' },
         ]}
       />

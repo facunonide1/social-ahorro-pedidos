@@ -205,7 +205,7 @@ export default function NuevaFacturaForm({
     }
 
     setBusy(false)
-    router.push(`/hub/facturas/${facData.id}`)
+    router.push(`/admin/facturas/${facData.id}`)
     router.refresh()
   }
 

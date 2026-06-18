@@ -66,7 +66,7 @@ export default async function CajaDetallePage({
         })}
         breadcrumbs={[
           { label: 'Sucursales' },
-          { label: 'Caja diaria', href: '/hub/sucursales/caja' },
+          { label: 'Caja diaria', href: '/admin/sucursales/caja' },
           { label: sucursal?.nombre ?? 'Caja' },
         ]}
       />

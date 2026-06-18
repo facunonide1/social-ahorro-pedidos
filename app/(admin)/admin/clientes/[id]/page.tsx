@@ -63,7 +63,7 @@ export default async function ClienteDetallePage({
         }
         breadcrumbs={[
           { label: 'Comercial' },
-          { label: 'Clientes', href: '/hub/clientes' },
+          { label: 'Clientes', href: '/admin/clientes' },
           { label: cliente.razon_social },
         ]}
         tabs={
@@ -71,12 +71,12 @@ export default async function ClienteDetallePage({
             ? [
                 {
                   label: 'Ficha',
-                  href: `/hub/clientes/${cliente.id}`,
+                  href: `/admin/clientes/${cliente.id}`,
                   active: !editando,
                 },
                 {
                   label: 'Editar',
-                  href: `/hub/clientes/${cliente.id}?modo=editar`,
+                  href: `/admin/clientes/${cliente.id}?modo=editar`,
                   active: editando,
                 },
               ]

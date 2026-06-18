@@ -21,11 +21,11 @@ type QuickAction = {
 
 const ACTIONS: QuickAction[] = [
   { label: 'Nuevo pedido',      href: '/pedidos/nuevo',                      icon: Plus,         color: 'text-violet-500' },
-  { label: 'Cargar factura',    href: '/hub/facturas/nueva',                 icon: FileText,     color: 'text-emerald-500' },
-  { label: 'Registrar pago',    href: '/hub/pagos/nuevo',                    icon: Banknote,     color: 'text-sky-500' },
-  { label: 'Aprobar pendientes', href: '/hub/aprobaciones',                  icon: CheckCircle2, color: 'text-amber-500' },
+  { label: 'Cargar factura',    href: '/admin/facturas/nueva',                 icon: FileText,     color: 'text-emerald-500' },
+  { label: 'Registrar pago',    href: '/admin/pagos/nuevo',                    icon: Banknote,     color: 'text-sky-500' },
+  { label: 'Aprobar pendientes', href: '/admin/aprobaciones',                  icon: CheckCircle2, color: 'text-amber-500' },
   { label: 'Nueva tarea',       href: '/admin/tareas',                       icon: ListPlus,     color: 'text-teal-500' },
-  { label: 'Stock crítico',     href: '/hub/operaciones/stock?filtro=critico', icon: PackageX,   color: 'text-rose-500' },
+  { label: 'Stock crítico',     href: '/admin/operaciones/stock?filtro=critico', icon: PackageX,   color: 'text-rose-500' },
 ]
 
 /** Grid de 6 acciones rápidas del Mission Control (F6.5.T4). */

@@ -62,7 +62,7 @@ export default async function ClientesCrmPage() {
         actions={
           canCreate ? (
             <Button asChild>
-              <Link href="/hub/clientes/nuevo">
+              <Link href="/admin/clientes/nuevo">
                 <Plus className="size-4" />
                 Nuevo cliente
               </Link>
@@ -113,7 +113,7 @@ export default async function ClientesCrmPage() {
               </div>
               {canCreate && (
                 <Button asChild variant="outline">
-                  <Link href="/hub/clientes/nuevo">
+                  <Link href="/admin/clientes/nuevo">
                     <Plus className="size-4" />
                     Cargar el primero
                   </Link>
@@ -125,7 +125,7 @@ export default async function ClientesCrmPage() {
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           {clientes.map((c) => (
-            <Link key={c.id} href={`/hub/clientes/${c.id}`} className="group">
+            <Link key={c.id} href={`/admin/clientes/${c.id}`} className="group">
               <Card
                 className={cn(
                   'h-full transition-colors hover:border-primary/40 hover:bg-accent/30',

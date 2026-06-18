@@ -19,10 +19,10 @@ export default async function CalendarioPage() {
   ])
 
   const venc: Vencimiento[] = []
-  for (const f of (facturas ?? []) as any[]) if (f.fecha_vencimiento && f.tipo_documento !== 'nota_credito') venc.push({ id: `f-${f.id}`, tipo: 'Factura', concepto: `${f.proveedores?.razon_social ?? '—'} · ${f.numero_factura ?? ''}`, fecha: f.fecha_vencimiento, monto: Number(f.total), href: '/hub/finanzas/documentos' })
-  for (const g of (gfi ?? []) as any[]) if (g.vencimiento) venc.push({ id: `g-${g.id}`, tipo: 'Gasto fijo', concepto: g.gastos_fijos?.concepto ?? 'Gasto fijo', fecha: g.vencimiento, monto: Number(g.monto ?? 0), href: '/hub/finanzas/gastos-fijos' })
-  for (const i of (imp ?? []) as any[]) if (i.fecha_vencimiento) venc.push({ id: `i-${i.id}`, tipo: 'Impuesto', concepto: i.descripcion || i.tipo, fecha: i.fecha_vencimiento, monto: Number(i.monto_real ?? i.monto_estimado ?? 0), href: '/hub/finanzas/impuestos' })
-  for (const c of (chq ?? []) as any[]) if (c.fecha_cobro_estimada) venc.push({ id: `c-${c.id}`, tipo: 'Cheque', concepto: `Cheque ${c.numero}`, fecha: c.fecha_cobro_estimada, monto: Number(c.monto), href: '/hub/finanzas/cheques' })
+  for (const f of (facturas ?? []) as any[]) if (f.fecha_vencimiento && f.tipo_documento !== 'nota_credito') venc.push({ id: `f-${f.id}`, tipo: 'Factura', concepto: `${f.proveedores?.razon_social ?? '—'} · ${f.numero_factura ?? ''}`, fecha: f.fecha_vencimiento, monto: Number(f.total), href: '/admin/finanzas/documentos' })
+  for (const g of (gfi ?? []) as any[]) if (g.vencimiento) venc.push({ id: `g-${g.id}`, tipo: 'Gasto fijo', concepto: g.gastos_fijos?.concepto ?? 'Gasto fijo', fecha: g.vencimiento, monto: Number(g.monto ?? 0), href: '/admin/finanzas/gastos-fijos' })
+  for (const i of (imp ?? []) as any[]) if (i.fecha_vencimiento) venc.push({ id: `i-${i.id}`, tipo: 'Impuesto', concepto: i.descripcion || i.tipo, fecha: i.fecha_vencimiento, monto: Number(i.monto_real ?? i.monto_estimado ?? 0), href: '/admin/finanzas/impuestos' })
+  for (const c of (chq ?? []) as any[]) if (c.fecha_cobro_estimada) venc.push({ id: `c-${c.id}`, tipo: 'Cheque', concepto: `Cheque ${c.numero}`, fecha: c.fecha_cobro_estimada, monto: Number(c.monto), href: '/admin/finanzas/cheques' })
 
   return (
     <>

@@ -47,7 +47,7 @@ export function StockClient({ productos, sucursales, kpis, rol }: { productos: P
           ))}
         </div>
         <div className="flex gap-2">
-          <Button asChild variant="outline" size="sm"><Link href="/hub/operaciones/importaciones"><Upload className="size-4" /> Importar</Link></Button>
+          <Button asChild variant="outline" size="sm"><Link href="/admin/operaciones/importaciones"><Upload className="size-4" /> Importar</Link></Button>
         </div>
       </div>
       {tab === 'productos' ? <Productos productos={productos} sucursales={sucursales} kpis={kpis} canEdit={['super_admin','gerente','comprador','administrativo'].includes(rol)} /> : <Kardex sucursales={sucursales} />}
@@ -117,7 +117,7 @@ function Productos({ productos, sucursales, kpis, canEdit }: { productos: Produc
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-16 text-center">
           <Package className="size-8 text-muted-foreground" />
           <div><div className="font-medium">Sin stock cargado</div><div className="mt-0.5 text-sm text-muted-foreground">Importá el Excel de stock por sucursal para empezar.</div></div>
-          <Button asChild size="sm"><Link href="/hub/operaciones/importaciones"><Upload className="size-4" /> Importar stock</Link></Button>
+          <Button asChild size="sm"><Link href="/admin/operaciones/importaciones"><Upload className="size-4" /> Importar stock</Link></Button>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
@@ -226,7 +226,7 @@ function DetalleSheet({ producto, sucursales, canEdit, onClose }: { producto: Pr
             ))}
           </Section>
 
-          <Button asChild variant="outline"><Link href="/hub/operaciones/transferencias/nueva">Crear transferencia</Link></Button>
+          <Button asChild variant="outline"><Link href="/admin/operaciones/transferencias/nueva">Crear transferencia</Link></Button>
         </div>
       </SheetContent>
     </Sheet>

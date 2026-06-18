@@ -26,7 +26,7 @@ export default async function Home() {
     .maybeSingle()
 
   if (adminProfile?.activo) {
-    redirect('/hub')
+    redirect('/admin')
   }
 
   // 2) ¿Está en CRM pedidos?

@@ -73,20 +73,20 @@ export default async function EmpleadoDetallePage({
         description={emp.puesto || 'Sin puesto asignado'}
         breadcrumbs={[
           { label: 'RRHH' },
-          { label: 'Empleados', href: '/hub/rrhh/empleados' },
+          { label: 'Empleados', href: '/admin/rrhh/empleados' },
           { label: emp.nombre_completo },
         ]}
         tabs={[
-          { label: 'Ficha', href: `/hub/rrhh/empleados/${emp.id}`, active: tab === 'ficha' },
+          { label: 'Ficha', href: `/admin/rrhh/empleados/${emp.id}`, active: tab === 'ficha' },
           {
             label: 'Turnos',
-            href: `/hub/rrhh/empleados/${emp.id}?tab=turnos`,
+            href: `/admin/rrhh/empleados/${emp.id}?tab=turnos`,
             active: tab === 'turnos',
             badge: (turnos ?? []).length,
           },
           {
             label: 'Ausencias',
-            href: `/hub/rrhh/empleados/${emp.id}?tab=ausencias`,
+            href: `/admin/rrhh/empleados/${emp.id}?tab=ausencias`,
             active: tab === 'ausencias',
             badge: (ausencias ?? []).length,
           },
@@ -94,7 +94,7 @@ export default async function EmpleadoDetallePage({
             ? [
                 {
                   label: 'Editar',
-                  href: `/hub/rrhh/empleados/${emp.id}?tab=editar`,
+                  href: `/admin/rrhh/empleados/${emp.id}?tab=editar`,
                   active: tab === 'editar',
                 },
               ]

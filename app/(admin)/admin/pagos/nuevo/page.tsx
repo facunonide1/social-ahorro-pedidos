@@ -25,7 +25,7 @@ export default async function NuevoPagoPage() {
         title="Nueva orden de pago"
         description="Elegí un proveedor, seleccioná las facturas a cancelar e informá el método."
         breadcrumbs={[
-          { label: 'Pagos', href: '/hub/pagos' },
+          { label: 'Pagos', href: '/admin/pagos' },
           { label: 'Nueva' },
         ]}
       />

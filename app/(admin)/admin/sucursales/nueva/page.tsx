@@ -16,7 +16,7 @@ export default async function NuevaSucursalPage() {
       <PageHeader
         title="Nueva sucursal"
         breadcrumbs={[
-          { label: 'Sucursales', href: '/hub/sucursales' },
+          { label: 'Sucursales', href: '/admin/sucursales' },
           { label: 'Nueva' },
         ]}
       />

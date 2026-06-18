@@ -104,7 +104,7 @@ export default function ChequeForm({
       setErr(error.message)
       return
     }
-    router.push('/hub/finanzas/cheques')
+    router.push('/admin/finanzas/cheques')
     router.refresh()
   }
 

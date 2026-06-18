@@ -55,13 +55,13 @@ export default async function AprobacionesPage({
         tabs={[
           {
             label: 'Pendientes',
-            href: '/hub/aprobaciones',
+            href: '/admin/aprobaciones',
             active: tab === 'pendientes',
             badge: pendientes.length,
           },
           {
             label: 'Resueltas',
-            href: '/hub/aprobaciones?tab=resueltas',
+            href: '/admin/aprobaciones?tab=resueltas',
             active: tab === 'resueltas',
             badge: resueltas.length,
           },

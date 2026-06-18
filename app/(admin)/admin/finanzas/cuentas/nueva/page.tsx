@@ -16,7 +16,7 @@ export default async function NuevaCuentaPage() {
       <PageHeader
         title="Nueva cuenta bancaria"
         breadcrumbs={[
-          { label: 'Cuentas bancarias', href: '/hub/finanzas/cuentas' },
+          { label: 'Cuentas bancarias', href: '/admin/finanzas/cuentas' },
           { label: 'Nueva' },
         ]}
       />

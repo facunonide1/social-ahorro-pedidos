@@ -17,7 +17,7 @@ export default async function NuevoProveedorPage() {
         title="Nuevo proveedor"
         description="Los contactos, cuentas bancarias y documentos se cargan en la ficha después de crearlo."
         breadcrumbs={[
-          { label: 'Proveedores', href: '/hub/proveedores' },
+          { label: 'Proveedores', href: '/admin/proveedores' },
           { label: 'Nuevo' },
         ]}
       />

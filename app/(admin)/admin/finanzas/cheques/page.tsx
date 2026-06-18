@@ -82,7 +82,7 @@ export default async function ChequesPage({
         actions={
           canCreate ? (
             <Button asChild>
-              <Link href="/hub/finanzas/cheques/nueva">
+              <Link href="/admin/finanzas/cheques/nueva">
                 <Plus className="size-4" />
                 Nuevo cheque
               </Link>
@@ -115,7 +115,7 @@ export default async function ChequesPage({
               className="rounded-full"
             >
               <Link
-                href={`/hub/finanzas/cheques${t.key ? `?tab=${t.key}` : ''}`}
+                href={`/admin/finanzas/cheques${t.key ? `?tab=${t.key}` : ''}`}
               >
                 {t.label}
               </Link>

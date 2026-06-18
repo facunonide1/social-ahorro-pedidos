@@ -87,7 +87,7 @@ export default async function ProveedorDetailPage({
           </span>
         }
         breadcrumbs={[
-          { label: 'Proveedores', href: '/hub/proveedores' },
+          { label: 'Proveedores', href: '/admin/proveedores' },
           { label: p.razon_social },
         ]}
       />

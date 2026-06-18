@@ -41,7 +41,7 @@ export default function ProveedoresFilters({
     if (nc) p.set('categoria', nc)
     if (na) p.set('activo', na)
     startTransition(() =>
-      router.push(`/hub/proveedores${p.toString() ? '?' + p : ''}`),
+      router.push(`/admin/proveedores${p.toString() ? '?' + p : ''}`),
     )
   }
 

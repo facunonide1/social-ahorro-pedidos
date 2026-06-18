@@ -110,7 +110,7 @@ export default async function InventarioDetailPage({
         title={`Inventario · ${inv.sucursales?.nombre || '—'}`}
         description={`${new Date(inv.fecha_inventario).toLocaleDateString('es-AR')}`}
         breadcrumbs={[
-          { label: 'Inventarios', href: '/hub/operaciones/inventarios' },
+          { label: 'Inventarios', href: '/admin/operaciones/inventarios' },
           { label: 'Detalle' },
         ]}
         actions={

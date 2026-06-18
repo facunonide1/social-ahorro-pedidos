@@ -74,7 +74,7 @@ async function run() {
   const { data: supers } = await adm.from('users_admin').select('id').eq('rol', 'super_admin').eq('activo', true)
   if (supers?.length) {
     await adm.from('notificaciones_admin').insert(
-      supers.map((s: any) => ({ user_id: s.id, tipo: 'info', prioridad: 'media', titulo: 'Reporte semanal de tareas', mensaje: 'NORA generó el resumen de la semana.', url_accion: '/hub/ia/resumen' })),
+      supers.map((s: any) => ({ user_id: s.id, tipo: 'info', prioridad: 'media', titulo: 'Reporte semanal de tareas', mensaje: 'NORA generó el resumen de la semana.', url_accion: '/admin/ia/resumen' })),
     )
   }
 

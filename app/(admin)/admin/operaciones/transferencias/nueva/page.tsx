@@ -28,7 +28,7 @@ export default async function NuevaTransferenciaPage() {
       <PageHeader
         title="Nueva transferencia"
         breadcrumbs={[
-          { label: 'Transferencias', href: '/hub/operaciones/transferencias' },
+          { label: 'Transferencias', href: '/admin/operaciones/transferencias' },
           { label: 'Nueva' },
         ]}
       />

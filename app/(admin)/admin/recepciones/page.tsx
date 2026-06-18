@@ -57,7 +57,7 @@ export default async function RecepcionesPage() {
         actions={
           canCreate ? (
             <Button asChild>
-              <Link href="/hub/recepciones/nueva">
+              <Link href="/admin/recepciones/nueva">
                 <Plus className="size-4" />
                 Nueva recepción
               </Link>
@@ -101,7 +101,7 @@ export default async function RecepcionesPage() {
                     <TableRow key={r.id}>
                       <TableCell className="font-mono text-xs font-bold">
                         <Link
-                          href={`/hub/recepciones/${r.id}`}
+                          href={`/admin/recepciones/${r.id}`}
                           className="hover:underline"
                         >
                           {r.numero_remito || '— sin remito —'}
@@ -124,7 +124,7 @@ export default async function RecepcionesPage() {
                       </TableCell>
                       <TableCell>
                         <Button asChild variant="ghost" size="sm">
-                          <Link href={`/hub/recepciones/${r.id}`}>
+                          <Link href={`/admin/recepciones/${r.id}`}>
                             Ver
                             <ArrowRight className="size-3.5" />
                           </Link>

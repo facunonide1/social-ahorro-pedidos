@@ -24,7 +24,7 @@ export default async function NuevoClientePage() {
         title="Nuevo cliente B2B"
         breadcrumbs={[
           { label: 'Comercial' },
-          { label: 'Clientes', href: '/hub/clientes' },
+          { label: 'Clientes', href: '/admin/clientes' },
           { label: 'Nuevo' },
         ]}
       />

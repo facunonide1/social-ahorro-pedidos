@@ -103,7 +103,7 @@ export default function CuentaForm({
         return
       }
       router.push(
-        data?.id ? `/hub/finanzas/cuentas/${data.id}` : '/hub/finanzas/cuentas',
+        data?.id ? `/admin/finanzas/cuentas/${data.id}` : '/admin/finanzas/cuentas',
       )
       router.refresh()
     } else if (initial) {

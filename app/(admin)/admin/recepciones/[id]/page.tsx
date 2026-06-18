@@ -98,7 +98,7 @@ export default async function RecepcionDetailPage({
           </span>
         }
         breadcrumbs={[
-          { label: 'Recepciones', href: '/hub/recepciones' },
+          { label: 'Recepciones', href: '/admin/recepciones' },
           { label: titulo },
         ]}
         actions={<RecepcionEstadoBadge estado={r.estado} />}

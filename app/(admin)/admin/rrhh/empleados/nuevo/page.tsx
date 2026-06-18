@@ -23,7 +23,7 @@ export default async function NuevoEmpleadoPage() {
         title="Nuevo empleado"
         breadcrumbs={[
           { label: 'RRHH' },
-          { label: 'Empleados', href: '/hub/rrhh/empleados' },
+          { label: 'Empleados', href: '/admin/rrhh/empleados' },
           { label: 'Nuevo' },
         ]}
       />

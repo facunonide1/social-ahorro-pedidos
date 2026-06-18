@@ -102,7 +102,7 @@ export default function ConciliacionClient({
   const [msg, setMsg] = useState<string | null>(null)
 
   function cambiarCuenta(id: string) {
-    router.push(`/hub/finanzas/conciliacion?cuenta=${id}`)
+    router.push(`/admin/finanzas/conciliacion?cuenta=${id}`)
   }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {

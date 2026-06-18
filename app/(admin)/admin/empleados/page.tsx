@@ -42,7 +42,7 @@ export default async function EmpleadosAdminPage() {
         actions={
           canCreate ? (
             <Button asChild>
-              <Link href="/hub/rrhh/empleados/nuevo">
+              <Link href="/admin/rrhh/empleados/nuevo">
                 <Plus className="size-4" />
                 Nuevo empleado
               </Link>
@@ -88,7 +88,7 @@ export default async function EmpleadosAdminPage() {
           {empleados.map((e) => (
             <Link
               key={e.id}
-              href={`/hub/rrhh/empleados/${e.id}`}
+              href={`/admin/rrhh/empleados/${e.id}`}
               className="group block"
             >
               <Card

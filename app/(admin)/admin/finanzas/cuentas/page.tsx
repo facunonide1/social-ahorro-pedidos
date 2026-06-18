@@ -45,7 +45,7 @@ export default async function CuentasBancariasPage() {
         actions={
           canCreate ? (
             <Button asChild>
-              <Link href="/hub/finanzas/cuentas/nueva">
+              <Link href="/admin/finanzas/cuentas/nueva">
                 <Plus className="size-4" />
                 Nueva cuenta
               </Link>
@@ -107,7 +107,7 @@ export default async function CuentasBancariasPage() {
 function CuentaCard({ cuenta: c }: { cuenta: CuentaBancariaConSaldo }) {
   const saldo = Number(c.saldo_actual || 0)
   return (
-    <Link href={`/hub/finanzas/cuentas/${c.id}`} className="group">
+    <Link href={`/admin/finanzas/cuentas/${c.id}`} className="group">
       <Card
         className={cn(
           'h-full transition-colors hover:border-primary/40 hover:bg-accent/30',

@@ -133,7 +133,7 @@ export default async function FacturasPage({
         actions={
           canCreate ? (
             <Button asChild>
-              <Link href="/hub/facturas/nueva">
+              <Link href="/admin/facturas/nueva">
                 <Plus className="size-4" />
                 Nueva factura
               </Link>
@@ -185,7 +185,7 @@ export default async function FacturasPage({
                     <TableRow key={r.id}>
                       <TableCell className="font-mono text-xs">
                         <Link
-                          href={`/hub/facturas/${r.id}`}
+                          href={`/admin/facturas/${r.id}`}
                           className="font-bold hover:underline"
                         >
                           {r.tipo_factura} {String(r.punto_venta).padStart(5, '0')}-
@@ -214,7 +214,7 @@ export default async function FacturasPage({
                       </TableCell>
                       <TableCell>
                         <Button asChild variant="ghost" size="sm">
-                          <Link href={`/hub/facturas/${r.id}`}>
+                          <Link href={`/admin/facturas/${r.id}`}>
                             Ver
                             <ArrowRight className="size-3.5" />
                           </Link>

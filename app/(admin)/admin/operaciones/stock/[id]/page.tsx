@@ -93,7 +93,7 @@ export default async function ProductoDetailPage({
           </span>
         }
         breadcrumbs={[
-          { label: 'Stock', href: '/hub/operaciones/stock' },
+          { label: 'Stock', href: '/admin/operaciones/stock' },
           { label: p.nombre },
         ]}
         actions={
@@ -102,8 +102,8 @@ export default async function ProductoDetailPage({
           </Badge>
         }
         tabs={[
-          { label: 'Stock por sucursal', href: `/hub/operaciones/stock/${p.id}` },
-          { label: 'Datos', href: `/hub/operaciones/stock/${p.id}?tab=datos` },
+          { label: 'Stock por sucursal', href: `/admin/operaciones/stock/${p.id}` },
+          { label: 'Datos', href: `/admin/operaciones/stock/${p.id}?tab=datos` },
         ]}
       />
 

@@ -145,7 +145,7 @@ export default async function CashFlowPage({
                 variant={dias === p.dias ? 'default' : 'outline'}
                 className="rounded-full"
               >
-                <Link href={`/hub/finanzas/cash-flow?dias=${p.dias}`}>
+                <Link href={`/admin/finanzas/cash-flow?dias=${p.dias}`}>
                   {p.label}
                 </Link>
               </Button>

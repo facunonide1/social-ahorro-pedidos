@@ -75,7 +75,7 @@ export default async function ProveedoresFinanzasPage() {
                     <td className="px-3 py-1.5 text-xs text-muted-foreground">{p.forma_pago_default ?? '—'}{p.plazo_pago_dias ? ` · ${p.plazo_pago_dias}d` : ''}</td>
                     <td className="px-3 py-1.5 text-right tabular-nums">{formatARS(p.comprado)}</td>
                     <td className={p.saldo > 0 ? 'px-3 py-1.5 text-right font-medium tabular-nums text-rose-600 dark:text-rose-400' : 'px-3 py-1.5 text-right tabular-nums text-muted-foreground'}>{formatARS(p.saldo)}</td>
-                    <td className="px-3 py-1.5 text-right"><Link href={`/hub/finanzas/proveedores/${p.id}`} className="inline-flex items-center gap-1 text-xs text-primary hover:underline">Cta cte <ArrowRight className="size-3" /></Link></td>
+                    <td className="px-3 py-1.5 text-right"><Link href={`/admin/finanzas/proveedores/${p.id}`} className="inline-flex items-center gap-1 text-xs text-primary hover:underline">Cta cte <ArrowRight className="size-3" /></Link></td>
                   </tr>
                 ))}
               </tbody>

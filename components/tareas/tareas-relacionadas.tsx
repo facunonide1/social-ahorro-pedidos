@@ -19,7 +19,7 @@ import { NuevaTareaSheet } from '@/app/(admin)/admin/tareas/nueva-tarea-sheet'
  *   <TareasRelacionadas
  *     entidadTipo="factura"
  *     entidadId={factura.id}
- *     entidadUrl={`/hub/facturas/${factura.id}`}
+ *     entidadUrl={`/admin/facturas/${factura.id}`}
  *     entidadTitulo={`Factura ${factura.numero}`}
  *   />
  */

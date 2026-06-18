@@ -33,7 +33,7 @@ export default async function NuevaDevolucionPage() {
       <PageHeader
         title="Nueva devolución a proveedor"
         breadcrumbs={[
-          { label: 'Devoluciones', href: '/hub/compras/devoluciones' },
+          { label: 'Devoluciones', href: '/admin/compras/devoluciones' },
           { label: 'Nueva' },
         ]}
       />

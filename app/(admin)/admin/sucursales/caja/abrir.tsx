@@ -67,7 +67,7 @@ export function AbrirCajaButton({
     }
     toast.success('Caja abierta.')
     setOpen(false)
-    router.push(`/hub/sucursales/caja/${data.id}`)
+    router.push(`/admin/sucursales/caja/${data.id}`)
     router.refresh()
   }
 

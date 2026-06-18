@@ -38,7 +38,7 @@ export default async function ProveedorFinanzasDetalle({ params }: { params: { i
   return (
     <>
       <PageHeader title={prov.razon_social} description={`CUIT ${prov.cuit}`}
-        breadcrumbs={[{ label: 'Finanzas' }, { label: 'Proveedores', href: '/hub/finanzas/proveedores' }, { label: prov.razon_social }]} />
+        breadcrumbs={[{ label: 'Finanzas' }, { label: 'Proveedores', href: '/admin/finanzas/proveedores' }, { label: prov.razon_social }]} />
       <div className="space-y-4 p-4 md:p-6">
         <section className="grid gap-4 lg:grid-cols-[320px_1fr]">
           <div className="space-y-3 rounded-lg border bg-card p-4 text-sm">
@@ -57,7 +57,7 @@ export default async function ProveedorFinanzasDetalle({ params }: { params: { i
               </div>
               <div className="text-xs text-muted-foreground">{saldoFinal > 0 ? 'Le debés a este proveedor' : 'Sin deuda'}</div>
             </div>
-            <Link href="/hub/finanzas/documentos" className="inline-block text-xs text-primary hover:underline">+ Nueva factura</Link>
+            <Link href="/admin/finanzas/documentos" className="inline-block text-xs text-primary hover:underline">+ Nueva factura</Link>
           </div>
 
           <ProveedorCtaCte movimientos={movs} proveedor={prov.razon_social} />

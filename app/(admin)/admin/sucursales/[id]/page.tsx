@@ -43,7 +43,7 @@ export default async function SucursalDetailPage({
           </span>
         }
         breadcrumbs={[
-          { label: 'Sucursales', href: '/hub/sucursales' },
+          { label: 'Sucursales', href: '/admin/sucursales' },
           { label: s.nombre },
         ]}
       />

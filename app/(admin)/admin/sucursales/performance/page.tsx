@@ -194,7 +194,7 @@ export default async function PerformanceSucursalesPage() {
 
                 <div className="flex justify-end gap-2 border-t border-border pt-3">
                   <Link
-                    href={`/hub/sucursales/${r.sucursal.id}`}
+                    href={`/admin/sucursales/${r.sucursal.id}`}
                     className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                   >
                     Ver sucursal

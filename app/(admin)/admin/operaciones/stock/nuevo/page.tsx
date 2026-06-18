@@ -16,7 +16,7 @@ export default async function NuevoProductoPage() {
       <PageHeader
         title="Nuevo producto"
         breadcrumbs={[
-          { label: 'Stock', href: '/hub/operaciones/stock' },
+          { label: 'Stock', href: '/admin/operaciones/stock' },
           { label: 'Nuevo' },
         ]}
       />

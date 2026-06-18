@@ -126,7 +126,7 @@ export default async function InventariosPage() {
                     </TableCell>
                     <TableCell>
                       <Button asChild variant="ghost" size="sm">
-                        <Link href={`/hub/operaciones/inventarios/${r.id}`}>
+                        <Link href={`/admin/operaciones/inventarios/${r.id}`}>
                           {r.estado === 'cerrado' ? 'Ver' : 'Contar'}
                           <ArrowRight className="size-3.5" />
                         </Link>

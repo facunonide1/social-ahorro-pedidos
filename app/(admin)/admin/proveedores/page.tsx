@@ -100,7 +100,7 @@ export default async function ProveedoresPage({
         actions={
           canCreate ? (
             <Button asChild>
-              <Link href="/hub/proveedores/nuevo">
+              <Link href="/admin/proveedores/nuevo">
                 <Plus className="size-4" />
                 Nuevo proveedor
               </Link>
@@ -151,7 +151,7 @@ export default async function ProveedoresPage({
                   <TableRow key={p.id} className={cn(!p.activo && 'opacity-60')}>
                     <TableCell className="font-semibold">
                       <Link
-                        href={`/hub/proveedores/${p.id}`}
+                        href={`/admin/proveedores/${p.id}`}
                         className="hover:underline"
                       >
                         {p.razon_social}
@@ -186,7 +186,7 @@ export default async function ProveedoresPage({
                     </TableCell>
                     <TableCell>
                       <Button asChild variant="ghost" size="sm">
-                        <Link href={`/hub/proveedores/${p.id}`}>
+                        <Link href={`/admin/proveedores/${p.id}`}>
                           Ver
                           <ArrowRight className="size-3.5" />
                         </Link>

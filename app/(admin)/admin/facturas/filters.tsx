@@ -62,7 +62,7 @@ export default function FacturasFilters({
     if (np) p.set('proveedor', np)
     if (nv) p.set('vence', nv)
     startTransition(() =>
-      router.push(`/hub/facturas${p.toString() ? '?' + p : ''}`),
+      router.push(`/admin/facturas${p.toString() ? '?' + p : ''}`),
     )
   }
 

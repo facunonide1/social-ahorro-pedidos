@@ -94,7 +94,7 @@ async function run() {
     const { data: supers } = await adm.from('users_admin').select('id').eq('rol', 'super_admin').eq('activo', true)
     if (supers?.length) {
       await adm.from('notificaciones_admin').insert(supers.flatMap((s: any) =>
-        fantasmas.slice(0, 10).map((f) => ({ user_id: s.id, tipo: 'alerta', prioridad: 'critica', titulo: 'Posible stock fantasma', mensaje: `${f.datos.nombre} (${f.datos.sucursal}) dejó de vender con stock`, url_accion: '/hub/operaciones/alertas' }))))
+        fantasmas.slice(0, 10).map((f) => ({ user_id: s.id, tipo: 'alerta', prioridad: 'critica', titulo: 'Posible stock fantasma', mensaje: `${f.datos.nombre} (${f.datos.sucursal}) dejó de vender con stock`, url_accion: '/admin/operaciones/alertas' }))))
     }
   }
 

@@ -115,7 +115,7 @@ export default function DevolucionForm({
       })),
     )
     setBusy(false)
-    router.push('/hub/compras/devoluciones')
+    router.push('/admin/compras/devoluciones')
     router.refresh()
   }
 

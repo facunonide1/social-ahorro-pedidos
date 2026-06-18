@@ -193,7 +193,7 @@ export default function NuevoPagoForm({ proveedores }: { proveedores: Prov[] }) 
       setErr(json.hint || json.error || 'No se pudo crear la orden de pago.')
       return
     }
-    router.push(`/hub/pagos/${json.pagoId}`)
+    router.push(`/admin/pagos/${json.pagoId}`)
     router.refresh()
   }
 

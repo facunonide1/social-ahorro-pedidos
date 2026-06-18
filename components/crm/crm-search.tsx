@@ -43,10 +43,10 @@ type QuickAction = {
 
 const ACCIONES_RAPIDAS: QuickAction[] = [
   { id: 'a-nuevo-pedido', label: 'Nuevo pedido', href: '/pedidos/nuevo', icon: Plus, keywords: 'crear pedido orden' },
-  { id: 'a-nuevo-prov', label: 'Nuevo proveedor', href: '/hub/proveedores/nuevo', icon: Building2, keywords: 'alta proveedor' },
-  { id: 'a-nueva-factura', label: 'Cargar factura', href: '/hub/facturas/nueva', icon: FileText, keywords: 'nueva factura proveedor' },
-  { id: 'a-nuevo-pago', label: 'Registrar pago', href: '/hub/pagos/nuevo', icon: Banknote, keywords: 'orden de pago op' },
-  { id: 'a-nueva-recepcion', label: 'Nueva recepción', href: '/hub/recepciones/nueva', icon: PackageCheck, keywords: 'recibir mercaderia' },
+  { id: 'a-nuevo-prov', label: 'Nuevo proveedor', href: '/admin/proveedores/nuevo', icon: Building2, keywords: 'alta proveedor' },
+  { id: 'a-nueva-factura', label: 'Cargar factura', href: '/admin/facturas/nueva', icon: FileText, keywords: 'nueva factura proveedor' },
+  { id: 'a-nuevo-pago', label: 'Registrar pago', href: '/admin/pagos/nuevo', icon: Banknote, keywords: 'orden de pago op' },
+  { id: 'a-nueva-recepcion', label: 'Nueva recepción', href: '/admin/recepciones/nueva', icon: PackageCheck, keywords: 'recibir mercaderia' },
 ]
 
 const NAVEGACION: QuickAction[] = [
@@ -54,13 +54,13 @@ const NAVEGACION: QuickAction[] = [
   { id: 'n-pedidos', label: 'Pedidos', href: '/pedidos', icon: ClipboardList },
   { id: 'n-clientes', label: 'Clientes', href: '/clientes', icon: Users },
   { id: 'n-repartidor', label: 'Repartidor', href: '/repartidor', icon: Truck },
-  { id: 'n-hub', label: 'NORA HQ', href: '/hub', icon: Home },
-  { id: 'n-proveedores', label: 'Proveedores', href: '/hub/proveedores', icon: Building2 },
-  { id: 'n-facturas', label: 'Facturas', href: '/hub/facturas', icon: FileText },
-  { id: 'n-pagos', label: 'Pagos', href: '/hub/pagos', icon: Banknote },
-  { id: 'n-recepciones', label: 'Recepciones', href: '/hub/recepciones', icon: PackageCheck },
-  { id: 'n-sucursales', label: 'Sucursales', href: '/hub/sucursales', icon: Home },
-  { id: 'n-usuarios', label: 'Usuarios', href: '/hub/usuarios', icon: UserCog },
+  { id: 'n-hub', label: 'NORA HQ', href: '/admin', icon: Home },
+  { id: 'n-proveedores', label: 'Proveedores', href: '/admin/proveedores', icon: Building2 },
+  { id: 'n-facturas', label: 'Facturas', href: '/admin/facturas', icon: FileText },
+  { id: 'n-pagos', label: 'Pagos', href: '/admin/pagos', icon: Banknote },
+  { id: 'n-recepciones', label: 'Recepciones', href: '/admin/recepciones', icon: PackageCheck },
+  { id: 'n-sucursales', label: 'Sucursales', href: '/admin/sucursales', icon: Home },
+  { id: 'n-usuarios', label: 'Usuarios', href: '/admin/usuarios', icon: UserCog },
   { id: 'n-config', label: 'Configuración', href: '/admin/configuracion', icon: UserCog, keywords: 'preferencias settings' },
 ]
 
@@ -234,7 +234,7 @@ export function CrmSearch({ variant = 'header' }: { variant?: Variant }) {
                 <CommandItem
                   key={p.id}
                   value={`prov-${p.id} ${p.razon_social} ${p.nombre_comercial ?? ''} ${p.cuit}`}
-                  onSelect={() => goto(`/hub/proveedores/${p.id}`)}
+                  onSelect={() => goto(`/admin/proveedores/${p.id}`)}
                   className="flex items-center gap-3"
                 >
                   <Building2 className="size-4 shrink-0 text-muted-foreground" />

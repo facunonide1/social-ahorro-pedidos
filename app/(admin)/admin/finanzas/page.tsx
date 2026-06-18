@@ -39,10 +39,10 @@ export default async function FinanzasTableroPage() {
 
   // Vencimientos unificados
   const venc: Venc[] = []
-  for (const f of facts) if (f.fecha_vencimiento && f.tipo_documento !== 'nota_credito') venc.push({ tipo: 'Factura', nombre: `${f.proveedores?.razon_social ?? '—'} · ${f.numero_factura ?? ''}`, fecha: f.fecha_vencimiento, monto: Number(f.total), href: '/hub/finanzas/documentos' })
-  for (const g of (gfi ?? []) as any[]) if (g.vencimiento) venc.push({ tipo: 'Gasto fijo', nombre: g.gastos_fijos?.concepto ?? 'Gasto fijo', fecha: g.vencimiento, monto: Number(g.monto ?? 0), href: '/hub/finanzas/gastos-fijos' })
-  for (const i of (imp ?? []) as any[]) venc.push({ tipo: 'Impuesto', nombre: i.descripcion || i.tipo, fecha: i.fecha_vencimiento, monto: Number(i.monto_real ?? i.monto_estimado ?? 0), href: '/hub/finanzas/impuestos' })
-  for (const c of (chq ?? []) as any[]) if (c.fecha_cobro_estimada) venc.push({ tipo: 'Cheque', nombre: `Cheque ${c.numero}`, fecha: c.fecha_cobro_estimada, monto: Number(c.monto), href: '/hub/finanzas/cheques' })
+  for (const f of facts) if (f.fecha_vencimiento && f.tipo_documento !== 'nota_credito') venc.push({ tipo: 'Factura', nombre: `${f.proveedores?.razon_social ?? '—'} · ${f.numero_factura ?? ''}`, fecha: f.fecha_vencimiento, monto: Number(f.total), href: '/admin/finanzas/documentos' })
+  for (const g of (gfi ?? []) as any[]) if (g.vencimiento) venc.push({ tipo: 'Gasto fijo', nombre: g.gastos_fijos?.concepto ?? 'Gasto fijo', fecha: g.vencimiento, monto: Number(g.monto ?? 0), href: '/admin/finanzas/gastos-fijos' })
+  for (const i of (imp ?? []) as any[]) venc.push({ tipo: 'Impuesto', nombre: i.descripcion || i.tipo, fecha: i.fecha_vencimiento, monto: Number(i.monto_real ?? i.monto_estimado ?? 0), href: '/admin/finanzas/impuestos' })
+  for (const c of (chq ?? []) as any[]) if (c.fecha_cobro_estimada) venc.push({ tipo: 'Cheque', nombre: `Cheque ${c.numero}`, fecha: c.fecha_cobro_estimada, monto: Number(c.monto), href: '/admin/finanzas/cheques' })
   venc.sort((a, b) => a.fecha.localeCompare(b.fecha))
   const proximos = venc.slice(0, 25)
 
@@ -52,10 +52,10 @@ export default async function FinanzasTableroPage() {
         breadcrumbs={[{ label: 'Finanzas' }]} />
       <div className="space-y-5 p-4 md:p-6">
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <KpiCard label="Deuda a proveedores" value={deuda} format="currency" icon={FileText} href="/hub/finanzas/documentos" />
-          <KpiCard label="Vencido sin pagar" value={vencido} format="currency" icon={AlertTriangle} variant={vencido > 0 ? 'danger' : 'default'} href="/hub/finanzas/documentos" />
-          <KpiCard label="Vence esta semana" value={semana} format="currency" icon={CalendarClock} variant={semana > 0 ? 'warning' : 'default'} href="/hub/finanzas/calendario" />
-          <KpiCard label="Saldo en bancos" value={saldoBancos} format="currency" icon={Landmark} href="/hub/finanzas/cuentas" />
+          <KpiCard label="Deuda a proveedores" value={deuda} format="currency" icon={FileText} href="/admin/finanzas/documentos" />
+          <KpiCard label="Vencido sin pagar" value={vencido} format="currency" icon={AlertTriangle} variant={vencido > 0 ? 'danger' : 'default'} href="/admin/finanzas/documentos" />
+          <KpiCard label="Vence esta semana" value={semana} format="currency" icon={CalendarClock} variant={semana > 0 ? 'warning' : 'default'} href="/admin/finanzas/calendario" />
+          <KpiCard label="Saldo en bancos" value={saldoBancos} format="currency" icon={Landmark} href="/admin/finanzas/cuentas" />
         </section>
 
         <NoraCard contexto="finanzas">
@@ -85,7 +85,7 @@ export default async function FinanzasTableroPage() {
                         <td className="px-3 py-1.5">{v.nombre}</td>
                         <td className={vencido ? 'px-3 py-1.5 font-medium text-rose-600 dark:text-rose-400' : 'px-3 py-1.5'}>{v.fecha}</td>
                         <td className="px-3 py-1.5 text-right font-mono tabular-nums">{formatARS(v.monto)}</td>
-                        <td className="px-3 py-1.5 text-right"><Button asChild size="sm" variant="outline" className="h-7 text-xs"><Link href="/hub/finanzas/pagos">Pagar <ArrowRight className="size-3" /></Link></Button></td>
+                        <td className="px-3 py-1.5 text-right"><Button asChild size="sm" variant="outline" className="h-7 text-xs"><Link href="/admin/finanzas/pagos">Pagar <ArrowRight className="size-3" /></Link></Button></td>
                       </tr>
                     )
                   })}

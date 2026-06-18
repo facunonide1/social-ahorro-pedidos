@@ -100,8 +100,8 @@ export default function SucursalForm({
         else setErr(error.message)
         return
       }
-      if (data?.id) router.push(`/hub/sucursales/${data.id}`)
-      else router.push('/hub/sucursales')
+      if (data?.id) router.push(`/admin/sucursales/${data.id}`)
+      else router.push('/admin/sucursales')
     } else if (initial) {
       const { error } = await sb.from('sucursales').update(payload).eq('id', initial.id)
       setBusy(false)

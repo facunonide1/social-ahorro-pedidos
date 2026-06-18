@@ -130,7 +130,7 @@ async function detectarEventos(
       return (data ?? []).map((f: any) => ({
         entidad_tipo: 'factura',
         entidad_id: f.id,
-        entidad_url: `/hub/facturas/${f.id}`,
+        entidad_url: `/admin/facturas/${f.id}`,
         titulo: `Factura ${f.numero_factura} de ${pickOne<any>(f.proveedores)?.razon_social ?? ''} vence en ${dias}d`,
         descripcion: `Monto: $ ${Number(f.total ?? 0).toLocaleString('es-AR')}`,
         sucursal_id: f.sucursal_id,
@@ -146,7 +146,7 @@ async function detectarEventos(
       return (data ?? []).map((f: any) => ({
         entidad_tipo: 'factura',
         entidad_id: f.id,
-        entidad_url: `/hub/facturas/${f.id}`,
+        entidad_url: `/admin/facturas/${f.id}`,
         titulo: `Factura ${f.numero_factura} VENCIDA · ${pickOne<any>(f.proveedores)?.razon_social ?? ''}`,
         descripcion: `Monto: $ ${Number(f.total ?? 0).toLocaleString('es-AR')}`,
         sucursal_id: f.sucursal_id,
@@ -163,7 +163,7 @@ async function detectarEventos(
       return (data ?? []).map((c: any) => ({
         entidad_tipo: 'caja',
         entidad_id: c.id,
-        entidad_url: `/hub/sucursales/caja/${c.id}`,
+        entidad_url: `/admin/sucursales/caja/${c.id}`,
         titulo: `Caja del ${c.fecha} quedó abierta`,
         descripcion: 'Cerrá la caja del día anterior con el arqueo correspondiente.',
         sucursal_id: c.sucursal_id,
@@ -186,7 +186,7 @@ async function detectarEventos(
         .map((s: any) => ({
           entidad_tipo: 'stock',
           entidad_id: s.id,
-          entidad_url: `/hub/operaciones/stock/${s.producto_id}`,
+          entidad_url: `/admin/operaciones/stock/${s.producto_id}`,
           titulo: `Stock crítico: ${pickOne<any>(s.productos)?.nombre ?? 'producto'} en ${pickOne<any>(s.sucursales)?.nombre ?? 'sucursal'}`,
           descripcion: `Quedan ${Number(s.cantidad_actual).toLocaleString('es-AR')} (mínimo ${Number(s.stock_minimo).toLocaleString('es-AR')}). Reponer.`,
           sucursal_id: s.sucursal_id,
@@ -208,7 +208,7 @@ async function detectarEventos(
       return (data ?? []).map((l: any) => ({
         entidad_tipo: 'lote',
         entidad_id: l.id,
-        entidad_url: '/hub/operaciones/vencimientos',
+        entidad_url: '/admin/operaciones/vencimientos',
         titulo: `Lote ${l.numero_lote ?? ''} de ${pickOne<any>(l.productos)?.nombre ?? 'producto'} vence ${new Date(l.fecha_vencimiento).toLocaleDateString('es-AR')}`,
         descripcion: `${Number(l.cantidad_actual).toLocaleString('es-AR')} unidades en ${pickOne<any>(l.sucursales)?.nombre ?? 'sucursal'}.`,
         sucursal_id: l.sucursal_id,

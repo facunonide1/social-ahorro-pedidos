@@ -146,10 +146,10 @@ export default function NuevoProveedorForm() {
       return
     }
     if (data?.id) {
-      router.push(`/hub/proveedores/${data.id}`)
+      router.push(`/admin/proveedores/${data.id}`)
       router.refresh()
     } else {
-      router.push('/hub/proveedores')
+      router.push('/admin/proveedores')
     }
   }
 

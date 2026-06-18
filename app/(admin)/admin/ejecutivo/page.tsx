@@ -181,14 +181,14 @@ export default async function DashboardEjecutivoPage() {
               titulo="Facturas vencidas"
               count={facturasVencidasCount}
               monto={facturasVencidasMonto}
-              href="/hub/facturas"
+              href="/admin/facturas"
               tone={facturasVencidasCount > 0 ? 'destructive' : 'muted'}
             />
             <AlertTile
               icon={Boxes}
               titulo="Stock crítico"
               count={stockCritico}
-              href="/hub/operaciones/stock"
+              href="/admin/operaciones/stock"
               tone={stockCritico > 0 ? 'warning' : 'muted'}
               subtitulo="productos por debajo del mínimo"
             />
@@ -196,7 +196,7 @@ export default async function DashboardEjecutivoPage() {
               icon={CheckSquare}
               titulo="Aprobaciones por resolver"
               count={aprobacionesPendientes}
-              href="/hub/aprobaciones"
+              href="/admin/aprobaciones"
               tone={aprobacionesPendientes > 0 ? 'warning' : 'muted'}
             />
           </div>
@@ -211,22 +211,22 @@ export default async function DashboardEjecutivoPage() {
             <ShortcutCard
               icon={TrendingUp}
               label="BI / Charts"
-              href="/hub/bi"
+              href="/admin/bi"
             />
             <ShortcutCard
               icon={Landmark}
               label="Cash flow"
-              href="/hub/finanzas/cash-flow"
+              href="/admin/finanzas/cash-flow"
             />
             <ShortcutCard
               icon={CheckSquare}
               label="Aprobaciones"
-              href="/hub/aprobaciones"
+              href="/admin/aprobaciones"
             />
             <ShortcutCard
               icon={AlertTriangle}
               label="Resumen IA del día"
-              href="/hub/ia/resumen"
+              href="/admin/ia/resumen"
             />
           </div>
         </section>

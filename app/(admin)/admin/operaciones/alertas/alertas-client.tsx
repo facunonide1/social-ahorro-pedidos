@@ -127,9 +127,9 @@ function acciones(a: AlertaRow) {
     <Button asChild variant="outline" size="sm" className="h-7 text-xs"><Link href={href}>{icon} {label}</Link></Button>
   )
   if (a.tipo === 'stock_fantasma') return btn('/admin/tareas', 'Tarea: revisar físico', <ClipboardList className="size-3.5" />)
-  if (a.tipo === 'quiebre_proyectado' || a.tipo === 'stock_critico') return <>{btn('/hub/operaciones/reposicion', 'Reponer', <ShoppingCart className="size-3.5" />)}{btn('/hub/operaciones/transferencias/nueva', 'Pedir a sucursal', <ArrowRightLeft className="size-3.5" />)}</>
-  if (a.tipo === 'sobrestock') return <>{btn('/hub/operaciones/transferencias', 'Redistribuir', <ArrowRightLeft className="size-3.5" />)}</>
-  if (a.tipo === 'sin_rotacion') return btn('/hub/operaciones/analisis', 'Ver análisis', <TrendingDown className="size-3.5" />)
-  if (a.tipo.startsWith('vencimiento')) return <>{btn('/hub/operaciones/vencimientos', 'Ver en vencimientos', <CalendarClock className="size-3.5" />)}</>
+  if (a.tipo === 'quiebre_proyectado' || a.tipo === 'stock_critico') return <>{btn('/admin/operaciones/reposicion', 'Reponer', <ShoppingCart className="size-3.5" />)}{btn('/admin/operaciones/transferencias/nueva', 'Pedir a sucursal', <ArrowRightLeft className="size-3.5" />)}</>
+  if (a.tipo === 'sobrestock') return <>{btn('/admin/operaciones/transferencias', 'Redistribuir', <ArrowRightLeft className="size-3.5" />)}</>
+  if (a.tipo === 'sin_rotacion') return btn('/admin/operaciones/analisis', 'Ver análisis', <TrendingDown className="size-3.5" />)
+  if (a.tipo.startsWith('vencimiento')) return <>{btn('/admin/operaciones/vencimientos', 'Ver en vencimientos', <CalendarClock className="size-3.5" />)}</>
   return null
 }

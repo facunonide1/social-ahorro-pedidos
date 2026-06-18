@@ -107,7 +107,7 @@ export default async function CuentaDetailPage({
           </span>
         }
         breadcrumbs={[
-          { label: 'Cuentas bancarias', href: '/hub/finanzas/cuentas' },
+          { label: 'Cuentas bancarias', href: '/admin/finanzas/cuentas' },
           { label: c.nombre },
         ]}
         actions={
@@ -116,8 +116,8 @@ export default async function CuentaDetailPage({
           </Badge>
         }
         tabs={[
-          { label: 'Movimientos', href: `/hub/finanzas/cuentas/${c.id}` },
-          { label: 'Datos', href: `/hub/finanzas/cuentas/${c.id}?tab=datos` },
+          { label: 'Movimientos', href: `/admin/finanzas/cuentas/${c.id}` },
+          { label: 'Datos', href: `/admin/finanzas/cuentas/${c.id}?tab=datos` },
         ]}
       />
 
@@ -230,7 +230,7 @@ export default async function CuentaDetailPage({
               Se muestran los últimos 200 movimientos. La conciliación se hace
               desde{' '}
               <Link
-                href="/hub/finanzas/conciliacion"
+                href="/admin/finanzas/conciliacion"
                 className="text-primary hover:underline"
               >
                 Finanzas · Conciliación

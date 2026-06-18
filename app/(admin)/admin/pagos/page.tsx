@@ -50,7 +50,7 @@ export default async function PagosPage() {
         actions={
           canCreate ? (
             <Button asChild>
-              <Link href="/hub/pagos/nuevo">
+              <Link href="/admin/pagos/nuevo">
                 <Plus className="size-4" />
                 Nueva OP
               </Link>
@@ -96,7 +96,7 @@ export default async function PagosPage() {
                     <TableRow key={r.id}>
                       <TableCell className="font-mono text-xs font-bold">
                         <Link
-                          href={`/hub/pagos/${r.id}`}
+                          href={`/admin/pagos/${r.id}`}
                           className="hover:underline"
                         >
                           {r.numero_orden_pago || '—'}
@@ -120,7 +120,7 @@ export default async function PagosPage() {
                       </TableCell>
                       <TableCell>
                         <Button asChild variant="ghost" size="sm">
-                          <Link href={`/hub/pagos/${r.id}`}>
+                          <Link href={`/admin/pagos/${r.id}`}>
                             Ver
                             <ArrowRight className="size-3.5" />
                           </Link>
