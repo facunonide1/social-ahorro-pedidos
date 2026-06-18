@@ -6,9 +6,51 @@
 >
 > **Regla permanente:** actualizar este archivo después de CADA sub-tanda.
 
-**Última actualización:** 2026-06-10 · **Rama:** `main` · **Sistema:** NORA HQ
+**Última actualización:** 2026-06-18 · **Rama:** `main` · **Sistema:** NORA HQ
 (orquestador, NO factura ni reemplaza SIFACO) · single-tenant (Social Ahorro)
 con `sucursal_id` en todo para escalar.
+
+---
+
+## 🟣 SESIÓN ACTUAL — OPERACIONES/STOCK → WMS (en curso)
+
+Reconstrucción del sector Operaciones a WMS con import de Excel diario, ventas
+por diferencia, análisis y disparadores de tareas. Ver auditoría previa en
+`docs/AUDITORIA-OPERACIONES.md`.
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T0 · Fix header /hub (buscador) | ✅ `87edf4b` |
+| T1 · Unificar productos → productos_catalogo (raíz del bug, FKs 0041) | ✅ `0c3ebc2` |
+| T2 · Schema WMS (0042: stock_items + trigger, movimientos firmados, lotes, rotacion, imports, config, alertas) | ✅ aplicada |
+| T3 · Importador stock diario (ventas por diferencia) ⭐ | ⬜ |
+| T4 · Importador vencimientos | ⬜ |
+| T5 · Stock (rehacer: Productos + Kárdex sobre catalogo+stock_items) | ⬜ |
+| T6 · Análisis ventas + dinero dormido + cron metricas-stock | ⬜ |
+| T7 · Reposición ⭐ | ⬜ |
+| T8 · Alertas ⭐ (9 tipos + stock fantasma) | ⬜ |
+| T9 · Vencimientos (acciones transferir/devolver/ofertar) | ⬜ |
+| T10 · Transferencias + redistribución (mueven stock) | ⬜ |
+| T11 · Inventarios (4 sucursales reales) | ⬜ |
+| T12 · CrearTareaRapida + recepción→stock + NORA tools + demo + tag v0.8 | ⬜ |
+
+### 👉 PRÓXIMA ACCIÓN: **T3 · Importador de stock diario** (`/hub/operaciones/importaciones`)
+Prerrequisitos: **`npm i xlsx`** (SheetJS, no instalado) + helper
+`lib/utils/export-excel.ts` (regla global: toda pantalla de productos exporta
+.xlsx con SKU). Lógica de procesamiento reusable en
+`lib/inventario/procesar-stock-import.ts` (separada del upload, para el futuro
+agente SIFACO F20). Modelo ya listo: el import calcula `delta = stock_nuevo −
+stock_items.cantidad` por producto e inserta un movimiento firmado
+(`venta` si bajó, `import_diferencia` si subió, `discrepancia` si la
+cantidad_vendida declarada difiere de la baja) — el **trigger
+`movimientos_stock_aplicar` deriva `stock_items`** (no setear absoluto a mano).
+Idempotente por `hash_archivo`. Matching SKU→EAN→fuzzy nombre→`matcheos_aprendidos`.
+Mapeo configurable guardado en `config_import_stock`. Menú Operación (8 secciones)
+y nav se wirean a medida que cada pantalla T3–T11 existe (patrón placeholder).
+
+> Decisiones tomadas: catálogo único = `productos_catalogo`; `productos` (vieja,
+> vacía) en desuso. `movimientos_stock.cantidad` = delta FIRMADO. Stock screen
+> vieja (form a `productos`) superseded por T5.
 
 ---
 
