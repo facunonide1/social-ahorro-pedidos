@@ -150,6 +150,9 @@ WhatsApp/Telegram · Integración SIFACO.
 - `docs/ERP-PROGRESO.md` — historial de progreso.
 - `docs/AUDITORIA-GAPS.md` — auditoría de gaps por ruta.
 - `docs/OBJETIVOS-NORA-HQ.md` — los 8 objetivos del sistema.
+- `docs/ARQUITECTURA.md` — **guía técnica para entender y mejorar** (dónde está
+  cada cosa: rutas → archivos → tablas, modelo de datos, recetas de extensión,
+  deuda técnica priorizada).
 - `docs/IDENTIDAD-NORA-HQ.md` / `docs/CHANGELOG.md` — identidad y cambios.
 - `docs/RESUMEN-SISTEMA.md` — **este documento**.
 
