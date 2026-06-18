@@ -69,11 +69,7 @@ export function ImportacionesClient({
       </div>
 
       {tab === 'stock' && <ImportarStock sucursales={sucursales} configs={configs} />}
-      {tab === 'vencimientos' && (
-        <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-          Importador de vencimientos (T4) — próximamente. Cargará lotes con fecha de vencimiento.
-        </div>
-      )}
+      {tab === 'vencimientos' && <ImportarVencimientos sucursales={sucursales} />}
       {tab === 'historial' && (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
@@ -271,6 +267,110 @@ function ImportarStock({ sucursales, configs }: { sucursales: Sucursal[]; config
           </div>
         </>
       )}
+    </div>
+  )
+}
+
+const CAMPOS_VENC = [
+  { key: 'sku', label: 'SKU' }, { key: 'ean', label: 'EAN' }, { key: 'nombre', label: 'Nombre' },
+  { key: 'numero_lote', label: 'N° lote' }, { key: 'fecha_vencimiento', label: 'Fecha vencimiento *' },
+  { key: 'cantidad', label: 'Cantidad *' }, { key: 'costo', label: 'Costo (opcional)' },
+] as const
+
+function ImportarVencimientos({ sucursales }: { sucursales: Sucursal[] }) {
+  const router = useRouter()
+  const [sucId, setSucId] = useState(sucursales[0]?.id ?? '')
+  const [fileName, setFileName] = useState<string | null>(null)
+  const [headers, setHeaders] = useState<string[]>([])
+  const [rows, setRows] = useState<string[][]>([])
+  const [mapeo, setMapeo] = useState<Record<string, string>>({})
+  const [items, setItems] = useState<any[] | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [done, setDone] = useState<any>(null)
+
+  async function onFile(file: File) {
+    try {
+      const { headers: h, rows: r } = await parseSpreadsheet(file)
+      if (h.length === 0) { toast.error('Sin encabezados.'); return }
+      const n = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+      const find = (...ks: string[]) => h.find((x) => ks.some((k) => n(x).includes(k))) ?? NONE
+      setFileName(file.name); setHeaders(h); setRows(r); setItems(null); setDone(null)
+      setMapeo({ sku: find('sku', 'codigo'), ean: find('ean', 'barras'), nombre: find('nombre', 'producto', 'descrip'), numero_lote: find('lote'), fecha_vencimiento: find('venc', 'caducidad'), cantidad: find('cantidad', 'stock', 'unidades'), costo: find('costo', 'precio') })
+    } catch { toast.error('No se pudo leer el archivo.') }
+  }
+
+  function buildFilas() {
+    const idx = (c: string) => headers.indexOf(c)
+    const num = (v: string) => { const x = Number(String(v).replace(/\./g, '').replace(',', '.')); return Number.isFinite(x) ? x : 0 }
+    const get = (r: string[], k: string) => { const c = mapeo[k]; return c && c !== NONE ? (r[idx(c)] ?? '').trim() : '' }
+    return rows.map((r, i) => ({
+      fila: i + 2, sku: get(r, 'sku') || null, ean: get(r, 'ean') || null, nombre: get(r, 'nombre') || null,
+      numero_lote: get(r, 'numero_lote') || null, fecha_vencimiento: get(r, 'fecha_vencimiento') || null,
+      cantidad: num(get(r, 'cantidad')), costo: mapeo.costo && mapeo.costo !== NONE ? num(get(r, 'costo')) : null,
+    }))
+  }
+
+  async function analizar() {
+    if (mapeo.fecha_vencimiento === NONE || mapeo.cantidad === NONE) { toast.error('Mapeá fecha y cantidad.'); return }
+    setBusy(true)
+    try {
+      const r = await fetch('/api/inventario/import-vencimientos', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: 'analizar', filas: buildFilas() }) })
+      const j = await r.json(); if (!r.ok) throw new Error(j?.error); setItems(j.items)
+    } catch (e: any) { toast.error(e?.message ?? 'Error') } finally { setBusy(false) }
+  }
+  async function confirmar() {
+    if (!items || !sucId) { toast.error('Elegí sucursal.'); return }
+    setBusy(true)
+    try {
+      const r = await fetch('/api/inventario/import-vencimientos', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: 'confirmar', sucursalId: sucId, items }) })
+      const j = await r.json(); if (!r.ok) throw new Error(j?.error)
+      toast.success(`Lotes: ${j.creados} creados, ${j.actualizados} actualizados.`); setDone(j); router.refresh()
+    } catch (e: any) { toast.error(e?.message ?? 'Error') } finally { setBusy(false) }
+  }
+
+  const okCount = items?.filter((i) => i.estado === 'ok').length ?? 0
+  const sinMatch = items?.filter((i) => i.estado === 'sin_match').length ?? 0
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Sucursal</Label>
+        <Select value={sucId} onValueChange={setSucId}><SelectTrigger className="w-[200px]"><SelectValue placeholder="Sucursal" /></SelectTrigger>
+          <SelectContent>{sucursales.map((s) => <SelectItem key={s.id} value={s.id}>{s.codigo ? `${s.codigo} · ` : ''}{s.nombre}</SelectItem>)}</SelectContent></Select>
+      </div>
+      <label className={cn('flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed p-8 text-center hover:border-primary/50', fileName && 'border-primary/40 bg-nora-bg')}
+        onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) onFile(f) }}>
+        {fileName ? <><FileSpreadsheet className="size-7 text-primary" /><div className="text-sm font-medium">{fileName}</div><div className="text-xs text-muted-foreground">{rows.length} filas</div></>
+          : <><Upload className="size-7 text-muted-foreground" /><div className="text-sm font-medium">Excel/CSV de vencimientos</div></>}
+        <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f) }} />
+      </label>
+      {headers.length > 0 && !items && (<>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {CAMPOS_VENC.map((c) => (<div key={c.key} className="space-y-1">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{c.label}</Label>
+            <Select value={mapeo[c.key] ?? NONE} onValueChange={(v) => setMapeo((m) => ({ ...m, [c.key]: v }))}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value={NONE}>— sin mapear —</SelectItem>{headers.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}</SelectContent></Select>
+          </div>))}
+        </div>
+        <Button onClick={analizar} disabled={busy} size="lg">{busy ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />} Analizar</Button>
+      </>)}
+      {items && (<>
+        <div className="grid grid-cols-3 gap-3"><Kpi label="Lotes OK" value={okCount} tone="ok" /><Kpi label="Sin match" value={sinMatch} tone={sinMatch > 0 ? 'warn' : undefined} /><Kpi label="Total filas" value={items.length} /></div>
+        <div className="flex gap-2">
+          {!done ? <Button onClick={confirmar} disabled={busy}>{busy ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />} Cargar lotes</Button>
+            : <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-600 dark:text-emerald-400"><CheckCircle2 className="size-4" /> Cargado</span>}
+          <Button variant="outline" onClick={() => exportExcel('vencimientos-import', items.map((i) => ({ SKU: i.sku ?? '', Producto: i.nombre_match ?? i.nombre_origen ?? '', Lote: i.numero_lote ?? '', Vencimiento: i.fecha_vencimiento ?? '', Cantidad: i.cantidad, Estado: i.estado })))}><Download className="size-4" /> Exportar</Button>
+          <Button variant="ghost" onClick={() => { setItems(null); setDone(null) }}>Volver</Button>
+        </div>
+        <div className="overflow-x-auto rounded-lg border border-border"><table className="w-full text-sm">
+          <thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">SKU</th><th className="px-3 py-2">Producto</th><th className="px-3 py-2">Lote</th><th className="px-3 py-2">Vence</th><th className="px-3 py-2 text-right">Cant.</th><th className="px-3 py-2">Estado</th></tr></thead>
+          <tbody>{items.slice(0, 300).map((i) => (<tr key={i.fila} className="border-t border-border">
+            <td className="px-3 py-1.5 font-mono text-xs">{i.sku ?? '—'}</td><td className="px-3 py-1.5">{i.nombre_match ?? <span className="text-muted-foreground">{i.nombre_origen ?? '—'}</span>}</td>
+            <td className="px-3 py-1.5">{i.numero_lote ?? '—'}</td><td className="px-3 py-1.5">{i.fecha_vencimiento ?? '—'}</td><td className="px-3 py-1.5 text-right tabular-nums">{i.cantidad}</td>
+            <td className="px-3 py-1.5">{i.estado === 'ok' ? <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-600 dark:text-emerald-400">ok</span> : i.estado === 'sin_match' ? <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-600 dark:text-amber-400">sin match</span> : <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[11px] text-rose-600 dark:text-rose-400">fecha inválida</span>}</td>
+          </tr>))}</tbody>
+        </table></div>
+      </>)}
     </div>
   )
 }

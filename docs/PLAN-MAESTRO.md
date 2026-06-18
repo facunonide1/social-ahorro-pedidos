@@ -24,7 +24,7 @@ por diferencia, análisis y disparadores de tareas. Ver auditoría previa en
 | T1 · Unificar productos → productos_catalogo (raíz del bug, FKs 0041) | ✅ `0c3ebc2` |
 | T2 · Schema WMS (0042: stock_items + trigger, movimientos firmados, lotes, rotacion, imports, config, alertas) | ✅ aplicada |
 | T3 · Importador stock diario (ventas por diferencia) ⭐ | ✅ |
-| T4 · Importador vencimientos | ⬜ |
+| T4 · Importador vencimientos | ✅ |
 | T5 · Stock (rehacer: Productos + Kárdex sobre catalogo+stock_items) | ⬜ |
 | T6 · Análisis ventas + dinero dormido + cron metricas-stock | ⬜ |
 | T7 · Reposición ⭐ | ⬜ |
@@ -34,7 +34,7 @@ por diferencia, análisis y disparadores de tareas. Ver auditoría previa en
 | T11 · Inventarios (4 sucursales reales) | ⬜ |
 | T12 · CrearTareaRapida + recepción→stock + NORA tools + demo + tag v0.8 | ⬜ |
 
-### 👉 PRÓXIMA ACCIÓN: **T3 · Importador de stock diario** (`/hub/operaciones/importaciones`)
+### 👉 PRÓXIMA ACCIÓN: **T5 · Stock (rehacer)** — `/hub/operaciones/stock` lee productos_catalogo + stock_items, tabs Productos/Kárdex, semáforo por sucursal, KPIs (valor stock a costo, críticos, por vencer), filtros, export Excel con SKU, detalle con lotes/movimientos/rotación. Luego T6 (análisis+cron metricas-stock), T7 reposición, T8 alertas, T9 vencimientos acciones, T10 transferencias mueven stock, T11 inventarios 4 sucursales, T12 tareas rápidas+NORA+demo+tag v0.8.
 Prerrequisitos: **`npm i xlsx`** (SheetJS, no instalado) + helper
 `lib/utils/export-excel.ts` (regla global: toda pantalla de productos exporta
 .xlsx con SKU). Lógica de procesamiento reusable en
