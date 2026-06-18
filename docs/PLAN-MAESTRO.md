@@ -23,7 +23,7 @@ por diferencia, análisis y disparadores de tareas. Ver auditoría previa en
 | T0 · Fix header /hub (buscador) | ✅ `87edf4b` |
 | T1 · Unificar productos → productos_catalogo (raíz del bug, FKs 0041) | ✅ `0c3ebc2` |
 | T2 · Schema WMS (0042: stock_items + trigger, movimientos firmados, lotes, rotacion, imports, config, alertas) | ✅ aplicada |
-| T3 · Importador stock diario (ventas por diferencia) ⭐ | ⬜ |
+| T3 · Importador stock diario (ventas por diferencia) ⭐ | ✅ |
 | T4 · Importador vencimientos | ⬜ |
 | T5 · Stock (rehacer: Productos + Kárdex sobre catalogo+stock_items) | ⬜ |
 | T6 · Análisis ventas + dinero dormido + cron metricas-stock | ⬜ |

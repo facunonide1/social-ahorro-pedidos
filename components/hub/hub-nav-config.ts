@@ -25,6 +25,7 @@ import {
   CheckSquare,
   BarChart3,
   Activity,
+  Upload,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -93,6 +94,12 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
         href: '/hub/operaciones/stock',
         icon: Boxes,
         roles: ['super_admin', 'gerente', 'administrativo', 'sucursal', 'comprador', 'auditor'],
+      },
+      {
+        label: 'Importaciones',
+        href: '/hub/operaciones/importaciones',
+        icon: Upload,
+        roles: ['super_admin', 'gerente', 'comprador'],
       },
       {
         label: 'Vencimientos',
