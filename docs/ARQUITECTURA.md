@@ -36,9 +36,9 @@ Complemento de `RESUMEN-SISTEMA.md` (qué hace) — esto es el **cómo y el dón
 
 | Shell | Layout | Sidebar/Nav | Para qué |
 |-------|--------|-------------|----------|
-| `/admin/*` | `app/(admin)/layout.tsx` → `components/layout/admin-shell.tsx` | `components/layout/sidebar.tsx` (8 pilares) + `top-nav.tsx` | **NORA HQ (principal)** |
-| `/hub/*` | `components/hub/hub-shell.tsx` | `components/hub/hub-sidebar.tsx` + `hub-top-bar.tsx` | Legacy (finanzas, stock, RRHH…) |
-| `/dashboard`, `/pedidos`, `/clientes` | `components/crm/*` | `crm-sidebar.tsx` + `crm-top-bar.tsx` | CRM de pedidos |
+| `/admin/*` | `app/(admin)/layout.tsx` → `components/layout/admin-shell.tsx` | `components/layout/sidebar.tsx` (`NAVEGACION`) + `top-nav.tsx` | **NORA HQ — ÚNICO panel** (incluye finanzas, operaciones, compras, RRHH, sucursales, clientes, IA, BI…) |
+| `/hub/*` | — (eliminado) | — | **Redirige** a `/admin/*` (308, `next.config.mjs`). Ya no existe shell propio. |
+| `/dashboard`, `/pedidos`, `/clientes` (raíz) | `components/crm/*` | `crm-sidebar.tsx` + `crm-top-bar.tsx` | CRM de pedidos (app aparte; link externo "CRM Pedidos ↗" en el sidebar) |
 
 **Para agregar un ítem al sidebar de NORA HQ:** editar `lib/constants/navegacion.ts`
 → array `NAVEGACION` (grupos × items con `rolesPermitidos`, `estado`, `badge`).
@@ -46,9 +46,10 @@ Complemento de `RESUMEN-SISTEMA.md` (qué hace) — esto es el **cómo y el dón
 + fetch en `sidebar.tsx`. Estados de item: `activo` | `placeholder` (toast "en
 construcción") | `fase2` | `externo`.
 
-> ⚠️ Deuda: `/hub` y CRM tienen su propio sidebar. Unificar todo a `NoraSidebar`
-> es un follow-up. `NAVEGACION_DEPARTAMENTAL` (viejo) sigue por
-> `departamentosPermitidos`.
+> ✅ Resuelto (v0.18): `/hub` se unificó dentro de `/admin` (un solo shell +
+> `NAVEGACION`). El CRM de pedidos queda aparte como link externo. Queda como
+> follow-up opcional unificar también el shell del CRM. `NAVEGACION_DEPARTAMENTAL`
+> (viejo) sigue por `departamentosPermitidos` (no usado por el sidebar actual).
 
 ### 2.1 Unificación de shells (v0.18 · en curso) — Mapa de migración `/hub → /admin`
 
@@ -134,8 +135,8 @@ tocan (no viven bajo `/hub`).
 
 Permisos: `lib/types/permisos.ts` (módulos × acciones, presets, `permisosEfectivos`).
 
-### Finanzas / Operaciones / RRHH / CRM (F2–F5) — `/hub/*`
-- Rutas en `app/hub/*`. Tipos/labels en `lib/types/admin.ts`.
+### Finanzas / Operaciones / RRHH / Compras (F2–F5) — `/admin/*` (antes `/hub/*`)
+- Rutas en `app/(admin)/admin/*` (movidas desde `app/hub/*` en v0.18). Tipos/labels en `lib/types/admin.ts`.
 - Helpers: `lib/admin-hub/factura.ts`, `pago.ts`.
 - Tablas: `facturas_proveedor`, `pagos`, `cuentas_bancarias_propias`,
   `movimientos_bancarios`, `cheques`, `impuestos_obligaciones`, `productos`,

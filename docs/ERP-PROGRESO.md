@@ -2,7 +2,18 @@
 
 **Última actualización:** 2026-06-18
 **Rama productiva:** `main`
-**Último hito:** Operaciones/WMS reconstruido (tag `v0.8-operaciones-completo`)
+**Último hito:** Unificación de shells — `/hub` mudado a `/admin` (tag `v0.18-unificacion-shells`)
+
+> **Unificación de shells (v0.18)** ✅: `/admin` es el ÚNICO panel. Fix del error
+> de Server Components en `/admin` (`KpiCard` pasó a universal: ya no recibe
+> `icon` forwardRef cruzando el límite server→client). 64 páginas movidas de
+> `app/hub/*` a `app/(admin)/admin/*` (sin tocar lógica/queries; se quitó el
+> wrapper `HubShell`, el shell lo da el layout `(admin)`). Sidebar único
+> (`NAVEGACION`) repuntado a `/admin` + grupo "Apps" (CRM Pedidos ↗, Cuponera ↗).
+> Redirects 308 `/hub/*`→`/admin/*` en `next.config.mjs`. Borrado `app/hub/*` y
+> el shell legacy de hub. `/api/hub/*` y badges de estado conservados. 81 rutas
+> `/admin`, build verde, 0 referencias `/hub`. CRM de pedidos y cuponera siguen
+> aparte como apps externas.
 
 > **OPS/WMS (T0–T12)** ✅: header fix; **catálogo único** `productos_catalogo`
 > (FKs reapuntadas, migr. 0041); schema WMS (0042: `stock_items` + trigger que

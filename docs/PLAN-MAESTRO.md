@@ -12,7 +12,24 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — FINANZAS → cuentas por pagar + tesorería + caja multinivel
+## 🟢 SESIÓN ACTUAL — UNIFICACIÓN DE SHELLS (pendiente #1 arquitectura) ✅
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T0 · Fix `/admin` (Server Component pasaba `icon` forwardRef a `KpiCard` client → error de serialización; `KpiCard` ahora universal) | ✅ `5aaecbd` |
+| T1 · Mapa de migración `/hub → /admin` documentado en ARQUITECTURA.md §2.1 | ✅ |
+| T2 · Mover 64 páginas `app/hub/*` → `app/(admin)/admin/*` (git mv + quitar wrapper HubShell) por grupos: Operaciones, Finanzas, Compras, Clientes/IA, Facturas/Pagos, RRHH/Sucursales/Aprobaciones, Ejecutivo/BI | ✅ |
+| T3 · Sidebar unificado: `NAVEGACION` repuntado a `/admin` (238 refs internas), grupo "Apps" con CRM Pedidos ↗ y Cuponera ↗ | ✅ |
+| T4 · Redirects 308 `/hub/*` → `/admin/*` (`next.config.mjs`; `/hub/usuarios`→`/admin/configuracion/usuarios`); borrado `app/hub/*` y 5 archivos de shell legacy | ✅ |
+| T5 · Verificación: build verde, 81 rutas `/admin`, 0 refs `/hub`, redirects probados (308) | ✅ |
+
+**Resultado:** UN SOLO panel (`/admin`). CRM de pedidos (`/dashboard`,`/pedidos`,`/clientes` raíz) y cuponera quedan aparte (links externos). `/api/hub/*` y `components/hub/*-estado-badge` se conservan. Tag `v0.18-unificacion-shells`.
+
+> **Pendiente del usuario / follow-ups:** (1) smoke test manual logueado de todas las secciones (no se pudo headless por auth). (2) Permisos finos por rol: `NAVEGACION` quedó con `rolesPermitidos` amplios; ajustar fino en Administración. (3) Opcional: unificar también el shell del CRM. (4) Opcional: merge de los dos `proveedores` y dos `pagos` que conviven.
+
+---
+
+## 🟢 SESIÓN PREVIA — FINANZAS → cuentas por pagar + tesorería + caja multinivel
 
 | Sub-tanda | Estado |
 |-----------|--------|
