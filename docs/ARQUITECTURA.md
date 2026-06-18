@@ -50,6 +50,47 @@ construcción") | `fase2` | `externo`.
 > es un follow-up. `NAVEGACION_DEPARTAMENTAL` (viejo) sigue por
 > `departamentosPermitidos`.
 
+### 2.1 Unificación de shells (v0.18 · en curso) — Mapa de migración `/hub → /admin`
+
+**Meta:** `/admin` es el ÚNICO panel (shell `(admin)/layout.tsx` + `NAVEGACION`).
+Todo `app/hub/*` se mueve a `app/(admin)/admin/*`. El CRM de pedidos
+(`/dashboard`, `/pedidos`, `/clientes` raíz) y la cuponera quedan APARTE
+(links externos en el sidebar). `/hub/*` no se borra: **redirige** a su
+equivalente `/admin/*` (red de seguridad para links viejos).
+
+**Patrón de move (por página):** `git mv app/hub/X app/(admin)/admin/X` y
+**quitar el wrapper `<HubShell profile=…>`** (el layout `(admin)` ya provee
+shell). Mantener `requireAdminHubAccess()` para auth/profile/queries. Los
+client components co-ubicados viajan con el folder (imports `@/` absolutos).
+
+**Mapa por grupo:**
+
+| Grupo | `/hub/*` → `/admin/*` |
+|-------|------------------------|
+| Operaciones | `operaciones/{stock,stock/[id],stock/nuevo,transferencias,transferencias/[id],transferencias/nueva,vencimientos,alertas,analisis,importaciones,inventarios,inventarios/[id],reposicion}` → idem en `/admin` |
+| Finanzas | `finanzas/*` (índice, caja, calendario, cash-flow, cheques(+nueva), conciliacion, cuentas(+[id]+nueva), documentos, gastos-fijos, impuestos, pagos, proveedores(+[id])) → `/admin/finanzas/*` |
+| Finanzas (legacy top-level) | `facturas(+[id]+nueva)`, `pagos(+[id]+nuevo)` → `/admin/facturas/*`, `/admin/pagos/*` |
+| Compras | `proveedores(+[id]+nuevo)`→`/admin/proveedores/*`; `recepciones(+[id]+nueva)`→`/admin/recepciones/*`; `compras/devoluciones(+[id]+nueva)`→`/admin/compras/devoluciones/*` |
+| Equipo/RRHH | `rrhh/empleados(+[id]+nuevo)`→`/admin/rrhh/empleados/*`; `sucursales/performance`→`/admin/sucursales/performance`; `aprobaciones`→`/admin/aprobaciones` |
+| Clientes | `clientes(+[id]+nuevo)`→`/admin/clientes/*`; `ia/tickets`→`/admin/ia/tickets` |
+| Inteligencia | `ejecutivo`→`/admin/ejecutivo`; `bi`→`/admin/bi`; `ia/resumen`→`/admin/ia/resumen` |
+| Sucursales | `sucursales(+[id]+nueva)`→`/admin/sucursales/*`; `sucursales/caja(+[id])`→`/admin/sucursales/caja/*`; `sucursales/gastos`→`/admin/sucursales/gastos` |
+| Root | `/hub` → redirect `/admin` |
+
+**Conflictos resueltos:**
+- `/hub/usuarios` es duplicado legacy de `/admin/configuracion/usuarios` →
+  **no se mueve**; `/hub/usuarios` redirige a `/admin/configuracion/usuarios`.
+- `/admin/empleados` (contexto tareas/gamificación, ya existía) ≠
+  `/admin/rrhh/empleados` (RRHH) → conviven, rutas distintas.
+- Dos `proveedores` (`/admin/proveedores` compras + `/admin/finanzas/proveedores`)
+  y dos `pagos` (`/admin/pagos` legacy + `/admin/finanzas/pagos`) conviven; merge
+  futuro opcional.
+
+**Sidebar:** `NAVEGACION` ya estaba unificado (lista todas las secciones), solo
+apuntaba a `/hub/*`. Tras mover, se repuntan los `href` a `/admin/*` y se agregan
+los links externos (CRM Pedidos ↗, Cuponera ↗). Las APIs (`app/api/*`) no se
+tocan (no viven bajo `/hub`).
+
 ---
 
 ## 3. Mapa por módulo (ruta → archivos → tablas)
