@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import type { Aprobacion } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -45,7 +44,7 @@ export default async function AprobacionesPage({
   const aprobadas = aprobaciones.filter((a) => a.estado === 'aprobada').length
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Centro de aprobaciones"
         description="Solicitudes que requieren visto bueno de gerencia"
@@ -108,6 +107,6 @@ export default async function AprobacionesPage({
           />
         )}
       </div>
-    </HubShell>
+    </>
   )
 }

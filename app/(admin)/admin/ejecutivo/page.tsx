@@ -12,7 +12,6 @@ import {
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -119,7 +118,7 @@ export default async function DashboardEjecutivoPage() {
   const margenMes = ventasMes - gastosMes
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Dashboard ejecutivo"
         description="Vista consolidada para gerencia: ventas, finanzas, operaciones y alertas en una pantalla."
@@ -232,7 +231,7 @@ export default async function DashboardEjecutivoPage() {
           </div>
         </section>
       </div>
-    </HubShell>
+    </>
   )
 }
 

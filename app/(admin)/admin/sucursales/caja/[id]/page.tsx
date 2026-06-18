@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import type { CajaDiaria, MovimientoCaja } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { CajaClient } from './caja-client'
 
@@ -56,7 +55,7 @@ export default async function CajaDetallePage({
   ].includes(profile.rol)
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title={`Caja · ${sucursal?.nombre ?? 'Sucursal'}`}
         description={new Date(caja.fecha).toLocaleDateString('es-AR', {
@@ -78,6 +77,6 @@ export default async function CajaDetallePage({
           canWrite={canWrite}
         />
       </div>
-    </HubShell>
+    </>
   )
 }

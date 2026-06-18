@@ -8,7 +8,6 @@ import type {
   EmpleadoTurno,
 } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -68,7 +67,7 @@ export default async function EmpleadoDetallePage({
     ])
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title={emp.nombre_completo}
         description={emp.puesto || 'Sin puesto asignado'}
@@ -196,7 +195,7 @@ export default async function EmpleadoDetallePage({
           </div>
         )}
       </div>
-    </HubShell>
+    </>
   )
 }
 

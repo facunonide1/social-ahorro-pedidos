@@ -9,7 +9,6 @@ import {
   type Sucursal,
 } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -63,7 +62,7 @@ export default async function CajaDiariaPage() {
     .reduce((a, c) => a + Number(c.diferencia || 0), 0)
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Caja diaria"
         description={`${cajas.length} caja${cajas.length === 1 ? '' : 's'} · ${abiertas.length} abierta${abiertas.length === 1 ? '' : 's'}`}
@@ -183,6 +182,6 @@ export default async function CajaDiariaPage() {
           </Card>
         )}
       </div>
-    </HubShell>
+    </>
   )
 }

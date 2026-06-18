@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import type { Sucursal } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { Badge } from '@/components/ui/badge'
 
@@ -30,7 +29,7 @@ export default async function SucursalDetailPage({
   if (!s) notFound()
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title={s.nombre}
         description={
@@ -52,6 +51,6 @@ export default async function SucursalDetailPage({
       <div className="mx-auto w-full max-w-3xl p-4 md:p-6">
         <SucursalForm mode="edit" initial={s} />
       </div>
-    </HubShell>
+    </>
   )
 }

@@ -3,7 +3,6 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { CATEGORIA_GASTO_LABELS } from '@/lib/types/admin'
 import { STATUS_LABELS, TIPO_ENVIO_LABELS } from '@/lib/types'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -89,7 +88,7 @@ export default async function BIPage() {
   const totalAdeudo = Object.values(adeudo).reduce((a, x) => a + x, 0)
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="BI"
         description={`Tendencias y distribución de los últimos ${DIAS_VENTAS} días.`}
@@ -230,7 +229,7 @@ export default async function BIPage() {
           </Card>
         </div>
       </div>
-    </HubShell>
+    </>
   )
 }
 

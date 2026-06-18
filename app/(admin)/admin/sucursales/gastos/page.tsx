@@ -7,7 +7,6 @@ import {
   type Sucursal,
 } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -64,7 +63,7 @@ export default async function GastosOperativosPage() {
   const topCategorias = [...porCategoria.entries()].sort((a, b) => b[1] - a[1])
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Gastos operativos"
         description="Gastos por sucursal y categoría — alquiler, servicios, mantenimiento y más"
@@ -150,6 +149,6 @@ export default async function GastosOperativosPage() {
           </>
         )}
       </div>
-    </HubShell>
+    </>
   )
 }

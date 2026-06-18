@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import type { Empleado, Sucursal } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -45,7 +44,7 @@ export default async function EmpleadosPage() {
   )
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Empleados"
         description={`${empleados.length} empleado${empleados.length === 1 ? '' : 's'} · ${activos.length} activo${activos.length === 1 ? '' : 's'}`}
@@ -163,6 +162,6 @@ export default async function EmpleadosPage() {
           ))}
         </div>
       </div>
-    </HubShell>
+    </>
   )
 }

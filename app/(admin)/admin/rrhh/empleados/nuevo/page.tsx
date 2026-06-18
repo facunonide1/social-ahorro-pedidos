@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { EmpleadoForm } from '../empleado-form'
 
@@ -19,7 +18,7 @@ export default async function NuevoEmpleadoPage() {
     .order('nombre')
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Nuevo empleado"
         breadcrumbs={[
@@ -33,6 +32,6 @@ export default async function NuevoEmpleadoPage() {
           sucursales={(sucursales ?? []) as { id: string; nombre: string }[]}
         />
       </div>
-    </HubShell>
+    </>
   )
 }

@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import type { Sucursal } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -49,14 +48,14 @@ export default async function PerformanceSucursalesPage() {
 
   if (sucRes.error) {
     return (
-      <HubShell profile={profile}>
+      <>
         <PageHeader title="Performance de sucursales" />
         <div className="p-4 md:p-6">
           <Alert variant="destructive">
             <AlertDescription>{sucRes.error.message}</AlertDescription>
           </Alert>
         </div>
-      </HubShell>
+      </>
     )
   }
 
@@ -120,7 +119,7 @@ export default async function PerformanceSucursalesPage() {
   const maxGasto = Math.max(...rows.map((r) => r.gastoMes), 1)
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Performance de sucursales"
         description={`Comparativa del mes ${periodoActual}.`}
@@ -213,7 +212,7 @@ export default async function PerformanceSucursalesPage() {
           tengan tag de sucursal de despacho.
         </p>
       </div>
-    </HubShell>
+    </>
   )
 }
 

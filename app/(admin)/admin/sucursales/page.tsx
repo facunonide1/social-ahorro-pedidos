@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import type { Sucursal } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -31,7 +30,7 @@ export default async function SucursalesPage() {
   const list = sucursales ?? []
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Sucursales"
         description={`${list.length} sucursal${list.length === 1 ? '' : 'es'}`}
@@ -66,7 +65,7 @@ export default async function SucursalesPage() {
           ))}
         </div>
       </div>
-    </HubShell>
+    </>
   )
 }
 
