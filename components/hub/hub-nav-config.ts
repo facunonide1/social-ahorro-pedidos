@@ -26,6 +26,8 @@ import {
   BarChart3,
   Activity,
   Upload,
+  ShoppingCart,
+  Bell,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -106,6 +108,12 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
         href: '/hub/operaciones/analisis',
         icon: TrendingUp,
         roles: ['super_admin', 'gerente', 'comprador', 'auditor'],
+      },
+      {
+        label: 'Reposición',
+        href: '/hub/operaciones/reposicion',
+        icon: ShoppingCart,
+        roles: ['super_admin', 'gerente', 'comprador'],
       },
       {
         label: 'Vencimientos',
