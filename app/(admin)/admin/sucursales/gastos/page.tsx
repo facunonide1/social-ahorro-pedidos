@@ -66,7 +66,7 @@ export default async function GastosOperativosPage() {
     <>
       <PageHeader
         title="Gastos operativos"
-        description="Gastos por sucursal y categoría — alquiler, servicios, mantenimiento y más"
+        description="Gastos variables del local por sucursal (caja chica, compras puntuales, mantenimiento). Los recurrentes mensuales van en Finanzas › Gastos fijos."
         breadcrumbs={[{ label: 'Sucursales' }, { label: 'Gastos operativos' }]}
       />
 

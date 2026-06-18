@@ -223,7 +223,6 @@ export const NAVEGACION: NavGrupo[] = [
       { label: 'Vencimientos',   href: '/admin/operaciones/vencimientos',   icon: 'CalendarClock' },
       { label: 'Transferencias', href: '/admin/operaciones/transferencias', icon: 'ArrowRightLeft' },
       { label: 'Inventarios',    href: '/admin/operaciones/inventarios',    icon: 'ClipboardCheck' },
-      { label: 'Caja diaria',    href: '/admin/sucursales/caja',            icon: 'Wallet' },
     ],
   },
   {
@@ -253,11 +252,20 @@ export const NAVEGACION: NavGrupo[] = [
     ],
   },
   {
+    grupo: 'Sucursales',
+    rolesPermitidos: ROLES_SUCURSAL,
+    items: [
+      { label: 'Listado de sucursales', href: '/admin/sucursales',             icon: 'Store', rolesPermitidos: ['super_admin', 'gerente'] },
+      { label: 'Caja diaria',           href: '/admin/sucursales/caja',        icon: 'Wallet' },
+      { label: 'Gastos operativos',     href: '/admin/sucursales/gastos',      icon: 'Receipt' },
+      { label: 'Performance',           href: '/admin/sucursales/performance', icon: 'BarChart3', rolesPermitidos: ROLES_SUPERVISOR },
+    ],
+  },
+  {
     grupo: 'Equipo',
     items: [
       { label: 'Resumen',      href: '/admin/rrhh',                     icon: 'LayoutGrid' },
       { label: 'Empleados',    href: '/admin/rrhh/empleados',           icon: 'UserCheck', rolesPermitidos: ROLES_GESTION_EQUIPO },
-      { label: 'Performance',  href: '/admin/sucursales/performance',   icon: 'BarChart3', rolesPermitidos: ROLES_SUPERVISOR },
       { label: 'Ranking',      href: '/admin/ranking',                icon: 'Trophy' },
       { label: 'Aprobaciones', href: '/admin/aprobaciones',             icon: 'CheckCircle2', badge: 'aprobacionesPendientes', rolesPermitidos: ROLES_SUPERVISOR },
     ],
@@ -265,8 +273,8 @@ export const NAVEGACION: NavGrupo[] = [
   {
     grupo: 'Clientes',
     items: [
-      { label: 'Clientes B2B',       href: '/admin/clientes',   icon: 'Users' },
-      { label: 'Validación tickets', href: '/admin/ia/tickets', icon: 'Ticket' },
+      { label: 'Clientes B2B (legacy)', href: '/admin/clientes',   icon: 'Users' },
+      { label: 'Validación tickets',    href: '/admin/ia/tickets', icon: 'Ticket' },
     ],
   },
   {
@@ -282,7 +290,6 @@ export const NAVEGACION: NavGrupo[] = [
     grupo: 'Administración',
     soloSuperAdmin: true,
     items: [
-      { label: 'Sucursales',            href: '/admin/sucursales',                       icon: 'Store' },
       { label: 'Usuarios y permisos',   href: '/admin/configuracion/usuarios',         icon: 'Shield' },
       { label: 'Catálogo de productos', href: '/admin/configuracion/catalogo',         icon: 'Package' },
       { label: 'Tipos de tareas',       href: '/admin/configuracion/tipos-tareas',     icon: 'ListChecks' },

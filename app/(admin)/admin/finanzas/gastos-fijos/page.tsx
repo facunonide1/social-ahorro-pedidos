@@ -31,7 +31,7 @@ export default async function GastosFijosPage() {
 
   return (
     <>
-      <PageHeader title="Gastos fijos" description="Gastos recurrentes que generan vencimientos cada mes."
+      <PageHeader title="Gastos fijos" description="Gastos recurrentes mensuales (alquiler, servicios, seguros) que generan vencimientos automáticos. Los gastos variables del local van en Sucursales › Gastos operativos."
         breadcrumbs={[{ label: 'Finanzas' }, { label: 'Gastos fijos' }]} />
       <div className="p-4 md:p-6">
         <GastosFijosClient

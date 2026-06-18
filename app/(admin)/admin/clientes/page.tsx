@@ -72,6 +72,14 @@ export default async function ClientesCrmPage() {
       />
 
       <div className="space-y-4 p-4 md:p-6">
+        <Alert>
+          <AlertDescription className="text-xs">
+            Módulo legacy: el <b>Clientes B2B</b> actual se reemplazará por el CRM
+            unificado. Por ahora sus datos se conservan; no construir encima sin
+            coordinar la migración al CRM.
+          </AlertDescription>
+        </Alert>
+
         {error && (
           <Alert variant="destructive">
             <AlertDescription>
