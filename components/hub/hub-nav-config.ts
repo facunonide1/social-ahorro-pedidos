@@ -13,6 +13,7 @@ import {
   Scale,
   ReceiptText,
   CalendarClock,
+  Repeat,
   Boxes,
   CalendarX,
   ArrowLeftRight,
@@ -184,6 +185,12 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
         href: '/hub/finanzas/pagos',
         icon: Banknote,
         roles: ['super_admin', 'gerente', 'tesoreria', 'auditor'],
+      },
+      {
+        label: 'Gastos fijos',
+        href: '/hub/finanzas/gastos-fijos',
+        icon: Repeat,
+        roles: ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'auditor'],
       },
       {
         label: 'Cuentas bancarias',

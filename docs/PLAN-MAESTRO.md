@@ -17,9 +17,11 @@ con `sucursal_id` en todo para escalar.
 | Sub-tanda | Estado |
 |-----------|--------|
 | T1 · Schema (0044: ALTER proveedores/facturas/pagos + gastos_fijos, caja multinivel [turnos/general/movimientos+trigger saldo], conciliacion, config import, enums) | ✅ aplicada |
-| T2 · Tablero · T3 Proveedores+ctacte · T4 Documentos · T5 Pagos⭐ · T6 Gastos fijos · T7 Caja multinivel⭐ · T8 Cuentas+conciliación · T9 Cheques+impuestos · T10 Calendario⭐ · T11 NORA+alertas+demo+tag v0.9 | ⬜ |
+| T2 · Tablero ✅ · T3 Proveedores+ctacte ✅ · T4 Documentos ✅ · T5 Pagos⭐ ✅ · T6 Gastos fijos · T7 Caja multinivel⭐ · T8 Cuentas+conciliación · T9 Cheques+impuestos · T10 Calendario⭐ · T11 NORA+alertas+demo+tag v0.9 | 🟡 en curso |
 
-### 👉 PRÓXIMA ACCIÓN: **T3 · Proveedores + cuenta corriente** (`/hub/finanzas/proveedores`). Ficha con datos+CBU/alias+forma de pago+condición+bonif volumen+desc pronto pago+score+KPIs (le debés/comprado 90d/entregas tarde). Tab "Cuenta corriente": saldo = documentos (signo por tipo_documento, nota_credito resta) − pagos; movimientos; export Excel. Botones Nueva factura/Ver cta cte/Documentos. Reusa proveedores (0044). Sigue T4 documentos, T5 pagos⭐, T6-T11.
+### 👉 PRÓXIMA ACCIÓN: **T6 · Gastos fijos + recurrencia** (`/hub/finanzas/gastos-fijos`). ABM de gastos_fijos (concepto, tipo, sucursal, monto, frecuencia, día del mes, proveedor opcional). Generación de gastos_fijos_instancias del período (UNIQUE gasto_fijo_id+periodo evita duplicar) vía botón "Generar mes" + cron mensual (POST cron-secret / super_admin; plan Hobby → si no se puede schedule, dejar endpoint manual y anotar en PENDIENTE DEL USUARIO). Cada instancia es un vencimiento del tablero/calendario; al pagarla enlazar pago_id. Export Excel. Sigue T7 caja multinivel⭐, T8-T11.
+>
+> Hecho T5 (e606a98): pago mueve dinero real con origen único (efectivo caja_general / cuenta bancaria / cheque emitido / MP), preview de impacto, FRENA si efectivo insuficiente (422), pago_facturas + estado pagada/pagada_parcial, NC restan. API POST /api/finanzas/pagos + GET pendientes. Hecho T4 (d65eb3e): documentos a pagar con alta anti-dup (hash_dedup), filtros, export Excel, nav.
 proveedores, vencido, vence esta semana, saldo bancos) + NoraCard + tabla de
 próximos vencimientos unificada (facturas+gastos_fijos+impuestos+cheques) con
 botón Pagar. Menú Finanzas (10 secciones) se wirea por pantalla. Decisiones:
