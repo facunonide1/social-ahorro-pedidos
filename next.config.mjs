@@ -21,6 +21,8 @@ const nextConfig = {
       // pagos/facturas legacy → nuevos de Finanzas (sin subrutas: colapsan al índice).
       { source: '/admin/pagos/:path*', destination: '/admin/finanzas/pagos', permanent: true },
       { source: '/admin/facturas/:path*', destination: '/admin/finanzas/documentos', permanent: true },
+      // Dashboard ejecutivo absorbido por Mission Control (vistazo) + BI (análisis).
+      { source: '/admin/ejecutivo', destination: '/admin', permanent: true },
     ]
   },
 }

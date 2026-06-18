@@ -1,4 +1,4 @@
-import { FileText, Ticket, Users, AlertTriangle } from 'lucide-react'
+import { FileText, Ticket, Users, AlertTriangle, TrendingUp, Wallet, Scale, Landmark } from 'lucide-react'
 
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { ROLES_TRANSVERSALES, ADMIN_ROLE_LABELS } from '@/lib/types/admin'
@@ -54,6 +54,39 @@ async function getKpis(): Promise<Kpis> {
   return { ventasHoy, ticketsHoy, ticketPromedio, empleadosActivos, alertasCriticas }
 }
 
+type ResumenGerencial = {
+  ventasMes: number
+  gastoMes: number
+  margenMes: number
+  saldoBancarioARS: number
+}
+
+/**
+ * Resumen gerencial (absorbido del ex /admin/ejecutivo) — solo roles
+ * transversales. Vistazo de 30s a nivel dirección. Tolerante a tablas vacías.
+ */
+async function getResumenGerencial(): Promise<ResumenGerencial> {
+  const adm = createAdminClient()
+  const d30 = new Date(Date.now() - 30 * 86_400_000).toISOString()
+  const mesActual = new Date().toISOString().slice(0, 7)
+
+  const [ventasRes, gastosRes, cuentasRes] = await Promise.all([
+    adm.from('orders').select('total, status').gte('created_at', d30),
+    adm.from('gastos_operativos').select('monto').eq('periodo', mesActual),
+    adm.from('cuentas_bancarias_con_saldo').select('moneda, saldo_actual, activa'),
+  ])
+
+  const ventasMes = ((ventasRes.data ?? []) as any[])
+    .filter((o) => o.status !== 'cancelado')
+    .reduce((a, o) => a + Number(o.total || 0), 0)
+  const gastoMes = ((gastosRes.data ?? []) as any[]).reduce((a, g) => a + Number(g.monto || 0), 0)
+  const saldoBancarioARS = ((cuentasRes.data ?? []) as any[])
+    .filter((c) => c.activa && c.moneda === 'ARS')
+    .reduce((a, c) => a + Number(c.saldo_actual || 0), 0)
+
+  return { ventasMes, gastoMes, margenMes: ventasMes - gastoMes, saldoBancarioARS }
+}
+
 /**
  * Mission Control (F6.5.T4) — home de NORA HQ.
  *
@@ -71,6 +104,7 @@ export default async function MissionControlPage() {
   })
 
   const kpis = esTransversal ? await getKpis() : null
+  const gerencial = esTransversal ? await getResumenGerencial() : null
 
   return (
     <div className="container mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-6 md:py-8">
@@ -117,6 +151,33 @@ export default async function MissionControlPage() {
               format="number"
               icon={AlertTriangle}
               variant={kpis.alertasCriticas > 0 ? 'danger' : 'default'}
+            />
+          </div>
+        </section>
+      )}
+
+      {gerencial && (
+        <section aria-label="Resumen gerencial">
+          <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            Resumen gerencial
+          </h2>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <KpiCard label="Ventas 30 días" value={gerencial.ventasMes} format="currency" icon={TrendingUp} />
+            <KpiCard label="Gasto del mes" value={gerencial.gastoMes} format="currency" icon={Wallet} />
+            <KpiCard
+              label="Margen del mes"
+              value={gerencial.margenMes}
+              format="currency"
+              icon={Scale}
+              variant={gerencial.margenMes < 0 ? 'danger' : 'success'}
+            />
+            <KpiCard
+              label="Saldo bancario ARS"
+              value={gerencial.saldoBancarioARS}
+              format="currency"
+              icon={Landmark}
+              variant={gerencial.saldoBancarioARS < 0 ? 'danger' : 'default'}
+              href="/admin/finanzas/cuentas"
             />
           </div>
         </section>

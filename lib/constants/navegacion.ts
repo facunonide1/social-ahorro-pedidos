@@ -218,6 +218,7 @@ export const NAVEGACION: NavGrupo[] = [
       { label: 'Mi equipo',      href: '/admin/mi-equipo',                icon: 'UsersRound', rolesPermitidos: ROLES_SUPERVISOR },
       { label: 'Tareas',         href: '/admin/tareas',                   icon: 'ListChecks', badge: 'tareasPendientes' },
       { label: 'Verificaciones', href: '/admin/verificaciones',           icon: 'CheckCircle2', badge: 'verificacionesPendientes' },
+      { label: 'Panel operaciones', href: '/admin/operaciones',           icon: 'LayoutGrid' },
       { label: 'Stock',          href: '/admin/operaciones/stock',          icon: 'Boxes' },
       { label: 'Vencimientos',   href: '/admin/operaciones/vencimientos',   icon: 'CalendarClock' },
       { label: 'Transferencias', href: '/admin/operaciones/transferencias', icon: 'ArrowRightLeft' },
@@ -229,20 +230,23 @@ export const NAVEGACION: NavGrupo[] = [
     grupo: 'Finanzas',
     rolesPermitidos: ROLES_FINANZAS,
     items: [
+      { label: 'Tablero',               href: '/admin/finanzas',              icon: 'LayoutGrid' },
+      { label: 'Documentos a pagar',    href: '/admin/finanzas/documentos',   icon: 'FileText' },
+      { label: 'Pagos',                 href: '/admin/finanzas/pagos',        icon: 'CreditCard' },
+      { label: 'Gastos fijos',          href: '/admin/finanzas/gastos-fijos', icon: 'Repeat' },
       { label: 'Cuentas y movimientos', href: '/admin/finanzas/cuentas',      icon: 'Building2' },
-      { label: 'Facturas',              href: '/admin/finanzas/documentos',              icon: 'FileText' },
-      { label: 'Pagos',                 href: '/admin/finanzas/pagos',                 icon: 'CreditCard' },
       { label: 'Cash flow',             href: '/admin/finanzas/cash-flow',    icon: 'TrendingUp' },
       { label: 'Conciliación',          href: '/admin/finanzas/conciliacion', icon: 'Scale' },
       { label: 'Cheques',               href: '/admin/finanzas/cheques',      icon: 'FileBadge' },
       { label: 'Impuestos',             href: '/admin/finanzas/impuestos',    icon: 'Receipt' },
-      { label: 'Gastos operativos',     href: '/admin/sucursales/gastos',     icon: 'TrendingDown' },
+      { label: 'Calendario de pagos',   href: '/admin/finanzas/calendario',   icon: 'CalendarDays' },
     ],
   },
   {
     grupo: 'Compras',
     rolesPermitidos: ROLES_COMPRAS,
     items: [
+      { label: 'Resumen',      href: '/admin/compras',               icon: 'LayoutGrid' },
       { label: 'Proveedores',  href: '/admin/proveedores',           icon: 'Truck' },
       { label: 'Recepciones',  href: '/admin/recepciones',           icon: 'PackageCheck' },
       { label: 'Devoluciones', href: '/admin/compras/devoluciones',  icon: 'Undo2' },
@@ -251,6 +255,7 @@ export const NAVEGACION: NavGrupo[] = [
   {
     grupo: 'Equipo',
     items: [
+      { label: 'Resumen',      href: '/admin/rrhh',                     icon: 'LayoutGrid' },
       { label: 'Empleados',    href: '/admin/rrhh/empleados',           icon: 'UserCheck', rolesPermitidos: ROLES_GESTION_EQUIPO },
       { label: 'Performance',  href: '/admin/sucursales/performance',   icon: 'BarChart3', rolesPermitidos: ROLES_SUPERVISOR },
       { label: 'Ranking',      href: '/admin/ranking',                icon: 'Trophy' },
@@ -268,7 +273,7 @@ export const NAVEGACION: NavGrupo[] = [
     grupo: 'Inteligencia',
     rolesPermitidos: ROLES_TRANSV,
     items: [
-      { label: 'Dashboard ejecutivo', href: '/admin/ejecutivo',  icon: 'LayoutGrid' },
+      { label: 'Panel IA',            href: '/admin/ia',         icon: 'LayoutGrid' },
       { label: 'BI / Reportes',       href: '/admin/bi',         icon: 'PieChart' },
       { label: 'Resumen IA del día',  href: '/admin/ia/resumen', icon: 'Sparkles' },
     ],
