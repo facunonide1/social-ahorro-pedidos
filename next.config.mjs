@@ -23,6 +23,8 @@ const nextConfig = {
       { source: '/admin/facturas/:path*', destination: '/admin/finanzas/documentos', permanent: true },
       // Dashboard ejecutivo absorbido por Mission Control (vistazo) + BI (análisis).
       { source: '/admin/ejecutivo', destination: '/admin', permanent: true },
+      // empleados (lista gamificación) duplicaba RRHH → canónico rrhh/empleados.
+      { source: '/admin/empleados', destination: '/admin/rrhh/empleados', permanent: true },
     ]
   },
 }
