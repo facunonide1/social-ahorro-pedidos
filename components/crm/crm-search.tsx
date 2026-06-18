@@ -44,8 +44,8 @@ type QuickAction = {
 const ACCIONES_RAPIDAS: QuickAction[] = [
   { id: 'a-nuevo-pedido', label: 'Nuevo pedido', href: '/pedidos/nuevo', icon: Plus, keywords: 'crear pedido orden' },
   { id: 'a-nuevo-prov', label: 'Nuevo proveedor', href: '/admin/proveedores/nuevo', icon: Building2, keywords: 'alta proveedor' },
-  { id: 'a-nueva-factura', label: 'Cargar factura', href: '/admin/facturas/nueva', icon: FileText, keywords: 'nueva factura proveedor' },
-  { id: 'a-nuevo-pago', label: 'Registrar pago', href: '/admin/pagos/nuevo', icon: Banknote, keywords: 'orden de pago op' },
+  { id: 'a-nueva-factura', label: 'Cargar factura', href: '/admin/finanzas/documentos', icon: FileText, keywords: 'nueva factura proveedor' },
+  { id: 'a-nuevo-pago', label: 'Registrar pago', href: '/admin/finanzas/pagos', icon: Banknote, keywords: 'orden de pago op' },
   { id: 'a-nueva-recepcion', label: 'Nueva recepción', href: '/admin/recepciones/nueva', icon: PackageCheck, keywords: 'recibir mercaderia' },
 ]
 
@@ -56,8 +56,8 @@ const NAVEGACION: QuickAction[] = [
   { id: 'n-repartidor', label: 'Repartidor', href: '/repartidor', icon: Truck },
   { id: 'n-hub', label: 'NORA HQ', href: '/admin', icon: Home },
   { id: 'n-proveedores', label: 'Proveedores', href: '/admin/proveedores', icon: Building2 },
-  { id: 'n-facturas', label: 'Facturas', href: '/admin/facturas', icon: FileText },
-  { id: 'n-pagos', label: 'Pagos', href: '/admin/pagos', icon: Banknote },
+  { id: 'n-facturas', label: 'Facturas', href: '/admin/finanzas/documentos', icon: FileText },
+  { id: 'n-pagos', label: 'Pagos', href: '/admin/finanzas/pagos', icon: Banknote },
   { id: 'n-recepciones', label: 'Recepciones', href: '/admin/recepciones', icon: PackageCheck },
   { id: 'n-sucursales', label: 'Sucursales', href: '/admin/sucursales', icon: Home },
   { id: 'n-usuarios', label: 'Usuarios', href: '/admin/usuarios', icon: UserCog },

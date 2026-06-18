@@ -130,7 +130,7 @@ async function detectarEventos(
       return (data ?? []).map((f: any) => ({
         entidad_tipo: 'factura',
         entidad_id: f.id,
-        entidad_url: `/admin/facturas/${f.id}`,
+        entidad_url: `/admin/finanzas/documentos`,
         titulo: `Factura ${f.numero_factura} de ${pickOne<any>(f.proveedores)?.razon_social ?? ''} vence en ${dias}d`,
         descripcion: `Monto: $ ${Number(f.total ?? 0).toLocaleString('es-AR')}`,
         sucursal_id: f.sucursal_id,
@@ -146,7 +146,7 @@ async function detectarEventos(
       return (data ?? []).map((f: any) => ({
         entidad_tipo: 'factura',
         entidad_id: f.id,
-        entidad_url: `/admin/facturas/${f.id}`,
+        entidad_url: `/admin/finanzas/documentos`,
         titulo: `Factura ${f.numero_factura} VENCIDA · ${pickOne<any>(f.proveedores)?.razon_social ?? ''}`,
         descripcion: `Monto: $ ${Number(f.total ?? 0).toLocaleString('es-AR')}`,
         sucursal_id: f.sucursal_id,

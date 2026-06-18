@@ -181,7 +181,7 @@ export default async function DashboardEjecutivoPage() {
               titulo="Facturas vencidas"
               count={facturasVencidasCount}
               monto={facturasVencidasMonto}
-              href="/admin/facturas"
+              href="/admin/finanzas/documentos"
               tone={facturasVencidasCount > 0 ? 'destructive' : 'muted'}
             />
             <AlertTile

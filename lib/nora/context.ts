@@ -50,7 +50,7 @@ const RULES: Array<{
     }),
   },
   {
-    test: (p) => p.startsWith('/admin/facturas'),
+    test: (p) => p.startsWith('/admin/finanzas/documentos'),
     ctx: () => ({
       pantalla: 'facturas',
       sugerencias: [

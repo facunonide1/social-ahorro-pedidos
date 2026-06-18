@@ -55,8 +55,8 @@ export const CRM_NAV_SECTIONS: CrmNavSection[] = [
     items: [
       { label: 'Proveedores', href: '/admin/proveedores', icon: Building2 },
       { label: 'Sucursales', href: '/admin/sucursales', icon: Building },
-      { label: 'Facturas', href: '/admin/facturas', icon: FileText },
-      { label: 'Pagos', href: '/admin/pagos', icon: Banknote },
+      { label: 'Facturas', href: '/admin/finanzas/documentos', icon: FileText },
+      { label: 'Pagos', href: '/admin/finanzas/pagos', icon: Banknote },
       { label: 'Recepciones', href: '/admin/recepciones', icon: PackageCheck },
     ],
   },

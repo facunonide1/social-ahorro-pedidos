@@ -230,8 +230,8 @@ export const NAVEGACION: NavGrupo[] = [
     rolesPermitidos: ROLES_FINANZAS,
     items: [
       { label: 'Cuentas y movimientos', href: '/admin/finanzas/cuentas',      icon: 'Building2' },
-      { label: 'Facturas',              href: '/admin/facturas',              icon: 'FileText' },
-      { label: 'Pagos',                 href: '/admin/pagos',                 icon: 'CreditCard' },
+      { label: 'Facturas',              href: '/admin/finanzas/documentos',              icon: 'FileText' },
+      { label: 'Pagos',                 href: '/admin/finanzas/pagos',                 icon: 'CreditCard' },
       { label: 'Cash flow',             href: '/admin/finanzas/cash-flow',    icon: 'TrendingUp' },
       { label: 'Conciliación',          href: '/admin/finanzas/conciliacion', icon: 'Scale' },
       { label: 'Cheques',               href: '/admin/finanzas/cheques',      icon: 'FileBadge' },

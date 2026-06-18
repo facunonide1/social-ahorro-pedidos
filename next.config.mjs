@@ -18,6 +18,9 @@ const nextConfig = {
       // v0.19 — consolidación de módulos duplicados (un módulo por función).
       { source: '/admin/finanzas/proveedores/:id', destination: '/admin/proveedores/:id', permanent: true },
       { source: '/admin/finanzas/proveedores', destination: '/admin/proveedores', permanent: true },
+      // pagos/facturas legacy → nuevos de Finanzas (sin subrutas: colapsan al índice).
+      { source: '/admin/pagos/:path*', destination: '/admin/finanzas/pagos', permanent: true },
+      { source: '/admin/facturas/:path*', destination: '/admin/finanzas/documentos', permanent: true },
     ]
   },
 }
