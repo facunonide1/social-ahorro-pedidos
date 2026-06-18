@@ -102,6 +102,12 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
         roles: ['super_admin', 'gerente', 'comprador'],
       },
       {
+        label: 'Análisis de ventas',
+        href: '/hub/operaciones/analisis',
+        icon: TrendingUp,
+        roles: ['super_admin', 'gerente', 'comprador', 'auditor'],
+      },
+      {
         label: 'Vencimientos',
         href: '/hub/operaciones/vencimientos',
         icon: CalendarX,

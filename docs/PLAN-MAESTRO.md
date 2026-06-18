@@ -26,7 +26,7 @@ por diferencia, análisis y disparadores de tareas. Ver auditoría previa en
 | T3 · Importador stock diario (ventas por diferencia) ⭐ | ✅ |
 | T4 · Importador vencimientos | ✅ |
 | T5 · Stock (rehacer: Productos + Kárdex) | ✅ |
-| T6 · Análisis ventas + dinero dormido + cron metricas-stock | ⬜ |
+| T6 · Análisis ventas + dinero dormido + cron metricas-stock | ✅ |
 | T7 · Reposición ⭐ | ⬜ |
 | T8 · Alertas ⭐ (9 tipos + stock fantasma) | ⬜ |
 | T9 · Vencimientos (acciones transferir/devolver/ofertar) | ⬜ |
