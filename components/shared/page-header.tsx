@@ -27,7 +27,7 @@ export interface PageHeaderProps {
   breadcrumbs?: Breadcrumb[]
   actions?: React.ReactNode
   tabs?: PageHeaderTab[]
-  /** Si true, el header se queda sticky al scrollear. Default true. */
+  /** Si true, el header se queda sticky al scrollear. Default false (scrollea). */
   sticky?: boolean
   className?: string
 }
@@ -62,7 +62,7 @@ export function PageHeader({
   breadcrumbs,
   actions,
   tabs,
-  sticky = true,
+  sticky = false,
   className,
 }: PageHeaderProps) {
   const pathname = usePathname() || ''

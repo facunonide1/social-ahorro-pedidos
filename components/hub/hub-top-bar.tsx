@@ -12,7 +12,7 @@ export function HubTopBar({ profile }: { profile: HubProfile }) {
   return (
     <header
       role="banner"
-      className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      className="border-b border-border bg-background"
     >
       <div className="flex h-14 items-center gap-2 px-3 md:gap-4 md:px-4">
         <HubMobileSidebarSheet role={profile.rol} />
