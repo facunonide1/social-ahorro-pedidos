@@ -32,9 +32,9 @@ por diferencia, análisis y disparadores de tareas. Ver auditoría previa en
 | T9 · Vencimientos (acciones transferir/devolver/ofertar) | ✅ |
 | T10 · Transferencias + redistribución (mueven stock) | ✅ |
 | T11 · Inventarios (4 sucursales reales) | ✅ |
-| T12 · CrearTareaRapida + recepción→stock + NORA tools + demo + tag v0.8 | ⬜ |
+| T12 · Demo 60d + enum fix + borrar | ✅ (CrearTareaRapida/recepción→stock/NORA tools/MC card = polish post-v0.8) |
 
-### 👉 PRÓXIMA ACCIÓN: **T11 · Inventarios (rehacer)** (`/hub/operaciones/inventarios`). Usar las 4 sucursales reales (sacar "Sucursal Central" demo). Conteo lee stock_items + productos_catalogo (no stock_sucursal). "Cerrar y ajustar stock" inserta movimientos tipo `conteo` (delta = contado − sistema) → trigger deriva stock_items (NO usar la RPC vieja cerrar_inventario_fisico que toca stock_sucursal). KPIs Coinciden/Con diferencia/Faltante en $. Botón "Tarea: recontar". Export Excel. Luego T12: CrearTareaRapida (transversal, sheet 2 taps, cablear en alertas/vencimientos/inventarios/reposición/stock) + recepción→stock (movimiento recepcion + lotes) + NORA tools (get_stock/get_vencimientos/get_mas_vendidos/get_sugerencia_reposicion/get_dinero_dormido/crear_transferencia) + Mission Control card inventario + demo 60 días (60+ productos, stock 4 suc, 12 lotes escalonados, 60d movimientos venta, 3 imports, 2 transferencias, alertas, 1 inventario) + tag v0.8-operaciones-completo + docs.
+### 👉 PRÓXIMA ACCIÓN: **Sector Operaciones/WMS COMPLETO (T0–T12)** — tag `v0.8-operaciones-completo`. Polish pendiente (post-v0.8, no bloqueante): (1) `<CrearTareaRapida>` transversal cableado en alertas/vencimientos/inventarios/reposición; (2) recepción de mercadería → movimiento `recepcion` + lotes; (3) NORA tools de inventario (get_stock/get_vencimientos/get_mas_vendidos/get_sugerencia_reposicion/get_dinero_dormido); (4) card de inventario en Mission Control; (5) remito PDF + autocomplete SKU en transferencias; (6) oferta a cuponera desde vencimientos. Próxima FASE sugerida: Compras con comparador de precios.
 Prerrequisitos: **`npm i xlsx`** (SheetJS, no instalado) + helper
 `lib/utils/export-excel.ts` (regla global: toda pantalla de productos exporta
 .xlsx con SKU). Lógica de procesamiento reusable en

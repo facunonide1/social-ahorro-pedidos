@@ -29,6 +29,9 @@ export async function POST(req: NextRequest) {
     await adm.from('tareas_recurrencias').delete().eq('es_demo', true)
     await adm.from('sucursales_metricas_diarias').delete().eq('es_demo', true)
     await adm.from('empleados_metricas_diarias').delete().eq('es_demo', true)
+    // OPS/WMS demo: borrar alertas + productos DEMO- (cascada a stock/lotes/rotacion/movimientos)
+    await adm.from('alertas_stock').delete().eq('es_demo', true)
+    await adm.from('productos_catalogo').delete().like('sku', 'DEMO-%')
     return NextResponse.json({ ok: true, accion: 'borrar' })
   }
 

@@ -1,8 +1,20 @@
 # ERP Social Ahorro · Progreso autónomo
 
-**Última actualización:** 2026-06-17
+**Última actualización:** 2026-06-18
 **Rama productiva:** `main`
-**Último hito:** F6-T · Módulo de tareas enterprise COMPLETO (tag `v0.7-tareas-completo`)
+**Último hito:** Operaciones/WMS reconstruido (tag `v0.8-operaciones-completo`)
+
+> **OPS/WMS (T0–T12)** ✅: header fix; **catálogo único** `productos_catalogo`
+> (FKs reapuntadas, migr. 0041); schema WMS (0042: `stock_items` + trigger que
+> deriva stock de **movimientos firmados**, lotes, rotación, imports, alertas);
+> **importador de Excel diario** con **ventas por diferencia** + importador de
+> vencimientos (SheetJS, mapeo configurable, idempotente); Stock rehecho
+> (semáforo + Kárdex + ajuste); Análisis (más vendidos + dinero dormido) + cron
+> `metricas-stock`; Reposición (orden por droguería); Alertas (9 tipos + stock
+> fantasma) + cron `alertas-stock`; Vencimientos con acción sugerida; Transferencias
+> que **mueven stock**; Inventarios que ajustan stock vía movimientos `conteo`;
+> **demo de 60 días** cargado. Migr. 0041–0043 aplicadas. Toda pantalla exporta
+> Excel con SKU. Polish post-v0.8: CrearTareaRapida, recepción→stock, NORA tools.
 
 > **F6.5 Reestructuración** (T1–T6 hechas: bugfixes header, rebrand NORA HQ,
 > sidebar 8 pilares, Mission Control, usuarios+permisos, catálogo+CSV). T7
