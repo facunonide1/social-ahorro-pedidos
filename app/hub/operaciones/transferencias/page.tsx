@@ -8,6 +8,7 @@ import type { EstadoTransferencia, TransferenciaSucursal } from '@/lib/types/adm
 
 import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
+import { NoraCard } from '@/components/nora/nora-card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -55,6 +56,36 @@ export default async function TransferenciasPage() {
 
   const rows = (rawRows ?? []) as Row[]
 
+  // Redistribuciones sugeridas: excedente (>45d) en una sucursal, faltante (<10d) en otra.
+  const [{ data: rot }, { data: stk }, { data: prods }, { data: sucsList }] = await Promise.all([
+    sb.from('producto_rotacion').select('producto_id, sucursal_id, venta_diaria_prom_30d, dias_stock_restante'),
+    sb.from('stock_items').select('producto_id, sucursal_id, cantidad'),
+    sb.from('productos_catalogo').select('id, nombre, sku'),
+    sb.from('sucursales').select('id, nombre').eq('activa', true),
+  ])
+  const sucN = new Map(((sucsList ?? []) as any[]).map((s) => [s.id, s.nombre]))
+  const prodN = new Map(((prods ?? []) as any[]).map((p) => [p.id, p]))
+  const stkMap = new Map(((stk ?? []) as any[]).map((s) => [`${s.producto_id}|${s.sucursal_id}`, Number(s.cantidad)]))
+  const porProd = new Map<string, { suc: string; dias: number | null; venta: number }[]>()
+  for (const r of (rot ?? []) as any[]) {
+    const a = porProd.get(r.producto_id) ?? []
+    a.push({ suc: r.sucursal_id, dias: r.dias_stock_restante == null ? null : Number(r.dias_stock_restante), venta: Number(r.venta_diaria_prom_30d ?? 0) })
+    porProd.set(r.producto_id, a)
+  }
+  const redis: { producto: string; sku: string | null; desde: string; hacia: string; cantidad: number }[] = []
+  for (const [pid, arr] of porProd) {
+    const exced = arr.find((x) => x.dias != null && x.dias > 45)
+    const falt = arr.find((x) => x.dias != null && x.dias < 10 && x.venta > 0)
+    if (!exced || !falt || exced.suc === falt.suc) continue
+    const stockOrigen = stkMap.get(`${pid}|${exced.suc}`) ?? 0
+    const stockDest = stkMap.get(`${pid}|${falt.suc}`) ?? 0
+    const necesita = Math.max(0, Math.ceil(falt.venta * 15 - stockDest))
+    const disponible = Math.max(0, Math.floor(stockOrigen - exced.venta * 15))
+    const cantidad = Math.min(necesita, disponible)
+    if (cantidad > 0) redis.push({ producto: prodN.get(pid)?.nombre ?? '—', sku: prodN.get(pid)?.sku ?? null, desde: sucN.get(exced.suc) ?? '—', hacia: sucN.get(falt.suc) ?? '—', cantidad })
+  }
+  redis.sort((a, b) => b.cantidad - a.cantidad)
+
   return (
     <HubShell profile={profile}>
       <PageHeader
@@ -86,6 +117,20 @@ export default async function TransferenciasPage() {
               )}
             </AlertDescription>
           </Alert>
+        )}
+
+        {redis.length > 0 && (
+          <NoraCard contexto="redistribución">
+            <p className="mb-2">Detecté <b>{redis.length}</b> redistribución{redis.length === 1 ? '' : 'es'} que equilibran stock entre sucursales:</p>
+            <ul className="space-y-1.5">
+              {redis.slice(0, 6).map((s, i) => (
+                <li key={i} className="flex items-center justify-between gap-2 text-sm">
+                  <span><b>{s.cantidad}u</b> de {s.producto} · {s.desde} → {s.hacia}</span>
+                  <Button asChild size="sm" variant="outline" className="h-7 text-xs"><Link href="/hub/operaciones/transferencias/nueva">Crear</Link></Button>
+                </li>
+              ))}
+            </ul>
+          </NoraCard>
         )}
 
         <Card className="overflow-hidden">

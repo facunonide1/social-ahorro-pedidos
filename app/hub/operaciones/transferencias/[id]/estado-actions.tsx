@@ -2,32 +2,19 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 
-import { createClient } from '@/lib/supabase/client'
-import { ESTADO_TRANSFERENCIA_LABELS } from '@/lib/types/admin'
 import type { EstadoTransferencia } from '@/lib/types/admin'
-
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-const NEXT: Record<EstadoTransferencia, EstadoTransferencia[]> = {
-  solicitada: ['aprobada', 'cancelada'],
-  aprobada: ['en_transito', 'cancelada'],
-  en_transito: ['recibida'],
+const ACCIONES: Record<EstadoTransferencia, { accion: string; label: string }[]> = {
+  solicitada: [{ accion: 'aprobar', label: 'Aprobar' }, { accion: 'cancelar', label: 'Cancelar' }],
+  aprobada: [{ accion: 'enviar', label: 'Enviar (descuenta origen)' }, { accion: 'cancelar', label: 'Cancelar' }],
+  en_transito: [{ accion: 'recibir', label: 'Recibir (suma destino)' }],
   recibida: [],
   cancelada: [],
-}
-
-const FECHA_FIELD: Partial<Record<EstadoTransferencia, string>> = {
-  en_transito: 'fecha_envio',
-  recibida: 'fecha_recepcion',
 }
 
 export default function TransferenciaEstadoActions({
@@ -38,56 +25,33 @@ export default function TransferenciaEstadoActions({
   currentEstado: EstadoTransferencia
 }) {
   const router = useRouter()
-  const sb = createClient()
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-
-  const opciones = NEXT[currentEstado]
+  const [busy, setBusy] = useState<string | null>(null)
+  const opciones = ACCIONES[currentEstado]
   if (opciones.length === 0) return null
 
-  async function change(next: EstadoTransferencia) {
-    setBusy(true)
-    setErr(null)
-    const patch: Record<string, unknown> = { estado: next }
-    const fechaField = FECHA_FIELD[next]
-    if (fechaField) patch[fechaField] = new Date().toISOString()
-    const { error } = await sb
-      .from('transferencias_sucursal')
-      .update(patch)
-      .eq('id', transferenciaId)
-    setBusy(false)
-    if (error) {
-      setErr(error.message)
-      return
-    }
-    router.refresh()
+  async function run(accion: string) {
+    setBusy(accion)
+    try {
+      const r = await fetch('/api/inventario/transferencia', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: transferenciaId, accion }),
+      })
+      const j = await r.json()
+      if (!r.ok) throw new Error(j?.error || 'Error')
+      toast.success(j.conDiferencias ? 'Recibida con diferencias (se generó alerta).' : 'Estado actualizado.')
+      router.refresh()
+    } catch (e: any) { toast.error(e?.message ?? 'Error') } finally { setBusy(null) }
   }
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-          Cambiar estado
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {err && (
-          <Alert variant="destructive">
-            <AlertDescription>{err}</AlertDescription>
-          </Alert>
-        )}
+      <CardHeader><CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Acciones</CardTitle></CardHeader>
+      <CardContent>
         <div className="flex flex-wrap gap-2">
-          {opciones.map((s) => (
-            <Button
-              key={s}
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={busy}
-              onClick={() => change(s)}
-            >
-              <ArrowRight className="size-3.5" />
-              {ESTADO_TRANSFERENCIA_LABELS[s]}
+          {opciones.map((o) => (
+            <Button key={o.accion} type="button" variant={o.accion === 'cancelar' ? 'ghost' : 'outline'} size="sm" disabled={busy !== null} onClick={() => run(o.accion)}>
+              {busy === o.accion ? <Loader2 className="size-3.5 animate-spin" /> : <ArrowRight className="size-3.5" />}
+              {o.label}
             </Button>
           ))}
         </div>
