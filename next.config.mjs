@@ -11,10 +11,13 @@ const nextConfig = {
   // las reglas específicas van antes del wildcard.
   async redirects() {
     return [
-      // /hub/usuarios era duplicado legacy → canónico en configuración.
+      // v0.18 — /hub/* mudado a /admin/*.
       { source: '/hub/usuarios', destination: '/admin/configuracion/usuarios', permanent: true },
       { source: '/hub', destination: '/admin', permanent: true },
       { source: '/hub/:path*', destination: '/admin/:path*', permanent: true },
+      // v0.19 — consolidación de módulos duplicados (un módulo por función).
+      { source: '/admin/finanzas/proveedores/:id', destination: '/admin/proveedores/:id', permanent: true },
+      { source: '/admin/finanzas/proveedores', destination: '/admin/proveedores', permanent: true },
     ]
   },
 }
