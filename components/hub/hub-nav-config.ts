@@ -162,6 +162,12 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
         roles: ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'auditor'],
       },
       {
+        label: 'Proveedores',
+        href: '/hub/finanzas/proveedores',
+        icon: Building2,
+        roles: ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'auditor'],
+      },
+      {
         label: 'Facturas',
         href: '/hub/facturas',
         icon: FileText,
