@@ -1,6 +1,5 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 
 import { ImportacionesClient } from './importaciones-client'
@@ -19,7 +18,7 @@ export default async function ImportacionesPage() {
   ])
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Importaciones"
         description="Subí el Excel diario de SIFACO por sucursal. NORA detecta ventas por diferencia de stock."
@@ -32,6 +31,6 @@ export default async function ImportacionesPage() {
           configs={(configs ?? []) as any[]}
         />
       </div>
-    </HubShell>
+    </>
   )
 }

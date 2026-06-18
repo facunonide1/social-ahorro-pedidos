@@ -1,6 +1,5 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 
 import ProductoForm from './form'
@@ -13,7 +12,7 @@ export default async function NuevoProductoPage() {
   })
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Nuevo producto"
         breadcrumbs={[
@@ -24,6 +23,6 @@ export default async function NuevoProductoPage() {
       <div className="mx-auto w-full max-w-2xl p-4 md:p-6">
         <ProductoForm mode="create" />
       </div>
-    </HubShell>
+    </>
   )
 }

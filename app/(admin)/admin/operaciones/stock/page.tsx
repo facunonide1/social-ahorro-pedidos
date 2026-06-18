@@ -1,6 +1,5 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 
 import { StockClient, type ProductoRow, type SucursalLite } from './stock-client'
@@ -60,7 +59,7 @@ export default async function StockPage() {
   const criticos = productos.filter((p) => p.critico).length
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Stock"
         description="Existencias por sucursal con semáforo, rotación y cobertura."
@@ -74,6 +73,6 @@ export default async function StockPage() {
           rol={profile.rol}
         />
       </div>
-    </HubShell>
+    </>
   )
 }

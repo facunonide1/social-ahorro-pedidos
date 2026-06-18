@@ -1,6 +1,5 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 
 import { AlertasClient, type AlertaRow } from './alertas-client'
@@ -21,12 +20,12 @@ export default async function AlertasPage() {
   const esSuper = ['super_admin', 'gerente'].includes(profile.rol)
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader title="Alertas de stock" description="Quiebres, sobrestock, sin rotación, stock fantasma y vencimientos."
         breadcrumbs={[{ label: 'Operaciones' }, { label: 'Alertas' }]} />
       <div className="p-4 md:p-6">
         <AlertasClient alertas={rows} sucursales={((sucs ?? []) as any[]).map((s) => ({ id: s.id, nombre: s.nombre }))} puedeRegenerar={esSuper} />
       </div>
-    </HubShell>
+    </>
   )
 }

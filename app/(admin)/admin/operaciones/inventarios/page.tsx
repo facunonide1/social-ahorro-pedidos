@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import type { InventarioFisico } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -48,7 +47,7 @@ export default async function InventariosPage() {
   const canManage = ['super_admin', 'gerente', 'administrativo'].includes(profile.rol)
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Inventarios físicos"
         description={`${rows.length} inventario${rows.length === 1 ? '' : 's'} registrado${rows.length === 1 ? '' : 's'}`}
@@ -140,6 +139,6 @@ export default async function InventariosPage() {
           </Table>
         </Card>
       </div>
-    </HubShell>
+    </>
   )
 }

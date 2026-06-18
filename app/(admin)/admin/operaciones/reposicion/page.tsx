@@ -1,6 +1,5 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 
 import { ReposicionClient, type RepoRow } from './reposicion-client'
@@ -40,12 +39,12 @@ export default async function ReposicionPage() {
   }).filter((r) => r.ventaDia > 0 || r.stock > 0)
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader title="Reposición" description="NORA sugiere qué comprar por sucursal según rotación y cobertura objetivo."
         breadcrumbs={[{ label: 'Operaciones' }, { label: 'Reposición' }]} />
       <div className="p-4 md:p-6">
         <ReposicionClient rows={rows} sucursales={((sucs ?? []) as any[]).map((s) => ({ id: s.id, nombre: s.nombre, codigo: s.codigo }))} />
       </div>
-    </HubShell>
+    </>
   )
 }

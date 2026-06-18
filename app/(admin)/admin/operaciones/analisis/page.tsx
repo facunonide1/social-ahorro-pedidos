@@ -1,6 +1,5 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 
 import { AnalisisClient, type VendidoRow, type DormidoRow } from './analisis-client'
@@ -68,7 +67,7 @@ export default async function AnalisisPage() {
     .sort((a, b) => b.inmovilizado - a.inmovilizado)
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader title="Análisis de ventas" description="Más vendidos, rotación y dinero dormido por sucursal."
         breadcrumbs={[{ label: 'Operaciones' }, { label: 'Análisis' }]} />
       <div className="p-4 md:p-6">
@@ -80,6 +79,6 @@ export default async function AnalisisPage() {
           hayVentas={(ventas ?? []).length > 0}
         />
       </div>
-    </HubShell>
+    </>
   )
 }

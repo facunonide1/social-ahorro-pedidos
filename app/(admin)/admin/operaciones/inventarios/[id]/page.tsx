@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import type { InventarioFisico, InventarioItem } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -106,7 +105,7 @@ export default async function InventarioDetailPage({
   rows.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title={`Inventario · ${inv.sucursales?.nombre || '—'}`}
         description={`${new Date(inv.fecha_inventario).toLocaleDateString('es-AR')}`}
@@ -216,6 +215,6 @@ export default async function InventarioDetailPage({
           </Card>
         )}
       </div>
-    </HubShell>
+    </>
   )
 }

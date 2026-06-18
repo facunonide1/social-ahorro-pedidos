@@ -5,7 +5,6 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { ESTADO_TRANSFERENCIA_LABELS } from '@/lib/types/admin'
 import type { EstadoTransferencia, TransferenciaSucursal } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -83,7 +82,7 @@ export default async function TransferenciaDetailPage({
   const canManage = ['super_admin', 'gerente', 'administrativo'].includes(profile.rol)
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title={`${t.origen?.nombre || '—'} → ${t.destino?.nombre || '—'}`}
         description={`Solicitada el ${new Date(t.fecha_solicitud).toLocaleDateString('es-AR')}`}
@@ -172,6 +171,6 @@ export default async function TransferenciaDetailPage({
           </Card>
         )}
       </div>
-    </HubShell>
+    </>
   )
 }

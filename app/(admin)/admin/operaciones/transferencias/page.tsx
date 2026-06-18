@@ -6,7 +6,6 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { ESTADO_TRANSFERENCIA_LABELS } from '@/lib/types/admin'
 import type { EstadoTransferencia, TransferenciaSucursal } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { NoraCard } from '@/components/nora/nora-card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -87,7 +86,7 @@ export default async function TransferenciasPage() {
   redis.sort((a, b) => b.cantidad - a.cantidad)
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Transferencias entre sucursales"
         description={`${rows.length} transferencia${rows.length === 1 ? '' : 's'}`}
@@ -186,6 +185,6 @@ export default async function TransferenciasPage() {
           </Table>
         </Card>
       </div>
-    </HubShell>
+    </>
   )
 }

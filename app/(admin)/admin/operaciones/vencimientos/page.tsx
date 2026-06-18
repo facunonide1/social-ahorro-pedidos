@@ -1,6 +1,5 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 
 import { VencimientosClient, type LoteRow } from './vencimientos-client'
@@ -58,12 +57,12 @@ export default async function VencimientosPage() {
   const riesgoTotal = rows.reduce((a, r) => a + r.riesgo, 0)
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader title="Vencimientos" description="Lotes por vencer con $ en riesgo y acción sugerida por NORA."
         breadcrumbs={[{ label: 'Operaciones' }, { label: 'Vencimientos' }]} />
       <div className="p-4 md:p-6">
         <VencimientosClient rows={rows} riesgoTotal={riesgoTotal} />
       </div>
-    </HubShell>
+    </>
   )
 }

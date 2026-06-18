@@ -8,7 +8,6 @@ import type {
   StockSucursal,
 } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { Badge } from '@/components/ui/badge'
@@ -81,7 +80,7 @@ export default async function ProductoDetailPage({
   )
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title={p.nombre}
         description={
@@ -272,6 +271,6 @@ export default async function ProductoDetailPage({
           </Card>
         )}
       </div>
-    </HubShell>
+    </>
   )
 }
