@@ -210,12 +210,12 @@ generar-agenda/escalamiento/metricas-nightly/reporte-semanal.
 | T7 | Cola de verificación supervisor | ✅ |
 | T8 | Escalamiento + notificaciones | ✅ |
 | T9 | Motor de métricas | ✅ |
-| T10 | Scorecards y objetivos UI | 🔄 (Mission Control hecho; scorecards/charts sobre F6) |
+| T10 | Scorecards y objetivos UI | ✅ |
 | T11 | Gamificación | ✅ (cableada en T6 + ranking F6) |
 | T12 | NORA en tareas | ✅ (pre-verif IA auto + reporte semanal) |
 | T13 | Auditoría gaps + adjuntos/comprobantes | ✅ (0039; 4/6 entidades + gaps doc) |
 | T14 | Datos demo | ✅ (es_demo 0040; seed tareas+métricas cargado) |
-| T15 | Cierre + tag v0.7-tareas-completo | ⬜ |
+| T15 | Cierre + tag v0.7-tareas-completo | ✅ |
 
 ---
 
@@ -267,7 +267,15 @@ la fase F6-T (módulo de tareas), por pedido del usuario.
 
 ---
 
-## 👉 PRÓXIMA ACCIÓN (F6-T)
+## 👉 PRÓXIMA ACCIÓN
+**F6-T COMPLETA (T1–T15) ✅ — tag `v0.7-tareas-completo`.** Módulo de tareas
+enterprise operativo end-to-end. **Próxima fase sugerida: F7 · Vencimientos WMS.**
+Pendientes de pulido (no bloqueantes): adjuntos en gastos/cheques (sin detalle),
+scorecards detallados, Kanban (`@dnd-kit`), crons sub-diarios (plan Pro), tools
+NORA extra, y F6.5 T7 (integraciones) / T8 (model router) diferidos.
+
+<details><summary>Referencia histórica T12</summary>
+
 **T12 · NORA en tareas.** Agregar tools en `lib/ai/tools.ts`: `crear_tarea`
 (preview→confirmación), `listar_tareas`, `reclamar_tarea` (reusa
 `/api/tareas/[id]/reclamar`), `estado_cumplimiento(scope,id,periodo)` (lee

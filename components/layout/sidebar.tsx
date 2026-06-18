@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -38,12 +38,23 @@ import { cn } from '@/lib/utils'
  * Los contadores de badge se pasan por `badgeCounts` (slot listo; 0 = oculto).
  */
 export function Sidebar({
-  badgeCounts = {},
+  badgeCounts: badgeCountsProp = {},
 }: {
   badgeCounts?: Record<string, number>
 }) {
   const pathname = usePathname() || ''
   const { rol } = usePermissions()
+  const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>(badgeCountsProp)
+
+  // Contadores dinámicos de badges (mis pendientes, verificaciones, aprobaciones).
+  useEffect(() => {
+    let alive = true
+    fetch('/api/admin/badge-counts', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => { if (alive && j && typeof j === 'object') setBadgeCounts(j) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [pathname])
   const collapsed = useUIStore((s) => s.sidebarCollapsed)
   const toggle = useUIStore((s) => s.toggleSidebar)
   const recientes = useUIStore((s) => s.recientes)

@@ -1,8 +1,23 @@
 # ERP Social Ahorro · Progreso autónomo
 
-**Última actualización:** 2026-05-22
+**Última actualización:** 2026-06-17
 **Rama productiva:** `main`
-**Último commit:** F6.5 NORA HQ (rebrand + design upgrade)
+**Último hito:** F6-T · Módulo de tareas enterprise COMPLETO (tag `v0.7-tareas-completo`)
+
+> **F6.5 Reestructuración** (T1–T6 hechas: bugfixes header, rebrand NORA HQ,
+> sidebar 8 pilares, Mission Control, usuarios+permisos, catálogo+CSV). T7
+> (gestor integraciones) y T8 (model router IA) diferidos.
+>
+> **F6-T Tareas enterprise** ✅ T1–T15: schema v2 (migr. 0037), turnos +
+> supervisores por sucursal, tipos CRUD + 16 seed farmacia (0038), motor de
+> recurrencias + cron `generar-agenda`, bandeja con pool + reclamo atómico,
+> ejecución con evidencias (foto/firma/GPS/termómetro/checklist/monto) →
+> bucket, cola de verificación con pre-IA de NORA, escalamiento, motor de
+> métricas (snapshots) + cron nightly, tareas hoy en Mission Control,
+> gamificación cableada, NORA pre-verifica evidencias + reporte semanal,
+> adjuntos/comprobantes polimórficos (0039) en facturas/pagos/recepciones/
+> devoluciones, datos demo (0040 + seed). Detalle completo en `docs/PLAN-MAESTRO.md`.
+> Migraciones 0035–0040 aplicadas vía MCP. Build verde (72 rutas).
 
 > **FASE 6.5 · NORA HQ (rebrand + diseño premium)** — hecho: F6.5.1 identidad,
 > F6.5.2 paleta Deep Tech (violeta/menta), F6.5.3 tipografía (Geist+Fraunces),
