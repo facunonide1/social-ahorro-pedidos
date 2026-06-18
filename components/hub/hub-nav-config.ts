@@ -116,6 +116,12 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
         roles: ['super_admin', 'gerente', 'comprador'],
       },
       {
+        label: 'Alertas',
+        href: '/hub/operaciones/alertas',
+        icon: Bell,
+        roles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'sucursal'],
+      },
+      {
         label: 'Vencimientos',
         href: '/hub/operaciones/vencimientos',
         icon: CalendarX,

@@ -28,7 +28,7 @@ por diferencia, análisis y disparadores de tareas. Ver auditoría previa en
 | T5 · Stock (rehacer: Productos + Kárdex) | ✅ |
 | T6 · Análisis ventas + dinero dormido + cron metricas-stock | ✅ |
 | T7 · Reposición ⭐ | ✅ |
-| T8 · Alertas ⭐ (9 tipos + stock fantasma) | ⬜ |
+| T8 · Alertas ⭐ (9 tipos + stock fantasma) | ✅ |
 | T9 · Vencimientos (acciones transferir/devolver/ofertar) | ⬜ |
 | T10 · Transferencias + redistribución (mueven stock) | ⬜ |
 | T11 · Inventarios (4 sucursales reales) | ⬜ |
