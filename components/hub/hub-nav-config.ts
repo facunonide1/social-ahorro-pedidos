@@ -181,7 +181,7 @@ export const HUB_NAV_SECTIONS: HubNavSection[] = [
       },
       {
         label: 'Pagos',
-        href: '/hub/pagos',
+        href: '/hub/finanzas/pagos',
         icon: Banknote,
         roles: ['super_admin', 'gerente', 'tesoreria', 'auditor'],
       },
