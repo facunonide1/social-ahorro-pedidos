@@ -34,7 +34,7 @@ por diferencia, análisis y disparadores de tareas. Ver auditoría previa en
 | T11 · Inventarios (4 sucursales reales) | ⬜ |
 | T12 · CrearTareaRapida + recepción→stock + NORA tools + demo + tag v0.8 | ⬜ |
 
-### 👉 PRÓXIMA ACCIÓN: **T5 · Stock (rehacer)** — `/hub/operaciones/stock` lee productos_catalogo + stock_items, tabs Productos/Kárdex, semáforo por sucursal, KPIs (valor stock a costo, críticos, por vencer), filtros, export Excel con SKU, detalle con lotes/movimientos/rotación. Luego T6 (análisis+cron metricas-stock), T7 reposición, T8 alertas, T9 vencimientos acciones, T10 transferencias mueven stock, T11 inventarios 4 sucursales, T12 tareas rápidas+NORA+demo+tag v0.8.
+### 👉 PRÓXIMA ACCIÓN: **T6 · Análisis de ventas + dinero dormido**. Cron `metricas-stock` (nightly) recalcula `producto_rotacion` desde movimientos `venta` (prom 7/30d, días de stock, ABC, fecha de quiebre). Pantalla `/hub/operaciones/analisis` con tabs "Más vendidos" (rankings por período/sucursal/categoría + 2 cajas NORA reponer/no-comprar) y "Dinero dormido" (stock sin rotación 60d+ × costo, ranking peores, acciones). Export Excel. Luego T7 reposición, T8 alertas (9 tipos + cron), T9 vencimientos acciones, T10 transferencias mueven stock, T11 inventarios 4 sucursales, T12 CrearTareaRapida + recepción→stock + NORA tools + demo 60d + tag v0.8.
 Prerrequisitos: **`npm i xlsx`** (SheetJS, no instalado) + helper
 `lib/utils/export-excel.ts` (regla global: toda pantalla de productos exporta
 .xlsx con SKU). Lógica de procesamiento reusable en
