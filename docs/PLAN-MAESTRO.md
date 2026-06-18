@@ -12,7 +12,24 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟣 SESIÓN ACTUAL — OPERACIONES/STOCK → WMS (en curso)
+## 🟢 SESIÓN ACTUAL — FINANZAS → cuentas por pagar + tesorería + caja multinivel
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 · Schema (0044: ALTER proveedores/facturas/pagos + gastos_fijos, caja multinivel [turnos/general/movimientos+trigger saldo], conciliacion, config import, enums) | ✅ aplicada |
+| T2 · Tablero · T3 Proveedores+ctacte · T4 Documentos · T5 Pagos⭐ · T6 Gastos fijos · T7 Caja multinivel⭐ · T8 Cuentas+conciliación · T9 Cheques+impuestos · T10 Calendario⭐ · T11 NORA+alertas+demo+tag v0.9 | ⬜ |
+
+### 👉 PRÓXIMA ACCIÓN: **T2 · Tablero `/hub/finanzas`** — 4 KPIs (deuda
+proveedores, vencido, vence esta semana, saldo bancos) + NoraCard + tabla de
+próximos vencimientos unificada (facturas+gastos_fijos+impuestos+cheques) con
+botón Pagar. Menú Finanzas (10 secciones) se wirea por pantalla. Decisiones:
+nota_credito = signo negativo en cta cte (computado por tipo_documento, total
+positivo); el pago mueve plata vía caja_general_movimientos (trigger saldo) o
+movimientos_bancarios. Sigue T3…T11.
+
+---
+
+## 🟣 OPERACIONES/STOCK → WMS (COMPLETA · tag v0.8-operaciones-completo)
 
 Reconstrucción del sector Operaciones a WMS con import de Excel diario, ventas
 por diferencia, análisis y disparadores de tareas. Ver auditoría previa en
