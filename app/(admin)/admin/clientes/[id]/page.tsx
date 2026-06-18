@@ -10,7 +10,6 @@ import {
   type ClienteCrm,
 } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { Badge } from '@/components/ui/badge'
@@ -55,7 +54,7 @@ export default async function ClienteDetallePage({
     : [{ data: [] as { id: string; nombre: string }[] }, []]
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title={cliente.razon_social}
         description={
@@ -243,7 +242,7 @@ export default async function ClienteDetallePage({
           </>
         )}
       </div>
-    </HubShell>
+    </>
   )
 }
 

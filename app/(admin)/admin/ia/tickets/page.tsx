@@ -2,7 +2,6 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import type { TicketValidacion } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -75,7 +74,7 @@ export default async function TicketsPage() {
   const rechazados = tickets.filter((t) => t.estado === 'rechazado').length
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Validación de tickets"
         description="Cargá la foto de un ticket y la IA extrae los datos. Después revisás y validás."
@@ -119,6 +118,6 @@ export default async function TicketsPage() {
           <TicketsClient initialTickets={ticketsConUrl} userId={profile.id} />
         )}
       </div>
-    </HubShell>
+    </>
   )
 }

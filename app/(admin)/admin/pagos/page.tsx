@@ -6,7 +6,6 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { METODO_PAGO_LABELS } from '@/lib/types/admin'
 import type { Pago } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PagoEstadoBadge } from '@/components/hub/pago-estado-badge'
 import { PageHeader } from '@/components/shared/page-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -44,7 +43,7 @@ export default async function PagosPage() {
   const canCreate = ['super_admin', 'gerente', 'tesoreria'].includes(profile.rol)
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Pagos a proveedores"
         description={`${rows.length} órden${rows.length === 1 ? '' : 'es'} de pago`}
@@ -135,6 +134,6 @@ export default async function PagosPage() {
           </Table>
         </Card>
       </div>
-    </HubShell>
+    </>
   )
 }

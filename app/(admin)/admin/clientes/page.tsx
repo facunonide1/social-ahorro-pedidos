@@ -10,7 +10,6 @@ import {
   type SegmentoCliente,
 } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -55,7 +54,7 @@ export default async function ClientesCrmPage() {
   const ltvTotal = activos.reduce((a, c) => a + Number(c.ltv || 0), 0)
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Clientes B2B"
         description={`${clientes.length} cliente${clientes.length === 1 ? '' : 's'} en el CRM`}
@@ -175,6 +174,6 @@ export default async function ClientesCrmPage() {
           ))}
         </div>
       </div>
-    </HubShell>
+    </>
   )
 }

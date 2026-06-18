@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 
 import NuevoPagoForm from './form'
@@ -21,7 +20,7 @@ export default async function NuevoPagoPage() {
     .order('razon_social', { ascending: true })
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Nueva orden de pago"
         description="Elegí un proveedor, seleccioná las facturas a cancelar e informá el método."
@@ -38,6 +37,6 @@ export default async function NuevoPagoPage() {
           }
         />
       </div>
-    </HubShell>
+    </>
   )
 }

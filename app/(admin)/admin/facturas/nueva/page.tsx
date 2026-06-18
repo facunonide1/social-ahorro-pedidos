@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 
 import NuevaFacturaForm from './form'
@@ -24,7 +23,7 @@ export default async function NuevaFacturaPage() {
   ])
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Nueva factura"
         breadcrumbs={[
@@ -41,6 +40,6 @@ export default async function NuevaFacturaPage() {
           sucursales={(sucRes.data ?? []) as { id: string; nombre: string }[]}
         />
       </div>
-    </HubShell>
+    </>
   )
 }

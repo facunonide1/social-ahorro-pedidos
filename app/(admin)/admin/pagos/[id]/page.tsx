@@ -12,7 +12,6 @@ import type {
   TipoFactura,
 } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { FacturaEstadoBadge } from '@/components/hub/factura-estado-badge'
 import { PagoEstadoBadge } from '@/components/hub/pago-estado-badge'
 import { KpiCard } from '@/components/cards/kpi-card'
@@ -102,7 +101,7 @@ export default async function PagoDetailPage({
   const numeroOP = p.numero_orden_pago || '— sin OP —'
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title={numeroOP}
         description={
@@ -252,7 +251,7 @@ export default async function PagoDetailPage({
         )}
         <Comprobantes entidadTipo="pago" entidadId={params.id} />
       </div>
-    </HubShell>
+    </>
   )
 }
 

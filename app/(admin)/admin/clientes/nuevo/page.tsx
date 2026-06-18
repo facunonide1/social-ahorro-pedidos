@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { ClienteForm } from '../cliente-form'
 import { listVendedores } from '../vendedores'
@@ -20,7 +19,7 @@ export default async function NuevoClientePage() {
   ])
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Nuevo cliente B2B"
         breadcrumbs={[
@@ -35,6 +34,6 @@ export default async function NuevoClientePage() {
           vendedores={vendedores}
         />
       </div>
-    </HubShell>
+    </>
   )
 }

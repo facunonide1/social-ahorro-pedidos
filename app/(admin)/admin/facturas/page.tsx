@@ -6,7 +6,6 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import type { FacturaEstado, FacturaProveedor } from '@/lib/types/admin'
 import { vencimientoBadge } from '@/lib/admin-hub/factura'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { FacturaEstadoBadge } from '@/components/hub/factura-estado-badge'
 import { PageHeader } from '@/components/shared/page-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -122,7 +121,7 @@ export default async function FacturasPage({
   const totalPend = pendientes.reduce((a, r) => a + Number(r.total || 0), 0)
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Facturas de proveedor"
         description={
@@ -229,6 +228,6 @@ export default async function FacturasPage({
           </Table>
         </Card>
       </div>
-    </HubShell>
+    </>
   )
 }

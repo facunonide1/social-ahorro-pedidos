@@ -3,7 +3,6 @@ import { Sparkles } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { Markdown } from '@/components/ai/markdown'
 import { RegenerarResumenButton } from './regenerar'
@@ -35,7 +34,7 @@ export default async function ResumenDiarioPage() {
   const canGenerate = ['super_admin', 'gerente'].includes(profile.rol)
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Resumen ejecutivo diario"
         description={
@@ -98,6 +97,6 @@ export default async function ResumenDiarioPage() {
           </p>
         )}
       </div>
-    </HubShell>
+    </>
   )
 }

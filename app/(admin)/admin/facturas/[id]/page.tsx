@@ -11,7 +11,6 @@ import type {
 } from '@/lib/types/admin'
 import { vencimientoBadge } from '@/lib/admin-hub/factura'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { FacturaEstadoBadge } from '@/components/hub/factura-estado-badge'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { PageHeader } from '@/components/shared/page-header'
@@ -124,7 +123,7 @@ export default async function FacturaDetailPage({
   const comprobante = `${f.tipo_factura} ${String(f.punto_venta).padStart(5, '0')}-${String(f.numero_factura).padStart(8, '0')}`
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title={comprobante}
         description={
@@ -330,6 +329,6 @@ export default async function FacturaDetailPage({
 
         <Comprobantes entidadTipo="factura" entidadId={params.id} />
       </div>
-    </HubShell>
+    </>
   )
 }
