@@ -1,6 +1,5 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 
 import NuevoProveedorForm from './form'
@@ -13,7 +12,7 @@ export default async function NuevoProveedorPage() {
   })
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Nuevo proveedor"
         description="Los contactos, cuentas bancarias y documentos se cargan en la ficha después de crearlo."
@@ -26,6 +25,6 @@ export default async function NuevoProveedorPage() {
       <div className="mx-auto w-full max-w-3xl p-4 md:p-6">
         <NuevoProveedorForm />
       </div>
-    </HubShell>
+    </>
   )
 }

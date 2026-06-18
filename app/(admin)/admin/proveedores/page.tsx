@@ -6,7 +6,6 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { CONDICION_IVA_LABELS } from '@/lib/types/admin'
 import type { Proveedor } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -89,7 +88,7 @@ export default async function ProveedoresPage({
   const hasFilters = q || categoria || activoFilter !== null
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Proveedores"
         description={
@@ -200,6 +199,6 @@ export default async function ProveedoresPage({
           </Table>
         </Card>
       </div>
-    </HubShell>
+    </>
   )
 }

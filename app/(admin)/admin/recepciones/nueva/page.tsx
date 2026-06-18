@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 
 import NuevaRecepcionForm from './form'
@@ -21,7 +20,7 @@ export default async function NuevaRecepcionPage() {
     .order('nombre', { ascending: true })
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Nueva recepción"
         description="Cargá los items y las cantidades. El estado se calcula automáticamente."
@@ -37,6 +36,6 @@ export default async function NuevaRecepcionPage() {
           forcedSucursalId={profile.rol === 'sucursal' ? profile.sucursal_id : null}
         />
       </div>
-    </HubShell>
+    </>
   )
 }

@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import type { RecepcionMercaderia } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { RecepcionEstadoBadge } from '@/components/hub/recepcion-estado-badge'
 import { PageHeader } from '@/components/shared/page-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -51,7 +50,7 @@ export default async function RecepcionesPage() {
   )
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Recepciones de mercadería"
         description={`${rows.length} recepción${rows.length === 1 ? '' : 'es'}`}
@@ -139,6 +138,6 @@ export default async function RecepcionesPage() {
           </Table>
         </Card>
       </div>
-    </HubShell>
+    </>
   )
 }

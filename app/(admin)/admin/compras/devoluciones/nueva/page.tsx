@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 
 import DevolucionForm from './form'
@@ -30,7 +29,7 @@ export default async function NuevaDevolucionPage() {
   ])
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Nueva devolución a proveedor"
         breadcrumbs={[
@@ -45,6 +44,6 @@ export default async function NuevaDevolucionPage() {
           productos={(prodRes.data ?? []) as { id: string; nombre: string }[]}
         />
       </div>
-    </HubShell>
+    </>
   )
 }

@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import type { RecepcionItem, RecepcionMercaderia } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { RecepcionEstadoBadge } from '@/components/hub/recepcion-estado-badge'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { PageHeader } from '@/components/shared/page-header'
@@ -79,7 +78,7 @@ export default async function RecepcionDetailPage({
   const titulo = r.numero_remito || 'Recepción sin remito'
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title={titulo}
         description={
@@ -209,6 +208,6 @@ export default async function RecepcionDetailPage({
 
         <Comprobantes entidadTipo="recepcion" entidadId={params.id} titulo="Remito firmado / fotos" />
       </div>
-    </HubShell>
+    </>
   )
 }

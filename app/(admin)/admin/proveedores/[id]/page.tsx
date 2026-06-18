@@ -10,7 +10,6 @@ import type {
   ProveedorDocumento,
 } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { Badge } from '@/components/ui/badge'
 
@@ -72,7 +71,7 @@ export default async function ProveedorDetailPage({
   const canEditCuentas = ['super_admin', 'gerente', 'tesoreria'].includes(profile.rol)
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title={p.razon_social}
         description={
@@ -114,6 +113,6 @@ export default async function ProveedorDetailPage({
           readOnly={!canEdit}
         />
       </div>
-    </HubShell>
+    </>
   )
 }

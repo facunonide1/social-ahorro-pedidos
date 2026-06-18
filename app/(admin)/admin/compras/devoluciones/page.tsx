@@ -12,7 +12,6 @@ import type {
   EstadoDevolucionProveedor,
 } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -59,7 +58,7 @@ export default async function DevolucionesPage() {
   const rows = (rawRows ?? []) as Row[]
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title="Devoluciones a proveedor"
         description={`${rows.length} devolución${rows.length === 1 ? '' : 'es'}`}
@@ -150,6 +149,6 @@ export default async function DevolucionesPage() {
           </Table>
         </Card>
       </div>
-    </HubShell>
+    </>
   )
 }

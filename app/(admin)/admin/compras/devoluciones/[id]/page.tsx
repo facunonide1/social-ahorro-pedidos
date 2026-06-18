@@ -12,7 +12,6 @@ import type {
   EstadoDevolucionProveedor,
 } from '@/lib/types/admin'
 
-import { HubShell } from '@/components/hub/hub-shell'
 import { PageHeader } from '@/components/shared/page-header'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -90,7 +89,7 @@ export default async function DevolucionDetailPage({
   )
 
   return (
-    <HubShell profile={profile}>
+    <>
       <PageHeader
         title={`Devolución · ${d.proveedores?.razon_social || '—'}`}
         description={`${new Date(d.fecha).toLocaleDateString('es-AR')} · ${MOTIVO_DEVOLUCION_LABELS[d.motivo]}`}
@@ -206,6 +205,6 @@ export default async function DevolucionDetailPage({
 
         <Comprobantes entidadTipo="devolucion" entidadId={params.id} titulo="Fotos mercadería / remito" />
       </div>
-    </HubShell>
+    </>
   )
 }
