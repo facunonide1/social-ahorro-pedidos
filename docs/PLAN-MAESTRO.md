@@ -17,11 +17,13 @@ con `sucursal_id` en todo para escalar.
 | Sub-tanda | Estado |
 |-----------|--------|
 | T1 · Schema (0044: ALTER proveedores/facturas/pagos + gastos_fijos, caja multinivel [turnos/general/movimientos+trigger saldo], conciliacion, config import, enums) | ✅ aplicada |
-| T2 · Tablero ✅ · T3 Proveedores+ctacte ✅ · T4 Documentos ✅ · T5 Pagos⭐ ✅ · T6 Gastos fijos · T7 Caja multinivel⭐ · T8 Cuentas+conciliación · T9 Cheques+impuestos · T10 Calendario⭐ · T11 NORA+alertas+demo+tag v0.9 | 🟡 en curso |
+| T2 Tablero ✅ · T3 Proveedores+ctacte ✅ · T4 Documentos ✅ · T5 Pagos⭐ ✅ · T6 Gastos fijos ✅ · T7 Caja multinivel⭐ ✅ · T8 Cuentas+conciliación ✅ (preexistente) · T9 Cheques+impuestos ✅ (preexistente) · T10 Calendario⭐ ✅ · T11 NORA+demo+tag ✅ | ✅ COMPLETA (v0.9-finanzas-completo) |
 
-### 👉 PRÓXIMA ACCIÓN: **T6 · Gastos fijos + recurrencia** (`/hub/finanzas/gastos-fijos`). ABM de gastos_fijos (concepto, tipo, sucursal, monto, frecuencia, día del mes, proveedor opcional). Generación de gastos_fijos_instancias del período (UNIQUE gasto_fijo_id+periodo evita duplicar) vía botón "Generar mes" + cron mensual (POST cron-secret / super_admin; plan Hobby → si no se puede schedule, dejar endpoint manual y anotar en PENDIENTE DEL USUARIO). Cada instancia es un vencimiento del tablero/calendario; al pagarla enlazar pago_id. Export Excel. Sigue T7 caja multinivel⭐, T8-T11.
+### 👉 PRÓXIMA ACCIÓN: **FINANZAS COMPLETA** — tag `v0.9-finanzas-completo`. Menú Finanzas: Tablero · Proveedores+ctacte · Documentos a pagar · Pagos⭐ · Gastos fijos · Caja⭐ · Cuentas bancarias · Cash flow · Conciliación · Cheques · Impuestos · Calendario de pagos. Próxima FASE sugerida: Compras con comparador de precios, o polish OPS post-v0.8.
 >
-> Hecho T5 (e606a98): pago mueve dinero real con origen único (efectivo caja_general / cuenta bancaria / cheque emitido / MP), preview de impacto, FRENA si efectivo insuficiente (422), pago_facturas + estado pagada/pagada_parcial, NC restan. API POST /api/finanzas/pagos + GET pendientes. Hecho T4 (d65eb3e): documentos a pagar con alta anti-dup (hash_dedup), filtros, export Excel, nav.
+> **PENDIENTE DEL USUARIO (Finanzas):** (1) cron `/api/cron/gastos-fijos` agregado a `vercel.json` (día 1 mensual) — en plan **Hobby** puede no ejecutarse; fallback = botón "Generar mes" en `/hub/finanzas/gastos-fijos`. (2) Datos demo cargados con `es_demo=true` (4 proveedores DEMO·, documentos, gastos fijos+instancias, cheques, impuestos, caja config/general/turnos/movimientos) — borrables con `delete ... where es_demo`. (3) RLS pendiente coupons/offers sigue abierto (decisión del usuario).
+>
+> Hecho T7 (63dc344): caja multinivel — turno (arqueo ciego, fondo fijo) → general (saldo por trigger) → retiros con aprobación super_admin. T6 (ad7ebcc): gastos fijos + generador mensual idempotente. T5 (e606a98): pago mueve dinero real con origen único + FRENA si efectivo insuficiente. T4 (d65eb3e): documentos anti-dup. T10 (875857c): calendario mensual unificado. T8/T9 ya existían (cuentas/conciliación/cheques/impuestos).
 proveedores, vencido, vence esta semana, saldo bancos) + NoraCard + tabla de
 próximos vencimientos unificada (facturas+gastos_fijos+impuestos+cheques) con
 botón Pagar. Menú Finanzas (10 secciones) se wirea por pantalla. Decisiones:
