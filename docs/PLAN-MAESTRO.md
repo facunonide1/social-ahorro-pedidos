@@ -25,7 +25,7 @@ por diferencia, análisis y disparadores de tareas. Ver auditoría previa en
 | T2 · Schema WMS (0042: stock_items + trigger, movimientos firmados, lotes, rotacion, imports, config, alertas) | ✅ aplicada |
 | T3 · Importador stock diario (ventas por diferencia) ⭐ | ✅ |
 | T4 · Importador vencimientos | ✅ |
-| T5 · Stock (rehacer: Productos + Kárdex sobre catalogo+stock_items) | ⬜ |
+| T5 · Stock (rehacer: Productos + Kárdex) | ✅ |
 | T6 · Análisis ventas + dinero dormido + cron metricas-stock | ⬜ |
 | T7 · Reposición ⭐ | ⬜ |
 | T8 · Alertas ⭐ (9 tipos + stock fantasma) | ⬜ |
