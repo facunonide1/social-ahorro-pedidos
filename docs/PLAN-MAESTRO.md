@@ -29,7 +29,7 @@ por diferencia, análisis y disparadores de tareas. Ver auditoría previa en
 | T6 · Análisis ventas + dinero dormido + cron metricas-stock | ✅ |
 | T7 · Reposición ⭐ | ✅ |
 | T8 · Alertas ⭐ (9 tipos + stock fantasma) | ✅ |
-| T9 · Vencimientos (acciones transferir/devolver/ofertar) | ⬜ |
+| T9 · Vencimientos (acciones transferir/devolver/ofertar) | ✅ |
 | T10 · Transferencias + redistribución (mueven stock) | ⬜ |
 | T11 · Inventarios (4 sucursales reales) | ⬜ |
 | T12 · CrearTareaRapida + recepción→stock + NORA tools + demo + tag v0.8 | ⬜ |
