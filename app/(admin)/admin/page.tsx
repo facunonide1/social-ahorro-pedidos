@@ -63,6 +63,7 @@ type ResumenGerencial = {
   ordenesAbiertas: number
   ofertasActivas: number
   ofertasPendientes: number
+  urgentes7d: number
 }
 
 const OC_ABIERTAS = ['borrador', 'enviada', 'confirmada', 'recibida_parcial']
@@ -76,7 +77,7 @@ async function getResumenGerencial(): Promise<ResumenGerencial> {
   const d30 = new Date(Date.now() - 30 * 86_400_000).toISOString()
   const mesActual = new Date().toISOString().slice(0, 7)
 
-  const [ventasRes, gastosRes, cuentasRes, faltRes, ocRes, ofeActRes, ofePendRes] = await Promise.all([
+  const [ventasRes, gastosRes, cuentasRes, faltRes, ocRes, ofeActRes, ofePendRes, urgRes] = await Promise.all([
     adm.from('orders').select('total, status').gte('created_at', d30),
     adm.from('gastos_operativos').select('monto').eq('periodo', mesActual),
     adm.from('cuentas_bancarias_con_saldo').select('moneda, saldo_actual, activa'),
@@ -84,6 +85,7 @@ async function getResumenGerencial(): Promise<ResumenGerencial> {
     adm.from('ordenes_compra').select('id', { count: 'exact', head: true }).in('estado', OC_ABIERTAS),
     adm.from('ofertas').select('id', { count: 'exact', head: true }).eq('estado', 'activa'),
     adm.from('ofertas').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente_aprobacion'),
+    adm.from('mensajes').select('id', { count: 'exact', head: true }).eq('es_urgente', true).gte('created_at', new Date(Date.now() - 7 * 86_400_000).toISOString()),
   ])
 
   const ventasMes = ((ventasRes.data ?? []) as any[])
@@ -94,7 +96,7 @@ async function getResumenGerencial(): Promise<ResumenGerencial> {
     .filter((c) => c.activa && c.moneda === 'ARS')
     .reduce((a, c) => a + Number(c.saldo_actual || 0), 0)
 
-  return { ventasMes, gastoMes, margenMes: ventasMes - gastoMes, saldoBancarioARS, faltantes: faltRes.count ?? 0, ordenesAbiertas: ocRes.count ?? 0, ofertasActivas: ofeActRes.count ?? 0, ofertasPendientes: ofePendRes.count ?? 0 }
+  return { ventasMes, gastoMes, margenMes: ventasMes - gastoMes, saldoBancarioARS, faltantes: faltRes.count ?? 0, ordenesAbiertas: ocRes.count ?? 0, ofertasActivas: ofeActRes.count ?? 0, ofertasPendientes: ofePendRes.count ?? 0, urgentes7d: urgRes.count ?? 0 }
 }
 
 /**
@@ -214,6 +216,13 @@ export default async function MissionControlPage() {
               icon={Clock}
               variant={gerencial.ofertasPendientes > 0 ? 'warning' : 'default'}
               href="/admin/ofertas"
+            />
+            <KpiCard
+              label="Mensajes urgentes (7d)"
+              value={gerencial.urgentes7d}
+              icon={AlertTriangle}
+              variant={gerencial.urgentes7d > 0 ? 'danger' : 'default'}
+              href="/admin/comunicacion"
             />
           </div>
         </section>

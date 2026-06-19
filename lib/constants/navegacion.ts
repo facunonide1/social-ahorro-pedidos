@@ -212,6 +212,14 @@ export const NAVEGACION: NavGrupo[] = [
     ],
   },
   {
+    grupo: 'Comunicación',
+    items: [
+      { label: 'Inbox',       href: '/admin/comunicacion',             icon: 'MessageSquare', badge: 'mensajesNoLeidos' },
+      { label: 'Comunicados', href: '/admin/comunicacion/comunicados', icon: 'CheckCheck' },
+      { label: 'Mi bandeja',  href: '/admin/comunicacion/mi-bandeja',  icon: 'Megaphone' },
+    ],
+  },
+  {
     grupo: 'Operación',
     items: [
       { label: 'Mi panel',       href: '/admin/mi-panel',                 icon: 'User' },

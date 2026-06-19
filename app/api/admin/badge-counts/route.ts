@@ -35,10 +35,25 @@ export async function GET() {
 
   const [t, v, a, f] = await Promise.all([misTareas, verif, aprob, faltantes])
 
+  // mensajes no leídos en mis canales (aprox, acotado)
+  let mensajesNoLeidos = 0
+  const { data: mis } = await sb.from('canal_miembros').select('canal_id, ultima_lectura_at').eq('user_id', user.id)
+  const canalIds = ((mis ?? []) as any[]).map((m) => m.canal_id)
+  if (canalIds.length) {
+    const lu = new Map(((mis ?? []) as any[]).map((m) => [m.canal_id, m.ultima_lectura_at]))
+    const { data: msgs } = await sb.from('mensajes').select('canal_id, created_at, autor_user_id').in('canal_id', canalIds).order('created_at', { ascending: false }).limit(500)
+    for (const m of (msgs ?? []) as any[]) {
+      if (m.autor_user_id === user.id) continue
+      const t0 = lu.get(m.canal_id)
+      if (t0 == null || m.created_at > t0) mensajesNoLeidos++
+    }
+  }
+
   return NextResponse.json({
     tareasPendientes: t.count ?? 0,
     verificacionesPendientes: v.count ?? 0,
     aprobacionesPendientes: a.count ?? 0,
     faltantesPendientes: f.count ?? 0,
+    mensajesNoLeidos,
   })
 }

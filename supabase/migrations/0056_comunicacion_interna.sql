@@ -1,0 +1,7 @@
+-- 0056 · Comunicación interna (v0.23). (Resumen; SQL real aplicado vía MCP.)
+-- Enums: canal_tipo, canal_vinculo, canal_rol, mensaje_tipo, recordatorio_patron.
+-- Tablas: canales, canal_miembros, mensajes (hilo_id self-ref, acciones jsonb,
+-- es_urgente, fijado, programado_para, entidad_relacionada), mensaje_lecturas,
+-- mensaje_reacciones, encuestas(+votos), recordatorios_programados, clima_chats.
+-- Fn es_miembro_canal(uuid). RLS: canales privados solo miembros/gerencia; resto
+-- admin activo (membresía validada en API). mensajes en publication realtime.
