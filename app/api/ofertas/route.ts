@@ -40,6 +40,18 @@ export async function POST(req: NextRequest) {
 
   if (!puedeGestionar) return NextResponse.json({ error: 'sin permiso para gestionar ofertas' }, { status: 403 })
 
+  // ---- crear campaña ----
+  if (accion === 'crear_campania') {
+    if (!b?.nombre) return NextResponse.json({ error: 'nombre requerido' }, { status: 400 })
+    const { data, error } = await adm.from('campanias').insert({
+      nombre: b.nombre, descripcion: b?.descripcion ?? null, objetivo: b?.objetivo ?? null,
+      tipo_origen: b?.tipo_origen ?? 'campania_fecha', fecha_inicio: b?.fecha_inicio ?? null, fecha_fin: b?.fecha_fin ?? null,
+      estado: b?.estado ?? 'activa', created_by: g.userId,
+    }).select('id').single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ ok: true, id: data.id })
+  }
+
   // ---- alta de producto al catálogo ----
   if (accion === 'alta_producto') {
     const nombre = String(b?.nombre ?? '').trim()
