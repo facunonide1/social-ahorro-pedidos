@@ -928,7 +928,54 @@ const getObjetivosEmpleado: ToolDef = {
 
 /* ---------- registro ---------- */
 
+const getFaltantes: ToolDef = {
+  definition: {
+    name: 'get_faltantes',
+    description: 'Lista los avisos de faltantes reportados por las sucursales (sector Compras), agrupados por producto. Útil para decidir qué órdenes armar.',
+    input_schema: { type: 'object', properties: { rubro: { type: 'string', description: 'farmacia|perfumeria|supermercado (opcional)' } } },
+  },
+  async execute(sb, input) {
+    let q = sb.from('avisos_faltante').select('producto_id, texto_libre, cantidad_sugerida, sucursales(nombre), productos_catalogo(nombre)').eq('estado', 'nuevo').limit(500)
+    if (input.rubro) q = q.eq('rubro', input.rubro)
+    const { data, error } = await q
+    if (error) return { error: error.message }
+    const map = new Map<string, { producto: string; avisos: number; total: number; sucursales: string[] }>()
+    for (const a of (data ?? []) as any[]) {
+      const nombre = pickOne<any>(a.productos_catalogo)?.nombre ?? a.texto_libre ?? '—'
+      const k = nombre.toLowerCase()
+      const g = map.get(k) ?? { producto: nombre, avisos: 0, total: 0, sucursales: [] }
+      g.avisos++; g.total += Number(a.cantidad_sugerida || 0)
+      const suc = pickOne<any>(a.sucursales)?.nombre; if (suc && !g.sucursales.includes(suc)) g.sucursales.push(suc)
+      map.set(k, g)
+    }
+    const items = [...map.values()].sort((a, b) => b.avisos - a.avisos)
+    return { total_productos: items.length, items: items.slice(0, 30) }
+  },
+}
+
+const getScoreProveedor: ToolDef = {
+  definition: {
+    name: 'score_proveedor',
+    description: 'Devuelve el score (0-10) y la última actividad de un proveedor por nombre, calculado de sus recepciones (puntualidad, faltantes, daños).',
+    input_schema: { type: 'object', properties: { nombre: { type: 'string', description: 'nombre o parte del nombre del proveedor' } }, required: ['nombre'] },
+  },
+  async execute(sb, input) {
+    const { data } = await sb.from('proveedores').select('id, razon_social, score_actual, rubros, es_drogueria').ilike('razon_social', `%${input.nombre}%`).limit(5)
+    if (!data?.length) return { error: 'No encontré ese proveedor.' }
+    const out = []
+    for (const p of data as any[]) {
+      const { data: ev } = await sb.from('proveedor_score_eventos').select('tipo').eq('proveedor_id', p.id)
+      const counts: Record<string, number> = {}
+      for (const e of (ev ?? []) as any[]) counts[e.tipo] = (counts[e.tipo] ?? 0) + 1
+      out.push({ proveedor: p.razon_social, score: p.score_actual, rubros: p.rubros, eventos: counts })
+    }
+    return { proveedores: out }
+  },
+}
+
 export const AI_TOOLS: Record<string, ToolDef> = {
+  get_faltantes: getFaltantes,
+  score_proveedor: getScoreProveedor,
   get_pedidos: getPedidos,
   get_resumen_ventas: getResumenVentas,
   get_facturas_vencer: getFacturasVencer,
@@ -971,6 +1018,8 @@ export const TOOL_LABELS: Record<string, string> = {
   get_performance_empleado: 'Analizando performance',
   get_ranking_sucursal: 'Calculando ranking',
   get_objetivos_empleado: 'Mirando objetivos',
+  get_faltantes: 'Revisando faltantes',
+  score_proveedor: 'Evaluando proveedor',
 }
 
 export async function runTool(

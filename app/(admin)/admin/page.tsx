@@ -59,7 +59,11 @@ type ResumenGerencial = {
   gastoMes: number
   margenMes: number
   saldoBancarioARS: number
+  faltantes: number
+  ordenesAbiertas: number
 }
+
+const OC_ABIERTAS = ['borrador', 'enviada', 'confirmada', 'recibida_parcial']
 
 /**
  * Resumen gerencial (absorbido del ex /admin/ejecutivo) — solo roles
@@ -70,10 +74,12 @@ async function getResumenGerencial(): Promise<ResumenGerencial> {
   const d30 = new Date(Date.now() - 30 * 86_400_000).toISOString()
   const mesActual = new Date().toISOString().slice(0, 7)
 
-  const [ventasRes, gastosRes, cuentasRes] = await Promise.all([
+  const [ventasRes, gastosRes, cuentasRes, faltRes, ocRes] = await Promise.all([
     adm.from('orders').select('total, status').gte('created_at', d30),
     adm.from('gastos_operativos').select('monto').eq('periodo', mesActual),
     adm.from('cuentas_bancarias_con_saldo').select('moneda, saldo_actual, activa'),
+    adm.from('avisos_faltante').select('id', { count: 'exact', head: true }).eq('estado', 'nuevo'),
+    adm.from('ordenes_compra').select('id', { count: 'exact', head: true }).in('estado', OC_ABIERTAS),
   ])
 
   const ventasMes = ((ventasRes.data ?? []) as any[])
@@ -84,7 +90,7 @@ async function getResumenGerencial(): Promise<ResumenGerencial> {
     .filter((c) => c.activa && c.moneda === 'ARS')
     .reduce((a, c) => a + Number(c.saldo_actual || 0), 0)
 
-  return { ventasMes, gastoMes, margenMes: ventasMes - gastoMes, saldoBancarioARS }
+  return { ventasMes, gastoMes, margenMes: ventasMes - gastoMes, saldoBancarioARS, faltantes: faltRes.count ?? 0, ordenesAbiertas: ocRes.count ?? 0 }
 }
 
 /**
@@ -178,6 +184,19 @@ export default async function MissionControlPage() {
               icon={Landmark}
               variant={gerencial.saldoBancarioARS < 0 ? 'danger' : 'default'}
               href="/admin/finanzas/cuentas"
+            />
+            <KpiCard
+              label="Faltantes a comprar"
+              value={gerencial.faltantes}
+              icon={AlertTriangle}
+              variant={gerencial.faltantes > 0 ? 'warning' : 'default'}
+              href="/admin/compras/faltantes"
+            />
+            <KpiCard
+              label="Órdenes de compra abiertas"
+              value={gerencial.ordenesAbiertas}
+              icon={FileText}
+              href="/admin/compras/ordenes"
             />
           </div>
         </section>
