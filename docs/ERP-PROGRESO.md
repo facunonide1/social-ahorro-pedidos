@@ -2,7 +2,18 @@
 
 **Última actualización:** 2026-06-18
 **Rama productiva:** `main`
-**Último hito:** Sector Compras completo (tag `v0.10-compras-completo`)
+**Último hito:** Módulo Ofertas completo (tag `v0.22-ofertas-completo`)
+
+> **Ofertas (v0.22)** ✅: módulo central en `/admin/ofertas` (objeto vivo). Carga/
+> propuesta NORA → borrador → aprobación → al aprobar dispara tareas (cartel+góndola
+> x sucursal), publica a cuponera (`offers`, best-effort), notifica + pide confirmación
+> de lectura al equipo, pasa a activa. Oferta viva (editar→nueva versión→re-confirmar).
+> Panel del empleado "La vi ✓". Calendario+campañas, propuestas NORA (por vencer/
+> dormidos/combo imán+dormido), rendimiento+aprendizaje por tipo, cartel imprimible,
+> A/B entre sucursales, límites/b2b. NORA tools + MC card. Migr. 0055. Demo es_demo.
+
+> **Compras · listas de precios (v0.21)** ✅: importador `/admin/compras/listas-precios`
+> (CSV/XLSX → mapeo → preview match% → confirmar), alimenta el comparador real.
 
 > **Compras (v0.10)** ✅: sector multisucursal en `/admin/compras/*` con filtro de
 > rubro transversal. Avisos de faltantes (1-tap desde sucursal/stock, bandeja

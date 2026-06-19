@@ -12,7 +12,35 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — COMPRAS: importador de listas de precios ✅ (v0.21-compras-listas-precios)
+## 🟢 SESIÓN ACTUAL — MÓDULO OFERTAS ✅ (v0.22-ofertas-completo)
+
+Objeto vivo central en `/admin/ofertas` (grupo Comercial). Migr. 0055.
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 schema: campanias, ofertas (codigo, version, tipos %/precio/2x1/nxm/combo/2da_unidad/por_cantidad/combo_dinamico/cruzada; limites, b2b, metricas, cuponera_ref), ofertas_confirmaciones, ofertas_versiones, ofertas_aprendizaje, ofertas_experimentos | ✅ |
+| T2 lista por tabs + crear (UI por tipo, productos autocomplete, canales, vigencia, campaña) | ✅ |
+| T3 aprobación ⭐ + motor `lib/ofertas/al-aprobar.ts`: dispara tareas (cartel+góndola x sucursal+publicar), publica cuponera (`offers`, best-effort), crea confirmaciones+notifica, estado→activa | ✅ |
+| T4 oferta viva ⭐ (editar activa→bump version+reset confirmaciones+re-notifica) + panel del empleado "La vi ✓" (NUEVA/CAMBIÓ) + barra de confirmación con recordar | ✅ |
+| T5 calendario mensual + campañas | ✅ |
+| T6 propuestas NORA ⭐ (`/api/ofertas/proponer`: por vencer/dormidos/combo imán+dormido, usa aprendizaje) | ✅ |
+| T7 rendimiento (uplift, ranking, comparación por tipo, NoraCard aprendizaje) | ✅ |
+| T8 cartel autogenerado imprimible + A/B (ofertas_experimentos) + límites/b2b/tope en schema | ✅ |
+| T9 NORA tools (ofertas_activas, oferta_para_cliente, estado_lectura) + MC card + demo + cierre | ✅ |
+
+**Cuponera:** publica insertando en `public.offers` (name/discount_type/value/dates/
+status='active'/promotion_type) vía admin client, best-effort en try/catch (no rompe
+el flujo; si falla queda `cuponera_ref.pendiente`). No modifica el resto de la cuponera.
+
+> **Follow-ups Ofertas:** ganchos con datos precargados desde Compras (compra
+> oportunista) y Operaciones (vencimientos/dormidos) → crear oferta; OCR/kit de
+> difusión (texto WSP+redes); medición real de uplift desde import de ventas
+> (hoy `metricas` se llena en demo); ranking de empleados por ofertas ofrecidas;
+> cupón segmentado/B2B en cuponera. Demo borrable con `delete … where es_demo`.
+
+---
+
+## 🟢 SESIÓN PREVIA — COMPRAS: importador de listas de precios ✅ (v0.21-compras-listas-precios)
 
 Faltaba la UI para cargar listas reales (el comparador solo tenía demo). Hecho:
 `/admin/compras/listas-precios` (reusa el patrón del importador de stock):

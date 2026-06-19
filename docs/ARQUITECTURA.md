@@ -157,6 +157,15 @@ Permisos: `lib/types/permisos.ts` (módulos × acciones, presets, `permisosEfect
   `caja_general`/`caja_turnos`/`caja_general_movimientos`, `gastos_operativos`,
   `aprobaciones`, `empleados`.
 
+> **Ofertas (v0.22):** módulo central en `app/(admin)/admin/ofertas/*` (grupo
+> Comercial). Tablas: `campanias`, `ofertas` (objeto vivo: codigo, version, tipos,
+> limites, b2b, metricas, cuponera_ref), `ofertas_confirmaciones`, `ofertas_versiones`,
+> `ofertas_aprendizaje`, `ofertas_experimentos`. Motor `lib/ofertas/al-aprobar.ts`:
+> al aprobar dispara tareas (módulo F6-T), publica a la cuponera (`public.offers`,
+> best-effort) y crea confirmaciones de lectura. APIs `app/api/ofertas/*`
+> (CRUD+aprobar+confirmar+proponer). NORA tools: ofertas_activas, oferta_para_cliente
+> (asistente de mostrador), estado_lectura_oferta. Ver `docs/PLAN-MAESTRO.md`.
+
 > **Compras (v0.10):** sector en `app/(admin)/admin/compras/*` con filtro de rubro
 > transversal (`components/compras/rubro-filter.tsx`, vive en `?rubro`). Tablas:
 > `ordenes_compra`(+`orden_compra_items` con `distribucion` jsonb), `avisos_faltante`,
