@@ -34,7 +34,7 @@ export default async function OfertaDetallePage({ params }: { params: { id: stri
 
   const tareaRows: TareaLite[] = ((tareas ?? []) as any[]).map((t) => ({ id: t.id, titulo: t.titulo, estado: t.estado, tipo: t.datos_custom?.tipo ?? '' }))
   const cartelTotal = tareaRows.filter((t) => t.tipo === 'cartel').length
-  const cartelOk = tareaRows.filter((t) => t.tipo === 'cartel' && ['verificada', 'completada', 'aprobada'].includes(t.estado)).length
+  const cartelOk = tareaRows.filter((t) => t.tipo === 'cartel' && ['completada','en_aprobacion','en_verificacion'].includes(t.estado)).length
 
   return (
     <>

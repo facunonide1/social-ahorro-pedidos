@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Bell, Pause, Play, Square, CheckCircle2 } from 'lucide-react'
+import { Bell, Pause, Play, Square, CheckCircle2, Image } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -32,6 +33,7 @@ export function OfertaGestion({ ofertaId, estado, version, rol, tareas, cartel, 
     <div className="space-y-5">
       {gestor && (
         <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm" variant="outline"><Link href={`/admin/ofertas/${ofertaId}/cartel`}><Image className="size-4" /> Ver cartel</Link></Button>
           {estado === 'activa' && <Button size="sm" variant="outline" disabled={busy} onClick={() => accion({ accion: 'estado', id: ofertaId, estado: 'pausada' }, 'Oferta pausada.')}><Pause className="size-4" /> Pausar</Button>}
           {estado === 'pausada' && <Button size="sm" variant="outline" disabled={busy} onClick={() => accion({ accion: 'estado', id: ofertaId, estado: 'activa' }, 'Oferta reactivada.')}><Play className="size-4" /> Reactivar</Button>}
           {['activa', 'pausada', 'aprobada'].includes(estado) && <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm('¿Finalizar la oferta?')) accion({ accion: 'estado', id: ofertaId, estado: 'finalizada' }, 'Oferta finalizada.') }}><Square className="size-4" /> Finalizar</Button>}
@@ -47,7 +49,7 @@ export function OfertaGestion({ ofertaId, estado, version, rol, tareas, cartel, 
                 {tareas.map((t) => (
                   <tr key={t.id} className="border-t border-border/60 first:border-t-0">
                     <td className="px-3 py-1.5">{t.titulo}</td>
-                    <td className="px-3 py-1.5 text-right"><Badge variant={['verificada', 'completada', 'aprobada'].includes(t.estado) ? 'success' : 'outline'} className="font-normal">{t.estado.replace(/_/g, ' ')}</Badge></td>
+                    <td className="px-3 py-1.5 text-right"><Badge variant={['completada','en_aprobacion','en_verificacion'].includes(t.estado) ? 'success' : 'outline'} className="font-normal">{t.estado.replace(/_/g, ' ')}</Badge></td>
                   </tr>
                 ))}
               </tbody>
