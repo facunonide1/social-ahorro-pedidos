@@ -973,7 +973,54 @@ const getScoreProveedor: ToolDef = {
   },
 }
 
+const getOfertasActivas: ToolDef = {
+  definition: {
+    name: 'ofertas_activas',
+    description: 'Lista las ofertas activas (para ofrecer en mostrador). Devuelve nombre, tipo y productos.',
+    input_schema: { type: 'object', properties: {} },
+  },
+  async execute(sb) {
+    const { data, error } = await sb.from('ofertas').select('nombre, tipo, valor, productos_ids, fecha_fin').eq('estado', 'activa').limit(50)
+    if (error) return { error: error.message }
+    return { cantidad: (data ?? []).length, ofertas: (data ?? []).map((o: any) => ({ nombre: o.nombre, tipo: o.tipo, valor: o.valor, vence: o.fecha_fin })) }
+  },
+}
+
+const getOfertaParaCliente: ToolDef = {
+  definition: {
+    name: 'oferta_para_cliente',
+    description: 'Dado un producto que el cliente lleva, sugiere qué ofertas activas ofrecerle (semilla del asistente de mostrador).',
+    input_schema: { type: 'object', properties: { producto: { type: 'string', description: 'nombre o SKU del producto' } }, required: ['producto'] },
+  },
+  async execute(sb, input) {
+    const { data: prods } = await sb.from('productos_catalogo').select('id, nombre').or(`nombre.ilike.%${input.producto}%,sku.ilike.%${input.producto}%`).limit(3)
+    if (!prods?.length) return { sugerencias: [], nota: 'No encontré ese producto.' }
+    const ids = (prods as any[]).map((p) => p.id)
+    const { data: ofertas } = await sb.from('ofertas').select('nombre, tipo, valor, productos_ids').eq('estado', 'activa').overlaps('productos_ids', ids).limit(20)
+    return { producto: (prods as any[])[0]?.nombre, sugerencias: (ofertas ?? []).map((o: any) => ({ nombre: o.nombre, tipo: o.tipo, valor: o.valor })) }
+  },
+}
+
+const getEstadoLectura: ToolDef = {
+  definition: {
+    name: 'estado_lectura_oferta',
+    description: 'Cuántos empleados confirmaron que vieron una oferta (por nombre).',
+    input_schema: { type: 'object', properties: { nombre: { type: 'string' } }, required: ['nombre'] },
+  },
+  async execute(sb, input) {
+    const { data: of } = await sb.from('ofertas').select('id, nombre, version').ilike('nombre', `%${input.nombre}%`).eq('estado', 'activa').limit(1).maybeSingle()
+    if (!of) return { error: 'No encontré esa oferta activa.' }
+    const { data: confs } = await sb.from('ofertas_confirmaciones').select('version_confirmada').eq('oferta_id', (of as any).id)
+    const total = (confs ?? []).length
+    const ok = (confs ?? []).filter((c: any) => c.version_confirmada >= ((of as any).version ?? 1)).length
+    return { oferta: (of as any).nombre, confirmaron: ok, total, pct: total > 0 ? Math.round((ok / total) * 100) : 0 }
+  },
+}
+
 export const AI_TOOLS: Record<string, ToolDef> = {
+  ofertas_activas: getOfertasActivas,
+  oferta_para_cliente: getOfertaParaCliente,
+  estado_lectura_oferta: getEstadoLectura,
   get_faltantes: getFaltantes,
   score_proveedor: getScoreProveedor,
   get_pedidos: getPedidos,
@@ -1020,6 +1067,9 @@ export const TOOL_LABELS: Record<string, string> = {
   get_objetivos_empleado: 'Mirando objetivos',
   get_faltantes: 'Revisando faltantes',
   score_proveedor: 'Evaluando proveedor',
+  ofertas_activas: 'Mirando ofertas',
+  oferta_para_cliente: 'Buscando ofertas',
+  estado_lectura_oferta: 'Revisando lecturas',
 }
 
 export async function runTool(

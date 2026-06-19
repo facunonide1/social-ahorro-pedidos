@@ -1,4 +1,4 @@
-import { FileText, Ticket, Users, AlertTriangle, TrendingUp, Wallet, Scale, Landmark } from 'lucide-react'
+import { FileText, Ticket, Users, AlertTriangle, TrendingUp, Wallet, Scale, Landmark, Tag, Clock } from 'lucide-react'
 
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { ROLES_TRANSVERSALES, ADMIN_ROLE_LABELS } from '@/lib/types/admin'
@@ -61,6 +61,8 @@ type ResumenGerencial = {
   saldoBancarioARS: number
   faltantes: number
   ordenesAbiertas: number
+  ofertasActivas: number
+  ofertasPendientes: number
 }
 
 const OC_ABIERTAS = ['borrador', 'enviada', 'confirmada', 'recibida_parcial']
@@ -74,12 +76,14 @@ async function getResumenGerencial(): Promise<ResumenGerencial> {
   const d30 = new Date(Date.now() - 30 * 86_400_000).toISOString()
   const mesActual = new Date().toISOString().slice(0, 7)
 
-  const [ventasRes, gastosRes, cuentasRes, faltRes, ocRes] = await Promise.all([
+  const [ventasRes, gastosRes, cuentasRes, faltRes, ocRes, ofeActRes, ofePendRes] = await Promise.all([
     adm.from('orders').select('total, status').gte('created_at', d30),
     adm.from('gastos_operativos').select('monto').eq('periodo', mesActual),
     adm.from('cuentas_bancarias_con_saldo').select('moneda, saldo_actual, activa'),
     adm.from('avisos_faltante').select('id', { count: 'exact', head: true }).eq('estado', 'nuevo'),
     adm.from('ordenes_compra').select('id', { count: 'exact', head: true }).in('estado', OC_ABIERTAS),
+    adm.from('ofertas').select('id', { count: 'exact', head: true }).eq('estado', 'activa'),
+    adm.from('ofertas').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente_aprobacion'),
   ])
 
   const ventasMes = ((ventasRes.data ?? []) as any[])
@@ -90,7 +94,7 @@ async function getResumenGerencial(): Promise<ResumenGerencial> {
     .filter((c) => c.activa && c.moneda === 'ARS')
     .reduce((a, c) => a + Number(c.saldo_actual || 0), 0)
 
-  return { ventasMes, gastoMes, margenMes: ventasMes - gastoMes, saldoBancarioARS, faltantes: faltRes.count ?? 0, ordenesAbiertas: ocRes.count ?? 0 }
+  return { ventasMes, gastoMes, margenMes: ventasMes - gastoMes, saldoBancarioARS, faltantes: faltRes.count ?? 0, ordenesAbiertas: ocRes.count ?? 0, ofertasActivas: ofeActRes.count ?? 0, ofertasPendientes: ofePendRes.count ?? 0 }
 }
 
 /**
@@ -197,6 +201,19 @@ export default async function MissionControlPage() {
               value={gerencial.ordenesAbiertas}
               icon={FileText}
               href="/admin/compras/ordenes"
+            />
+            <KpiCard
+              label="Ofertas activas"
+              value={gerencial.ofertasActivas}
+              icon={Tag}
+              href="/admin/ofertas"
+            />
+            <KpiCard
+              label="Ofertas a aprobar"
+              value={gerencial.ofertasPendientes}
+              icon={Clock}
+              variant={gerencial.ofertasPendientes > 0 ? 'warning' : 'default'}
+              href="/admin/ofertas"
             />
           </div>
         </section>
