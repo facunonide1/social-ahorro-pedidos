@@ -71,7 +71,9 @@ export function ComparadorClient({ productos, proveedores, rubro }: { productos:
 
       {rows.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-14 text-center">
-          <Scale className="size-7 text-muted-foreground" /><div className="text-sm text-muted-foreground">Sin listas de precios cargadas en este rubro. Cargá una lista de proveedor o el demo.</div>
+          <Scale className="size-7 text-muted-foreground" />
+          <div className="text-sm text-muted-foreground">Importá listas de precios de tus droguerías para empezar a comparar.</div>
+          <a href="/admin/compras/listas-precios" className="text-sm text-primary hover:underline">Ir a Listas de precios →</a>
         </div>
       ) : (
         <div className="space-y-3">

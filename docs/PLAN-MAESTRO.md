@@ -12,7 +12,22 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — SECTOR COMPRAS ✅ (v0.10-compras-completo)
+## 🟢 SESIÓN ACTUAL — COMPRAS: importador de listas de precios ✅ (v0.21-compras-listas-precios)
+
+Faltaba la UI para cargar listas reales (el comparador solo tenía demo). Hecho:
+`/admin/compras/listas-precios` (reusa el patrón del importador de stock):
+subir CSV/XLSX → mapeo de columnas (SKU/EAN/descripción/precio/desc. volumen) →
+**preview con % matcheado** contra `productos_catalogo` (SKU→EAN→aprendido→nombre)
+→ confirmar. Marca la lista vigente (la anterior del proveedor+rubro pasa a
+histórica), escribe `precios_historico`. Lista de listas con match%, marcar
+vigente / eliminar. El comparador lee `listas_precios_items` vigentes y tiene
+empty-state que linkea acá. API `/api/compras/listas-precios` (analizar/confirmar/
+eliminar/marcar_vigente). Fix previo: error de Server Components en Compras
+(`parseRubro` movido a módulo plano `components/compras/rubro.ts`).
+
+---
+
+## 🟢 SESIÓN PREVIA — SECTOR COMPRAS ✅ (v0.10-compras-completo)
 
 Sistema de compras multisucursal conectado a stock, ventas, finanzas y ofertas
 (gancho). Rutas en `/admin/compras/*`.
