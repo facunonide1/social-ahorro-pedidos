@@ -249,7 +249,7 @@ export const NAVEGACION: NavGrupo[] = [
       { label: 'Avisos de faltantes',    href: '/admin/compras/faltantes',     icon: 'AlertTriangle', badge: 'faltantesPendientes' },
       { label: 'Órdenes de compra',      href: '/admin/compras/ordenes',       icon: 'ShoppingCart' },
       { label: 'Comparador de precios',  href: '/admin/compras/comparador',    icon: 'Scale' },
-      { label: 'Recepciones',            href: '/admin/recepciones',           icon: 'PackageCheck' },
+      { label: 'Recepciones',            href: '/admin/compras/recepciones',   icon: 'PackageCheck' },
       { label: 'Devoluciones',           href: '/admin/compras/devoluciones',  icon: 'Undo2' },
       { label: 'Proveedores',            href: '/admin/proveedores',           icon: 'Truck' },
     ],
