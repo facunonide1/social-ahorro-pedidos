@@ -2,7 +2,18 @@
 
 **Última actualización:** 2026-06-18
 **Rama productiva:** `main`
-**Último hito:** Merge stock + caja + depósito por sucursal (tag `v0.20-merge-stock-caja`)
+**Último hito:** Sector Compras completo (tag `v0.10-compras-completo`)
+
+> **Compras (v0.10)** ✅: sector multisucursal en `/admin/compras/*` con filtro de
+> rubro transversal. Avisos de faltantes (1-tap desde sucursal/stock, bandeja
+> agrupada, cruce con stock→transferir). Órdenes con distribución por sucursal
+> (origen aviso/NORA/SIFACO) → al recibir suben stock + generan transferencias
+> automáticas + factura borrador a Finanzas + evento de score. Comparador de
+> precios (import de listas + match a catálogo, precio final, mejor, smart split).
+> Devoluciones con efectos (stock-out + NC + score). Score de proveedor automático
+> (trigger). NORA tools + card en Mission Control. Demo coherente (8 proveedores,
+> listas, 10 faltantes, 8 órdenes, scores). Migr. 0052-0054. Gancho a Ofertas
+> dejado. Detalle: `docs/PLAN-MAESTRO.md`.
 
 > **Merge stock+caja (v0.20)** ✅: un solo modelo de stock (`stock_items`, canónica
 > con datos) y uno de caja (multinivel Finanzas). Stock ahora con **góndola/depósito**

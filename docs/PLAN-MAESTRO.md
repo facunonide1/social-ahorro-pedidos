@@ -12,7 +12,30 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — MERGE STOCK + CAJA + DEPÓSITO ✅ (v0.20)
+## 🟢 SESIÓN ACTUAL — SECTOR COMPRAS ✅ (v0.10-compras-completo)
+
+Sistema de compras multisucursal conectado a stock, ventas, finanzas y ofertas
+(gancho). Rutas en `/admin/compras/*`.
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 · Schema (migr. 0052): proveedores rubros[]/score/es_drogueria, ordenes_compra(+items distribución), avisos_faltante, listas_precios(+items), precios_historico, proveedor_score_eventos, matcheos | ✅ |
+| T2 · Filtro de rubro transversal (`<RubroFilter>` URL) + tablero (KPIs, NoraCard, proveedores por rubro) | ✅ |
+| T3 · Avisos de faltantes ⭐ (1-tap desde sucursal/stock, bandeja agrupada por producto, cruce con stock→transferir, badge, notifica) | ✅ |
+| T4 · Órdenes ⭐ (distribución por sucursal, origen aviso/nora/sifaco, precarga avisos, aviso de N transferencias, export; `lib/compras/procesar-orden.ts` stub SIFACO) | ✅ |
+| T5 · Comparador ⭐ (listas de precios import API + match, precio final, mejor, aumento; smart split por proveedor) | ✅ |
+| T6 · Recepción contra orden ⭐ (sube stock+lotes, transferencias automáticas, factura borrador a Finanzas, score, alerta diferencias) | ✅ |
+| T7 · Devoluciones (efectos al enviar: stock-out + NC esperada + score, idempotente) | ✅ |
+| T8 · Score automático de proveedor (trigger migr. 0053) + ficha con rubros/score | ✅ |
+| T9 · NORA tools (get_faltantes, score_proveedor), Mission Control card, DEMO (migr. 0054), cierre | ✅ |
+
+**Resultado:** Compras completo. Tag `v0.10-compras-completo`. Gancho a Ofertas dejado (compra oportunista / sugerir publicar) sin construir el módulo.
+
+> **Follow-ups Compras:** OCR de facturas (reusar lib/ai OCR de tickets); alertas de aumento de precio / "vendiendo a pérdida"; compra oportunista (cálculo capital inmovilizado) en UI; integración directa SIFACO (F20) sobre `procesar-orden.ts`; botón UI cargar/borrar demo (hoy demo cargado por SQL `es_demo`, borrable con `delete … where es_demo`); módulo central de Ofertas.
+
+---
+
+## 🟢 SESIÓN PREVIA — MERGE STOCK + CAJA + DEPÓSITO ✅ (v0.20)
 
 Consolida los 2 modelos de datos que convivían y agrega depósito por sucursal.
 Detalle + chequeo de integridad en `docs/MERGE-STOCK-CAJA.md`.

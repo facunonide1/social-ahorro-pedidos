@@ -157,6 +157,17 @@ Permisos: `lib/types/permisos.ts` (módulos × acciones, presets, `permisosEfect
   `caja_general`/`caja_turnos`/`caja_general_movimientos`, `gastos_operativos`,
   `aprobaciones`, `empleados`.
 
+> **Compras (v0.10):** sector en `app/(admin)/admin/compras/*` con filtro de rubro
+> transversal (`components/compras/rubro-filter.tsx`, vive en `?rubro`). Tablas:
+> `ordenes_compra`(+`orden_compra_items` con `distribucion` jsonb), `avisos_faltante`,
+> `listas_precios`(+`_items`), `precios_historico`, `proveedor_score_eventos`
+> (trigger → `proveedores.score_actual`). APIs en `app/api/compras/*`
+> (faltantes, ordenes, listas-precios, recepciones, devoluciones/efectos).
+> `lib/compras/procesar-orden.ts` normaliza ítems (stub SIFACO F20). Al recibir
+> una orden (`/api/compras/recepciones`) sube stock + lotes + transferencias
+> automáticas + factura borrador + score. Comparador + smart split leen
+> `listas_precios_items` vigentes por rubro. Ver `docs/PLAN-MAESTRO.md`.
+
 > **Stock (v0.20):** modelo único `stock_items` (grano producto×sucursal) con
 > `cantidad_gondola` + `cantidad_deposito`; `cantidad` es **generada** (total).
 > Todo deriva de `movimientos_stock` (firmados, con `ubicacion`) vía trigger
