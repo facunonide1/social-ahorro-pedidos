@@ -1,7 +1,8 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
-import { RubroFilter, parseRubro } from '@/components/compras/rubro-filter'
+import { RubroFilter } from '@/components/compras/rubro-filter'
+import { parseRubro } from '@/components/compras/rubro'
 import { ComparadorClient, type ProductoComp, type ProvLite } from './comparador-client'
 
 export const dynamic = 'force-dynamic'

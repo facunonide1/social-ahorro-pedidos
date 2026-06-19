@@ -2,21 +2,12 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
+import { RUBROS, parseRubro, type Rubro } from '@/components/compras/rubro'
 
-export const RUBROS = [
-  { v: 'todos', l: 'Todos' },
-  { v: 'farmacia', l: 'Farmacia' },
-  { v: 'perfumeria', l: 'Perfumería' },
-  { v: 'supermercado', l: 'Súper' },
-  { v: 'servicios', l: 'Servicios' },
-] as const
-
-export type Rubro = (typeof RUBROS)[number]['v']
-
-/** Normaliza el searchParam ?rubro a un rubro válido (default 'todos'). */
-export function parseRubro(v: string | undefined | null): Rubro {
-  return (RUBROS.find((r) => r.v === v)?.v ?? 'todos') as Rubro
-}
+// Re-export para consumidores cliente (los Server Components deben importar
+// estos helpers desde '@/components/compras/rubro', no desde este archivo).
+export { RUBROS, parseRubro }
+export type { Rubro }
 
 /**
  * Filtro de rubro transversal del sector Compras. Vive en la URL (?rubro=)
