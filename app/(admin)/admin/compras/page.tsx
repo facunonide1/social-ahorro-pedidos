@@ -1,51 +1,101 @@
-import { Truck, FileText, PackageCheck, Undo2, Building2 } from 'lucide-react'
+import Link from 'next/link'
+import { ShoppingCart, AlertTriangle, DollarSign, TrendingDown, Truck, FileText, PackageCheck, Undo2, Scale, Megaphone, ArrowRight } from 'lucide-react'
 
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
-import { SectorDashboard, type SectorKpi, type SectorAcceso } from '@/components/dashboard/sector-dashboard'
+import { formatARS } from '@/lib/utils/format'
+import { PageHeader } from '@/components/shared/page-header'
+import { KpiCard } from '@/components/cards/kpi-card'
+import { NoraCard } from '@/components/nora/nora-card'
+import { RubroFilter, parseRubro } from '@/components/compras/rubro-filter'
+import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Compras' }
 
-const DOC_PENDIENTES = ['pendiente_aprobacion', 'aprobada', 'programada_pago', 'pagada_parcial', 'vencida']
+const ABIERTAS = ['borrador', 'enviada', 'confirmada', 'recibida_parcial']
 
-export default async function ComprasDashboard() {
+export default async function ComprasTablero({ searchParams }: { searchParams: { rubro?: string } }) {
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'auditor'] })
   const sb = createClient()
+  const rubro = parseRubro(searchParams.rubro)
+  const inicioMes = new Date().toISOString().slice(0, 7) + '-01'
 
-  const [{ count: provs }, { count: docs }, { count: recep }, { count: devol }] = await Promise.all([
-    sb.from('proveedores').select('id', { count: 'exact', head: true }).eq('activo', true),
-    sb.from('facturas_proveedor').select('id', { count: 'exact', head: true }).in('estado', DOC_PENDIENTES),
-    sb.from('recepciones_mercaderia').select('id', { count: 'exact', head: true }).in('estado', ['parcial', 'con_diferencias']),
-    sb.from('devoluciones_proveedor').select('id', { count: 'exact', head: true }).neq('estado', 'cerrada'),
-  ])
+  let ocQ = sb.from('ordenes_compra').select('id, total_estimado, estado, rubro, created_at').limit(2000)
+  if (rubro !== 'todos') ocQ = ocQ.eq('rubro', rubro)
+  let afQ = sb.from('avisos_faltante').select('id, estado, rubro').eq('estado', 'nuevo').limit(2000)
+  if (rubro !== 'todos') afQ = afQ.eq('rubro', rubro)
+  let provQ = sb.from('proveedores').select('id, razon_social, rubros, score_actual, es_drogueria').eq('activo', true).order('razon_social').limit(500)
 
-  const kpis: SectorKpi[] = [
-    { label: 'Proveedores activos', value: provs ?? 0, icon: Truck, href: '/admin/proveedores' },
-    { label: 'Documentos a pagar', value: docs ?? 0, icon: FileText, variant: (docs ?? 0) > 0 ? 'warning' : 'default', href: '/admin/finanzas/documentos' },
-    { label: 'Recepciones con diferencias', value: recep ?? 0, icon: PackageCheck, variant: (recep ?? 0) > 0 ? 'warning' : 'default', href: '/admin/recepciones' },
-    { label: 'Devoluciones abiertas', value: devol ?? 0, icon: Undo2, variant: (devol ?? 0) > 0 ? 'warning' : 'default', href: '/admin/compras/devoluciones' },
-  ]
+  const [{ data: ocs }, { data: avisos }, { data: provs }] = await Promise.all([ocQ, afQ, provQ])
 
-  const accesos: SectorAcceso[] = [
-    { label: 'Proveedores', href: '/admin/proveedores', icon: Building2, descripcion: 'Ficha, cuentas, cta. corriente' },
-    { label: 'Recepciones', href: '/admin/recepciones', icon: PackageCheck },
-    { label: 'Devoluciones', href: '/admin/compras/devoluciones', icon: Undo2 },
-    { label: 'Documentos a pagar', href: '/admin/finanzas/documentos', icon: FileText },
-  ]
-
-  const nora = (recep ?? 0) > 0 || (devol ?? 0) > 0
-    ? <p>Tenés {(recep ?? 0) > 0 && <><b>{recep}</b> recepciones con diferencias</>}{(recep ?? 0) > 0 && (devol ?? 0) > 0 && ' y '}{(devol ?? 0) > 0 && <><b>{devol}</b> devoluciones abiertas</>} para cerrar.</p>
-    : <p>Compras al día. <b>{provs ?? 0}</b> proveedores activos y sin recepciones ni devoluciones pendientes.</p>
+  const ordenes = (ocs ?? []) as any[]
+  const abiertas = ordenes.filter((o) => ABIERTAS.includes(o.estado)).length
+  const compradoMes = ordenes.filter((o) => o.created_at >= inicioMes).reduce((a, o) => a + Number(o.total_estimado ?? 0), 0)
+  const faltantes = (avisos ?? []).length
+  const proveedores = ((provs ?? []) as any[]).filter((p) => rubro === 'todos' || (p.rubros ?? []).includes(rubro))
 
   return (
-    <SectorDashboard
-      title="Compras"
-      descripcion="Proveedores, recepciones y devoluciones."
-      breadcrumbs={[{ label: 'Compras' }]}
-      kpis={kpis}
-      nora={nora}
-      accesos={accesos}
-    />
+    <>
+      <PageHeader title="Compras" description="Sistema de compras multisucursal conectado a stock, ventas y finanzas."
+        breadcrumbs={[{ label: 'Compras' }]} />
+      <div className="space-y-5 p-4 md:p-6">
+        <RubroFilter />
+
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <KpiCard label="Órdenes abiertas" value={abiertas} icon={ShoppingCart} href="/admin/compras/ordenes" />
+          <KpiCard label="Faltantes sin resolver" value={faltantes} icon={AlertTriangle} variant={faltantes > 0 ? 'warning' : 'default'} href="/admin/compras/faltantes" />
+          <KpiCard label="Comprado este mes" value={compradoMes} format="currency" icon={DollarSign} />
+          <KpiCard label="Ahorro detectado" value={0} format="currency" icon={TrendingDown} footer="Comparador" href="/admin/compras/comparador" />
+        </section>
+
+        <NoraCard contexto="compras">
+          {faltantes > 0
+            ? <p>Hay <b>{faltantes}</b> faltantes reportados por las sucursales{rubro !== 'todos' ? ` en ${rubro}` : ''}. Cruzalos con el análisis de reposición de Operaciones y armá las órdenes. <Link href="/admin/compras/faltantes" className="text-primary hover:underline">Ver faltantes →</Link></p>
+            : <p>Sin faltantes pendientes. Revisá la sugerencia de reposición de Operaciones para adelantarte a los quiebres.</p>}
+        </NoraCard>
+
+        <section>
+          <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Accesos rápidos</h2>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+            {[
+              { l: 'Avisos de faltantes', h: '/admin/compras/faltantes', i: AlertTriangle },
+              { l: 'Órdenes de compra', h: '/admin/compras/ordenes', i: ShoppingCart },
+              { l: 'Comparador de precios', h: '/admin/compras/comparador', i: Scale },
+              { l: 'Recepciones', h: '/admin/compras/recepciones', i: PackageCheck },
+              { l: 'Devoluciones', h: '/admin/compras/devoluciones', i: Undo2 },
+              { l: 'Proveedores', h: '/admin/proveedores', i: Truck },
+            ].map((a) => (
+              <Link key={a.h} href={a.h} className="group flex flex-col gap-2 rounded-xl border border-border bg-card p-4 transition-all hover:scale-[1.02] hover:border-primary/50 hover:shadow-md">
+                <div className="flex items-center justify-between"><a.i className="size-5 text-primary" /><ArrowRight className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" /></div>
+                <div className="text-sm font-medium">{a.l}</div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <h2 className="mb-2 text-sm font-semibold">Proveedores por rubro {rubro !== 'todos' && <span className="text-muted-foreground">· {rubro}</span>}</h2>
+          {proveedores.length === 0 ? (
+            <div className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">Sin proveedores en este rubro. Cargá el demo o creá proveedores.</div>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">Proveedor</th><th className="px-3 py-2">Rubros</th><th className="px-3 py-2 text-right">Score</th></tr></thead>
+                <tbody>
+                  {proveedores.slice(0, 30).map((p) => (
+                    <tr key={p.id} className="border-t border-border">
+                      <td className="px-3 py-1.5"><Link href={`/admin/proveedores/${p.id}`} className="font-medium hover:underline">{p.razon_social}</Link>{p.es_drogueria && <span className="ml-2 text-[10px] text-muted-foreground">droguería</span>}</td>
+                      <td className="px-3 py-1.5 text-xs text-muted-foreground">{(p.rubros ?? []).join(', ') || '—'}</td>
+                      <td className={cn('px-3 py-1.5 text-right tabular-nums', p.score_actual != null && p.score_actual < 6 && 'text-rose-600 dark:text-rose-400')}>{p.score_actual != null ? `${p.score_actual}/10` : '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
+    </>
   )
 }
