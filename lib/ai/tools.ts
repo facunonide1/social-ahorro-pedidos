@@ -269,24 +269,24 @@ const getStockCritico: ToolDef = {
   async execute(sb, input) {
     const limit = Math.min(Number(input.limit) || 25, 60)
     const { data, error } = await sb
-      .from('stock_sucursal')
+      .from('stock_items')
       .select(
-        'cantidad_actual, stock_minimo, productos(nombre, categoria), sucursales(nombre)',
+        'cantidad, stock_minimo, productos_catalogo(nombre, categoria), sucursales(nombre)',
       )
       .gt('stock_minimo', 0)
-      .order('cantidad_actual', { ascending: true })
+      .order('cantidad', { ascending: true })
       .limit(300)
     if (error) return { error: error.message }
     const criticos = (data ?? [])
       .filter(
-        (r: any) => Number(r.cantidad_actual) <= Number(r.stock_minimo),
+        (r: any) => Number(r.cantidad) <= Number(r.stock_minimo),
       )
       .slice(0, limit)
       .map((r: any) => ({
-        producto: pickOne<any>(r.productos)?.nombre ?? '—',
-        categoria: pickOne<any>(r.productos)?.categoria ?? null,
+        producto: pickOne<any>(r.productos_catalogo)?.nombre ?? '—',
+        categoria: pickOne<any>(r.productos_catalogo)?.categoria ?? null,
         sucursal: pickOne<any>(r.sucursales)?.nombre ?? '—',
-        cantidad_actual: Number(r.cantidad_actual),
+        cantidad_actual: Number(r.cantidad),
         stock_minimo: Number(r.stock_minimo),
       }))
     return { cantidad: criticos.length, items: criticos }
@@ -442,10 +442,10 @@ const getAnomalias: ToolDef = {
         .order('fecha_vencimiento', { ascending: true })
         .limit(20),
       sb
-        .from('stock_sucursal')
-        .select('cantidad_actual, stock_minimo, productos(nombre), sucursales(nombre)')
+        .from('stock_items')
+        .select('cantidad, stock_minimo, productos_catalogo(nombre), sucursales(nombre)')
         .gt('stock_minimo', 0)
-        .order('cantidad_actual', { ascending: true })
+        .order('cantidad', { ascending: true })
         .limit(200),
       sb
         .from('lotes_productos')
@@ -474,12 +474,12 @@ const getAnomalias: ToolDef = {
       total: Number(f.total || 0),
     }))
     const stockCritico = (stock.data ?? [])
-      .filter((r: any) => Number(r.cantidad_actual) <= Number(r.stock_minimo))
+      .filter((r: any) => Number(r.cantidad) <= Number(r.stock_minimo))
       .slice(0, 20)
       .map((r: any) => ({
-        producto: pickOne<any>(r.productos)?.nombre ?? '—',
+        producto: pickOne<any>(r.productos_catalogo)?.nombre ?? '—',
         sucursal: pickOne<any>(r.sucursales)?.nombre ?? '—',
-        cantidad_actual: Number(r.cantidad_actual),
+        cantidad_actual: Number(r.cantidad),
         stock_minimo: Number(r.stock_minimo),
       }))
     const vencimientos = (lotes.data ?? []).map((l: any) => ({

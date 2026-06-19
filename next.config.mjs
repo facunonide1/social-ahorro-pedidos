@@ -25,6 +25,8 @@ const nextConfig = {
       { source: '/admin/ejecutivo', destination: '/admin', permanent: true },
       // empleados (lista gamificación) duplicaba RRHH → canónico rrhh/empleados.
       { source: '/admin/empleados', destination: '/admin/rrhh/empleados', permanent: true },
+      // v0.20 — caja legacy (cajas_diarias) → caja multinivel de Finanzas.
+      { source: '/admin/sucursales/caja/:path*', destination: '/admin/finanzas/caja', permanent: true },
     ]
   },
 }

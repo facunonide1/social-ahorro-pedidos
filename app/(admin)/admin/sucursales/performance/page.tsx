@@ -37,12 +37,12 @@ export default async function PerformanceSucursalesPage() {
       .select('sucursal_id, monto, pagado')
       .eq('periodo', periodoActual),
     sb
-      .from('cajas_diarias')
-      .select('sucursal_id, estado, saldo_final_sistema, diferencia, fecha')
+      .from('caja_turnos')
+      .select('sucursal_id, estado, contado, diferencia, fecha')
       .gte('fecha', inicioMes),
     sb
-      .from('stock_sucursal')
-      .select('sucursal_id, cantidad_actual, stock_minimo')
+      .from('stock_items')
+      .select('sucursal_id, cantidad, stock_minimo')
       .gt('stock_minimo', 0),
   ])
 
@@ -90,18 +90,18 @@ export default async function PerformanceSucursalesPage() {
     const cajasSuc = (cajasRes.data ?? []).filter(
       (c: any) => c.sucursal_id === s.id,
     )
-    const cajasAbiertas = cajasSuc.filter((c: any) => c.estado === 'abierta')
+    const cajasAbiertas = cajasSuc.filter((c: any) => c.estado === 'abierto')
     const saldoCajaActual = cajasAbiertas.reduce(
-      (a: number, c: any) => a + Number(c.saldo_final_sistema || 0),
+      (a: number, c: any) => a + Number(c.contado || 0),
       0,
     )
     const diferenciaAcum = cajasSuc
-      .filter((c: any) => c.estado === 'cerrada' && c.diferencia != null)
+      .filter((c: any) => c.estado !== 'abierto' && c.diferencia != null)
       .reduce((a: number, c: any) => a + Number(c.diferencia || 0), 0)
     const stockCriticoCount = (stockRes.data ?? []).filter(
       (r: any) =>
         r.sucursal_id === s.id &&
-        Number(r.cantidad_actual) <= Number(r.stock_minimo),
+        Number(r.cantidad) <= Number(r.stock_minimo),
     ).length
     return {
       sucursal: s,

@@ -153,19 +153,19 @@ async function detectarEventos(
       }))
     }
     case 'caja_no_cerrada_eod': {
-      // Cajas abiertas con fecha < hoy
+      // Turnos de caja abiertos con fecha < hoy (modelo multinivel)
       const { data } = await sb
-        .from('cajas_diarias')
+        .from('caja_turnos')
         .select('id, sucursal_id, fecha')
-        .eq('estado', 'abierta')
+        .eq('estado', 'abierto')
         .lt('fecha', hoy)
         .limit(50)
       return (data ?? []).map((c: any) => ({
         entidad_tipo: 'caja',
         entidad_id: c.id,
-        entidad_url: `/admin/sucursales/caja/${c.id}`,
+        entidad_url: `/admin/finanzas/caja`,
         titulo: `Caja del ${c.fecha} quedó abierta`,
-        descripcion: 'Cerrá la caja del día anterior con el arqueo correspondiente.',
+        descripcion: 'Cerrá el turno de caja del día anterior con el arqueo correspondiente.',
         sucursal_id: c.sucursal_id,
       }))
     }

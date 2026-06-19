@@ -51,10 +51,10 @@ export async function GET(_req: NextRequest) {
       .lt('fecha_vencimiento', ahora)
       .in('estado', ['pendiente', 'asignada', 'en_progreso', 'en_verificacion']),
     adm
-      .from('stock_sucursal')
-      .select('cantidad_actual, stock_minimo')
+      .from('stock_items')
+      .select('cantidad, stock_minimo')
       .gt('stock_minimo', 0)
-      .limit(500),
+      .limit(5000),
     adm
       .from('lotes_productos')
       .select('id', { count: 'exact', head: true })
@@ -70,7 +70,7 @@ export async function GET(_req: NextRequest) {
   )
   const tareasVencidas = tareasVencRes.count ?? 0
   const stockCritico = ((stockRes.data ?? []) as any[]).filter(
-    (s) => Number(s.cantidad_actual) <= Number(s.stock_minimo),
+    (s) => Number(s.cantidad) <= Number(s.stock_minimo),
   ).length
   const lotesPorVencer = lotesRes.count ?? 0
 

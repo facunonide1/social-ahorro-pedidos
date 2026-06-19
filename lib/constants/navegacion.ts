@@ -256,7 +256,7 @@ export const NAVEGACION: NavGrupo[] = [
     rolesPermitidos: ROLES_SUCURSAL,
     items: [
       { label: 'Listado de sucursales', href: '/admin/sucursales',             icon: 'Store', rolesPermitidos: ['super_admin', 'gerente'] },
-      { label: 'Caja diaria',           href: '/admin/sucursales/caja',        icon: 'Wallet' },
+      { label: 'Caja',                  href: '/admin/finanzas/caja',          icon: 'Wallet' },
       { label: 'Gastos operativos',     href: '/admin/sucursales/gastos',      icon: 'Receipt' },
       { label: 'Performance',           href: '/admin/sucursales/performance', icon: 'BarChart3', rolesPermitidos: ROLES_SUPERVISOR },
     ],

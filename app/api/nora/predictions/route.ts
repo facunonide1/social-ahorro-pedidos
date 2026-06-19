@@ -64,10 +64,10 @@ export async function GET(_req: NextRequest) {
       .limit(40),
     // Stock en o bajo el mínimo → riesgo de quiebre
     adm
-      .from('stock_sucursal')
-      .select('cantidad_actual, stock_minimo, productos(nombre)')
+      .from('stock_items')
+      .select('cantidad, stock_minimo, productos_catalogo(nombre)')
       .gt('stock_minimo', 0)
-      .limit(500),
+      .limit(5000),
     // Facturas que vencen en 7d → presión de caja
     adm
       .from('facturas_proveedor')
@@ -105,12 +105,12 @@ export async function GET(_req: NextRequest) {
 
   // --- Stock bajo mínimo ---
   const stockBajo = ((stockRes.data ?? []) as any[])
-    .filter((s) => Number(s.cantidad_actual) <= Number(s.stock_minimo))
+    .filter((s) => Number(s.cantidad) <= Number(s.stock_minimo))
     .map((s) => {
-      const prod = Array.isArray(s.productos) ? s.productos[0] : s.productos
+      const prod = Array.isArray(s.productos_catalogo) ? s.productos_catalogo[0] : s.productos_catalogo
       return {
         nombre: prod?.nombre ?? 'producto sin nombre',
-        actual: Number(s.cantidad_actual),
+        actual: Number(s.cantidad),
         minimo: Number(s.stock_minimo),
       }
     })

@@ -38,7 +38,7 @@ async function getKpis(): Promise<Kpis> {
       .select('id', { count: 'exact', head: true })
       .lt('fecha_vencimiento', ahora)
       .in('estado', ['pendiente', 'asignada', 'en_progreso', 'en_verificacion']),
-    adm.from('stock_sucursal').select('cantidad_actual, stock_minimo').gt('stock_minimo', 0).limit(1000),
+    adm.from('stock_items').select('cantidad, stock_minimo').gt('stock_minimo', 0).limit(5000),
   ])
 
   const ordenes = (ordersRes.data ?? []) as { total: number | null }[]
@@ -46,8 +46,8 @@ async function getKpis(): Promise<Kpis> {
   const ticketsHoy = ordenes.length
   const ticketPromedio = ticketsHoy > 0 ? ventasHoy / ticketsHoy : 0
   const empleadosActivos = empRes.count ?? 0
-  const stockCritico = ((stockRes.data ?? []) as { cantidad_actual: number; stock_minimo: number }[]).filter(
-    (s) => Number(s.cantidad_actual) <= Number(s.stock_minimo),
+  const stockCritico = ((stockRes.data ?? []) as { cantidad: number; stock_minimo: number }[]).filter(
+    (s) => Number(s.cantidad) <= Number(s.stock_minimo),
   ).length
   const alertasCriticas = (tareasRes.count ?? 0) + stockCritico
 
