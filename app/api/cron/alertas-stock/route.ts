@@ -33,7 +33,7 @@ async function run() {
   const hoy = new Date().toISOString().slice(0, 10)
 
   const [{ data: stock }, { data: rot }, { data: lotes }, { data: prods }, { data: sucs }] = await Promise.all([
-    adm.from('stock_items').select('producto_id, sucursal_id, cantidad, stock_minimo, stock_maximo'),
+    adm.from('stock_items').select('producto_id, sucursal_id, cantidad, cantidad_gondola, cantidad_deposito, stock_minimo, stock_maximo'),
     adm.from('producto_rotacion').select('producto_id, sucursal_id, venta_diaria_prom_30d, dias_stock_restante, ultima_venta'),
     adm.from('lotes_productos').select('id, producto_id, sucursal_id, numero_lote, fecha_vencimiento, cantidad_actual').gt('cantidad_actual', 0),
     adm.from('productos_catalogo').select('id, nombre, sku').eq('activo', true),
@@ -51,12 +51,15 @@ async function run() {
   // Stock / rotación
   for (const s of (stock ?? []) as any[]) {
     const cant = Number(s.cantidad), min = Number(s.stock_minimo), max = s.stock_maximo == null ? null : Number(s.stock_maximo)
+    const gondola = Number(s.cantidad_gondola ?? 0), deposito = Number(s.cantidad_deposito ?? 0)
     const r = rotMap.get(`${s.producto_id}|${s.sucursal_id}`)
     const venta30 = Number(r?.venta_diaria_prom_30d ?? 0)
     const dias = r?.dias_stock_restante == null ? null : Number(r.dias_stock_restante)
     const base = { producto_id: s.producto_id, sucursal_id: s.sucursal_id, datos: { nombre: nombre(s.producto_id), sku: sku(s.producto_id), sucursal: sucMap.get(s.sucursal_id), stock: cant, min } }
 
     if (min > 0 && cant <= min) out.push({ ...base, tipo: 'stock_critico', severidad: cant <= 0 ? 'critica' : 'warning' })
+    // Reponer góndola: hay stock en depósito pero la góndola está en/bajo el mínimo.
+    if (deposito > 0 && (gondola <= min || gondola <= 0)) out.push({ ...base, tipo: 'reponer_gondola', severidad: gondola <= 0 ? 'warning' : 'info', datos: { ...base.datos, gondola, deposito } })
     if (dias != null && venta30 > 0 && dias <= LEAD_DAYS) out.push({ ...base, tipo: 'quiebre_proyectado', severidad: 'critica', datos: { ...base.datos, dias } })
     if (max != null && cant > max) out.push({ ...base, tipo: 'sobrestock', severidad: 'info', datos: { ...base.datos, max } })
 

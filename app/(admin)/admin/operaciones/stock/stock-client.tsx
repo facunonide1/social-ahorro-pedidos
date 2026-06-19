@@ -17,13 +17,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 
-export type SucursalLite = { id: string; nombre: string; codigo: string | null }
+export type SucursalLite = { id: string; nombre: string; codigo: string | null; usaDeposito?: boolean }
 export type ProductoRow = {
   id: string; sku: string | null; ean: string | null; nombre: string
   laboratorio: string | null; categoria: string | null; costo: number
-  total: number; ventaDia: number; cobertura: number | null
+  total: number; totalGondola: number; totalDeposito: number; ventaDia: number; cobertura: number | null
   critico: boolean; sinRotacion: boolean; porVencer: boolean; abc: string | null
-  stockPorSuc: Record<string, { cantidad: number; min: number; max: number | null }>
+  stockPorSuc: Record<string, { cantidad: number; gondola: number; deposito: number; min: number; max: number | null }>
 }
 type Kpis = { productos: number; valorStock: number; criticos: number; porVencer: number }
 const ALL = '__all__'
@@ -82,7 +82,8 @@ function Productos({ productos, sucursales, kpis, canEdit }: { productos: Produc
     exportExcel('stock', rows.map((p) => ({
       SKU: p.sku ?? '', EAN: p.ean ?? '', Producto: p.nombre, Laboratorio: p.laboratorio ?? '', Categoria: p.categoria ?? '',
       ...Object.fromEntries(sucursales.map((s) => [s.codigo || s.nombre, p.stockPorSuc[s.id]?.cantidad ?? 0])),
-      Total: p.total, 'Venta/día': p.ventaDia, 'Cobertura (días)': p.cobertura ?? '', ABC: p.abc ?? '',
+      Gondola: p.totalGondola, Deposito: p.totalDeposito, Total: p.total,
+      'Venta/día': p.ventaDia, 'Cobertura (días)': p.cobertura ?? '', ABC: p.abc ?? '',
     })), { sheet: 'Stock' })
   }
 
@@ -157,6 +158,7 @@ function DetalleSheet({ producto, sucursales, canEdit, onClose }: { producto: Pr
   const [movs, setMovs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [ajuste, setAjuste] = useState<{ suc: string; delta: string; motivo: string } | null>(null)
+  const [repo, setRepo] = useState<{ suc: string; cantidad: string } | null>(null)
   const [busy, setBusy] = useState(false)
   const sucName = (id: string) => sucursales.find((s) => s.id === id)?.nombre ?? id.slice(0, 6)
 
@@ -168,6 +170,20 @@ function DetalleSheet({ producto, sucursales, canEdit, onClose }: { producto: Pr
     ]).then(([l, m]) => { if (alive) { setLotes(l.data ?? []); setMovs(m.data ?? []); setLoading(false) } })
     return () => { alive = false }
   }, [producto.id])
+
+  async function guardarRepo() {
+    if (!repo) return
+    const cant = Number(repo.cantidad)
+    if (!Number.isFinite(cant) || cant <= 0) { toast.error('Ingresá una cantidad mayor a 0.'); return }
+    const x = producto.stockPorSuc[repo.suc]
+    if (x && cant > x.deposito) { toast.error(`Solo hay ${x.deposito} en depósito.`); return }
+    setBusy(true)
+    try {
+      const r = await fetch('/api/inventario/reposicion-interna', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ producto_id: producto.id, sucursal_id: repo.suc, cantidad: cant }) })
+      const j = await r.json(); if (!r.ok) throw new Error(j?.error)
+      toast.success('Góndola repuesta desde depósito.'); setRepo(null); onClose(); router.refresh()
+    } catch (e: any) { toast.error(e?.message ?? 'Error') } finally { setBusy(false) }
+  }
 
   async function guardarAjuste() {
     if (!ajuste) return
@@ -190,16 +206,33 @@ function DetalleSheet({ producto, sucursales, canEdit, onClose }: { producto: Pr
           <div className="text-xs text-muted-foreground">SKU {producto.sku ?? '—'} · EAN {producto.ean ?? '—'} · {producto.laboratorio ?? ''}</div>
 
           <Section title="Stock por sucursal">
-            {sucursales.map((s) => { const x = producto.stockPorSuc[s.id]; const v = sem(x); return (
+            {sucursales.map((s) => { const x = producto.stockPorSuc[s.id]; const v = sem(x); const dep = x?.deposito ?? 0; return (
               <div key={s.id} className="flex items-center justify-between border-b border-border/60 py-1 last:border-0">
-                <span>{s.nombre}</span>
+                <span>
+                  {s.nombre}
+                  {s.usaDeposito && (
+                    <span className="ml-2 text-[10px] text-muted-foreground">
+                      G {x?.gondola ?? 0} · D {dep}
+                    </span>
+                  )}
+                </span>
                 <span className="flex items-center gap-2">
                   <span className={cn('tabular-nums', v.c)}>{x?.cantidad ?? 0}</span>
+                  {canEdit && s.usaDeposito && dep > 0 && <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px] text-primary" onClick={() => setRepo({ suc: s.id, cantidad: '' })}>Reponer</Button>}
                   {canEdit && <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => setAjuste({ suc: s.id, delta: '', motivo: '' })}>Ajustar</Button>}
                 </span>
               </div>
             )})}
           </Section>
+
+          {repo && (
+            <div className="space-y-2 rounded-md border border-primary/40 bg-nora-bg p-3">
+              <div className="text-xs font-medium">Reponer góndola desde depósito · {sucName(repo.suc)}</div>
+              <div className="text-[11px] text-muted-foreground">Disponible en depósito: {producto.stockPorSuc[repo.suc]?.deposito ?? 0}</div>
+              <Input type="number" placeholder="Cantidad a mover a góndola" value={repo.cantidad} onChange={(e) => setRepo({ ...repo, cantidad: e.target.value })} />
+              <div className="flex gap-2"><Button size="sm" disabled={busy} onClick={guardarRepo}>{busy ? 'Moviendo…' : 'Reponer góndola'}</Button><Button size="sm" variant="ghost" onClick={() => setRepo(null)}>Cancelar</Button></div>
+            </div>
+          )}
 
           {ajuste && (
             <div className="rounded-md border border-primary/40 bg-nora-bg p-3 space-y-2">
