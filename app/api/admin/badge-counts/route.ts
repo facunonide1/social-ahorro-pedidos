@@ -31,11 +31,14 @@ export async function GET() {
 
   const aprob = sb.from('aprobaciones').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente')
 
-  const [t, v, a] = await Promise.all([misTareas, verif, aprob])
+  const faltantes = sb.from('avisos_faltante').select('id', { count: 'exact', head: true }).eq('estado', 'nuevo')
+
+  const [t, v, a, f] = await Promise.all([misTareas, verif, aprob, faltantes])
 
   return NextResponse.json({
     tareasPendientes: t.count ?? 0,
     verificacionesPendientes: v.count ?? 0,
     aprobacionesPendientes: a.count ?? 0,
+    faltantesPendientes: f.count ?? 0,
   })
 }

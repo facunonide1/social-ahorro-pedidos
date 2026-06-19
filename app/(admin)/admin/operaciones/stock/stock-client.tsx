@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, Download, Upload, Package, Loader2, SlidersHorizontal } from 'lucide-react'
+import { Search, Download, Upload, Package, Loader2, SlidersHorizontal, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { createClient } from '@/lib/supabase/client'
@@ -47,6 +47,7 @@ export function StockClient({ productos, sucursales, kpis, rol }: { productos: P
           ))}
         </div>
         <div className="flex gap-2">
+          <Button asChild variant="outline" size="sm"><Link href="/admin/compras/faltantes"><AlertTriangle className="size-4" /> Falta esto</Link></Button>
           <Button asChild variant="outline" size="sm"><Link href="/admin/operaciones/importaciones"><Upload className="size-4" /> Importar</Link></Button>
         </div>
       </div>

@@ -245,10 +245,13 @@ export const NAVEGACION: NavGrupo[] = [
     grupo: 'Compras',
     rolesPermitidos: ROLES_COMPRAS,
     items: [
-      { label: 'Resumen',      href: '/admin/compras',               icon: 'LayoutGrid' },
-      { label: 'Proveedores',  href: '/admin/proveedores',           icon: 'Truck' },
-      { label: 'Recepciones',  href: '/admin/recepciones',           icon: 'PackageCheck' },
-      { label: 'Devoluciones', href: '/admin/compras/devoluciones',  icon: 'Undo2' },
+      { label: 'Tablero',                href: '/admin/compras',               icon: 'LayoutGrid' },
+      { label: 'Avisos de faltantes',    href: '/admin/compras/faltantes',     icon: 'AlertTriangle', badge: 'faltantesPendientes' },
+      { label: 'Órdenes de compra',      href: '/admin/compras/ordenes',       icon: 'ShoppingCart' },
+      { label: 'Comparador de precios',  href: '/admin/compras/comparador',    icon: 'Scale' },
+      { label: 'Recepciones',            href: '/admin/recepciones',           icon: 'PackageCheck' },
+      { label: 'Devoluciones',           href: '/admin/compras/devoluciones',  icon: 'Undo2' },
+      { label: 'Proveedores',            href: '/admin/proveedores',           icon: 'Truck' },
     ],
   },
   {
