@@ -12,7 +12,31 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — UNIFICACIÓN DE SHELLS (pendiente #1 arquitectura) ✅
+## 🟢 SESIÓN ACTUAL — CONSOLIDACIÓN + DASHBOARDS POR SECTOR ✅ (v0.19)
+
+Ordena los módulos duplicados que quedaron tras la unificación y agrega un
+dashboard de entrada a cada sector. Detalle completo en `docs/CONSOLIDACION.md`.
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 · Auditoría + plan (duplicados son solo UI; tablas únicas → sin migración) | ✅ |
+| T2 · Proveedores unificados en `/admin/proveedores` (+ cuenta corriente portada); borrado `/admin/finanzas/proveedores` + redirect | ✅ |
+| T3 · Eliminados pagos/facturas legacy → `/admin/finanzas/pagos` y `/documentos` + redirects | ✅ |
+| T4 · `<SectorDashboard>` + dashboards de Operaciones, Compras, RRHH, IA (Finanzas ya tenía) | ✅ |
+| T5 · Mission Control = home global (+ Resumen gerencial); absorbido `/admin/ejecutivo` (→ redirect); sidebar con dashboard por grupo | ✅ |
+| T6 · Gastos clarificados (operativos vs fijos); grupo "Sucursales" en sidebar; Clientes B2B marcado legacy | ✅ |
+| T7 · Build verde, redirects probados (308), `/admin/empleados`→`/admin/rrhh/empleados`. 18 módulos, 75 rutas | ✅ |
+
+**Resultado:** un módulo por función; jerarquía Mission Control → dashboard de
+sector → secciones. Tag `v0.19-consolidacion-dashboards`.
+
+> **Pendientes/notas:** Clientes B2B vive hasta el CRM unificado; permisos finos
+> por rol pendientes; conviven aún 2 modelos de stock y de caja (merge futuro, no
+> en esta sesión); tablas pagos/facturas/proveedores quedan únicas.
+
+---
+
+## 🟢 SESIÓN PREVIA — UNIFICACIÓN DE SHELLS (pendiente #1 arquitectura) ✅
 
 | Sub-tanda | Estado |
 |-----------|--------|

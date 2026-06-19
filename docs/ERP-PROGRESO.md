@@ -2,7 +2,17 @@
 
 **Última actualización:** 2026-06-18
 **Rama productiva:** `main`
-**Último hito:** Unificación de shells — `/hub` mudado a `/admin` (tag `v0.18-unificacion-shells`)
+**Último hito:** Consolidación + dashboards por sector (tag `v0.19-consolidacion-dashboards`)
+
+> **Consolidación (v0.19)** ✅: eliminados módulos duplicados (un módulo por
+> función, redirects 308, sin migración — tablas compartidas): proveedores
+> unificado en `/admin/proveedores` (+ cuenta corriente); pagos/facturas legacy →
+> `/admin/finanzas/pagos` y `/documentos`; `/admin/empleados` → `/admin/rrhh/empleados`;
+> `/admin/ejecutivo` absorbido por Mission Control + BI. Dashboards de entrada por
+> sector (`<SectorDashboard>`: Operaciones, Compras, RRHH, IA + Finanzas). Mission
+> Control = home global con Resumen gerencial. Sidebar: dashboard por grupo, grupo
+> "Sucursales", gastos clarificados (operativos vs fijos), Clientes B2B legacy. 18
+> módulos, 75 rutas, build verde. Detalle: `docs/CONSOLIDACION.md`.
 
 > **Unificación de shells (v0.18)** ✅: `/admin` es el ÚNICO panel. Fix del error
 > de Server Components en `/admin` (`KpiCard` pasó a universal: ya no recibe

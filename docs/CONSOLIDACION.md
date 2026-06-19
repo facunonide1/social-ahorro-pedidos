@@ -52,3 +52,39 @@ grid de accesos rápidos). Página índice de cada sector lo usa:
 3. **Secciones** del sector.
 
 `BI` (`/admin/bi`) = análisis profundo (recibe lo analítico de Ejecutivo).
+
+---
+
+## ✅ Resultado (v0.19 — entregado)
+
+**Eliminado (con redirect 308, sin pérdida de datos — misma tabla):**
+| Ruta eliminada | Redirige a |
+|----------------|-----------|
+| `/admin/finanzas/proveedores`, `/[id]` | `/admin/proveedores`, `/[id]` |
+| `/admin/pagos`, `/nuevo`, `/[id]` | `/admin/finanzas/pagos` |
+| `/admin/facturas`, `/nueva`, `/[id]` | `/admin/finanzas/documentos` |
+| `/admin/empleados` | `/admin/rrhh/empleados` |
+| `/admin/ejecutivo` | `/admin` (Mission Control) |
+
+**Unificado:** Proveedores en `/admin/proveedores` (ficha rica + cuenta corriente
+portada). Pagos/Facturas → los nuevos de Finanzas. Empleados → RRHH.
+
+**Dashboards por sector** (componente `<SectorDashboard>`): Operaciones, Compras,
+Equipo/RRHH, IA/Inteligencia (nuevos) + Finanzas (tablero existente). Mission
+Control = home global con "Resumen gerencial" (absorbe Ejecutivo).
+
+**Sidebar:** ítem de inicio por grupo apunta al dashboard del sector; grupo
+propio "Sucursales" (consolidó caja/gastos/performance dispersos); gastos
+clarificados (operativos=Sucursales vs fijos=Finanzas); "Clientes B2B (legacy)".
+
+**Lista final de módulos `/admin` (un módulo por función):**
+`aprobaciones · bi · clientes(legacy) · compras · configuracion · finanzas ·
+ia · mi-equipo · mi-panel · objetivos · operaciones · proveedores · ranking ·
+recepciones · rrhh · sucursales · tareas · verificaciones` (18 top-level, 75 rutas).
+
+**Pendientes/notas:** (1) Clientes B2B sigue vivo hasta el CRM unificado.
+(2) Permisos finos por rol (sidebar con roles amplios). (3) Conviven aún dos
+modelos de stock (`stock_items` nuevo vs `stock_sucursal` legacy en algunos KPIs)
+y de caja (`caja_general`/`caja_turnos` vs `cajas_diarias`) — no listados para
+esta sesión; merge futuro. (4) Tablas `pagos`/`facturas_proveedor`/`proveedores`
+quedan únicas y compartidas, sin migración pendiente.

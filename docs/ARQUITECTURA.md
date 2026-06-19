@@ -92,6 +92,17 @@ apuntaba a `/hub/*`. Tras mover, se repuntan los `href` a `/admin/*` y se agrega
 los links externos (CRM Pedidos ↗, Cuponera ↗). Las APIs (`app/api/*`) no se
 tocan (no viven bajo `/hub`).
 
+### 2.2 Consolidación + dashboards por sector (v0.19) — ver `docs/CONSOLIDACION.md`
+
+Se eliminaron módulos duplicados (un módulo por función, redirects 308, **sin
+migración** porque compartían tabla): proveedores unificado en `/admin/proveedores`;
+pagos/facturas legacy → `/admin/finanzas/pagos` y `/documentos`; `/admin/empleados`
+→ `/admin/rrhh/empleados`; `/admin/ejecutivo` absorbido por Mission Control (vistazo)
++ BI (análisis). **Jerarquía de dashboards:** Mission Control (`/admin`, home global)
+→ dashboard de sector (`<SectorDashboard>` en `components/dashboard/`) → secciones.
+Cada grupo del sidebar abre el dashboard de su sector. Gastos: "operativos"
+(Sucursales, variables) vs "fijos" (Finanzas, recurrentes).
+
 ---
 
 ## 3. Mapa por módulo (ruta → archivos → tablas)
