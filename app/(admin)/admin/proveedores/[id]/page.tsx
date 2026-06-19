@@ -103,7 +103,12 @@ export default async function ProveedorDetailPage({
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-mono text-xs">CUIT {p.cuit}</span>
             {p.condicion_iva && <span>· {CONDICION_IVA_LABELS[p.condicion_iva]}</span>}
-            {p.categoria && <span>· {p.categoria}</span>}
+            {(p as any).rubros?.length > 0 && <span>· {(p as any).rubros.join(', ')}</span>}
+            {(p as any).score_actual != null && (
+              <Badge variant={(p as any).score_actual >= 7 ? 'success' : (p as any).score_actual >= 5 ? 'warning' : 'destructive'} className="ml-1">
+                Score {(p as any).score_actual}/10
+              </Badge>
+            )}
             {!p.activo && (
               <Badge variant="outline" className="ml-1">
                 Inactivo
