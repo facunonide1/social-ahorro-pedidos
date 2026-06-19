@@ -46,11 +46,18 @@ export default function DevolucionEstadoActions({
       .from('devoluciones_proveedor')
       .update({ estado: next })
       .eq('id', devolucionId)
-    setBusy(false)
     if (error) {
+      setBusy(false)
       setErr(error.message)
       return
     }
+    // Al enviarse: descuenta stock + nota de crédito esperada + score (idempotente)
+    if (next === 'enviada') {
+      try {
+        await fetch('/api/compras/devoluciones/efectos', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ devolucion_id: devolucionId }) })
+      } catch { /* no bloquea el cambio de estado */ }
+    }
+    setBusy(false)
     router.refresh()
   }
 
