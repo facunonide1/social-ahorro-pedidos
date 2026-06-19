@@ -275,6 +275,16 @@ export const NAVEGACION: NavGrupo[] = [
     ],
   },
   {
+    grupo: 'Comercial',
+    items: [
+      { label: 'Ofertas',             href: '/admin/ofertas',             icon: 'Tag' },
+      { label: 'Propuestas de NORA',  href: '/admin/ofertas/propuestas',  icon: 'Sparkles' },
+      { label: 'Calendario',          href: '/admin/ofertas/calendario',  icon: 'CalendarDays' },
+      { label: 'Rendimiento',         href: '/admin/ofertas/rendimiento', icon: 'BarChart3' },
+      { label: 'Para ofrecer',        href: '/admin/ofertas/panel',       icon: 'Megaphone' },
+    ],
+  },
+  {
     grupo: 'Clientes',
     items: [
       { label: 'Clientes B2B (legacy)', href: '/admin/clientes',   icon: 'Users' },

@@ -1,0 +1,10 @@
+-- 0055 · Módulo Ofertas (v0.22). Campañas, ofertas (objeto vivo) con aprobación,
+-- confirmación de lectura, versiones, aprendizaje y experimentos A/B.
+-- (Aplicada vía MCP; ver docs/PLAN-MAESTRO.md para el detalle de enums/tablas/RLS.)
+-- Enums: campania_origen, campania_estado, oferta_tipo (porcentaje_descuento,
+-- precio_fijo, 2x1, nxm, combo, segunda_unidad_pct, descuento_por_cantidad,
+-- combo_dinamico, oferta_cruzada), oferta_vigencia, oferta_estado, oferta_propuesta_por.
+-- Tablas: campanias, ofertas(+codigo OF-YYYY-NNNN, version, limites, b2b, metricas,
+-- cuponera_ref), ofertas_confirmaciones, ofertas_versiones, ofertas_aprendizaje,
+-- ofertas_experimentos. RLS: gestión super/gerente/administrativo; confirmaciones
+-- las escribe cada empleado activo.
