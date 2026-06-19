@@ -112,7 +112,8 @@ Cada grupo del sidebar abre el dashboard de su sector. Gastos: "operativos"
 - Componentes: `nora-briefing-card.tsx`, `nora-predicciones-panel.tsx`,
   `quick-actions.tsx`, `sucursales-live.tsx` (todos en `app/(admin)/admin/`).
 - APIs: `nora/daily-briefing`, `nora/predictions`, `sucursales/live-status`.
-- Tablas: lee `orders`, `empleados`, `tareas`, `stock_sucursal`, `sucursales`.
+- Tablas: lee `orders`, `empleados`, `tareas`, `stock_items`, `sucursales`,
+  `gastos_operativos`, `cuentas_bancarias_con_saldo` (resumen gerencial).
 
 ### Tareas (módulo enterprise F6-T) — el más grande
 - **Bandeja** `/admin/tareas`: `page.tsx` (tabs Mi día/Pool/Mi sucursal/Todas) +
@@ -150,10 +151,19 @@ Permisos: `lib/types/permisos.ts` (módulos × acciones, presets, `permisosEfect
 - Rutas en `app/(admin)/admin/*` (movidas desde `app/hub/*` en v0.18). Tipos/labels en `lib/types/admin.ts`.
 - Helpers: `lib/admin-hub/factura.ts`, `pago.ts`.
 - Tablas: `facturas_proveedor`, `pagos`, `cuentas_bancarias_propias`,
-  `movimientos_bancarios`, `cheques`, `impuestos_obligaciones`, `productos`,
-  `stock_sucursal`, `lotes_productos`, `transferencias_sucursal`,
+  `movimientos_bancarios`, `cheques`, `impuestos_obligaciones`,
+  `productos_catalogo`, `stock_items`, `lotes_productos`, `transferencias_sucursal`,
   `inventarios_fisicos`, `devoluciones_proveedor`, `clientes_crm`,
-  `caja_diaria`, `gastos_operativos`, `aprobaciones`, `empleados`.
+  `caja_general`/`caja_turnos`/`caja_general_movimientos`, `gastos_operativos`,
+  `aprobaciones`, `empleados`.
+
+> **Stock (v0.20):** modelo único `stock_items` (grano producto×sucursal) con
+> `cantidad_gondola` + `cantidad_deposito`; `cantidad` es **generada** (total).
+> Todo deriva de `movimientos_stock` (firmados, con `ubicacion`) vía trigger
+> `tg_aplicar_movimiento_stock`. Reposición interna depósito→góndola = 2
+> movimientos `reposicion_interna`. `sucursales.usa_deposito` activa la UI de
+> depósito. `stock_sucursal` y `caja(s)_diaria(s)` son legacy (cajas_diarias
+> eliminada; stock_sucursal vacía, drop diferido). Ver `docs/MERGE-STOCK-CAJA.md`.
 
 ### NORA (IA) — transversal
 - Cliente: `lib/ai/client.ts` (`getAnthropic`, `hasAnthropicKey`), `config.ts`

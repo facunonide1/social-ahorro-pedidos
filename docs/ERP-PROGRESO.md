@@ -2,7 +2,17 @@
 
 **Última actualización:** 2026-06-18
 **Rama productiva:** `main`
-**Último hito:** Consolidación + dashboards por sector (tag `v0.19-consolidacion-dashboards`)
+**Último hito:** Merge stock + caja + depósito por sucursal (tag `v0.20-merge-stock-caja`)
+
+> **Merge stock+caja (v0.20)** ✅: un solo modelo de stock (`stock_items`, canónica
+> con datos) y uno de caja (multinivel Finanzas). Stock ahora con **góndola/depósito**
+> por sucursal (`cantidad` generada = total; `movimientos_stock.ubicacion`; trigger
+> reescrito; `usa_deposito`), **reposición interna** depósito→góndola (tipo de
+> movimiento + API), alerta `reponer_gondola`, UI y export con G/D/Total. Lectores
+> de `stock_sucursal` (vacía) repuntados a `stock_items` (Mission Control, NORA,
+> performance, IA tools, alertas). Caja: `cajas_diarias` (vacía) eliminada, páginas
+> legacy redirigen a `/admin/finanzas/caja`. Integridad verificada: stock total
+> 7607=7607 (sin pérdida). Migr. 0046–0050. Detalle: `docs/MERGE-STOCK-CAJA.md`.
 
 > **Consolidación (v0.19)** ✅: eliminados módulos duplicados (un módulo por
 > función, redirects 308, sin migración — tablas compartidas): proveedores

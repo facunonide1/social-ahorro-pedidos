@@ -12,7 +12,26 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — CONSOLIDACIÓN + DASHBOARDS POR SECTOR ✅ (v0.19)
+## 🟢 SESIÓN ACTUAL — MERGE STOCK + CAJA + DEPÓSITO ✅ (v0.20)
+
+Consolida los 2 modelos de datos que convivían y agrega depósito por sucursal.
+Detalle + chequeo de integridad en `docs/MERGE-STOCK-CAJA.md`.
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 · Detección + respaldo: `stock_items` canónica (144/7607u) vs `stock_sucursal` vacía; `cajas_diarias` vacía. Backups (migr. 0046) | ✅ |
+| T2 · Modelo stock con góndola/depósito (migr. 0047-0048): `cantidad`=generada (total), `cantidad_gondola/deposito`, `movimientos_stock.ubicacion`, trigger reescrito, `usa_deposito`, tipo `reposicion_interna`. Total preservado 7607=7607 | ✅ |
+| T3 · UI góndola/depósito + "Reponer góndola" (API reposición interna) + export G/D/Total + alerta `reponer_gondola` (migr. 0049) | ✅ |
+| T4 · Caja: `cajas_diarias` eliminada (migr. 0050) + páginas legacy borradas + redirect → `/admin/finanzas/caja`; lectores de `stock_sucursal` repuntados a `stock_items` | ✅ |
+| T5 · Build verde, redirects probados (308), integridad de stock verificada (sin pérdida) | ✅ |
+
+**Resultado:** un modelo de stock (con góndola/depósito) y uno de caja. Tag `v0.20-merge-stock-caja`.
+
+> **Pendientes:** retirar página huérfana `stock/[id]` (legacy `productos`) y luego `drop stock_sucursal`; cargar `usa_deposito=true` donde corresponda; recepción/transferencia con selección de ubicación. Backups `backup_*_v20` vigentes.
+
+---
+
+## 🟢 SESIÓN PREVIA — CONSOLIDACIÓN + DASHBOARDS POR SECTOR ✅ (v0.19)
 
 Ordena los módulos duplicados que quedaron tras la unificación y agrega un
 dashboard de entrada a cada sector. Detalle completo en `docs/CONSOLIDACION.md`.
