@@ -2,7 +2,15 @@
 
 **Última actualización:** 2026-06-18
 **Rama productiva:** `main`
-**Último hito:** Módulo Ofertas completo (tag `v0.22-ofertas-completo`)
+**Último hito:** Comunicación interna completa (tag `v0.23-comunicacion-interna`)
+
+> **Comunicación interna (v0.23)** ✅: motor de chat único en `/admin/comunicacion`
+> que reemplaza el WhatsApp interno. Canales por sucursal/sector/operación/proveedor/
+> directo, mensajería **realtime** (Supabase), reacciones, hilos, fijados, urgente,
+> mensajes-acción. @NORA responde con datos reales (stock) y sugiere tareas.
+> chat→tarea→chat (módulo F6-T). Canales vinculados a módulo (transferencias/stock/…).
+> Comunicados con confirmación de lectura, mi bandeja, recordatorios recurrentes +
+> resumen diario NORA + clima por sucursal (crons). Migr. 0056. Demo es_demo.
 
 > **Ofertas (v0.22)** ✅: módulo central en `/admin/ofertas` (objeto vivo). Carga/
 > propuesta NORA → borrador → aprobación → al aprobar dispara tareas (cartel+góndola

@@ -10,6 +10,8 @@
     { "path": "/api/cron/reporte-semanal",    "schedule": "0 10 * * 1" },
     { "path": "/api/cron/calcular-objetivos", "schedule": "0 2 * * *" },
     { "path": "/api/cron/check-triggers",     "schedule": "0 9 * * *" },
-    { "path": "/api/cron/gastos-fijos",       "schedule": "0 6 1 * *" }
+    { "path": "/api/cron/gastos-fijos",       "schedule": "0 6 1 * *" },
+    { "path": "/api/cron/comunicacion-recordatorios", "schedule": "*/30 * * * *" },
+    { "path": "/api/cron/comunicacion-resumen",       "schedule": "0 22 * * *" }
   ]
 }

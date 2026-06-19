@@ -157,6 +157,15 @@ Permisos: `lib/types/permisos.ts` (módulos × acciones, presets, `permisosEfect
   `caja_general`/`caja_turnos`/`caja_general_movimientos`, `gastos_operativos`,
   `aprobaciones`, `empleados`.
 
+> **Comunicación interna (v0.23):** motor de chat en `app/(admin)/admin/comunicacion/*`.
+> Tablas: `canales`, `canal_miembros`, `mensajes` (hilo_id self-ref, acciones jsonb,
+> entidad_relacionada, es_urgente/fijado/programado), `mensaje_lecturas`,
+> `mensaje_reacciones`, `encuestas`(+votos), `recordatorios_programados`, `clima_chats`.
+> `mensajes` está en la publication `supabase_realtime` (chat en vivo vía
+> `sb.channel().on('postgres_changes')`). API `app/api/comunicacion`. NORA en el chat:
+> `lib/comunicacion/nora-chat.ts`. chat→tarea usa el módulo Tareas (F6-T) con
+> `datos_custom.origen_mensaje_id`. Crons: comunicacion-recordatorios, comunicacion-resumen.
+
 > **Ofertas (v0.22):** módulo central en `app/(admin)/admin/ofertas/*` (grupo
 > Comercial). Tablas: `campanias`, `ofertas` (objeto vivo: codigo, version, tipos,
 > limites, b2b, metricas, cuponera_ref), `ofertas_confirmaciones`, `ofertas_versiones`,

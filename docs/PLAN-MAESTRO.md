@@ -12,7 +12,27 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — MÓDULO OFERTAS ✅ (v0.22-ofertas-completo)
+## 🟢 SESIÓN ACTUAL — COMUNICACIÓN INTERNA ✅ (v0.23-comunicacion-interna)
+
+Motor de chat único que reemplaza el WhatsApp interno, conectado al sistema. Migr. 0056.
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 schema: canales, canal_miembros, mensajes (hilos, acciones, urgente, fijado, programado, entidad_relacionada), lecturas, reacciones, encuestas(+votos), recordatorios_programados, clima_chats; fn `es_miembro_canal`; realtime en `mensajes` | ✅ |
+| T2 inbox `/admin/comunicacion`: canales agrupados + conversación **realtime** (Supabase channel), enviar, reaccionar, fijar, urgente, hilos, mensajes-acción | ✅ |
+| T3 @NORA en el chat (`lib/comunicacion/nora-chat.ts`): responde stock real + detecta problema y sugiere crear tarea (mensaje-acción) | ✅ |
+| T4 chat→tarea→chat (encargados crean tarea desde mensaje; usa F6-T; entidad_relacionada en ambos sentidos; postea sistema) | ✅ |
+| T5 canales vinculados a módulo (transferencias/stock/proveedor/compras/caja; vínculo opcional sugerido por NORA o manual al crear) | ✅ |
+| T6 comunicados + confirmación de lectura (`/comunicados`, barra % leyeron) | ✅ |
+| T7 mi bandeja (`/mi-bandeja`: menciones + notifs + directos) | ✅ |
+| T8 recordatorios recurrentes (cron) + resumen diario NORA (cron) + clima por sucursal; encuestas (schema+API+demo) | ✅ |
+| T9 MC card (urgentes) + badge no leídos + demo (10 canales, mensajes de todo tipo, encuesta, comunicado, urgente, hilo, chat→tarea, clima) | ✅ |
+
+> **Follow-ups Comunicación:** voz→transcripción (necesita Whisper/OpenAI configurado); búsqueda semántica (hoy filtro por canal); UI de voto de encuesta in-chat (data+API listos, el chat muestra la pregunta); descontar/sumar stock real desde fotos de transferencia (hoy mensaje-sistema); A/B y kit de difusión ya quedaron en Ofertas. Demo borrable con `delete … where es_demo`.
+
+---
+
+## 🟢 SESIÓN PREVIA — MÓDULO OFERTAS ✅ (v0.22-ofertas-completo)
 
 Objeto vivo central en `/admin/ofertas` (grupo Comercial). Migr. 0055.
 
