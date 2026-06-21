@@ -73,13 +73,30 @@ export type RecepcionEstado =
   | 'rechazada'
 
 export type AdminRole =
+  // catálogo base del negocio (v2)
   | 'super_admin'
   | 'gerente'
+  | 'encargado_sucursal'
   | 'comprador'
-  | 'administrativo'
   | 'tesoreria'
+  | 'cajero'
+  | 'repartidor'
+  | 'rrhh'
+  | 'marketing'
+  | 'empleado_general'
+  // legacy (mapeados a presets — ver docs/PERMISOS.md)
+  | 'administrativo'
   | 'auditor'
   | 'sucursal'
+
+/** Roles legacy que conviven mapeados a un preset; se evitan en altas nuevas. */
+export const ROLES_LEGACY: ReadonlyArray<AdminRole> = ['administrativo', 'sucursal']
+
+/** Roles del catálogo base, en orden de presentación (para selects de alta). */
+export const ROLES_CATALOGO: ReadonlyArray<AdminRole> = [
+  'super_admin', 'gerente', 'encargado_sucursal', 'comprador', 'tesoreria',
+  'cajero', 'repartidor', 'rrhh', 'marketing', 'empleado_general', 'auditor',
+]
 
 /**
  * Departamentos del ERP.
@@ -106,13 +123,19 @@ export type NotificacionPrioridad = 'baja' | 'media' | 'alta' | 'critica'
 // ============ LABELS ============
 
 export const ADMIN_ROLE_LABELS: Record<AdminRole, string> = {
-  super_admin:    'Super administrador',
-  gerente:        'Gerente',
-  comprador:      'Comprador',
-  administrativo: 'Administrativo',
-  tesoreria:      'Tesorería',
-  auditor:        'Auditor',
-  sucursal:       'Sucursal',
+  super_admin:        'Super administrador (dueño)',
+  gerente:            'Gerente',
+  encargado_sucursal: 'Encargado de sucursal',
+  comprador:          'Comprador',
+  tesoreria:          'Tesorería / Finanzas',
+  cajero:             'Cajero',
+  repartidor:         'Repartidor',
+  rrhh:               'RRHH',
+  marketing:          'Marketing',
+  empleado_general:   'Empleado general',
+  administrativo:     'Administrativo (legacy)',
+  auditor:            'Auditor (solo lectura)',
+  sucursal:           'Encargado (legacy)',
 }
 
 export const CONDICION_IVA_LABELS: Record<CondicionIva, string> = {
@@ -187,13 +210,19 @@ export const DEPARTAMENTO_LABELS: Record<Departamento, string> = {
  * la migración.
  */
 export const ROL_A_DEPARTAMENTOS_LEGACY: Record<AdminRole, Departamento[]> = {
-  super_admin:    ['ejecutivo','equipo','compras','finanzas','operaciones','sucursales','comercial','clientes','rrhh','bi'],
-  gerente:        ['ejecutivo','equipo','compras','finanzas','operaciones','sucursales','comercial','clientes','rrhh','bi'],
-  auditor:        ['ejecutivo','equipo','compras','finanzas','operaciones','sucursales','comercial','clientes','rrhh','bi'],
-  comprador:      ['equipo','compras'],
-  administrativo: ['equipo','finanzas'],
-  tesoreria:      ['equipo','finanzas'],
-  sucursal:       ['equipo','sucursales'],
+  super_admin:        ['ejecutivo','equipo','compras','finanzas','operaciones','sucursales','comercial','clientes','rrhh','bi'],
+  gerente:            ['ejecutivo','equipo','compras','finanzas','operaciones','sucursales','comercial','clientes','rrhh','bi'],
+  auditor:            ['ejecutivo','equipo','compras','finanzas','operaciones','sucursales','comercial','clientes','rrhh','bi'],
+  encargado_sucursal: ['equipo','sucursales','operaciones','clientes'],
+  comprador:          ['equipo','compras'],
+  tesoreria:          ['equipo','finanzas'],
+  cajero:             ['equipo','sucursales','finanzas'],
+  repartidor:         ['equipo'],
+  rrhh:               ['equipo','rrhh'],
+  marketing:          ['equipo','comercial','clientes','bi'],
+  empleado_general:   ['equipo'],
+  administrativo:     ['equipo','finanzas'],
+  sucursal:           ['equipo','sucursales'],
 }
 
 /**

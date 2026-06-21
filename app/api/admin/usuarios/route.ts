@@ -45,7 +45,9 @@ export async function POST(req: NextRequest) {
     rol: body?.rol as AdminRole,
     nombre: String(body?.nombre ?? ''),
     sucursal_id: body?.sucursal_id ?? null,
+    sucursales_acceso: body?.sucursales_acceso ?? [],
     permisos_custom: body?.permisos_custom ?? {},
+    empleado_id: body?.empleado_id ?? null,
   })
 
   if (!res.ok) {

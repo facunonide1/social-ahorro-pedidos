@@ -54,6 +54,7 @@ export async function PATCH(
   const res = await updateAdminUser(params.id, {
     rol: body?.rol as AdminRole | undefined,
     sucursal_id: body?.sucursal_id,
+    sucursales_acceso: body?.sucursales_acceso,
     activo: body?.activo,
     permisos_custom: body?.permisos_custom,
     nombre: body?.nombre,

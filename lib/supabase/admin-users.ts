@@ -8,12 +8,16 @@ export type CreateAdminUserInput = {
   rol: AdminRole
   nombre: string
   sucursal_id?: string | null
+  sucursales_acceso?: string[]
   permisos_custom?: PermisosCustom
+  /** Si se pasa, vincula la cuenta nueva a este legajo de empleado. */
+  empleado_id?: string | null
 }
 
 export type UpdateAdminUserInput = {
   rol?: AdminRole
   sucursal_id?: string | null
+  sucursales_acceso?: string[]
   activo?: boolean
   permisos_custom?: PermisosCustom
   nombre?: string
@@ -51,8 +55,8 @@ export async function createAdminUser(
   if (password.length < 8) {
     return { ok: false, error: 'password_min_8', stage: 'validate' }
   }
-  if (rol === 'sucursal' && !sucursal_id) {
-    return { ok: false, error: 'sucursal_requerida_para_rol_sucursal', stage: 'validate' }
+  if ((rol === 'sucursal' || rol === 'encargado_sucursal' || rol === 'cajero') && !sucursal_id) {
+    return { ok: false, error: 'sucursal_requerida_para_este_rol', stage: 'validate' }
   }
 
   const admin = createAdminClient()
@@ -84,6 +88,7 @@ export async function createAdminUser(
     id: userId,
     rol,
     sucursal_id: sucursal_id ?? null,
+    sucursales_acceso: input.sucursales_acceso ?? [],
     activo: true,
     permisos_custom: input.permisos_custom ?? {},
   })
@@ -98,7 +103,20 @@ export async function createAdminUser(
     }
   }
 
+  // 3) Vincular al legajo de empleado (si corresponde)
+  if (input.empleado_id) {
+    await admin.from('empleados').update({ user_id: userId }).eq('id', input.empleado_id)
+  }
+
   return { ok: true, userId, email, rol }
+}
+
+/** Vincula (o desvincula con null) un usuario del panel a un legajo de empleado. */
+export async function vincularEmpleado(empleadoId: string, userId: string | null): Promise<{ ok: boolean; error?: string }> {
+  const admin = createAdminClient()
+  const { error } = await admin.from('empleados').update({ user_id: userId }).eq('id', empleadoId)
+  if (error) return { ok: false, error: error.message }
+  return { ok: true }
 }
 
 /**
@@ -114,6 +132,7 @@ export async function updateAdminUser(
   const patch: Record<string, unknown> = {}
   if (input.rol !== undefined) patch.rol = input.rol
   if (input.sucursal_id !== undefined) patch.sucursal_id = input.sucursal_id
+  if (input.sucursales_acceso !== undefined) patch.sucursales_acceso = input.sucursales_acceso
   if (input.activo !== undefined) patch.activo = input.activo
   if (input.permisos_custom !== undefined) patch.permisos_custom = input.permisos_custom
 
