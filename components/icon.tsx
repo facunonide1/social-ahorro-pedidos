@@ -88,6 +88,14 @@ import {
   FileSearch,
   Settings,
   Repeat,
+  // Centro de Datos
+  Database,
+  Upload,
+  Download,
+  ShoppingBag,
+  Layers,
+  History,
+  AlertCircle,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -179,6 +187,13 @@ const REGISTRY: Record<string, LucideIcon> = {
   FileSearch,
   Settings,
   Repeat,
+  Database,
+  Upload,
+  Download,
+  ShoppingBag,
+  Layers,
+  History,
+  AlertCircle,
 }
 
 /**

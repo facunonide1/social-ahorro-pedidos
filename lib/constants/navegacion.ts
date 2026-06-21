@@ -234,6 +234,19 @@ export const NAVEGACION: NavGrupo[] = [
     ],
   },
   {
+    grupo: 'Centro de Datos',
+    rolesPermitidos: ['super_admin', 'gerente'],
+    items: [
+      { label: 'Centro de Datos', href: '/admin/centro-datos',               icon: 'Database' },
+      { label: 'Importar',        href: '/admin/centro-datos/importar',       icon: 'Upload' },
+      { label: 'Exportar',        href: '/admin/centro-datos/exportar',       icon: 'Download' },
+      { label: 'Ventas diarias',  href: '/admin/centro-datos/ventas-diarias', icon: 'ShoppingBag' },
+      { label: 'Perfiles',        href: '/admin/centro-datos/perfiles',       icon: 'Layers' },
+      { label: 'Historial',       href: '/admin/centro-datos/historial',      icon: 'History' },
+      { label: 'Sin matchear',    href: '/admin/centro-datos/sin-matchear',   icon: 'AlertCircle', badge: 'sinMatchearPendientes' },
+    ],
+  },
+  {
     grupo: 'Finanzas',
     rolesPermitidos: ROLES_FINANZAS,
     items: [
