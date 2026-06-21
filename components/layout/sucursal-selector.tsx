@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Check, ChevronsUpDown, Building2 } from 'lucide-react'
 import { useSucursal } from '@/lib/hooks/use-sucursal'
 import { usePermissions } from '@/lib/hooks/use-permissions'
@@ -37,14 +38,35 @@ export function SucursalSelector() {
   } = useSucursal()
   const { rol, sucursalId, isReady } = usePermissions()
   const isLoading = useSucursalStore((s) => s.isLoading)
+  const router = useRouter()
+
+  // Escribe la cookie leída por los Server Components y refresca para que
+  // las páginas server vuelvan a ejecutar sus queries con la nueva sucursal.
+  const escribirCookie = useCallback((v: string) => {
+    if (typeof document !== 'undefined') {
+      document.cookie = `sa_sucursal=${v}; path=/; max-age=31536000; SameSite=Lax`
+    }
+  }, [])
+
+  const cambiar = useCallback((v: string) => {
+    setSucursalActiva(v)
+    escribirCookie(v)
+    router.refresh()
+  }, [setSucursalActiva, escribirCookie, router])
 
   // Si el rol está limitado a una sucursal, fijar el store a su sucursal_id.
   useEffect(() => {
     if (!isReady || !isHydrated) return
     if (rol === 'sucursal' && sucursalId && sucursalActiva !== sucursalId) {
       setSucursalActiva(sucursalId)
+      escribirCookie(sucursalId)
     }
-  }, [isReady, isHydrated, rol, sucursalId, sucursalActiva, setSucursalActiva])
+  }, [isReady, isHydrated, rol, sucursalId, sucursalActiva, setSucursalActiva, escribirCookie])
+
+  // Sincroniza la cookie con el store en cada mount (por si quedó desfasada).
+  useEffect(() => {
+    if (isHydrated) escribirCookie(sucursalActiva)
+  }, [isHydrated, sucursalActiva, escribirCookie])
 
   if (!isHydrated || !isReady) {
     return <Skeleton className="h-9 w-44" />
@@ -77,7 +99,7 @@ export function SucursalSelector() {
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel>Sucursal activa</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => setSucursalActiva('todas')}>
+        <DropdownMenuItem onSelect={() => cambiar('todas')}>
           <Check className={cn('size-4', isAllSucursales ? 'opacity-100' : 'opacity-0')} />
           <span>Todas las sucursales</span>
           <span className="ml-auto text-xs text-muted-foreground">consolidado</span>
@@ -90,7 +112,7 @@ export function SucursalSelector() {
           </div>
         ) : (
           sucursalesDisponibles.map((s) => (
-            <DropdownMenuItem key={s.id} onSelect={() => setSucursalActiva(s.id)}>
+            <DropdownMenuItem key={s.id} onSelect={() => cambiar(s.id)}>
               <Check className={cn('size-4', sucursalActiva === s.id ? 'opacity-100' : 'opacity-0')} />
               <span className="truncate">{s.nombre}</span>
               {s.codigo && (

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { AdminShell } from '@/components/layout/admin-shell'
+import { SucursalScopeBadge } from '@/components/shared/sucursal-scope-badge'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,5 +29,9 @@ export const viewport: Viewport = {
  */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const profile = await requireAdminHubAccess()
-  return <AdminShell profile={profile}>{children}</AdminShell>
+  return (
+    <AdminShell profile={profile} scopeBadge={<SucursalScopeBadge />}>
+      {children}
+    </AdminShell>
+  )
 }

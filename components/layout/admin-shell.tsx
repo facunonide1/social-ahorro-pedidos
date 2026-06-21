@@ -23,9 +23,11 @@ import type { HubProfile } from '@/lib/admin-hub/auth'
 export function AdminShell({
   profile,
   children,
+  scopeBadge,
 }: {
   profile: HubProfile
   children: ReactNode
+  scopeBadge?: ReactNode
 }) {
   const loadSucursales = useSucursalStore((s) => s.loadSucursales)
   const isHydratedSuc  = useSucursalStore((s) => s.isHydrated)
@@ -52,7 +54,14 @@ export function AdminShell({
         <TopNav profile={profile} />
         <div className="flex flex-1">
           <Sidebar />
-          <main className="flex-1 overflow-x-hidden">{children}</main>
+          <main className="flex-1 overflow-x-hidden">
+            {scopeBadge && (
+              <div className="flex items-center gap-2 border-b border-border bg-muted/20 px-4 py-1.5 md:px-6">
+                {scopeBadge}
+              </div>
+            )}
+            {children}
+          </main>
         </div>
         <AiChatDock />
       </div>
