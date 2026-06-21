@@ -79,3 +79,9 @@ $$;
 grant execute on function public.cd_ranking_vendidos(uuid, date, date, int) to authenticated;
 grant execute on function public.cd_totales_sucursal(date, date) to authenticated;
 grant execute on function public.cd_resumen_ventas(uuid, date, date) to authenticated;
+
+-- search_path fijo (advisor function_search_path_mutable). No son SECURITY
+-- DEFINER → respetan la RLS de ventas_diarias.
+alter function public.cd_ranking_vendidos(uuid, date, date, int) set search_path = public;
+alter function public.cd_totales_sucursal(date, date) set search_path = public;
+alter function public.cd_resumen_ventas(uuid, date, date) set search_path = public;
