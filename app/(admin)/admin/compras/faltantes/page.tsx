@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/shared/page-header'
 import { RubroFilter } from '@/components/compras/rubro-filter'
 import { parseRubro } from '@/components/compras/rubro'
 import { getSucursalActiva } from '@/lib/sucursal/server'
+import { VentasFinasCard } from '@/components/centro-datos/ventas-finas-card'
 import { FaltantesClient, type FaltanteGrupo, type ProductoLite, type SucLite } from './faltantes-client'
 
 export const dynamic = 'force-dynamic'
@@ -62,6 +63,7 @@ export default async function FaltantesPage({ searchParams }: { searchParams: { 
         breadcrumbs={[{ label: 'Compras' }, { label: 'Faltantes' }]} />
       <div className="space-y-4 p-4 md:p-6">
         <RubroFilter />
+        <VentasFinasCard sucursalId={sucursalId} esTodas={esTodas} titulo="Más vendidos (para decidir qué comprar)" />
         <FaltantesClient
           grupos={grupos}
           rol={profile.rol}

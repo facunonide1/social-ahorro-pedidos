@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { VentasFinasCard } from '@/components/centro-datos/ventas-finas-card'
 
 import { AnalisisClient, type VendidoRow, type DormidoRow } from './analisis-client'
 
@@ -73,7 +74,8 @@ export default async function AnalisisPage() {
     <>
       <PageHeader title="Análisis de ventas" description="Más vendidos, rotación y dinero dormido por sucursal."
         breadcrumbs={[{ label: 'Operaciones' }, { label: 'Análisis' }]} />
-      <div className="p-4 md:p-6">
+      <div className="space-y-4 p-4 md:p-6">
+        <VentasFinasCard sucursalId={sucursalId} esTodas={esTodas} />
         <AnalisisClient
           masVendidos={masVendidos}
           dineroDormido={dineroDormido}
