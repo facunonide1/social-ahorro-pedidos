@@ -147,6 +147,18 @@ Cada grupo del sidebar abre el dashboard de su sector. Gastos: "operativos"
 
 Permisos: `lib/types/permisos.ts` (módulos × acciones, presets, `permisosEfectivos`).
 
+> **Usuarios + permisos finos (v0.26):** `/admin/configuracion/usuarios` lista
+> PERSONAS unificadas (empleados ⟕ users_admin por `empleados.user_id`). Roles
+> (enum `admin_role`, ampliado en migr. 0060): super_admin, gerente,
+> encargado_sucursal, comprador, tesoreria, cajero, repartidor, rrhh, marketing,
+> empleado_general + legacy (administrativo/auditor/sucursal). **18 módulos × 5
+> acciones** en `lib/types/permisos.ts` (`PERMISO_MODULOS`, `puede`,
+> `permisosEfectivos`, `diffContraPreset`, sub-permisos). Gate de API real (403):
+> `lib/admin-hub/permisos-server.ts` → `requirePermiso(modulo, accion)` (aplicado
+> en caja/pagos/ofertas). Sidebar: `navegacionParaUsuario(rol, permisosCustom)` +
+> `moduloDeHref`. `users_admin.sucursales_acceso[]` (migr. 0061) para acceso
+> multi-sucursal. Ver `docs/PERMISOS.md`.
+
 ### Finanzas / Operaciones / RRHH / Compras (F2–F5) — `/admin/*` (antes `/hub/*`)
 - Rutas en `app/(admin)/admin/*` (movidas desde `app/hub/*` en v0.18). Tipos/labels en `lib/types/admin.ts`.
 - Helpers: `lib/admin-hub/factura.ts`, `pago.ts`.

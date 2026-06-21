@@ -16,6 +16,7 @@ import {
   type DeptEstado,
   type DeptInfo,
 } from '@/lib/constants/departamentos'
+import { puede, type PermisoModulo, type PermisosCustom } from '@/lib/types/permisos'
 
 export type LucideIconName = string
 
@@ -359,6 +360,66 @@ export function navegacionParaRol(rol: AdminRole | null): NavGrupo[] {
       items: g.items.filter((it) =>
         it.rolesPermitidos ? it.rolesPermitidos.includes(rol) : true,
       ),
+    }))
+    .filter((g) => g.items.length > 0)
+}
+
+/**
+ * Mapea un href de NAVEGACION a su módulo de permisos. El orden importa:
+ * los prefijos más específicos (ej. caja) van antes que los generales (finanzas).
+ * Devuelve null si el item no está gobernado por permisos (links externos).
+ */
+export function moduloDeHref(href: string): PermisoModulo | null {
+  if (href === '/admin') return 'mission_control'
+  const reglas: [string, PermisoModulo][] = [
+    ['/admin/comunicacion', 'comunicacion'],
+    ['/admin/centro-datos', 'centro_datos'],
+    ['/admin/finanzas/caja', 'caja'],
+    ['/admin/finanzas', 'finanzas'],
+    ['/admin/compras', 'compras'],
+    ['/admin/proveedores', 'compras'],
+    ['/admin/recepciones', 'compras'],
+    ['/admin/operaciones', 'operaciones'],
+    ['/admin/ofertas', 'ofertas'],
+    ['/admin/ia/tickets', 'clientes'],
+    ['/admin/clientes', 'clientes'],
+    ['/admin/sucursales', 'sucursales'],
+    ['/admin/rrhh', 'rrhh'],
+    ['/admin/aprobaciones', 'aprobaciones'],
+    ['/admin/bi', 'bi'],
+    ['/admin/ia', 'ia'],
+    ['/admin/configuracion', 'configuracion'],
+    ['/admin/verificaciones', 'tareas'],
+    ['/admin/tareas', 'tareas'],
+    ['/admin/mi-panel', 'tareas'],
+    ['/admin/mi-equipo', 'tareas'],
+    ['/admin/objetivos', 'tareas'],
+    ['/admin/ranking', 'tareas'],
+  ]
+  for (const [prefijo, modulo] of reglas) {
+    if (href === prefijo || href.startsWith(prefijo + '/')) return modulo
+  }
+  return null
+}
+
+/**
+ * Filtra NAVEGACION por permisos finos reales (rol + overrides). Un item se ve
+ * si `puede(modulo, 'ver')`; los items sin módulo (links externos) se muestran
+ * siempre. Los grupos sin items quedan ocultos. super_admin ve todo.
+ */
+export function navegacionParaUsuario(rol: AdminRole | null, custom?: PermisosCustom | null): NavGrupo[] {
+  if (!rol) return []
+  if (rol === 'super_admin') return navegacionParaRol(rol)
+  return NAVEGACION
+    .filter((g) => (g.soloSuperAdmin ? false : true))
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((it) => {
+        if (it.estado === 'externo') return true
+        const modulo = moduloDeHref(it.href)
+        if (!modulo) return true
+        return puede(rol, custom ?? null, modulo, 'ver')
+      }),
     }))
     .filter((g) => g.items.length > 0)
 }

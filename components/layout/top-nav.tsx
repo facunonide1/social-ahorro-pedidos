@@ -6,7 +6,7 @@ import { Menu } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { usePermissions } from '@/lib/hooks/use-permissions'
-import { navegacionParaRol, type NavGrupo } from '@/lib/constants/navegacion'
+import { navegacionParaUsuario, type NavGrupo } from '@/lib/constants/navegacion'
 import { NoraBrand } from '@/components/nora/nora-brand'
 import type { HubProfile } from '@/lib/admin-hub/auth'
 
@@ -35,8 +35,8 @@ import { cn } from '@/lib/utils'
  * El top bar queda con marca + selectores + búsqueda + notificaciones + user.
  */
 export function TopNav({ profile }: { profile: HubProfile }) {
-  const { rol } = usePermissions()
-  const grupos = navegacionParaRol(rol)
+  const { rol, permisosCustom } = usePermissions()
+  const grupos = navegacionParaUsuario(rol, permisosCustom)
 
   return (
     <header

@@ -2,19 +2,20 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { AdminRole } from '@/lib/types/admin'
+import { puedeAprobarRetiros, type PermisosCustom } from '@/lib/types/permisos'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-type Gate = { rol: AdminRole; userId: string }
+type Gate = { rol: AdminRole; userId: string; permisosCustom: PermisosCustom }
 
 async function gate(): Promise<Gate | { error: string; status: 401 | 403 }> {
   const sb = createClient()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return { error: 'no autenticado', status: 401 }
-  const { data: me } = await sb.from('users_admin').select('rol, activo').eq('id', user.id).maybeSingle<{ rol: AdminRole; activo: boolean }>()
+  const { data: me } = await sb.from('users_admin').select('rol, activo, permisos_custom').eq('id', user.id).maybeSingle<{ rol: AdminRole; activo: boolean; permisos_custom: PermisosCustom | null }>()
   if (!me || !me.activo) return { error: 'sin permiso', status: 403 }
-  return { rol: me.rol, userId: user.id }
+  return { rol: me.rol, userId: user.id, permisosCustom: me.permisos_custom ?? {} }
 }
 
 /** Obtiene (o crea) la caja general de una sucursal. */
@@ -119,9 +120,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // ---- aprobar / rechazar movimiento (super_admin) ----
+  // ---- aprobar / rechazar movimiento (permiso fino: aprobar retiros) ----
   if (action === 'aprobar' || action === 'rechazar') {
-    if (!can('super_admin')) return NextResponse.json({ error: 'requiere super_admin' }, { status: 403 })
+    if (!puedeAprobarRetiros(g.rol, g.permisosCustom)) return NextResponse.json({ error: 'sin permiso para aprobar retiros (caja:aprobar)' }, { status: 403 })
     const { data: mov } = await adm.from('caja_general_movimientos').select('id, monto, estado, caja_general_id, tipo, referencia_id').eq('id', b?.movimiento_id).maybeSingle()
     if (!mov) return NextResponse.json({ error: 'movimiento inexistente' }, { status: 404 })
     if (mov.estado !== 'pendiente_aprobacion') return NextResponse.json({ error: 'ya resuelto' }, { status: 409 })

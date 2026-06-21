@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { createAdminUser, vincularEmpleado } from '@/lib/supabase/admin-users'
 import type { AdminRole } from '@/lib/types/admin'
 
@@ -46,6 +46,26 @@ export async function POST(req: NextRequest) {
   }
 
   if (accion === 'dar_acceso') {
+    // Si el empleado YA tiene un auth user (user_id) sin fila en users_admin,
+    // reusamos esa cuenta en vez de crear una nueva (evita duplicados).
+    if (b?.empleado_id) {
+      const adm = createAdminClient()
+      const { data: emp } = await adm.from('empleados').select('user_id').eq('id', b.empleado_id).maybeSingle<{ user_id: string | null }>()
+      if (emp?.user_id) {
+        const { data: ya } = await adm.from('users_admin').select('id').eq('id', emp.user_id).maybeSingle()
+        if (!ya) {
+          const { error } = await adm.from('users_admin').insert({
+            id: emp.user_id, rol: (b?.rol as AdminRole) ?? 'empleado_general',
+            sucursal_id: b?.sucursal_id ?? null, sucursales_acceso: b?.sucursales_acceso ?? [],
+            activo: true, permisos_custom: b?.permisos_custom ?? {},
+          })
+          if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+          if (b?.nombre) await adm.auth.admin.updateUserById(emp.user_id, { user_metadata: { nombre: String(b.nombre) } }).catch(() => {})
+          return NextResponse.json({ ok: true, userId: emp.user_id, reuso: true })
+        }
+        return NextResponse.json({ error: 'el empleado ya tiene cuenta de panel' }, { status: 409 })
+      }
+    }
     const res = await createAdminUser({
       email: String(b?.email ?? ''),
       password: String(b?.password ?? ''),

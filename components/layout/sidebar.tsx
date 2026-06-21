@@ -15,7 +15,7 @@ import { toast } from 'sonner'
 import { useUIStore } from '@/lib/stores/ui-store'
 import { usePermissions } from '@/lib/hooks/use-permissions'
 import {
-  navegacionParaRol,
+  navegacionParaUsuario,
   navItemPorHref,
   type NavItem,
 } from '@/lib/constants/navegacion'
@@ -43,7 +43,7 @@ export function Sidebar({
   badgeCounts?: Record<string, number>
 }) {
   const pathname = usePathname() || ''
-  const { rol } = usePermissions()
+  const { rol, permisosCustom } = usePermissions()
   const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>(badgeCountsProp)
 
   // Contadores dinámicos de badges (mis pendientes, verificaciones, aprobaciones).
@@ -65,7 +65,7 @@ export function Sidebar({
   const pushReciente = useUIStore((s) => s.pushReciente)
   const isHydrated = useUIStore((s) => s.isHydrated)
 
-  const grupos = navegacionParaRol(rol)
+  const grupos = navegacionParaUsuario(rol, permisosCustom)
 
   useEffect(() => {
     if (!isHydrated) return

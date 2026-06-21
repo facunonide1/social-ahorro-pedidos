@@ -8,10 +8,12 @@ import {
   ROLES_JEFE_LEGACY,
 } from '@/lib/types/admin'
 import type { AdminRole, Departamento } from '@/lib/types/admin'
+import type { PermisosCustom } from '@/lib/types/permisos'
 
 type PermissionsState = {
   rol: AdminRole | null
   sucursalId: string | null
+  permisosCustom: PermisosCustom
   isLoading: boolean
   isReady: boolean
 }
@@ -34,6 +36,7 @@ export function usePermissions() {
   const [state, setState] = useState<PermissionsState>({
     rol: null,
     sucursalId: null,
+    permisosCustom: {},
     isLoading: true,
     isReady: false,
   })
@@ -44,23 +47,24 @@ export function usePermissions() {
       const sb = createClient()
       const { data: { user } } = await sb.auth.getUser()
       if (!user) {
-        if (!cancelled) setState({ rol: null, sucursalId: null, isLoading: false, isReady: true })
+        if (!cancelled) setState({ rol: null, sucursalId: null, permisosCustom: {}, isLoading: false, isReady: true })
         return
       }
       const { data } = await sb
         .from('users_admin')
-        .select('rol, sucursal_id, activo')
+        .select('rol, sucursal_id, permisos_custom, activo')
         .eq('id', user.id)
-        .maybeSingle<{ rol: AdminRole; sucursal_id: string | null; activo: boolean }>()
+        .maybeSingle<{ rol: AdminRole; sucursal_id: string | null; permisos_custom: PermisosCustom | null; activo: boolean }>()
 
       if (cancelled) return
       if (!data?.activo) {
-        setState({ rol: null, sucursalId: null, isLoading: false, isReady: true })
+        setState({ rol: null, sucursalId: null, permisosCustom: {}, isLoading: false, isReady: true })
         return
       }
       setState({
         rol: data.rol,
         sucursalId: data.sucursal_id,
+        permisosCustom: data.permisos_custom ?? {},
         isLoading: false,
         isReady: true,
       })
@@ -110,6 +114,7 @@ export function usePermissions() {
   return {
     rol: state.rol,
     sucursalId: state.sucursalId,
+    permisosCustom: state.permisosCustom,
     departamentos,
     esJefe,
     esSuperAdmin,

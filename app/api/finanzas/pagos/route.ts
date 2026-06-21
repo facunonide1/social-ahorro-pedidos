@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { AdminRole } from '@/lib/types/admin'
+import { puede, type PermisosCustom } from '@/lib/types/permisos'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -18,9 +19,10 @@ async function gate() {
   const sb = createClient()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return { error: 'no autenticado', status: 401 as const }
-  const { data: me } = await sb.from('users_admin').select('rol, activo').eq('id', user.id).maybeSingle<{ rol: AdminRole; activo: boolean }>()
-  if (!me || !me.activo || !['super_admin', 'gerente', 'tesoreria'].includes(me.rol)) {
-    return { error: 'sin permiso para ejecutar pagos', status: 403 as const }
+  const { data: me } = await sb.from('users_admin').select('rol, activo, permisos_custom').eq('id', user.id).maybeSingle<{ rol: AdminRole; activo: boolean; permisos_custom: PermisosCustom | null }>()
+  // ejecutar un pago = aprobar en finanzas (permiso fino, 403 real)
+  if (!me || !me.activo || !puede(me.rol, me.permisos_custom ?? null, 'finanzas', 'aprobar')) {
+    return { error: 'sin permiso para ejecutar pagos (finanzas:aprobar)', status: 403 as const }
   }
   return { ok: true as const, userId: user.id }
 }

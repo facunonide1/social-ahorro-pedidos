@@ -2,21 +2,19 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { AdminRole } from '@/lib/types/admin'
+import { puede, type PermisosCustom } from '@/lib/types/permisos'
 import { aprobarOferta } from '@/lib/ofertas/al-aprobar'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const GESTORES: AdminRole[] = ['super_admin', 'gerente', 'administrativo']
-const APROBADORES: AdminRole[] = ['super_admin', 'gerente']
-
 async function gate() {
   const sb = createClient()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return { error: 'no autenticado', status: 401 as const }
-  const { data: me } = await sb.from('users_admin').select('rol, activo').eq('id', user.id).maybeSingle<{ rol: AdminRole; activo: boolean }>()
+  const { data: me } = await sb.from('users_admin').select('rol, activo, permisos_custom').eq('id', user.id).maybeSingle<{ rol: AdminRole; activo: boolean; permisos_custom: PermisosCustom | null }>()
   if (!me || !me.activo) return { error: 'sin permiso', status: 403 as const }
-  return { ok: true as const, userId: user.id, rol: me.rol }
+  return { ok: true as const, userId: user.id, rol: me.rol, permisosCustom: me.permisos_custom ?? {} }
 }
 
 const CAMPOS = ['campania_id', 'nombre', 'tipo', 'valor', 'nx', 'ny', 'combo_detalle', 'tramos', 'productos_ids', 'rubro', 'canales', 'vigencia_tipo', 'fecha_inicio', 'fecha_fin', 'origen', 'origen_ref', 'limite_unidades_total', 'limite_por_cliente', 'tope_inversion', 'b2b', 'propuesta_por', 'justificacion'] as const
@@ -28,7 +26,7 @@ export async function POST(req: NextRequest) {
   try { b = await req.json() } catch { return NextResponse.json({ error: 'body inválido' }, { status: 400 }) }
   const adm = createAdminClient()
   const accion = b?.accion ?? 'crear'
-  const puedeGestionar = GESTORES.includes(g.rol)
+  const puedeGestionar = puede(g.rol, g.permisosCustom, 'ofertas', 'editar') || puede(g.rol, g.permisosCustom, 'ofertas', 'crear')
 
   // ---- confirmar lectura (cualquier empleado activo) ----
   if (accion === 'confirmar_lectura') {
@@ -101,14 +99,14 @@ export async function POST(req: NextRequest) {
 
   // ---- aprobar (dispara el motor) ----
   if (accion === 'aprobar') {
-    if (!APROBADORES.includes(g.rol)) return NextResponse.json({ error: 'requiere super_admin/gerente' }, { status: 403 })
+    if (!puede(g.rol, g.permisosCustom, 'ofertas', 'aprobar')) return NextResponse.json({ error: 'sin permiso para aprobar ofertas (ofertas:aprobar)' }, { status: 403 })
     try { const r = await aprobarOferta(adm, b.id, g.userId); return NextResponse.json(r) }
     catch (e: any) { return NextResponse.json({ error: e?.message ?? 'Error al aprobar' }, { status: 400 }) }
   }
 
   // ---- rechazar ----
   if (accion === 'rechazar') {
-    if (!APROBADORES.includes(g.rol)) return NextResponse.json({ error: 'requiere super_admin/gerente' }, { status: 403 })
+    if (!puede(g.rol, g.permisosCustom, 'ofertas', 'aprobar')) return NextResponse.json({ error: 'sin permiso (ofertas:aprobar)' }, { status: 403 })
     await adm.from('ofertas').update({ estado: 'rechazada', rechazo_motivo: b?.motivo ?? null, updated_at: new Date().toISOString() }).eq('id', b.id)
     return NextResponse.json({ ok: true })
   }

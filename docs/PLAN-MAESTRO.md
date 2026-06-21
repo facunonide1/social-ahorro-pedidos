@@ -12,7 +12,28 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — CENTRO DE DATOS ✅ (v0.25-centro-datos)
+## 🟢 SESIÓN ACTUAL — USUARIOS + PERMISOS FINOS ✅ (v0.26-usuarios-permisos)
+
+Arregla la gestión de usuarios (empleados no aparecían) y rehace permisos a 18
+módulos × 5 acciones por sector. Detalle: `docs/PERMISOS.md`. Migr. 0060/0061.
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 · Unificar empleados+usuarios: página lista PERSONAS (empleados ⟕ users_admin por `empleados.user_id`), filtros tipo/rol/sucursal/búsqueda, acciones "Dar acceso" (reusa auth user existente) y "Vincular legajo". API `/api/admin/personas`. Backups v26. | ✅ |
+| T2 · Catálogo de roles: +encargado_sucursal/cajero/repartidor/empleado_general/rrhh/marketing (enum 0060, aditivo sobre legacy). Labels + ROLES_CATALOGO/LEGACY. | ✅ |
+| T3 · Permisos finos: `lib/types/permisos.ts` reescrito 18 módulos × 5 acciones (ver/crear/editar/aprobar/eliminar), presets por 13 roles, sub-permisos (saldo caja general / aprobar retiros / editar precios), `permisosEfectivos`/`puede`/`diffContraPreset`. `permisos-server.ts` (`requirePermiso`→403). | ✅ |
+| T4 · UI matriz: ficha con tabs Datos/Permisos/Vista previa; matriz 18×5 agrupada con override resaltado, multi-sucursal de acceso, anti-autobloqueo, preview "qué ve". | ✅ |
+| T5 · Aplicar: sidebar/top-nav usan `navegacionParaUsuario` (filtra por `puede(modulo,'ver')`). Gates backend 403 reales en caja (aprobar retiros), pagos (finanzas:aprobar), ofertas (crear/editar/aprobar). Build verde, docs, tag. | ✅ |
+
+> **Follow-ups permisos:** migrar el resto de gates de rol→`requirePermiso` por
+> sector (hoy migrados caja/pagos/ofertas); cruzar `sucursales_acceso` en los
+> filtros server de cada módulo (hoy el selector global usa sucursal_id); en
+> `empleados` con `user_id` huérfano (auth sin users_admin) "Dar acceso" reusa la
+> cuenta. Legacy `administrativo`/`sucursal` conviven mapeados.
+
+---
+
+## 🟢 SESIÓN PREVIA — CENTRO DE DATOS ✅ (v0.25-centro-datos)
 
 Puente bidireccional con SIFACO por archivos (importar/exportar con perfiles de
 mapeo reutilizables) + carga de ventas diarias por sucursal. NO reemplaza SIFACO.
