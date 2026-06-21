@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { listAdminUsers } from '@/lib/admin-hub/users'
 import type { TipoTarea } from '@/lib/types/tareas'
 
@@ -59,6 +60,11 @@ export default async function TareasBandejaPage({
   } else {
     q = q.in('estado', ACTIVOS)
   }
+
+  // Selector global de sucursal: en vistas no acotadas a "mi sucursal" del rol,
+  // aplica el filtro de la sucursal activa del header (todas = sin filtro).
+  const { sucursalId: sucActiva, esTodas: sucTodas } = getSucursalActiva()
+  if (!sucTodas && sucActiva && (tab === 'todas' || tab === 'pool')) q = q.eq('sucursal_id', sucActiva)
 
   const { data: rows, error } = await q
 

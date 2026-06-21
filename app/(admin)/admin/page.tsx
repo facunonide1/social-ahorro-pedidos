@@ -1,6 +1,7 @@
 import { FileText, Ticket, Users, AlertTriangle, TrendingUp, Wallet, Scale, Landmark, Tag, Clock } from 'lucide-react'
 
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { ROLES_TRANSVERSALES, ADMIN_ROLE_LABELS } from '@/lib/types/admin'
 import { saludoHora } from '@/lib/utils/saludo'
 import { createAdminClient } from '@/lib/supabase/server'
@@ -29,16 +30,18 @@ async function getKpis(): Promise<Kpis> {
   }).format(new Date())
   const inicioHoy = `${fechaAR}T00:00:00-03:00`
   const ahora = new Date().toISOString()
+  const { sucursalId, esTodas } = getSucursalActiva()
+  const scope = <T,>(q: T): T => (esTodas || !sucursalId ? q : (q as any).eq('sucursal_id', sucursalId))
 
   const [ordersRes, empRes, tareasRes, stockRes] = await Promise.all([
     adm.from('orders').select('total').gte('created_at', inicioHoy),
-    adm.from('empleados').select('id', { count: 'exact', head: true }).eq('activo', true),
-    adm
+    scope(adm.from('empleados').select('id', { count: 'exact', head: true }).eq('activo', true)),
+    scope(adm
       .from('tareas')
       .select('id', { count: 'exact', head: true })
       .lt('fecha_vencimiento', ahora)
-      .in('estado', ['pendiente', 'asignada', 'en_progreso', 'en_verificacion']),
-    adm.from('stock_items').select('cantidad, stock_minimo').gt('stock_minimo', 0).limit(5000),
+      .in('estado', ['pendiente', 'asignada', 'en_progreso', 'en_verificacion'])),
+    scope(adm.from('stock_items').select('cantidad, stock_minimo').gt('stock_minimo', 0).limit(5000)),
   ])
 
   const ordenes = (ordersRes.data ?? []) as { total: number | null }[]
@@ -76,13 +79,15 @@ async function getResumenGerencial(): Promise<ResumenGerencial> {
   const adm = createAdminClient()
   const d30 = new Date(Date.now() - 30 * 86_400_000).toISOString()
   const mesActual = new Date().toISOString().slice(0, 7)
+  const { sucursalId, esTodas } = getSucursalActiva()
+  const scope = <T,>(q: T, col = 'sucursal_id'): T => (esTodas || !sucursalId ? q : (q as any).eq(col, sucursalId))
 
   const [ventasRes, gastosRes, cuentasRes, faltRes, ocRes, ofeActRes, ofePendRes, urgRes] = await Promise.all([
     adm.from('orders').select('total, status').gte('created_at', d30),
-    adm.from('gastos_operativos').select('monto').eq('periodo', mesActual),
+    scope(adm.from('gastos_operativos').select('monto').eq('periodo', mesActual)),
     adm.from('cuentas_bancarias_con_saldo').select('moneda, saldo_actual, activa'),
-    adm.from('avisos_faltante').select('id', { count: 'exact', head: true }).eq('estado', 'nuevo'),
-    adm.from('ordenes_compra').select('id', { count: 'exact', head: true }).in('estado', OC_ABIERTAS),
+    scope(adm.from('avisos_faltante').select('id', { count: 'exact', head: true }).eq('estado', 'nuevo')),
+    scope(adm.from('ordenes_compra').select('id', { count: 'exact', head: true }).in('estado', OC_ABIERTAS), 'sucursal_compradora_id'),
     adm.from('ofertas').select('id', { count: 'exact', head: true }).eq('estado', 'activa'),
     adm.from('ofertas').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente_aprobacion'),
     adm.from('mensajes').select('id', { count: 'exact', head: true }).eq('es_urgente', true).gte('created_at', new Date(Date.now() - 7 * 86_400_000).toISOString()),
