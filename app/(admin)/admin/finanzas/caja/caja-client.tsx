@@ -6,6 +6,7 @@ import { Wallet, Vault, Check, X, ArrowDownToLine, Lock, Settings2, Play } from 
 import { toast } from 'sonner'
 
 import { formatARS } from '@/lib/utils/format'
+import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -16,7 +17,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { cn } from '@/lib/utils'
 
 export type SucCajaConfig = { id: string; nombre: string; fondo_fijo: number; usa_caja_general: boolean; usa_caja_fuerte: boolean; saldo_general: number }
-export type TurnoRow = { id: string; sucursal: string; fecha: string; apertura: number; ventas: number; pagos: number; esperado: number | null; contado: number | null; diferencia: number | null; fondo_dejado: number | null; retiro: number | null; estado: string }
+export type TurnoRow = { id: string; sucursal_id: string; sucursal: string; fecha: string; apertura: number; ventas: number; pagos: number; esperado: number | null; contado: number | null; diferencia: number | null; fondo_dejado: number | null; retiro: number | null; estado: string }
 export type MovRow = { id: string; tipo: string; monto: number; estado: string; notas: string | null; fecha: string; sucursal: string }
 
 const TIPO_MOV: Record<string, string> = { entrada_turno: 'Remanente turno', pago_proveedor: 'Pago proveedor', retiro_socios: 'Retiro socios', ajuste: 'Ajuste' }
@@ -29,10 +30,13 @@ async function post(body: any) {
   return j
 }
 
-export function CajaClient({ rol, sucursales, turnos, movimientos }: { rol: string; sucursales: SucCajaConfig[]; turnos: TurnoRow[]; movimientos: MovRow[] }) {
+export type Desglose = { efectivo: number; mercadopago: number; tarjetas: number }
+
+export function CajaClient({ rol, sucursales, turnos, movimientos, desglose }: { rol: string; sucursales: SucCajaConfig[]; turnos: TurnoRow[]; movimientos: MovRow[]; desglose?: Desglose }) {
   const router = useRouter()
   const esSuper = rol === 'super_admin'
   const puedeConfig = rol === 'super_admin' || rol === 'gerente'
+  const totalDisponible = sucursales.reduce((a, s) => a + s.saldo_general, 0)
   const [abrir, setAbrir] = useState(false)
   const [cerrar, setCerrar] = useState<TurnoRow | null>(null)
   const [retiro, setRetiro] = useState(false)
@@ -53,6 +57,19 @@ export function CajaClient({ rol, sucursales, turnos, movimientos }: { rol: stri
 
       {/* ===== GENERAL ===== */}
       <TabsContent value="general" className="space-y-5">
+        {/* Consolidado disponible para pagos */}
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Wallet className="size-3.5" /> Efectivo consolidado disponible para pagos</div>
+          <div className="mt-1 font-mono text-2xl font-semibold tabular-nums">{formatARS(totalDisponible)}</div>
+          {desglose && (
+            <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+              <span>Declarado 60d · Efectivo {formatARS(desglose.efectivo)}</span>
+              <span>Mercado Pago {formatARS(desglose.mercadopago)}</span>
+              <span>Tarjetas {formatARS(desglose.tarjetas)}</span>
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {sucursales.map((s) => (
             <div key={s.id} className="rounded-lg border border-border p-3">
@@ -120,7 +137,7 @@ export function CajaClient({ rol, sucursales, turnos, movimientos }: { rol: stri
       {/* ===== TURNOS ===== */}
       <TabsContent value="turnos" className="space-y-4">
         <div className="flex items-center gap-2">
-          <p className="text-sm text-muted-foreground">El cierre usa arqueo ciego: contás el efectivo sin ver el esperado.</p>
+          <p className="text-sm text-muted-foreground">Abrís el turno y al cerrar cargás el arqueo de SIFACO (efectivo, MP, tarjetas) con la captura. Debe cuadrar en $0.</p>
           <Button size="sm" className="ml-auto" onClick={() => setAbrir(true)}><Play className="size-4" /> Abrir turno</Button>
         </div>
         <div className="overflow-x-auto rounded-lg border border-border">
@@ -152,7 +169,7 @@ export function CajaClient({ rol, sucursales, turnos, movimientos }: { rol: stri
       )}
 
       {abrir && <AbrirTurno sucursales={sucursales} onClose={() => setAbrir(false)} />}
-      {cerrar && <CerrarTurno turno={cerrar} onClose={() => setCerrar(null)} />}
+      {cerrar && <CerrarArqueo turno={cerrar} onClose={() => setCerrar(null)} />}
       {retiro && <RetiroSocios sucursales={sucursales} onClose={() => setRetiro(false)} />}
     </Tabs>
   )
@@ -207,33 +224,84 @@ function AbrirTurno({ sucursales, onClose }: { sucursales: SucCajaConfig[]; onCl
   )
 }
 
-function CerrarTurno({ turno, onClose }: { turno: TurnoRow; onClose: () => void }) {
+function CerrarArqueo({ turno, onClose }: { turno: TurnoRow; onClose: () => void }) {
   const router = useRouter()
-  const [ventas, setVentas] = useState('')
-  const [pagos, setPagos] = useState('')
-  const [contado, setContado] = useState('')
+  const [inicio, setInicio] = useState(String(turno.apertura ?? 0))
+  const [efectivo, setEfectivo] = useState('')
+  const [mp, setMp] = useState('')
+  const [tarjetas, setTarjetas] = useState('')
+  const [sistema, setSistema] = useState('')
+  const [obs, setObs] = useState('')
+  const [archivo, setArchivo] = useState<File | null>(null)
+  const [subiendo, setSubiendo] = useState(false)
   const [busy, setBusy] = useState(false)
+
+  const declarado = (Number(efectivo) || 0) + (Number(mp) || 0) + (Number(tarjetas) || 0)
+  const diferencia = (Number(sistema) || 0) > 0 ? declarado - (Number(sistema) || 0) : 0
+  const cuadra = diferencia === 0
+
   async function submit() {
-    if (contado === '') { toast.error('Ingresá el efectivo contado.'); return }
+    if (efectivo === '' && mp === '' && tarjetas === '') { toast.error('Cargá al menos un total.'); return }
+    if (!archivo) { toast.error('Subí la captura del arqueo de SIFACO.'); return }
     setBusy(true)
     try {
-      const j = await post({ action: 'cerrar_turno', turno_id: turno.id, ventas_efectivo: Number(ventas) || 0, pagos_efectivo: Number(pagos) || 0, contado: Number(contado) })
-      const dif = Number(j.diferencia)
-      toast.success(`Turno cerrado. ${dif === 0 ? 'Sin diferencia' : dif > 0 ? `Sobrante ${formatARS(dif)}` : `Faltante ${formatARS(Math.abs(dif))}`}. Retiro a general: ${formatARS(j.retiro_a_general)} (pendiente de aprobación).`)
+      // 1) subir la captura al bucket privado
+      setSubiendo(true)
+      const sb = createClient()
+      const ext = archivo.name.split('.').pop() || 'jpg'
+      const path = `${turno.sucursal_id}/${turno.id}-${Date.now()}.${ext}`
+      const { error: upErr } = await sb.storage.from('arqueos-caja').upload(path, archivo, { upsert: true })
+      setSubiendo(false)
+      if (upErr) throw new Error('No se pudo subir la captura: ' + upErr.message)
+
+      // 2) cerrar el arqueo
+      const j = await post({
+        action: 'cerrar_arqueo', turno_id: turno.id,
+        inicio_caja: Number(inicio) || 0, total_efectivo: Number(efectivo) || 0,
+        total_mercadopago: Number(mp) || 0, total_tarjetas: Number(tarjetas) || 0,
+        total_sistema: Number(sistema) || 0, captura_url: path, observacion: obs || null,
+      })
+      toast.success(`Caja cerrada${j.diferencia === 0 ? ' y cuadrada ✓' : ` con diferencia ${formatARS(j.diferencia)}`}. ${j.efectivo_a_general > 0 ? `${formatARS(j.efectivo_a_general)} al consolidado.` : ''}`)
       onClose(); router.refresh()
-    } catch (e: any) { toast.error(e?.message ?? 'Error') } finally { setBusy(false) }
+    } catch (e: any) { toast.error(e?.message ?? 'Error') } finally { setBusy(false); setSubiendo(false) }
   }
+
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 sm:max-w-sm">
-        <SheetHeader><SheetTitle>Cerrar turno · arqueo ciego</SheetTitle></SheetHeader>
-        <div className="flex flex-col gap-4 pt-4">
-          <p className="text-xs text-muted-foreground">{turno.sucursal} · {turno.fecha}. No se muestra el esperado para evitar sesgo.</p>
-          <div className="space-y-1.5"><Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Ventas en efectivo del turno</Label><Input type="number" value={ventas} onChange={(e) => setVentas(e.target.value)} placeholder="0" /></div>
-          <div className="space-y-1.5"><Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Pagos en efectivo del turno</Label><Input type="number" value={pagos} onChange={(e) => setPagos(e.target.value)} placeholder="0" /></div>
-          <div className="space-y-1.5"><Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Efectivo contado (arqueo) *</Label><Input type="number" value={contado} onChange={(e) => setContado(e.target.value)} placeholder="0" autoFocus /></div>
-          <p className="text-[11px] text-muted-foreground">El sistema dejará el fondo fijo y enviará el remanente a la caja general (requiere aprobación de super_admin).</p>
-          <Button size="lg" disabled={busy} onClick={submit}>{busy ? 'Cerrando…' : 'Cerrar y arquear'}</Button>
+      <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-sm">
+        <SheetHeader><SheetTitle>Cerrar caja · arqueo</SheetTitle></SheetHeader>
+        <div className="flex flex-col gap-3 pt-4 pb-8">
+          <p className="text-xs text-muted-foreground">{turno.sucursal} · {turno.fecha}. Cargá los totales que te da SIFACO.</p>
+
+          <div className="space-y-1.5"><Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Inicio de caja</Label><Input inputMode="decimal" value={inicio} onChange={(e) => setInicio(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Total efectivo</Label><Input inputMode="decimal" value={efectivo} onChange={(e) => setEfectivo(e.target.value)} placeholder="0" autoFocus /></div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5"><Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Mercado Pago</Label><Input inputMode="decimal" value={mp} onChange={(e) => setMp(e.target.value)} placeholder="0" /></div>
+            <div className="space-y-1.5"><Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Tarjetas</Label><Input inputMode="decimal" value={tarjetas} onChange={(e) => setTarjetas(e.target.value)} placeholder="0" /></div>
+          </div>
+          <div className="space-y-1.5"><Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Total según SIFACO (para cuadrar)</Label><Input inputMode="decimal" value={sistema} onChange={(e) => setSistema(e.target.value)} placeholder="0 = sin control" /></div>
+
+          {/* total declarado + cuadre */}
+          <div className="rounded-lg border border-border p-3">
+            <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Total declarado</span><span className="font-mono font-semibold tabular-nums">{formatARS(declarado)}</span></div>
+            <div className={cn('mt-1 flex items-center justify-between rounded-md px-2 py-1 text-sm', cuadra ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600')}>
+              <span>{cuadra ? 'Cuadra' : 'Diferencia'}</span>
+              <span className="font-mono font-semibold tabular-nums">{cuadra ? '$0 ✓' : formatARS(diferencia)}</span>
+            </div>
+          </div>
+
+          {/* captura obligatoria */}
+          <div className="space-y-1.5">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Captura del arqueo SIFACO *</Label>
+            <input type="file" accept="image/*" capture="environment" onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
+              className="block w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-xs" />
+            {archivo && <p className="text-[11px] text-emerald-600">{archivo.name}</p>}
+          </div>
+
+          <div className="space-y-1.5"><Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Observación (opcional)</Label><Input value={obs} onChange={(e) => setObs(e.target.value)} placeholder="Diferencia justificada, etc." /></div>
+
+          <p className="text-[11px] text-muted-foreground">Al cerrar, el efectivo (menos el fondo fijo) suma al consolidado para pagos.</p>
+          <Button size="lg" disabled={busy} onClick={submit}>{busy ? (subiendo ? 'Subiendo captura…' : 'Cerrando…') : 'Cerrar caja y enviar'}</Button>
         </div>
       </SheetContent>
     </Sheet>

@@ -1,3 +1,6 @@
+import Link from 'next/link'
+import { History } from 'lucide-react'
+
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
@@ -9,7 +12,7 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Caja' }
 
 export default async function CajaPage() {
-  const profile = await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'sucursal', 'auditor'] })
+  const profile = await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'sucursal', 'auditor', 'cajero', 'encargado_sucursal'] })
   const sb = createClient()
   const { sucursalId, esTodas } = getSucursalActiva()
 
@@ -17,13 +20,28 @@ export default async function CajaPage() {
   let turnosQ = sb.from('caja_turnos').select('id, sucursal_id, fecha, apertura, ventas_efectivo, pagos_efectivo, esperado, contado, diferencia, fondo_dejado, retiro_a_general, estado, sucursales(nombre)').order('fecha', { ascending: false }).limit(80)
   if (!esTodas && sucursalId) { cajasQ = cajasQ.eq('sucursal_id', sucursalId); turnosQ = turnosQ.eq('sucursal_id', sucursalId) }
 
-  const [{ data: sucs }, { data: cfg }, { data: cajas }, { data: turnos }, { data: movs }] = await Promise.all([
+  // desglose por medio de pago: arqueos cerrados de los últimos 60 días (en scope)
+  const desde60 = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10)
+  let arqQ = sb.from('arqueos_caja').select('total_efectivo, total_mercadopago, total_tarjetas, efectivo_a_general').neq('estado', 'abierta').gte('fecha', desde60)
+  if (!esTodas && sucursalId) arqQ = arqQ.eq('sucursal_id', sucursalId)
+
+  const [{ data: sucs }, { data: cfg }, { data: cajas }, { data: turnos }, { data: movs }, { data: arqs }] = await Promise.all([
     sb.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
     sb.from('config_caja_sucursal').select('sucursal_id, fondo_fijo, usa_caja_general, usa_caja_fuerte'),
     cajasQ,
     turnosQ,
     sb.from('caja_general_movimientos').select('id, tipo, monto, estado, notas, fecha, caja_general_id, caja_general(sucursal_id, sucursales(nombre))').order('fecha', { ascending: false }).limit(120),
+    arqQ,
   ])
+
+  const desglose = ((arqs ?? []) as any[]).reduce(
+    (a, r) => ({
+      efectivo: a.efectivo + Number(r.total_efectivo ?? 0),
+      mercadopago: a.mercadopago + Number(r.total_mercadopago ?? 0),
+      tarjetas: a.tarjetas + Number(r.total_tarjetas ?? 0),
+    }),
+    { efectivo: 0, mercadopago: 0, tarjetas: 0 },
+  )
 
   const cfgBySuc = new Map(((cfg ?? []) as any[]).map((c) => [c.sucursal_id, c]))
   const cajaBySuc = new Map(((cajas ?? []) as any[]).map((c) => [c.sucursal_id, Number(c.saldo_actual)]))
@@ -36,7 +54,7 @@ export default async function CajaPage() {
   }))
 
   const turnoRows: TurnoRow[] = ((turnos ?? []) as any[]).map((t) => ({
-    id: t.id, sucursal: t.sucursales?.nombre ?? '—', fecha: t.fecha, apertura: Number(t.apertura ?? 0),
+    id: t.id, sucursal_id: t.sucursal_id, sucursal: t.sucursales?.nombre ?? '—', fecha: t.fecha, apertura: Number(t.apertura ?? 0),
     ventas: Number(t.ventas_efectivo ?? 0), pagos: Number(t.pagos_efectivo ?? 0),
     esperado: t.esperado != null ? Number(t.esperado) : null, contado: t.contado != null ? Number(t.contado) : null,
     diferencia: t.diferencia != null ? Number(t.diferencia) : null, fondo_dejado: t.fondo_dejado != null ? Number(t.fondo_dejado) : null,
@@ -50,10 +68,11 @@ export default async function CajaPage() {
 
   return (
     <>
-      <PageHeader title="Caja" description="Caja del turno → caja general → retiros, con arqueo ciego y aprobaciones."
-        breadcrumbs={[{ label: 'Finanzas' }, { label: 'Caja' }]} />
+      <PageHeader title="Caja" description="Arqueo manual al cierre (SIFACO) → consolidado para pagos → retiros con aprobación."
+        breadcrumbs={[{ label: 'Finanzas' }, { label: 'Caja' }]}
+        actions={<Link href="/admin/finanzas/caja/historico" className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted/50"><History className="size-4" /> Histórico y control</Link>} />
       <div className="p-4 md:p-6">
-        <CajaClient rol={profile.rol} sucursales={sucursales} turnos={turnoRows} movimientos={movRows} />
+        <CajaClient rol={profile.rol} sucursales={sucursales} turnos={turnoRows} movimientos={movRows} desglose={desglose} />
       </div>
     </>
   )

@@ -56,9 +56,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // ---- abrir turno ----
+  // ---- abrir turno (cajero/encargado de la sucursal) ----
   if (action === 'abrir_turno') {
-    if (!can('super_admin', 'gerente', 'tesoreria', 'sucursal', 'administrativo')) return NextResponse.json({ error: 'sin permiso' }, { status: 403 })
+    if (!can('super_admin', 'gerente', 'tesoreria', 'sucursal', 'administrativo', 'cajero', 'encargado_sucursal')) return NextResponse.json({ error: 'sin permiso' }, { status: 403 })
     if (!b?.sucursal_id) return NextResponse.json({ error: 'sucursal requerida' }, { status: 400 })
     const { data: cfg } = await adm.from('config_caja_sucursal').select('fondo_fijo').eq('sucursal_id', b.sucursal_id).maybeSingle()
     const fondo = Number(cfg?.fondo_fijo ?? 0)
@@ -105,6 +105,67 @@ export async function POST(req: NextRequest) {
       })
     }
     return NextResponse.json({ ok: true, esperado, diferencia, fondo_dejado: fondoDejado, retiro_a_general: retiro })
+  }
+
+  // ---- cerrar arqueo manual ⭐ (modelo real: el cajero carga los totales de
+  //      SIFACO, sube la captura, cuadra en $0, suma al consolidado) ----
+  if (action === 'cerrar_arqueo') {
+    if (!can('super_admin', 'gerente', 'tesoreria', 'sucursal', 'administrativo', 'cajero', 'encargado_sucursal')) {
+      return NextResponse.json({ error: 'sin permiso' }, { status: 403 })
+    }
+    const { data: t } = await adm.from('caja_turnos').select('*').eq('id', b?.turno_id).maybeSingle()
+    if (!t) return NextResponse.json({ error: 'turno inexistente' }, { status: 404 })
+    if (t.estado !== 'abierto') return NextResponse.json({ error: 'el turno ya fue cerrado' }, { status: 409 })
+    // el cajero solo puede cerrar SU turno; encargado/super/gerente cualquiera
+    const esSupervisor = can('super_admin', 'gerente', 'tesoreria', 'encargado_sucursal', 'administrativo')
+    if (!esSupervisor && t.cajero_user_id !== g.userId) {
+      return NextResponse.json({ error: 'solo podés cerrar tu propia caja' }, { status: 403 })
+    }
+    // captura del arqueo SIFACO OBLIGATORIA
+    if (!b?.captura_url) return NextResponse.json({ error: 'subí la captura del arqueo de SIFACO' }, { status: 400 })
+
+    const inicio = Number(b?.inicio_caja ?? t.apertura ?? 0)
+    const efectivo = Number(b?.total_efectivo ?? 0)
+    const mp = Number(b?.total_mercadopago ?? 0)
+    const tarjetas = Number(b?.total_tarjetas ?? 0)
+    const sistema = Number(b?.total_sistema ?? 0)
+    const declarado = efectivo + mp + tarjetas
+    const diferencia = sistema > 0 ? declarado - sistema : 0
+    const estado = diferencia === 0 ? 'cerrada' : 'observada'
+
+    const { data: cfg } = await adm.from('config_caja_sucursal').select('fondo_fijo').eq('sucursal_id', t.sucursal_id).maybeSingle()
+    const fondo = Number(cfg?.fondo_fijo ?? inicio ?? 0)
+    const efectivoAGeneral = Math.max(0, efectivo - fondo)
+
+    // nombre del cajero (para el histórico)
+    let cajeroNombre: string | null = null
+    try { const { data: au } = await adm.auth.admin.getUserById(g.userId); cajeroNombre = (au?.user?.user_metadata as any)?.nombre ?? au?.user?.email ?? null } catch { /* */ }
+
+    const { data: arqueo, error: eArq } = await adm.from('arqueos_caja').insert({
+      sucursal_id: t.sucursal_id, caja_turno_id: t.id, cajero_id: g.userId, cajero_nombre: cajeroNombre,
+      fecha: t.fecha, inicio_caja: inicio, total_efectivo: efectivo, total_mercadopago: mp, total_tarjetas: tarjetas,
+      total_sistema: sistema, diferencia_cierre: diferencia, efectivo_a_general: efectivoAGeneral,
+      captura_url: b.captura_url, estado, observacion: b?.observacion ?? null,
+    }).select('id').single()
+    if (eArq) return NextResponse.json({ error: eArq.message }, { status: 400 })
+
+    // cerrar el turno (declarativo; sin recálculo desde ventas)
+    await adm.from('caja_turnos').update({
+      contado: efectivo, esperado: sistema, diferencia, fondo_dejado: fondo,
+      retiro_a_general: efectivoAGeneral, ventas_efectivo: 0, pagos_efectivo: 0, estado: 'aprobado',
+    }).eq('id', t.id)
+
+    // sumar el efectivo al consolidado (entrada auto-aprobada; el trigger aplica el saldo)
+    if (efectivoAGeneral > 0) {
+      const cg = await getCajaGeneral(adm, t.sucursal_id)
+      await adm.from('caja_general_movimientos').insert({
+        caja_general_id: cg.id, tipo: 'entrada_turno', monto: efectivoAGeneral,
+        referencia_tipo: 'arqueo_caja', referencia_id: arqueo.id, estado: 'aprobado',
+        solicitado_por: g.userId, aprobado_por: g.userId, notas: `Arqueo cierre ${t.fecha}`,
+      })
+    }
+
+    return NextResponse.json({ ok: true, arqueo_id: arqueo.id, total_declarado: declarado, diferencia, estado, efectivo_a_general: efectivoAGeneral })
   }
 
   // ---- retiro de socios (salida de caja general, requiere aprobación) ----

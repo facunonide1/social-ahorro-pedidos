@@ -224,6 +224,18 @@ Permisos: `lib/types/permisos.ts` (módulos × acciones, presets, `permisosEfect
 > automáticas + factura borrador + score. Comparador + smart split leen
 > `listas_precios_items` vigentes por rubro. Ver `docs/PLAN-MAESTRO.md`.
 
+> **Caja · arqueo manual (v0.27):** la caja es **declarativa manual**. Apertura
+> por turno (`caja_turnos`, ya existía). Cierre = **arqueo** (`arqueos_caja`, migr.
+> 0062): el cajero carga efectivo/MP/tarjetas de SIFACO (`total_declarado`
+> generado), `total_sistema` para cuadrar en $0 (`diferencia_cierre`), sube la
+> captura (bucket privado `arqueos-caja`). El efectivo menos el fondo fijo
+> (`efectivo_a_general`) suma al consolidado (`caja_general`) vía un movimiento
+> `entrada_turno` **auto-aprobado** (trigger `caja_general_mov_saldo`). Retiros
+> siguen con aprobación. API `POST /api/finanzas/caja` action `cerrar_arqueo`
+> (captura obligatoria, cajero solo su turno). Histórico + control anti-robo en
+> `/admin/finanzas/caja/historico`: NORA cruza declarado vs `ventas_diarias` y
+> marca sospechosos. NO recalcula desde ventas. Ver `docs/PLAN-MAESTRO.md`.
+
 > **Stock (v0.20):** modelo único `stock_items` (grano producto×sucursal) con
 > `cantidad_gondola` + `cantidad_deposito`; `cantidad` es **generada** (total).
 > Todo deriva de `movimientos_stock` (firmados, con `ubicacion`) vía trigger

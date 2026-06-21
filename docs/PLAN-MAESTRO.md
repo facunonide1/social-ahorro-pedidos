@@ -12,7 +12,33 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — USUARIOS + PERMISOS FINOS ✅ (v0.26-usuarios-permisos)
+## 🟢 SESIÓN ACTUAL — FIX CAJA (arqueo manual) ✅ (v0.27-caja-arqueo)
+
+La caja pasa a **declarativa manual**: el cajero abre turno y al cerrar carga el
+arqueo de SIFACO (efectivo/MP/tarjetas), sube la captura y cuadra en $0. El
+efectivo suma al consolidado para pagos. El dueño ve el histórico y NORA cruza
+declarado vs ventas reales (control anti-robo). Migr. 0062. No recalcula desde
+ventas; conserva el modelo multinivel + aprobación de retiros.
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 · Schema: tabla `arqueos_caja` (inicio, efectivo/MP/tarjetas, total_declarado [generado], total_sistema, diferencia_cierre, efectivo_a_general, captura_url, estado abierta/cerrada/observada) + bucket privado `arqueos-caja` + RLS/storage. Acción API `cerrar_arqueo` (captura obligatoria, suma al consolidado via entrada_turno auto-aprobada). | ✅ |
+| T2 · Cierre = arqueo manual (UI mobile cajero): form inicio/efectivo/MP/tarjetas + total declarado + cuadre $0 ✓/dif en rojo + captura SIFACO obligatoria + "Cerrar caja y enviar". | ✅ |
+| T3 · Consolidado: card "efectivo disponible para pagos" (caja_general) + desglose por medio de pago (60d), conectado a pagos/retiros con aprobación (modelo multinivel intacto). | ✅ |
+| T4 · Histórico + control: `/admin/finanzas/caja/historico` (dueño/encargado): cierres por sucursal/turno/cajero con captura (signed URL), filtros + export. NORA cruza declarado vs `ventas_diarias` → marca sospechosos (dif≠0 o desvío >10%). Ranking de descuadres por cajero + card de alerta. | ✅ |
+| T5 · Build verde, smoke (turno→arqueo→consolidado→trigger), docs, tag. | ✅ |
+
+> **Reglas caja:** declarativa manual (no recalcular desde ventas); captura
+> obligatoria al cerrar; efectivo (menos fondo fijo) → consolidado auto-aprobado;
+> retiros siguen requiriendo aprobación; cajero solo cierra su turno; respeta
+> selector de sucursal y permisos (módulo `caja`).
+> **Follow-ups caja:** legacy `cerrar_turno` (cálculo desde ventas) queda inerte,
+> superseded por `cerrar_arqueo`; el cruce NORA usa ventas_diarias (cuando estén
+> cargadas del Centro de Datos); demo de arqueos pendiente.
+
+---
+
+## 🟢 SESIÓN PREVIA — USUARIOS + PERMISOS FINOS ✅ (v0.26-usuarios-permisos)
 
 Arregla la gestión de usuarios (empleados no aparecían) y rehace permisos a 18
 módulos × 5 acciones por sector. Detalle: `docs/PERMISOS.md`. Migr. 0060/0061.
