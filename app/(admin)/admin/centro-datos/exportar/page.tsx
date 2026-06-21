@@ -7,7 +7,7 @@ import { ExportarClient } from './exportar-client'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Exportar · Centro de Datos' }
 
-export default async function ExportarPage() {
+export default async function ExportarPage({ searchParams }: { searchParams: { accion?: string } }) {
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente'] })
   const sb = createClient()
 
@@ -29,6 +29,7 @@ export default async function ExportarPage() {
           perfilesFormato={(perfiles ?? []) as PerfilDatos[]}
           sucursales={(sucursales ?? []) as { id: string; nombre: string }[]}
           rubros={rubros as string[]}
+          accionInicial={searchParams.accion ?? null}
         />
       </div>
     </>

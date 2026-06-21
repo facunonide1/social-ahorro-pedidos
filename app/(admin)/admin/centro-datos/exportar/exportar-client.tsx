@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Download, Plus, Trash2, Loader2, Eye, FileDown, Wand2, ArrowUp, ArrowDown, Lock, Clock, X,
@@ -47,11 +47,20 @@ function descargarCsv(csv: string, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-export function ExportarClient({ acciones, perfilesFormato, sucursales, rubros }: { acciones: AccionExport[]; perfilesFormato: PerfilDatos[]; sucursales: Suc[]; rubros: string[] }) {
+export function ExportarClient({ acciones, perfilesFormato, sucursales, rubros, accionInicial }: { acciones: AccionExport[]; perfilesFormato: PerfilDatos[]; sucursales: Suc[]; rubros: string[]; accionInicial?: string | null }) {
   const router = useRouter()
   const [constructor, setConstructor] = useState<AccionExport | 'nueva' | null>(null)
   const [preview, setPreview] = useState<{ accion: AccionExport; filas: any[]; csv: string; filename: string; total: number; formato: string } | null>(null)
   const [cargando, setCargando] = useState<string | null>(null)
+  const autoOpen = useRef(false)
+
+  useEffect(() => {
+    if (autoOpen.current || !accionInicial) return
+    autoOpen.current = true
+    const a = acciones.find((x) => x.id === accionInicial)
+    if (a) previsualizar(a)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accionInicial])
 
   async function previsualizar(a: AccionExport) {
     setCargando(a.id)

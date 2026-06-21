@@ -1017,7 +1017,76 @@ const getEstadoLectura: ToolDef = {
   },
 }
 
+/* ---------- Centro de Datos (puente SIFACO) ---------- */
+
+const centroDatosEstado: ToolDef = {
+  definition: {
+    name: 'centro_datos_estado',
+    description: 'Estado del Centro de Datos (puente con SIFACO): última importación, items sin matchear pendientes y perfiles con carga atrasada (recordatorios).',
+    input_schema: { type: 'object', properties: {} },
+  },
+  execute: async (sb) => {
+    const [{ data: ultimo }, { count: sinMatch }, { data: perfiles }] = await Promise.all([
+      sb.from('import_jobs').select('archivo_nombre, created_at, filas_ok, estado').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      sb.from('items_sin_match').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente'),
+      sb.from('perfiles_datos').select('nombre, frecuencia, ultima_carga').eq('activo', true).eq('direccion', 'import').neq('frecuencia', 'manual'),
+    ])
+    const horas: Record<string, number> = { cada_2hs: 2, diaria: 24, semanal: 168 }
+    const atrasados = ((perfiles ?? []) as any[]).filter((p) => {
+      const lim = horas[p.frecuencia]; if (!lim) return false
+      if (!p.ultima_carga) return true
+      return (Date.now() - new Date(p.ultima_carga).getTime()) / 3_600_000 > lim
+    }).map((p) => p.nombre)
+    return {
+      ultima_carga: ultimo ? { archivo: (ultimo as any).archivo_nombre, cuando: (ultimo as any).created_at, filas: (ultimo as any).filas_ok } : null,
+      items_sin_matchear: sinMatch ?? 0,
+      recordatorios: atrasados,
+    }
+  },
+}
+
+const ventasDia: ToolDef = {
+  definition: {
+    name: 'ventas_dia',
+    description: 'Ranking de productos más vendidos según las ventas diarias por sucursal (fuente fina del Centro de Datos). Permite filtrar por sucursal y rango de fechas.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        sucursal_id: { type: 'string', description: 'UUID de la sucursal (opcional; vacío = todas)' },
+        desde: { type: 'string', description: 'Fecha desde YYYY-MM-DD (opcional, default 7 días atrás)' },
+        hasta: { type: 'string', description: 'Fecha hasta YYYY-MM-DD (opcional, default hoy)' },
+        limite: { type: 'number', description: 'Cuántos productos (default 10)' },
+      },
+    },
+  },
+  execute: async (sb, input) => {
+    const desde = input.desde ?? isoDaysAgo(7).slice(0, 10)
+    const hasta = input.hasta ?? todayISO()
+    const { data, error } = await sb.rpc('cd_ranking_vendidos', {
+      p_sucursal: input.sucursal_id ?? null, p_desde: desde, p_hasta: hasta, p_limit: input.limite ?? 10,
+    })
+    if (error) return { error: error.message }
+    return { desde, hasta, top: (data ?? []).map((r: any) => ({ codigo: r.sku, producto: r.descripcion, unidades: Math.round(r.cantidad), monto: Math.round(r.monto) })) }
+  },
+}
+
+const itemsSinMatch: ToolDef = {
+  definition: {
+    name: 'items_sin_match',
+    description: 'Lista los productos que quedaron sin matchear con el catálogo tras las importaciones (cola de resolución del Centro de Datos).',
+    input_schema: { type: 'object', properties: { limite: { type: 'number' } } },
+  },
+  execute: async (sb, input) => {
+    const { data } = await sb.from('items_sin_match').select('sku, codigo, barras, descripcion_origen, created_at')
+      .eq('estado', 'pendiente').order('created_at', { ascending: false }).limit(input.limite ?? 20)
+    return { pendientes: (data ?? []).map((i: any) => ({ codigo: i.sku ?? i.codigo, barras: i.barras, descripcion: i.descripcion_origen })) }
+  },
+}
+
 export const AI_TOOLS: Record<string, ToolDef> = {
+  centro_datos_estado: centroDatosEstado,
+  ventas_dia: ventasDia,
+  items_sin_match: itemsSinMatch,
   ofertas_activas: getOfertasActivas,
   oferta_para_cliente: getOfertaParaCliente,
   estado_lectura_oferta: getEstadoLectura,
@@ -1048,6 +1117,9 @@ export const AI_TOOL_DEFINITIONS: Anthropic.Tool[] = Object.values(AI_TOOLS).map
 
 /** Etiquetas legibles para mostrar en la UI ("Consultando…"). */
 export const TOOL_LABELS: Record<string, string> = {
+  centro_datos_estado: 'Mirando el Centro de Datos',
+  ventas_dia: 'Calculando las ventas del día',
+  items_sin_match: 'Revisando la cola sin matchear',
   get_pedidos: 'Consultando pedidos',
   get_resumen_ventas: 'Calculando ventas',
   get_facturas_vencer: 'Revisando facturas por vencer',

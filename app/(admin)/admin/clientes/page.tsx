@@ -11,6 +11,7 @@ import {
 } from '@/lib/types/admin'
 
 import { PageHeader } from '@/components/shared/page-header'
+import { AccesoCentroDatos } from '@/components/centro-datos/acceso-centro-datos'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -60,14 +61,17 @@ export default async function ClientesCrmPage() {
         description={`${clientes.length} cliente${clientes.length === 1 ? '' : 's'} en el CRM`}
         breadcrumbs={[{ label: 'Comercial' }, { label: 'Clientes' }]}
         actions={
-          canCreate ? (
-            <Button asChild>
-              <Link href="/admin/clientes/nuevo">
-                <Plus className="size-4" />
-                Nuevo cliente
-              </Link>
-            </Button>
-          ) : undefined
+          <div className="flex gap-2">
+            <AccesoCentroDatos accion={{ tipo: 'importar-clientes' }} />
+            {canCreate && (
+              <Button asChild>
+                <Link href="/admin/clientes/nuevo">
+                  <Plus className="size-4" />
+                  Nuevo cliente
+                </Link>
+              </Button>
+            )}
+          </div>
         }
       />
 

@@ -8,7 +8,7 @@ import { ImportarClient } from './importar-client'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Importar · Centro de Datos' }
 
-export default async function ImportarPage({ searchParams }: { searchParams: { perfil?: string } }) {
+export default async function ImportarPage({ searchParams }: { searchParams: { perfil?: string; tipo?: string } }) {
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente'] })
   const sb = createClient()
   const { sucursalId } = getSucursalActiva()
@@ -19,6 +19,13 @@ export default async function ImportarPage({ searchParams }: { searchParams: { p
     sb.from('sucursales').select('id, nombre').order('nombre'),
   ])
 
+  // acceso desde sectores: ?tipo=stock|ventas|clientes preselecciona el perfil de sistema
+  let prePerfil = searchParams.perfil ?? null
+  if (!prePerfil && searchParams.tipo) {
+    const m = ((perfiles ?? []) as any[]).find((p) => p.tipo === searchParams.tipo)
+    if (m) prePerfil = m.id
+  }
+
   return (
     <>
       <PageHeader title="Importar" description="Subí los archivos que exporta SIFACO. NORA los lee, valida y aplica con rollback."
@@ -28,7 +35,7 @@ export default async function ImportarPage({ searchParams }: { searchParams: { p
           perfiles={(perfiles ?? []) as PerfilDatos[]}
           sucursales={(sucursales ?? []) as { id: string; nombre: string }[]}
           sucursalActiva={sucursalId}
-          perfilPreseleccionado={searchParams.perfil ?? null}
+          perfilPreseleccionado={prePerfil}
         />
       </div>
     </>

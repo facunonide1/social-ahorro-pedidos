@@ -12,7 +12,34 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — SELECTOR DE SUCURSAL GLOBAL ✅ (v0.24-selector-sucursal-global)
+## 🟢 SESIÓN ACTUAL — CENTRO DE DATOS ✅ (v0.25-centro-datos)
+
+Puente bidireccional con SIFACO por archivos (importar/exportar con perfiles de
+mapeo reutilizables) + carga de ventas diarias por sucursal. NO reemplaza SIFACO.
+Antesala de F20. Detalle completo: `docs/CENTRO-DATOS.md`. Migr. 0057/0058/0059.
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 · Schema (0057): perfiles_datos, import_jobs, export_jobs, acciones_export, ventas_diarias, items_sin_match, snapshots_import + enums + RLS + es_demo. `productos_catalogo += rubro, ventas_mensuales` | ✅ |
+| T2 · Importar + perfiles + mapeo: núcleo `lib/centro-datos/import.ts` (mapear→analizar[semáforo+explicación NORA+cambios]→aplicar[snapshot]→cola). Pantalla Importar (perfiles guardados + flujo) + Perfiles (CRUD+mapeo con archivo ejemplo+auto-map). 0058 siembra perfiles/acciones SIFACO de sistema | ✅ |
+| T3 · Ventas diarias por sucursal: funciones SQL agregadas (0059), vista (KPIs/ranking/comparativa/export), respeta selector global. `VentasFinasCard` insertada en Operaciones/Análisis y Compras/Faltantes (leen de ventas_diarias) | ✅ |
+| T4 · Exportar + acciones: motor `lib/centro-datos/export.ts` (CSV exacto SIFACO), botones predefinidos + CONSTRUCTOR (entidad+filtros+columnas+formato+programar) con vista previa | ✅ |
+| T5 · Historial + rollback + sin matchear + recordatorios: Historial (import/export, deshacer via snapshot), cola Sin matchear (crear/vincular/ignorar + backfill), badge sidebar, recordatorios live | ✅ |
+| T6 · Accesos desde sectores (Ofertas/Stock/CRM) + NORA tools (centro_datos_estado/ventas_dia/items_sin_match) + card MC + demo (es_demo, cargar/borrar) + docs + tag | ✅ |
+
+**Reglas:** match SIEMPRE por CODIGO→BARRAS→nombre; lo no matcheado va a la cola
+(no se descarta); NUNCA aplicar sin snapshot (rollback siempre). Acepta
+.xls/.xlsx/.csv/.txt (SheetJS). Perfiles/núcleo reutilizables por F20.
+
+> **Follow-ups Centro de Datos:** import de clientes es best-effort (alta en
+> clientes_crm sin pisar por doc); exportaciones programadas corren por botón
+> manual en Hobby (cron con Pro); tool `explicar_archivo`/`importar` por chat
+> requiere subida de archivo (hoy el flujo es la UI). Demo borrable con
+> `delete … where es_demo` o el botón.
+
+---
+
+## 🟢 SESIÓN PREVIA — SELECTOR DE SUCURSAL GLOBAL ✅ (v0.24-selector-sucursal-global)
 
 Selector en el header que filtra TODO el sistema (Todas = consolidado / una sucursal).
 

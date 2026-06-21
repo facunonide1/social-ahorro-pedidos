@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { Badge } from '@/components/ui/badge'
 import { FRECUENCIA_HORAS, FRECUENCIA_LABEL, type FrecuenciaDatos } from '@/lib/types/centro-datos'
+import { DemoButton } from './demo-button'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Centro de Datos' }
@@ -45,7 +46,7 @@ export default async function CentroDatosPage() {
   return (
     <>
       <PageHeader title="Centro de Datos" description="El puente bidireccional con SIFACO: importá y exportá por archivos."
-        breadcrumbs={[{ label: 'Centro de Datos' }]} />
+        breadcrumbs={[{ label: 'Centro de Datos' }]} actions={<DemoButton />} />
       <div className="space-y-5 p-4 md:p-6">
         {/* Estado / recordatorios */}
         <div className="grid gap-3 sm:grid-cols-3">

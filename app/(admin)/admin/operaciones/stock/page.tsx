@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { AccesoCentroDatos } from '@/components/centro-datos/acceso-centro-datos'
 
 import { StockClient, type ProductoRow, type SucursalLite } from './stock-client'
 
@@ -73,6 +74,12 @@ export default async function StockPage() {
         title="Stock"
         description="Existencias por sucursal con semáforo, rotación y cobertura."
         breadcrumbs={[{ label: 'Operaciones' }, { label: 'Stock' }]}
+        actions={
+          <div className="flex gap-2">
+            <AccesoCentroDatos accion={{ tipo: 'importar-stock' }} />
+            <AccesoCentroDatos accion={{ tipo: 'exportar-dif-stock' }} />
+          </div>
+        }
       />
       <div className="p-4 md:p-6">
         <StockClient

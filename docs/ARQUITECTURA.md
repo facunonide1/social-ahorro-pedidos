@@ -157,6 +157,21 @@ Permisos: `lib/types/permisos.ts` (módulos × acciones, presets, `permisosEfect
   `caja_general`/`caja_turnos`/`caja_general_movimientos`, `gastos_operativos`,
   `aprobaciones`, `empleados`.
 
+> **Centro de Datos · puente SIFACO (v0.25):** sección en `app/(admin)/admin/
+> centro-datos/*` (grupo destacado del sidebar). Tablas (migr. 0057): `perfiles_
+> datos` (mapeo reutilizable import/export), `import_jobs`/`export_jobs` (historial),
+> `snapshots_import` (rollback), `acciones_export` (constructor), `ventas_diarias`
+> (fuente fina, UNIQUE fecha+sucursal+sku), `items_sin_match` (cola). Núcleo
+> reutilizable (F20-ready): `lib/centro-datos/import.ts` (mapear→analizar→aplicar
+> [snapshot]→revertir) y `export.ts` (registros→CSV exacto SIFACO). Match SIEMPRE
+> CODIGO→BARRAS→nombre. APIs `app/api/centro-datos/{perfiles,import,acciones,export,
+> rollback,sin-match,demo}`. Funciones SQL de agregación de ventas (0059):
+> `cd_ranking_vendidos`/`cd_totales_sucursal`/`cd_resumen_ventas`. Perfiles/acciones
+> de sistema sembrados en 0058. NORA tools: `centro_datos_estado`, `ventas_dia`,
+> `items_sin_match`. `VentasFinasCard` (`components/centro-datos/`) y `AccesoCentro
+> Datos` se insertan en Operaciones/Compras/Ofertas/Stock/CRM. Ver `docs/CENTRO-DATOS.md`
+> (formato real SIFACO de 26 columnas).
+
 > **Sucursal activa global (v0.24):** selector en el header (`components/layout/
 > sucursal-selector.tsx`, store `lib/stores/sucursal-store.ts` + hook
 > `lib/hooks/use-sucursal.ts`, localStorage). Para que los **Server Components**
