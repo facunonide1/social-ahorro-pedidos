@@ -1,5 +1,6 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
 
 import { GastosFijosClient, type GastoRow, type InstanciaRow } from './gastos-fijos-client'
@@ -10,9 +11,15 @@ export const metadata = { title: 'Gastos fijos' }
 export default async function GastosFijosPage() {
   const profile = await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'auditor'] })
   const sb = createClient()
+  const { sucursalId, esTodas } = getSucursalActiva()
+
+  // gastos sin sucursal (sucursal_id null = "todas") siempre se ven; los de una
+  // sucursal específica se filtran cuando hay sucursal activa.
+  let gastosQ = sb.from('gastos_fijos').select('id, concepto, tipo, monto, frecuencia, dia_mes, activo, sucursal_id, proveedor_id, sucursales(nombre), proveedores(razon_social)').order('concepto')
+  if (!esTodas && sucursalId) gastosQ = gastosQ.or(`sucursal_id.eq.${sucursalId},sucursal_id.is.null`)
 
   const [{ data: gastos }, { data: inst }, { data: sucs }, { data: provs }] = await Promise.all([
-    sb.from('gastos_fijos').select('id, concepto, tipo, monto, frecuencia, dia_mes, activo, sucursal_id, proveedor_id, sucursales(nombre), proveedores(razon_social)').order('concepto'),
+    gastosQ,
     sb.from('gastos_fijos_instancias').select('id, periodo, monto, estado, vencimiento, gasto_fijo_id, gastos_fijos(concepto)').order('vencimiento', { ascending: false }).limit(300),
     sb.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
     sb.from('proveedores').select('id, razon_social').eq('activo', true).order('razon_social'),

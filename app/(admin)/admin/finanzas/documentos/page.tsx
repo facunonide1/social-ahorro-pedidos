@@ -1,5 +1,6 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
 
 import { DocumentosClient, type DocRow } from './documentos-client'
@@ -10,9 +11,13 @@ export const metadata = { title: 'Documentos a pagar' }
 export default async function DocumentosPage() {
   const profile = await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'auditor'] })
   const sb = createClient()
+  const { sucursalId, esTodas } = getSucursalActiva()
+
+  let docsQ = sb.from('facturas_proveedor').select('id, tipo_documento, numero_factura, total, fecha_emision, fecha_vencimiento, estado, sucursal_id, proveedores(razon_social)').order('fecha_emision', { ascending: false }).limit(1000)
+  if (!esTodas && sucursalId) docsQ = docsQ.eq('sucursal_id', sucursalId)
 
   const [{ data: docs }, { data: provs }, { data: sucs }] = await Promise.all([
-    sb.from('facturas_proveedor').select('id, tipo_documento, numero_factura, total, fecha_emision, fecha_vencimiento, estado, sucursal_id, proveedores(razon_social)').order('fecha_emision', { ascending: false }).limit(1000),
+    docsQ,
     sb.from('proveedores').select('id, razon_social, cuit, plazo_pago_dias, forma_pago_default').eq('activo', true).order('razon_social'),
     sb.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
   ])

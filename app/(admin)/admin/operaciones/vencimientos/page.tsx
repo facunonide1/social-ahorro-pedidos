@@ -1,5 +1,6 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
 
 import { VencimientosClient, type LoteRow } from './vencimientos-client'
@@ -10,10 +11,14 @@ export const metadata = { title: 'Vencimientos' }
 export default async function VencimientosPage() {
   const profile = await requireAdminHubAccess()
   const sb = createClient()
+  const { sucursalId, esTodas } = getSucursalActiva()
   const en90 = new Date(Date.now() + 90 * 86_400_000).toISOString().slice(0, 10)
 
+  let lotesQ = sb.from('lotes_productos').select('id, producto_id, sucursal_id, numero_lote, fecha_vencimiento, cantidad_actual, costo_unitario').gt('cantidad_actual', 0).lte('fecha_vencimiento', en90).order('fecha_vencimiento')
+  if (!esTodas && sucursalId) lotesQ = lotesQ.eq('sucursal_id', sucursalId)
+
   const [{ data: lotes }, { data: prods }, { data: rot }, { data: sucs }] = await Promise.all([
-    sb.from('lotes_productos').select('id, producto_id, sucursal_id, numero_lote, fecha_vencimiento, cantidad_actual, costo_unitario').gt('cantidad_actual', 0).lte('fecha_vencimiento', en90).order('fecha_vencimiento'),
+    lotesQ,
     sb.from('productos_catalogo').select('id, sku, nombre, precio_costo_promedio'),
     sb.from('producto_rotacion').select('producto_id, sucursal_id, venta_diaria_prom_30d'),
     sb.from('sucursales').select('id, nombre, codigo').eq('activa', true).order('nombre'),

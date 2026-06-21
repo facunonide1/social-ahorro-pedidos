@@ -1,5 +1,6 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
 
 import { AlertasClient, type AlertaRow } from './alertas-client'
@@ -10,9 +11,13 @@ export const metadata = { title: 'Alertas' }
 export default async function AlertasPage() {
   const profile = await requireAdminHubAccess()
   const sb = createClient()
+  const { sucursalId, esTodas } = getSucursalActiva()
+
+  let alertasQ = sb.from('alertas_stock').select('id, tipo, severidad, datos, producto_id, sucursal_id, created_at').eq('estado', 'activa').order('severidad').order('created_at', { ascending: false }).limit(500)
+  if (!esTodas && sucursalId) alertasQ = alertasQ.eq('sucursal_id', sucursalId)
 
   const [{ data: alertas }, { data: sucs }] = await Promise.all([
-    sb.from('alertas_stock').select('id, tipo, severidad, datos, producto_id, sucursal_id, created_at').eq('estado', 'activa').order('severidad').order('created_at', { ascending: false }).limit(500),
+    alertasQ,
     sb.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
   ])
 

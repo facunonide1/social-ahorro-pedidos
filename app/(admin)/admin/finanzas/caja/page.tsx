@@ -1,5 +1,6 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
 
 import { CajaClient, type SucCajaConfig, type TurnoRow, type MovRow } from './caja-client'
@@ -10,12 +11,17 @@ export const metadata = { title: 'Caja' }
 export default async function CajaPage() {
   const profile = await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'sucursal', 'auditor'] })
   const sb = createClient()
+  const { sucursalId, esTodas } = getSucursalActiva()
+
+  let cajasQ = sb.from('caja_general').select('sucursal_id, saldo_actual').eq('tipo', 'caja_general')
+  let turnosQ = sb.from('caja_turnos').select('id, sucursal_id, fecha, apertura, ventas_efectivo, pagos_efectivo, esperado, contado, diferencia, fondo_dejado, retiro_a_general, estado, sucursales(nombre)').order('fecha', { ascending: false }).limit(80)
+  if (!esTodas && sucursalId) { cajasQ = cajasQ.eq('sucursal_id', sucursalId); turnosQ = turnosQ.eq('sucursal_id', sucursalId) }
 
   const [{ data: sucs }, { data: cfg }, { data: cajas }, { data: turnos }, { data: movs }] = await Promise.all([
     sb.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
     sb.from('config_caja_sucursal').select('sucursal_id, fondo_fijo, usa_caja_general, usa_caja_fuerte'),
-    sb.from('caja_general').select('sucursal_id, saldo_actual').eq('tipo', 'caja_general'),
-    sb.from('caja_turnos').select('id, sucursal_id, fecha, apertura, ventas_efectivo, pagos_efectivo, esperado, contado, diferencia, fondo_dejado, retiro_a_general, estado, sucursales(nombre)').order('fecha', { ascending: false }).limit(80),
+    cajasQ,
+    turnosQ,
     sb.from('caja_general_movimientos').select('id, tipo, monto, estado, notas, fecha, caja_general_id, caja_general(sucursal_id, sucursales(nombre))').order('fecha', { ascending: false }).limit(120),
   ])
 

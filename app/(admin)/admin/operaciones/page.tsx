@@ -2,6 +2,7 @@ import { Boxes, AlertTriangle, CalendarClock, Bell, ArrowRightLeft, ClipboardChe
 
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { formatARS } from '@/lib/utils/format'
 import { SectorDashboard, type SectorKpi, type SectorAcceso } from '@/components/dashboard/sector-dashboard'
 
@@ -11,14 +12,20 @@ export const metadata = { title: 'Operaciones' }
 export default async function OperacionesDashboard() {
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'sucursal', 'auditor'] })
   const sb = createClient()
+  const { sucursalId, esTodas } = getSucursalActiva()
   const en30 = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10)
   const hoy = new Date().toISOString().slice(0, 10)
 
+  let itemsQ = sb.from('stock_items').select('producto_id, cantidad, stock_minimo').limit(20000)
+  let lotesQ = sb.from('lotes_productos').select('id', { count: 'exact', head: false }).gt('cantidad_actual', 0).lte('fecha_vencimiento', en30).gte('fecha_vencimiento', hoy).limit(5000)
+  let alertasQ = sb.from('alertas_stock').select('id', { count: 'exact', head: true }).eq('estado', 'activa')
+  if (!esTodas && sucursalId) { itemsQ = itemsQ.eq('sucursal_id', sucursalId); lotesQ = lotesQ.eq('sucursal_id', sucursalId); alertasQ = alertasQ.eq('sucursal_id', sucursalId) }
+
   const [{ data: items }, { data: prods }, { data: lotes }, { count: alertas }] = await Promise.all([
-    sb.from('stock_items').select('producto_id, cantidad, stock_minimo').limit(20000),
+    itemsQ,
     sb.from('productos_catalogo').select('id, precio_costo_promedio').limit(20000),
-    sb.from('lotes_productos').select('id', { count: 'exact', head: false }).gt('cantidad_actual', 0).lte('fecha_vencimiento', en30).gte('fecha_vencimiento', hoy).limit(5000),
-    sb.from('alertas_stock').select('id', { count: 'exact', head: true }).eq('estado', 'activa'),
+    lotesQ,
+    alertasQ,
   ])
 
   const costo = new Map(((prods ?? []) as any[]).map((p) => [p.id, Number(p.precio_costo_promedio ?? 0)]))

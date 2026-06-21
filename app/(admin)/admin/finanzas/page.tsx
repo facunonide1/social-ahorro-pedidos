@@ -3,6 +3,7 @@ import { FileText, AlertTriangle, CalendarClock, Landmark, ArrowRight } from 'lu
 
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { formatARS } from '@/lib/utils/format'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/cards/kpi-card'
@@ -19,11 +20,15 @@ type Venc = { tipo: string; nombre: string; fecha: string; monto: number; href: 
 export default async function FinanzasTableroPage() {
   const profile = await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'auditor'] })
   const sb = createClient()
+  const { sucursalId, esTodas } = getSucursalActiva()
   const hoy = new Date().toISOString().slice(0, 10)
   const en7 = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10)
 
+  let factQ = sb.from('facturas_proveedor').select('id, numero_factura, total, fecha_vencimiento, estado, tipo_documento, proveedores(razon_social)').not('estado', 'in', '("pagada","anulada","rechazada","borrador")').limit(1000)
+  if (!esTodas && sucursalId) factQ = factQ.eq('sucursal_id', sucursalId)
+
   const [{ data: facturas }, { data: gfi }, { data: imp }, { data: chq }, { data: movs }] = await Promise.all([
-    sb.from('facturas_proveedor').select('id, numero_factura, total, fecha_vencimiento, estado, tipo_documento, proveedores(razon_social)').not('estado', 'in', '("pagada","anulada","rechazada","borrador")').limit(1000),
+    factQ,
     sb.from('gastos_fijos_instancias').select('id, periodo, monto, vencimiento, estado, gastos_fijos(concepto)').eq('estado', 'pendiente').limit(500),
     sb.from('impuestos_obligaciones').select('id, tipo, descripcion, monto_estimado, monto_real, fecha_vencimiento, estado').not('estado', 'in', '("pagado")').limit(500),
     sb.from('cheques').select('id, numero, monto, fecha_cobro_estimada, estado, tipo').eq('tipo', 'emitido').not('estado', 'in', '("cobrado","anulado","rechazado")').limit(500),

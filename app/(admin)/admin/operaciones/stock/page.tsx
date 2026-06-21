@@ -1,5 +1,6 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
 
 import { StockClient, type ProductoRow, type SucursalLite } from './stock-client'
@@ -10,16 +11,22 @@ export const metadata = { title: 'Stock' }
 export default async function StockPage() {
   const profile = await requireAdminHubAccess()
   const sb = createClient()
+  const { sucursalId, esTodas } = getSucursalActiva()
 
   const en30d = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10)
+
+  let stockQ = sb.from('stock_items').select('producto_id, sucursal_id, cantidad, cantidad_gondola, cantidad_deposito, stock_minimo, stock_maximo')
+  let rotQ = sb.from('producto_rotacion').select('producto_id, sucursal_id, venta_diaria_prom_30d, dias_stock_restante, clasificacion_abc')
+  let lotesQ = sb.from('lotes_productos').select('producto_id').gt('cantidad_actual', 0).lte('fecha_vencimiento', en30d)
+  if (!esTodas && sucursalId) { stockQ = stockQ.eq('sucursal_id', sucursalId); rotQ = rotQ.eq('sucursal_id', sucursalId); lotesQ = lotesQ.eq('sucursal_id', sucursalId) }
 
   const [{ data: prods }, { data: stock }, { data: rot }, { data: sucs }, { data: lotesVenc }] =
     await Promise.all([
       sb.from('productos_catalogo').select('id, sku, codigo_barras, nombre, laboratorio, categoria, precio_costo_promedio, precio_sugerido').eq('activo', true).order('nombre').limit(5000),
-      sb.from('stock_items').select('producto_id, sucursal_id, cantidad, cantidad_gondola, cantidad_deposito, stock_minimo, stock_maximo'),
-      sb.from('producto_rotacion').select('producto_id, sucursal_id, venta_diaria_prom_30d, dias_stock_restante, clasificacion_abc'),
+      stockQ,
+      rotQ,
       sb.from('sucursales').select('id, nombre, codigo, usa_deposito').eq('activa', true).order('nombre'),
-      sb.from('lotes_productos').select('producto_id').gt('cantidad_actual', 0).lte('fecha_vencimiento', en30d),
+      lotesQ,
     ])
 
   const sucursales = ((sucs ?? []) as any[]).map((s) => ({ id: s.id, nombre: s.nombre, codigo: s.codigo, usaDeposito: !!s.usa_deposito })) as SucursalLite[]
