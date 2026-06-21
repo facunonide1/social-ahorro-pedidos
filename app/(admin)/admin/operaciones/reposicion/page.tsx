@@ -1,5 +1,6 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
 
 import { ReposicionClient, type RepoRow } from './reposicion-client'
@@ -10,10 +11,12 @@ export const metadata = { title: 'Reposición' }
 export default async function ReposicionPage() {
   const profile = await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'auditor'] })
   const sb = createClient()
+  const { sucursalId, esTodas } = getSucursalActiva()
+  const scope = <T,>(q: T): T => (esTodas || !sucursalId ? q : (q as any).eq('sucursal_id', sucursalId))
 
   const [{ data: rot }, { data: stock }, { data: prods }, { data: sucs }] = await Promise.all([
-    sb.from('producto_rotacion').select('producto_id, sucursal_id, venta_diaria_prom_30d, dias_stock_restante'),
-    sb.from('stock_items').select('producto_id, sucursal_id, cantidad, stock_maximo'),
+    scope(sb.from('producto_rotacion').select('producto_id, sucursal_id, venta_diaria_prom_30d, dias_stock_restante')),
+    scope(sb.from('stock_items').select('producto_id, sucursal_id, cantidad, stock_maximo')),
     sb.from('productos_catalogo').select('id, sku, nombre, laboratorio, precio_costo_promedio, droguerias_preferidas').eq('activo', true),
     sb.from('sucursales').select('id, nombre, codigo').eq('activa', true).order('nombre'),
   ])

@@ -1,4 +1,5 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 
@@ -10,14 +11,16 @@ export const metadata = { title: 'Análisis de ventas' }
 export default async function AnalisisPage() {
   const profile = await requireAdminHubAccess()
   const sb = createClient()
+  const { sucursalId, esTodas } = getSucursalActiva()
+  const scope = <T,>(q: T): T => (esTodas || !sucursalId ? q : (q as any).eq('sucursal_id', sucursalId))
   const ahora = Date.now()
   const d90 = new Date(ahora - 90 * 86_400_000).toISOString()
 
   const [{ data: ventas }, { data: prods }, { data: stock }, { data: rot }, { data: sucs }] = await Promise.all([
-    sb.from('movimientos_stock').select('producto_id, sucursal_id, cantidad, fecha').eq('tipo', 'venta').gte('fecha', d90).limit(50000),
+    scope(sb.from('movimientos_stock').select('producto_id, sucursal_id, cantidad, fecha').eq('tipo', 'venta').gte('fecha', d90).limit(50000)),
     sb.from('productos_catalogo').select('id, sku, nombre, categoria, laboratorio, precio_sugerido, precio_costo_promedio').eq('activo', true),
-    sb.from('stock_items').select('producto_id, sucursal_id, cantidad'),
-    sb.from('producto_rotacion').select('producto_id, sucursal_id, ultima_venta, clasificacion_abc, dias_stock_restante'),
+    scope(sb.from('stock_items').select('producto_id, sucursal_id, cantidad')),
+    scope(sb.from('producto_rotacion').select('producto_id, sucursal_id, ultima_venta, clasificacion_abc, dias_stock_restante')),
     sb.from('sucursales').select('id, nombre, codigo').eq('activa', true).order('nombre'),
   ])
 
