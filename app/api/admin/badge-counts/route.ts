@@ -33,7 +33,11 @@ export async function GET() {
 
   const faltantes = sb.from('avisos_faltante').select('id', { count: 'exact', head: true }).eq('estado', 'nuevo')
 
-  const [t, v, a, f] = await Promise.all([misTareas, verif, aprob, faltantes])
+  const sinMatch = TRANSVERSAL.includes(me.rol)
+    ? sb.from('items_sin_match').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente')
+    : Promise.resolve({ count: 0 } as any)
+
+  const [t, v, a, f, sm] = await Promise.all([misTareas, verif, aprob, faltantes, sinMatch])
 
   // mensajes no leídos en mis canales (aprox, acotado)
   let mensajesNoLeidos = 0
@@ -54,6 +58,7 @@ export async function GET() {
     verificacionesPendientes: v.count ?? 0,
     aprobacionesPendientes: a.count ?? 0,
     faltantesPendientes: f.count ?? 0,
+    sinMatchearPendientes: sm.count ?? 0,
     mensajesNoLeidos,
   })
 }
