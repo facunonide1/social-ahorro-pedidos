@@ -157,6 +157,17 @@ Permisos: `lib/types/permisos.ts` (módulos × acciones, presets, `permisosEfect
   `caja_general`/`caja_turnos`/`caja_general_movimientos`, `gastos_operativos`,
   `aprobaciones`, `empleados`.
 
+> **Sucursal activa global (v0.24):** selector en el header (`components/layout/
+> sucursal-selector.tsx`, store `lib/stores/sucursal-store.ts` + hook
+> `lib/hooks/use-sucursal.ts`, localStorage). Para que los **Server Components**
+> filtren, el selector también persiste la cookie `sa_sucursal` y hace
+> `router.refresh()`. En el server: `lib/sucursal/server.ts` →
+> `getSucursalActiva()` (`{sucursalId, esTodas}`) y `filtrarPorSucursal(query)`.
+> Patrón en cada page: `const {sucursalId, esTodas} = getSucursalActiva()` y
+> `if (!esTodas && sucursalId) q = q.eq('sucursal_id', sucursalId)`. Badge global
+> "Viendo: X" = `components/shared/sucursal-scope-badge.tsx` (en el shell).
+> Entidades sin sucursal (proveedores, bancos, ofertas, mensajes, orders/CRM) no filtran.
+
 > **Comunicación interna (v0.23):** motor de chat en `app/(admin)/admin/comunicacion/*`.
 > Tablas: `canales`, `canal_miembros`, `mensajes` (hilo_id self-ref, acciones jsonb,
 > entidad_relacionada, es_urgente/fijado/programado), `mensaje_lecturas`,

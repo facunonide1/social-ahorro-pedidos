@@ -12,7 +12,24 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — COMUNICACIÓN INTERNA ✅ (v0.23-comunicacion-interna)
+## 🟢 SESIÓN ACTUAL — SELECTOR DE SUCURSAL GLOBAL ✅ (v0.24-selector-sucursal-global)
+
+Selector en el header que filtra TODO el sistema (Todas = consolidado / una sucursal).
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 · Estado global: store/hook/selector ya existían (localStorage). Se agregó **puente cookie** `sa_sucursal` + `getSucursalActiva()`/`filtrarPorSucursal()` (server) para que los Server Components filtren; el selector escribe la cookie y hace `router.refresh()`. Badge global "Viendo: <sucursal>" en el shell (`SucursalScopeBadge`) | ✅ |
+| T2 · Filtro aplicado: Operaciones (dashboard, stock, vencimientos, alertas, análisis, reposición), Finanzas (tablero, documentos, caja, gastos-fijos), Compras (dashboard, faltantes, órdenes, recepciones), RRHH, Mission Control (KPIs + resumen gerencial), Tareas (vistas todas/pool). Consolidado cuando = Todas | ✅ |
+| T3 · Indicador "Viendo: X" global (badge en header de cada página) | ✅ |
+| T4 · Build verde, docs, tag | ✅ |
+
+**Reglas:** sucursal específica → `WHERE sucursal_id = X` (órdenes usan `sucursal_compradora_id`). Entidades sin sucursal quedan globales (proveedores, bancos, impuestos, **ofertas** [alcance todas], mensajes, **orders/CRM** [tabla sin `sucursal_id`]). Rol `sucursal` queda fijado a su sucursal (badge no clickeable).
+
+> **Follow-ups:** que las ACCIONES de los forms (crear tarea/gasto/ajuste) tomen por default la sucursal activa vía `useSucursal()` (hoy usan la sucursal del perfil); agregar `sucursal_id` a `orders`/CRM si se quiere "ventas hoy" por sucursal en Mission Control.
+
+---
+
+## 🟢 SESIÓN PREVIA — COMUNICACIÓN INTERNA ✅ (v0.23-comunicacion-interna)
 
 Motor de chat único que reemplaza el WhatsApp interno, conectado al sistema. Migr. 0056.
 

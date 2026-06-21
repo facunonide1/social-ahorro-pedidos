@@ -2,7 +2,12 @@
 
 **Última actualización:** 2026-06-18
 **Rama productiva:** `main`
-**Último hito:** Comunicación interna completa (tag `v0.23-comunicacion-interna`)
+**Último hito:** Selector de sucursal global (tag `v0.24-selector-sucursal-global`)
+
+> **Selector de sucursal global (v0.24)** ✅: selector en el header que filtra TODO
+> el sistema (Todas = consolidado o una sucursal). Puente cookie sa_sucursal +
+> getSucursalActiva() para Server Components; badge global 'Viendo: X'. Filtro
+> aplicado en Operaciones, Finanzas, Compras, RRHH, Mission Control y Tareas.
 
 > **Comunicación interna (v0.23)** ✅: motor de chat único en `/admin/comunicacion`
 > que reemplaza el WhatsApp interno. Canales por sucursal/sector/operación/proveedor/
