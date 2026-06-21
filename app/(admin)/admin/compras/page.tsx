@@ -9,6 +9,7 @@ import { KpiCard } from '@/components/cards/kpi-card'
 import { NoraCard } from '@/components/nora/nora-card'
 import { RubroFilter } from '@/components/compras/rubro-filter'
 import { parseRubro } from '@/components/compras/rubro'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -20,12 +21,15 @@ export default async function ComprasTablero({ searchParams }: { searchParams: {
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'auditor'] })
   const sb = createClient()
   const rubro = parseRubro(searchParams.rubro)
+  const { sucursalId, esTodas } = getSucursalActiva()
   const inicioMes = new Date().toISOString().slice(0, 7) + '-01'
 
   let ocQ = sb.from('ordenes_compra').select('id, total_estimado, estado, rubro, created_at').limit(2000)
   if (rubro !== 'todos') ocQ = ocQ.eq('rubro', rubro)
+  if (!esTodas && sucursalId) ocQ = ocQ.eq('sucursal_compradora_id', sucursalId)
   let afQ = sb.from('avisos_faltante').select('id, estado, rubro').eq('estado', 'nuevo').limit(2000)
   if (rubro !== 'todos') afQ = afQ.eq('rubro', rubro)
+  if (!esTodas && sucursalId) afQ = afQ.eq('sucursal_id', sucursalId)
   let provQ = sb.from('proveedores').select('id, razon_social, rubros, score_actual, es_drogueria').eq('activo', true).order('razon_social').limit(500)
 
   const [{ data: ocs }, { data: avisos }, { data: provs }] = await Promise.all([ocQ, afQ, provQ])

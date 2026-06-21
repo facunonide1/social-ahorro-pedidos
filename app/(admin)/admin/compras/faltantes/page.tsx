@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { RubroFilter } from '@/components/compras/rubro-filter'
 import { parseRubro } from '@/components/compras/rubro'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { FaltantesClient, type FaltanteGrupo, type ProductoLite, type SucLite } from './faltantes-client'
 
 export const dynamic = 'force-dynamic'
@@ -12,11 +13,13 @@ export default async function FaltantesPage({ searchParams }: { searchParams: { 
   const profile = await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'sucursal', 'auditor'] })
   const sb = createClient()
   const rubro = parseRubro(searchParams.rubro)
+  const { sucursalId, esTodas } = getSucursalActiva()
 
   let q = sb.from('avisos_faltante')
     .select('id, producto_id, texto_libre, rubro, sucursal_id, cantidad_sugerida, estado, created_at, productos_catalogo(nombre, sku), sucursales(nombre)')
     .in('estado', ['nuevo', 'en_orden']).order('created_at', { ascending: false }).limit(1000)
   if (rubro !== 'todos') q = q.eq('rubro', rubro)
+  if (!esTodas && sucursalId) q = q.eq('sucursal_id', sucursalId)
 
   const [{ data: avisos }, { data: prods }, { data: sucs }] = await Promise.all([
     q,

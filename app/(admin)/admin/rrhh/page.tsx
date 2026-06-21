@@ -2,6 +2,7 @@ import { Users, UserX, Building2, Trophy, CalendarDays } from 'lucide-react'
 
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { SectorDashboard, type SectorKpi, type SectorAcceso } from '@/components/dashboard/sector-dashboard'
 
 export const dynamic = 'force-dynamic'
@@ -10,10 +11,14 @@ export const metadata = { title: 'Equipo / RRHH' }
 export default async function RrhhDashboard() {
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'administrativo', 'auditor'] })
   const sb = createClient()
+  const { sucursalId, esTodas } = getSucursalActiva()
   const hoy = new Date().toISOString().slice(0, 10)
 
+  let activosQ = sb.from('empleados').select('id', { count: 'exact', head: true }).eq('activo', true)
+  if (!esTodas && sucursalId) activosQ = activosQ.eq('sucursal_id', sucursalId)
+
   const [{ count: activos }, { count: ausentes }, { count: sucs }] = await Promise.all([
-    sb.from('empleados').select('id', { count: 'exact', head: true }).eq('activo', true),
+    activosQ,
     sb.from('empleado_ausencias').select('id', { count: 'exact', head: true }).lte('fecha_desde', hoy).gte('fecha_hasta', hoy),
     sb.from('sucursales').select('id', { count: 'exact', head: true }).eq('activa', true),
   ])

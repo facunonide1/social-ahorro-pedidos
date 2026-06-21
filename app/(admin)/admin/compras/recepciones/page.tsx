@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { RubroFilter } from '@/components/compras/rubro-filter'
 import { parseRubro } from '@/components/compras/rubro'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { RecepcionesClient, type OrdenRecibible, type RecepRow } from './recepciones-client'
 
 export const dynamic = 'force-dynamic'
@@ -14,15 +15,19 @@ export default async function RecepcionesComprasPage({ searchParams }: { searchP
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'sucursal', 'auditor'] })
   const sb = createClient()
   const rubro = parseRubro(searchParams.rubro)
+  const { sucursalId, esTodas } = getSucursalActiva()
 
   let oq = sb.from('ordenes_compra').select('id, codigo, rubro, estado, sucursal_compradora_id, proveedores(razon_social)').in('estado', RECIBIBLES).order('created_at', { ascending: false }).limit(500)
   if (rubro !== 'todos') oq = oq.eq('rubro', rubro)
+  if (!esTodas && sucursalId) oq = oq.eq('sucursal_compradora_id', sucursalId)
+  let recepQ = sb.from('recepciones_mercaderia').select('id, numero_remito, fecha_recepcion, estado, orden_compra_id, ordenes_compra(codigo), sucursales(nombre)').not('orden_compra_id', 'is', null).order('fecha_recepcion', { ascending: false }).limit(200)
+  if (!esTodas && sucursalId) recepQ = recepQ.eq('sucursal_id', sucursalId)
 
   const [{ data: ords }, { data: items }, { data: sucs }, { data: receps }] = await Promise.all([
     oq,
     sb.from('orden_compra_items').select('orden_id, producto_id, descripcion, cantidad_total, costo_unitario, productos_catalogo(nombre, sku)').limit(5000),
     sb.from('sucursales').select('id, nombre'),
-    sb.from('recepciones_mercaderia').select('id, numero_remito, fecha_recepcion, estado, orden_compra_id, ordenes_compra(codigo), sucursales(nombre)').not('orden_compra_id', 'is', null).order('fecha_recepcion', { ascending: false }).limit(200),
+    recepQ,
   ])
 
   const sucMap = new Map(((sucs ?? []) as any[]).map((s) => [s.id, s.nombre]))

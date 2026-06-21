@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { RubroFilter } from '@/components/compras/rubro-filter'
 import { parseRubro } from '@/components/compras/rubro'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { OrdenesClient, type OrdenRow } from './ordenes-client'
 
 export const dynamic = 'force-dynamic'
@@ -12,11 +13,13 @@ export default async function OrdenesPage({ searchParams }: { searchParams: { ru
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'auditor'] })
   const sb = createClient()
   const rubro = parseRubro(searchParams.rubro)
+  const { sucursalId, esTodas } = getSucursalActiva()
 
   let q = sb.from('ordenes_compra')
     .select('id, codigo, rubro, estado, origen, total_estimado, condicion_pago, created_at, sucursal_compradora_id, proveedores(razon_social)')
     .order('created_at', { ascending: false }).limit(1000)
   if (rubro !== 'todos') q = q.eq('rubro', rubro)
+  if (!esTodas && sucursalId) q = q.eq('sucursal_compradora_id', sucursalId)
   const [{ data }, { data: sucs }] = await Promise.all([q, sb.from('sucursales').select('id, nombre')])
   const sucMap = new Map(((sucs ?? []) as any[]).map((s) => [s.id, s.nombre]))
 
