@@ -12,7 +12,29 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — FIX CAJA (arqueo manual) ✅ (v0.27-caja-arqueo)
+## 🟢 SESIÓN ACTUAL — FIX COMPRAS (recomendaciones) ✅ (v0.28-compras-recomendaciones)
+
+Compras recomienda QUÉ comprar usando las ventas reales por SKU (`ventas_diarias`
+del Centro de Datos) + el stock + ANT_1..6. Migr. 0063. Si no hay ventas cargadas,
+empty state claro (no inventa datos).
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 · Motor de rotación: función SQL `compras_rotacion(sucursal, dias)` (ventas_diarias ⋈ stock_items ⋈ catálogo, on-demand, respeta sucursal). `lib/compras/recomendaciones.ts`: velocidad (u/día), cobertura (días), clasificación (alta/media/baja/sin_venta), cantidad sugerida (cubrir N días), tendencia (mes_act vs ant_1), dinero dormido. `hayVentas=false` → empty state. | ✅ |
+| T2 · Recomendaciones `/admin/compras/recomendaciones`: tabs Qué comprar / Quiebres (≤3d o stock 0 con demanda) / Dinero dormido. Respeta selector de sucursal. Cantidad sugerida + "Armar orden" (precarga `?recom=` en nueva orden) por ítem o selección. Ítem en sidebar + card NORA en dashboard de Compras. | ✅ |
+| T3 · Dinero dormido: productos con stock sin venta en N días, plata inmovilizada, "Liquidar" → Ofertas, export Excel. NORA narra (card dashboard Compras + Mission Control compacto). Build verde, smoke (motor con ventas reales), docs, tag. | ✅ |
+
+> **Reglas compras-recom:** fuente = ventas_diarias (fina) + ventas_mensuales
+> (ANT). Sugerido = cubrir `dias` de venta menos stock. Urgente = cobertura ≤3d
+> o stock 0 con demanda. Sin ventas → empty state que linkea a Centro de Datos.
+> **Follow-ups:** cron nightly opcional para cachear en `producto_rotacion` (hoy
+> on-demand, siempre fresco); distribución por sucursal en "Armar orden" cuando
+> el scope es Todas (hoy precarga sin distribución); demo de ventas para ver
+> recomendaciones vivas.
+
+---
+
+## 🟢 SESIÓN PREVIA — FIX CAJA (arqueo manual) ✅ (v0.27-caja-arqueo)
 
 La caja pasa a **declarativa manual**: el cajero abre turno y al cerrar carga el
 arqueo de SIFACO (efectivo/MP/tarjetas), sube la captura y cuadra en $0. El

@@ -9,6 +9,7 @@ import { KpiCard } from '@/components/cards/kpi-card'
 import { NoraCard } from '@/components/nora/nora-card'
 import { RubroFilter } from '@/components/compras/rubro-filter'
 import { parseRubro } from '@/components/compras/rubro'
+import { RecomendacionesComprasCard } from '@/components/compras/recomendaciones-card'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { cn } from '@/lib/utils'
 
@@ -59,6 +60,8 @@ export default async function ComprasTablero({ searchParams }: { searchParams: {
             ? <p>Hay <b>{faltantes}</b> faltantes reportados por las sucursales{rubro !== 'todos' ? ` en ${rubro}` : ''}. Cruzalos con el análisis de reposición de Operaciones y armá las órdenes. <Link href="/admin/compras/faltantes" className="text-primary hover:underline">Ver faltantes →</Link></p>
             : <p>Sin faltantes pendientes. Revisá la sugerencia de reposición de Operaciones para adelantarte a los quiebres.</p>}
         </NoraCard>
+
+        <RecomendacionesComprasCard sucursalId={sucursalId} esTodas={esTodas} />
 
         <section>
           <h2 className="mb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Accesos rápidos</h2>

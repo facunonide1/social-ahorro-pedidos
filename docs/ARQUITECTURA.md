@@ -213,6 +213,16 @@ Permisos: `lib/types/permisos.ts` (módulos × acciones, presets, `permisosEfect
 > (CRUD+aprobar+confirmar+proponer). NORA tools: ofertas_activas, oferta_para_cliente
 > (asistente de mostrador), estado_lectura_oferta. Ver `docs/PLAN-MAESTRO.md`.
 
+> **Compras · recomendaciones (v0.28):** "Qué comprar" en
+> `/admin/compras/recomendaciones` usa las ventas reales por SKU
+> (`ventas_diarias`) vía la función SQL `compras_rotacion(sucursal, dias)` (migr.
+> 0063, on-demand, respeta sucursal). Lógica en `lib/compras/recomendaciones.ts`:
+> velocidad/cobertura/clasificación/sugerido/tendencia/dinero-dormido;
+> `hayVentas=false` → empty state (no inventa). Card NORA reutilizable
+> `components/compras/recomendaciones-card.tsx` en el dashboard de Compras y
+> Mission Control. "Armar orden" precarga `/admin/compras/ordenes/nueva?recom=`.
+> Ver `docs/PLAN-MAESTRO.md`.
+
 > **Compras (v0.10):** sector en `app/(admin)/admin/compras/*` con filtro de rubro
 > transversal (`components/compras/rubro-filter.tsx`, vive en `?rubro`). Tablas:
 > `ordenes_compra`(+`orden_compra_items` con `distribucion` jsonb), `avisos_faltante`,

@@ -268,6 +268,7 @@ export const NAVEGACION: NavGrupo[] = [
     rolesPermitidos: ROLES_COMPRAS,
     items: [
       { label: 'Tablero',                href: '/admin/compras',               icon: 'LayoutGrid' },
+      { label: 'Qué comprar',            href: '/admin/compras/recomendaciones', icon: 'Sparkles' },
       { label: 'Avisos de faltantes',    href: '/admin/compras/faltantes',     icon: 'AlertTriangle', badge: 'faltantesPendientes' },
       { label: 'Órdenes de compra',      href: '/admin/compras/ordenes',       icon: 'ShoppingCart' },
       { label: 'Comparador de precios',  href: '/admin/compras/comparador',    icon: 'Scale' },

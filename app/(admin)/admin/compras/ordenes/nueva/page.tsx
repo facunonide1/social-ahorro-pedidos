@@ -6,7 +6,7 @@ import { NuevaOrdenForm, type ProvLite, type SucLite, type ProdLite, type ItemIn
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Nueva orden de compra' }
 
-export default async function NuevaOrdenPage({ searchParams }: { searchParams: { avisos?: string } }) {
+export default async function NuevaOrdenPage({ searchParams }: { searchParams: { avisos?: string; recom?: string; suc?: string } }) {
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador'] })
   const sb = createClient()
 
@@ -40,6 +40,25 @@ export default async function NuevaOrdenPage({ searchParams }: { searchParams: {
       }
     }
     iniciales = [...map.values()]
+  }
+
+  // Precarga desde recomendaciones de compra (?recom=productoId-qty,…  &suc=sucursalId)
+  const recomPairs = (searchParams.recom ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+  if (recomPairs.length) {
+    const ids = recomPairs.map((p) => p.split('-')[0])
+    const { data: prodsRecom } = await sb.from('productos_catalogo')
+      .select('id, sku, nombre, precio_costo_promedio').in('id', ids)
+    const pmap = new Map(((prodsRecom ?? []) as any[]).map((p) => [p.id, p]))
+    const sucDest = searchParams.suc ?? null
+    for (const pair of recomPairs) {
+      const [pid, qtyStr] = pair.split('-')
+      const p = pmap.get(pid); if (!p) continue
+      const qty = Number(qtyStr) || 0
+      iniciales.push({
+        producto_id: p.id, nombre: p.nombre, sku: p.sku, costo: Number(p.precio_costo_promedio ?? 0),
+        distribucion: sucDest ? { [sucDest]: qty } : {}, avisoIds: [],
+      })
+    }
   }
 
   return (
