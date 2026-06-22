@@ -12,7 +12,40 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — FIX COMPRAS (recomendaciones) ✅ (v0.28-compras-recomendaciones)
+## 🟢 SESIÓN ACTUAL — CRM / CLIENTES ✅ (v0.29-crm-clientes)
+
+CRM unificado B2C+B2B y accionable: ficha 360, segmentos, comunicación masiva
+multicanal, automatizaciones y motor de puntos. NO toca la cuponera (Supabase
+compartido) ni el CRM de pedidos: las lee y, para push/puntos, escribe en su
+formato. Migr. 0064.
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 · Schema: `clientes` (maestro 5 fuentes) + cliente_fuentes/compras + dedup_pendientes + segmentos + campanias_crm/envios + automatizaciones + puntos_reglas/movimientos + b2b_cuenta_corriente/pedidos_recurrentes. Enums + RLS (super/gerente/marketing/administrativo). `lib/types/crm.ts`. | ✅ |
+| T2 · Clientes: dashboard CRM (KPIs activos/riesgo/nuevos/campañas), lista unificada (filtros tipo/nivel/churn/fuente + export + "Sincronizar fuentes"), ficha 360 B2C/B2B, resolución de duplicados (fusionar/separar). `lib/crm/{unificar,segmentos,gate}.ts`. Dedup por DNI→tel→email. | ✅ |
+| T3 · Segmentos: 4 automáticos de NORA (riesgo/VIP/crónicos/cumpleaños) con conteo en vivo + constructor manual con reglas combinables y preview. | ✅ |
+| T4 · Comunicación ⭐: campañas multicanal. NORA redacta (IA o plantillas; otra versión/más corto; email HTML identidad). Push→`notifications` (Club, GRATIS), Email→Resend (sin key=encolado), WhatsApp→SIEMPRE encolado (F19). Métricas + export. | ✅ |
+| T5 · Automatizaciones ⭐: cumpleaños/inactividad/recompra-crónicos (banda anti-spam) activables. Cron diario `correr-automatizaciones`. | ✅ |
+| T6 · Puntos: reglas en HQ (compra ratio / ticket+50 / reseña+30) + niveles; `sumarPuntos` sincroniza con cuponera (point_transactions/user_points); enganchado al OCR de tickets. Movimientos + export. | ✅ |
+| T7 · B2B preparado: alta mayorista/institución (CUIT/límite) + cta cte + recurrentes; conecta Finanzas/Ofertas. | ✅ |
+| T8 · NORA tools (buscar_cliente/perfil_cliente/clientes_en_riesgo) + card Mission Control + demo (80 clientes 5 fuentes, 3 dedup, 4 segmentos, 2 campañas, 3 automatizaciones, B2B geriátrico) + docs + tag. | ✅ |
+
+> **Reglas CRM:** NO romper la cuponera (leer/escribir en su formato: push=
+> `notifications`, puntos=`point_transactions`/`user_points`); NO tocar
+> users_pedidos/orders ni roles del CRM de pedidos; dedup DNI→tel→email; WhatsApp
+> encolado hasta F19; permiso fino módulo `clientes`.
+> **Integraciones a conectar (keys):** `RESEND_API_KEY`+`EMAIL_FROM` (email
+> marketing real; sin ellas encola), `WOOCOMMERCE_URL`/`CONSUMER_KEY`/`SECRET`
+> (importar clientes/compras web), WhatsApp Business API (F19, hoy encola),
+> `ANTHROPIC_API_KEY` (NORA redacta con IA; sin ella usa plantillas). SIFACO:
+> clientes por el Centro de Datos (perfil "Clientes SIFACO", match DNI).
+> **Follow-ups CRM:** atribución de campañas cruzando ventas (hoy métricas demo);
+> WooCommerce import de clientes/compras (adapter listo en lib/woo); auditor
+> nocturno `cliente_vip_sin_compra_60d`. Demo borrable con el botón / `where es_demo`.
+
+---
+
+## 🟢 SESIÓN PREVIA — FIX COMPRAS (recomendaciones) ✅ (v0.28-compras-recomendaciones)
 
 Compras recomienda QUÉ comprar usando las ventas reales por SKU (`ventas_diarias`
 del Centro de Datos) + el stock + ANT_1..6. Migr. 0063. Si no hay ventas cargadas,

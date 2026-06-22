@@ -10,6 +10,7 @@ import { KpiCard } from '@/components/cards/kpi-card'
 import { NoraCard } from '@/components/nora/nora-card'
 import type { Cliente } from '@/lib/types/crm'
 import { ClientesListClient, type ClienteRow } from './clientes-list-client'
+import { CrmDemoButton } from './demo-button'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Clientes · CRM' }
@@ -56,7 +57,7 @@ export default async function ClientesCrmPage() {
     <>
       <PageHeader title="Clientes" description="CRM unificado B2C + B2B. Una ficha por persona, de todas las fuentes."
         breadcrumbs={[{ label: 'Comercial' }, { label: 'Clientes' }]}
-        actions={<AccesoCentroDatos accion={{ tipo: 'importar-clientes' }} />} />
+        actions={<div className="flex gap-2"><CrmDemoButton /><AccesoCentroDatos accion={{ tipo: 'importar-clientes' }} /></div>} />
 
       <div className="space-y-5 p-4 md:p-6">
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">

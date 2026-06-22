@@ -234,6 +234,22 @@ Permisos: `lib/types/permisos.ts` (módulos × acciones, presets, `permisosEfect
 > automáticas + factura borrador + score. Comparador + smart split leen
 > `listas_precios_items` vigentes por rubro. Ver `docs/PLAN-MAESTRO.md`.
 
+> **CRM / Clientes unificado (v0.29):** maestro `clientes` (B2C+B2B) en
+> `app/(admin)/admin/clientes/*` (grupo Clientes/CRM). Unifica 5 fuentes
+> (cuponera `users`/`user_points`, pedidos `customers`, tickets
+> `tickets_validacion`, web/WooCommerce, SIFACO vía Centro de Datos) con dedup
+> DNI→tel→email (`lib/crm/unificar.ts`). Tablas (migr. 0064): clientes,
+> cliente_fuentes/compras, dedup_pendientes, segmentos, campanias_crm/envios,
+> automatizaciones, puntos_reglas/movimientos, b2b_*. **NO rompe la cuponera**:
+> push = insert en `notifications`; puntos = `point_transactions`+`user_points`
+> (`lib/crm/puntos.ts`). Segmentos `lib/crm/segmentos.ts` (auto + reglas).
+> Campañas: NORA redacta `lib/crm/nora-redactar.ts` (IA/plantillas), canales
+> `lib/crm/canales.ts` (push/email Resend/whatsapp encolado F19). Automatizaciones
+> `lib/crm/automatizaciones.ts` + cron `correr-automatizaciones`. Gate fino módulo
+> `clientes` (`lib/crm/gate.ts`). NORA tools: buscar_cliente, perfil_cliente,
+> clientes_en_riesgo. Card MC `components/crm/clientes-mc-card.tsx`. APIs
+> `app/api/crm/*`. Ver `docs/PLAN-MAESTRO.md`.
+
 > **Caja · arqueo manual (v0.27):** la caja es **declarativa manual**. Apertura
 > por turno (`caja_turnos`, ya existía). Cierre = **arqueo** (`arqueos_caja`, migr.
 > 0062): el cajero carga efectivo/MP/tarjetas de SIFACO (`total_declarado`

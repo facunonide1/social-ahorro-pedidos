@@ -1083,7 +1083,54 @@ const itemsSinMatch: ToolDef = {
   },
 }
 
+/* ---------- CRM / Clientes ---------- */
+
+const buscarCliente: ToolDef = {
+  definition: {
+    name: 'buscar_cliente',
+    description: 'Busca clientes del CRM por nombre, DNI, teléfono o email. Devuelve los que matchean con su nivel, gasto y riesgo de churn.',
+    input_schema: { type: 'object', properties: { q: { type: 'string', description: 'texto a buscar' } }, required: ['q'] },
+  },
+  execute: async (sb, input) => {
+    const q = String(input.q ?? '').trim()
+    if (q.length < 2) return { error: 'búsqueda muy corta' }
+    const { data } = await sb.from('clientes').select('id, nombre, dni, telefono, email, nivel, total_gastado_12m, riesgo_churn, ultima_compra, tipo')
+      .or(`nombre.ilike.%${q}%,dni.ilike.%${q}%,telefono.ilike.%${q}%,email.ilike.%${q}%`).eq('activo', true).limit(10)
+    return { clientes: (data ?? []).map((c: any) => ({ id: c.id, nombre: c.nombre, tipo: c.tipo, nivel: c.nivel, gastado_12m: Number(c.total_gastado_12m), riesgo: c.riesgo_churn, ultima_compra: c.ultima_compra })) }
+  },
+}
+
+const perfilCliente: ToolDef = {
+  definition: {
+    name: 'perfil_cliente',
+    description: 'Ficha 360 de un cliente del CRM por id: datos, nivel, puntos, gasto, riesgo, fuentes y últimas compras.',
+    input_schema: { type: 'object', properties: { cliente_id: { type: 'string' } }, required: ['cliente_id'] },
+  },
+  execute: async (sb, input) => {
+    const { data: c } = await sb.from('clientes').select('*').eq('id', input.cliente_id).maybeSingle()
+    if (!c) return { error: 'cliente no encontrado' }
+    const { data: compras } = await sb.from('cliente_compras').select('fecha, monto, canal').eq('cliente_id', c.id).order('fecha', { ascending: false }).limit(5)
+    return { nombre: c.nombre, tipo: c.tipo, nivel: c.nivel, puntos: c.puntos, gastado_12m: Number(c.total_gastado_12m), compras_12m: c.n_compras_12m, riesgo: c.riesgo_churn, ultima_compra: c.ultima_compra, fuentes: c.fuentes, ultimas_compras: compras ?? [] }
+  },
+}
+
+const clientesEnRiesgo: ToolDef = {
+  definition: {
+    name: 'clientes_en_riesgo',
+    description: 'Lista los clientes con riesgo de churn medio/alto (antes compraban y dejaron de venir), ordenados por valor. Útil para campañas de reactivación.',
+    input_schema: { type: 'object', properties: { limite: { type: 'number' } } },
+  },
+  execute: async (sb, input) => {
+    const { data } = await sb.from('clientes').select('id, nombre, total_gastado_12m, riesgo_churn, ultima_compra')
+      .eq('activo', true).neq('riesgo_churn', 'bajo').order('total_gastado_12m', { ascending: false }).limit(input.limite ?? 15)
+    return { en_riesgo: (data ?? []).map((c: any) => ({ id: c.id, nombre: c.nombre, gastado_12m: Number(c.total_gastado_12m), riesgo: c.riesgo_churn, ultima_compra: c.ultima_compra })) }
+  },
+}
+
 export const AI_TOOLS: Record<string, ToolDef> = {
+  buscar_cliente: buscarCliente,
+  perfil_cliente: perfilCliente,
+  clientes_en_riesgo: clientesEnRiesgo,
   centro_datos_estado: centroDatosEstado,
   ventas_dia: ventasDia,
   items_sin_match: itemsSinMatch,
@@ -1117,6 +1164,9 @@ export const AI_TOOL_DEFINITIONS: Anthropic.Tool[] = Object.values(AI_TOOLS).map
 
 /** Etiquetas legibles para mostrar en la UI ("Consultando…"). */
 export const TOOL_LABELS: Record<string, string> = {
+  buscar_cliente: 'Buscando el cliente',
+  perfil_cliente: 'Abriendo la ficha del cliente',
+  clientes_en_riesgo: 'Buscando clientes en riesgo',
   centro_datos_estado: 'Mirando el Centro de Datos',
   ventas_dia: 'Calculando las ventas del día',
   items_sin_match: 'Revisando la cola sin matchear',

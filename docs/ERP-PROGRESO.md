@@ -1,8 +1,18 @@
 # ERP Social Ahorro · Progreso autónomo
 
-**Última actualización:** 2026-06-18
+**Última actualización:** 2026-06-22
 **Rama productiva:** `main`
-**Último hito:** Selector de sucursal global (tag `v0.24-selector-sucursal-global`)
+**Último hito:** CRM unificado B2C+B2B (tag `v0.29-crm-clientes`)
+
+> **CRM / Clientes (v0.29)** ✅: maestro `clientes` unificado de 5 fuentes (cuponera/
+> pedidos/tickets/web/SIFACO) con dedup DNI→tel→email, sin romper la cuponera
+> (push=`notifications`, puntos=`point_transactions`/`user_points`). Ficha 360,
+> segmentos auto+manual, campañas multicanal (NORA redacta; push/email/whatsapp
+> encolado F19), automatizaciones (cron) y motor de puntos. B2B preparado. Migr.
+> 0064. Demo es_demo (80 clientes). Próximo sugerido: RRHH o Sucursales.
+
+> _(hitos previos v0.25–v0.28: Centro de Datos, Usuarios/Permisos, Caja arqueo,
+> Compras recomendaciones — ver `docs/PLAN-MAESTRO.md`.)_
 
 > **Selector de sucursal global (v0.24)** ✅: selector en el header que filtra TODO
 > el sistema (Todas = consolidado o una sucursal). Puente cookie sa_sucursal +

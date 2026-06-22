@@ -127,5 +127,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 
+  // Suma puntos al cliente del CRM por cargar el ticket (best-effort, no rompe el flujo).
+  if (ticket && clienteDni) {
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const { sumarPuntos } = await import('@/lib/crm/puntos')
+      const adm = createAdminClient()
+      const { data: cli } = await adm.from('clientes').select('id').eq('dni', clienteDni).eq('activo', true).maybeSingle()
+      if (cli) await sumarPuntos(adm, cli.id, 'cargar_ticket', { referenciaTipo: 'ticket', referenciaId: ticket.id })
+    } catch { /* no bloquear la carga del ticket */ }
+  }
+
   return NextResponse.json({ ok: true, duplicado: false, ticket, ocr })
 }
