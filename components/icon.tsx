@@ -96,6 +96,7 @@ import {
   Layers,
   History,
   AlertCircle,
+  Coins,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -194,6 +195,7 @@ const REGISTRY: Record<string, LucideIcon> = {
   Layers,
   History,
   AlertCircle,
+  Coins,
 }
 
 /**

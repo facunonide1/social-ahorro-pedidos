@@ -308,10 +308,15 @@ export const NAVEGACION: NavGrupo[] = [
     ],
   },
   {
-    grupo: 'Clientes',
+    grupo: 'Clientes / CRM',
     items: [
-      { label: 'Clientes B2B (legacy)', href: '/admin/clientes',   icon: 'Users' },
-      { label: 'Validación tickets',    href: '/admin/ia/tickets', icon: 'Ticket' },
+      { label: 'Clientes',          href: '/admin/clientes',                  icon: 'Users' },
+      { label: 'Segmentos',         href: '/admin/clientes/segmentos',        icon: 'PieChart' },
+      { label: 'Comunicación',      href: '/admin/clientes/comunicacion',     icon: 'Megaphone' },
+      { label: 'Automatizaciones',  href: '/admin/clientes/automatizaciones', icon: 'Repeat' },
+      { label: 'Puntos',            href: '/admin/clientes/puntos',           icon: 'Coins' },
+      { label: 'B2B',               href: '/admin/clientes/b2b',              icon: 'Building2' },
+      { label: 'Validación tickets', href: '/admin/ia/tickets',               icon: 'Ticket' },
     ],
   },
   {

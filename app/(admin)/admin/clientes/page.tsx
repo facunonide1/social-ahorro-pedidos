@@ -1,190 +1,92 @@
 import Link from 'next/link'
-import { ArrowRight, Plus, Users } from 'lucide-react'
+import { Users, AlertTriangle, UserPlus, Megaphone, ArrowRight, PieChart, Repeat, Coins, Building2, Copy } from 'lucide-react'
 
-import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
-import {
-  SEGMENTO_CLIENTE_LABELS,
-  TIPO_CLIENTE_CRM_LABELS,
-  type ClienteCrm,
-  type SegmentoCliente,
-} from '@/lib/types/admin'
-
+import { createClient } from '@/lib/supabase/server'
+import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { AccesoCentroDatos } from '@/components/centro-datos/acceso-centro-datos'
 import { KpiCard } from '@/components/cards/kpi-card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import { NoraCard } from '@/components/nora/nora-card'
+import type { Cliente } from '@/lib/types/crm'
+import { ClientesListClient, type ClienteRow } from './clientes-list-client'
 
 export const dynamic = 'force-dynamic'
+export const metadata = { title: 'Clientes · CRM' }
 
-const SEGMENTO_VARIANT: Record<
-  SegmentoCliente,
-  'secondary' | 'success' | 'warning' | 'destructive' | 'info'
-> = {
-  nuevo: 'info',
-  activo: 'success',
-  en_riesgo: 'warning',
-  dormido: 'destructive',
-  vip: 'secondary',
-}
+const ACCESOS = [
+  { l: 'Segmentos', h: '/admin/clientes/segmentos', i: PieChart },
+  { l: 'Comunicación', h: '/admin/clientes/comunicacion', i: Megaphone },
+  { l: 'Automatizaciones', h: '/admin/clientes/automatizaciones', i: Repeat },
+  { l: 'Puntos', h: '/admin/clientes/puntos', i: Coins },
+  { l: 'B2B', h: '/admin/clientes/b2b', i: Building2 },
+  { l: 'Duplicados', h: '/admin/clientes/duplicados', i: Copy },
+]
 
 export default async function ClientesCrmPage() {
-  const profile = await requireAdminHubAccess()
+  const profile = await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'marketing', 'administrativo', 'auditor'] })
   const sb = createClient()
+  const { sucursalId, esTodas } = getSucursalActiva()
 
-  const { data, error } = await sb
-    .from('clientes_crm')
-    .select('*')
-    .order('activo', { ascending: false })
-    .order('razon_social', { ascending: true })
+  let q = sb.from('clientes').select('*').eq('activo', true).order('total_gastado_12m', { ascending: false }).limit(3000)
+  if (!esTodas && sucursalId) q = q.eq('sucursal_habitual_id', sucursalId)
 
-  const clientes = (data ?? []) as ClienteCrm[]
-  const canCreate = ['super_admin', 'gerente', 'administrativo'].includes(
-    profile.rol,
-  )
+  const inicioMes = new Date().toISOString().slice(0, 7) + '-01'
+  const [{ data: clientesData }, { data: sucs }, { count: campActivas }, { count: dedupPend }] = await Promise.all([
+    q,
+    sb.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
+    sb.from('campanias_crm').select('id', { count: 'exact', head: true }).in('estado', ['programada', 'enviada']),
+    sb.from('dedup_pendientes').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente'),
+  ])
 
-  const activos = clientes.filter((c) => c.activo)
-  const vip = activos.filter((c) => c.segmento === 'vip').length
-  const enRiesgo = activos.filter(
-    (c) => c.segmento === 'en_riesgo' || c.segmento === 'dormido',
-  ).length
-  const ltvTotal = activos.reduce((a, c) => a + Number(c.ltv || 0), 0)
+  const clientes = (clientesData ?? []) as Cliente[]
+  const sucMap = new Map(((sucs ?? []) as any[]).map((s) => [s.id, s.nombre]))
+  const activos = clientes.length
+  const enRiesgo = clientes.filter((c) => c.riesgo_churn !== 'bajo').length
+  const nuevosMes = clientes.filter((c) => c.created_at >= inicioMes).length
+
+  const rows: ClienteRow[] = clientes.map((c) => ({
+    id: c.id, nombre: c.nombre, tipo: c.tipo, dni: c.dni, telefono: c.telefono, email: c.email,
+    nivel: c.nivel, riesgo: c.riesgo_churn, gastado: Number(c.total_gastado_12m),
+    ultima_compra: c.ultima_compra, fuentes: c.fuentes ?? [],
+    sucursal: c.sucursal_habitual_id ? sucMap.get(c.sucursal_habitual_id) ?? null : null,
+  }))
 
   return (
     <>
-      <PageHeader
-        title="Clientes B2B"
-        description={`${clientes.length} cliente${clientes.length === 1 ? '' : 's'} en el CRM`}
+      <PageHeader title="Clientes" description="CRM unificado B2C + B2B. Una ficha por persona, de todas las fuentes."
         breadcrumbs={[{ label: 'Comercial' }, { label: 'Clientes' }]}
-        actions={
-          <div className="flex gap-2">
-            <AccesoCentroDatos accion={{ tipo: 'importar-clientes' }} />
-            {canCreate && (
-              <Button asChild>
-                <Link href="/admin/clientes/nuevo">
-                  <Plus className="size-4" />
-                  Nuevo cliente
-                </Link>
-              </Button>
-            )}
-          </div>
-        }
-      />
+        actions={<AccesoCentroDatos accion={{ tipo: 'importar-clientes' }} />} />
 
-      <div className="space-y-4 p-4 md:p-6">
-        <Alert>
-          <AlertDescription className="text-xs">
-            Módulo legacy: el <b>Clientes B2B</b> actual se reemplazará por el CRM
-            unificado. Por ahora sus datos se conservan; no construir encima sin
-            coordinar la migración al CRM.
-          </AlertDescription>
-        </Alert>
+      <div className="space-y-5 p-4 md:p-6">
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <KpiCard label="Clientes activos" value={activos} icon={Users} />
+          <KpiCard label="En riesgo de churn" value={enRiesgo} icon={AlertTriangle} variant={enRiesgo > 0 ? 'warning' : 'default'} href="/admin/clientes/segmentos" />
+          <KpiCard label="Nuevos del mes" value={nuevosMes} icon={UserPlus} variant="success" />
+          <KpiCard label="Campañas activas" value={campActivas ?? 0} icon={Megaphone} href="/admin/clientes/comunicacion" />
+        </section>
 
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>
-              {error.message}
-              {error.message.includes('does not exist') && (
-                <div className="mt-1 text-xs">
-                  Aplicá la migración <code>0029_clientes_crm.sql</code>.
-                </div>
-              )}
-            </AlertDescription>
-          </Alert>
-        )}
+        <NoraCard contexto="clientes">
+          {activos === 0
+            ? <p>Todavía no hay clientes unificados. Sincronizá las fuentes (Club, pedidos, tickets) o cargá la demo para empezar.</p>
+            : <p>Tenés <b>{activos}</b> clientes{enRiesgo > 0 ? <>, <b className="text-amber-600">{enRiesgo} en riesgo</b> de dejar de comprar</> : ''}. Revisá los <Link href="/admin/clientes/segmentos" className="text-primary hover:underline">segmentos</Link> y armá una campaña.</p>}
+        </NoraCard>
 
-        {!error && (
-          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <KpiCard label="Clientes activos" value={activos.length} />
-            <KpiCard label="VIP" value={vip} variant="success" />
-            <KpiCard
-              label="En riesgo / dormidos"
-              value={enRiesgo}
-              variant={enRiesgo > 0 ? 'warning' : 'default'}
-            />
-            <KpiCard
-              label="LTV acumulado"
-              value={ltvTotal}
-              format="currency"
-            />
-          </section>
-        )}
+        {/* Accesos del sector */}
+        <section className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+          {ACCESOS.map((a) => {
+            const I = a.i
+            return (
+              <Link key={a.h} href={a.h} className="group flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card p-3 text-center transition-all hover:border-primary/40 hover:shadow-sm">
+                <I className="size-5 text-primary" />
+                <span className="text-xs font-medium">{a.l}</span>
+                {a.l === 'Duplicados' && (dedupPend ?? 0) > 0 && <span className="text-[10px] text-amber-600">{dedupPend} pendientes</span>}
+              </Link>
+            )
+          })}
+        </section>
 
-        {!error && clientes.length === 0 && (
-          <Card>
-            <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-              <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Users className="size-6" />
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Todavía no hay clientes B2B cargados.
-              </div>
-              {canCreate && (
-                <Button asChild variant="outline">
-                  <Link href="/admin/clientes/nuevo">
-                    <Plus className="size-4" />
-                    Cargar el primero
-                  </Link>
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {clientes.map((c) => (
-            <Link key={c.id} href={`/admin/clientes/${c.id}`} className="group">
-              <Card
-                className={cn(
-                  'h-full transition-colors hover:border-primary/40 hover:bg-accent/30',
-                  !c.activo && 'opacity-60',
-                )}
-              >
-                <CardContent className="space-y-3 p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold">
-                        {c.razon_social}
-                      </div>
-                      {c.nombre_fantasia && (
-                        <div className="truncate text-xs text-muted-foreground">
-                          {c.nombre_fantasia}
-                        </div>
-                      )}
-                    </div>
-                    <Badge
-                      variant={SEGMENTO_VARIANT[c.segmento]}
-                      className="shrink-0 text-[10px]"
-                    >
-                      {SEGMENTO_CLIENTE_LABELS[c.segmento]}
-                    </Badge>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                    <span>{TIPO_CLIENTE_CRM_LABELS[c.tipo_cliente]}</span>
-                    {c.cuit && <span>CUIT {c.cuit}</span>}
-                    {c.localidad && <span>{c.localidad}</span>}
-                  </div>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">
-                      LTV{' '}
-                      <span className="font-semibold text-foreground tabular-nums">
-                        $ {Number(c.ltv || 0).toLocaleString('es-AR')}
-                      </span>
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                      Ver
-                      <ArrowRight className="size-3" />
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+        <ClientesListClient rows={rows} sucursales={((sucs ?? []) as any[]).map((s) => ({ id: s.id, nombre: s.nombre }))} puedeCrear={['super_admin', 'gerente', 'marketing', 'administrativo'].includes(profile.rol)} />
       </div>
     </>
   )
