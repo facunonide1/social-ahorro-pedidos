@@ -117,6 +117,7 @@ async function getResumenGerencial(): Promise<ResumenGerencial> {
 export default async function MissionControlPage() {
   const profile = await requireAdminHubAccess()
   const esTransversal = ROLES_TRANSVERSALES.includes(profile.rol)
+  const { sucursalId, esTodas } = getSucursalActiva()
   const fecha = new Date().toLocaleDateString('es-AR', {
     weekday: 'long',
     day: 'numeric',
