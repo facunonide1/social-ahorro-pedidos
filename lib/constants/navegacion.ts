@@ -210,6 +210,8 @@ export const NAVEGACION: NavGrupo[] = [
     grupo: 'Mission Control',
     items: [
       { label: 'Mission Control', href: '/admin', icon: 'LayoutDashboard' },
+      { label: 'NORA', href: '/admin/nora', icon: 'Sparkles' },
+      { label: 'Feed de NORA', href: '/admin/nora/feed', icon: 'Bot', badge: 'noraAvisosPendientes' },
     ],
   },
   {
@@ -378,6 +380,7 @@ export function navegacionParaRol(rol: AdminRole | null): NavGrupo[] {
 export function moduloDeHref(href: string): PermisoModulo | null {
   if (href === '/admin') return 'mission_control'
   const reglas: [string, PermisoModulo][] = [
+    ['/admin/nora', 'mission_control'],
     ['/admin/comunicacion', 'comunicacion'],
     ['/admin/centro-datos', 'centro_datos'],
     ['/admin/finanzas/caja', 'caja'],
