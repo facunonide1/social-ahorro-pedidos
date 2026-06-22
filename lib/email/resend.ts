@@ -1,6 +1,34 @@
 import type { Order, OrderStatus } from '@/lib/types'
 import { formatOrderNumber } from '@/lib/orders/format'
 
+/** ¿Está configurado el servicio de email (Resend)? */
+export function hasEmailConfig(): boolean {
+  return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM)
+}
+
+/**
+ * Envío genérico de email (usado por las campañas del CRM). Si no hay
+ * RESEND_API_KEY/EMAIL_FROM, devuelve { ok:false, skipped } para que el caller
+ * lo deje encolado y avise "conectá el servicio de email en configuración".
+ */
+export async function sendEmail(
+  to: string, subject: string, opts: { html?: string; text?: string },
+): Promise<{ ok: boolean; skipped?: string; error?: string }> {
+  const apiKey = process.env.RESEND_API_KEY
+  const from = process.env.EMAIL_FROM
+  if (!apiKey || !from) return { ok: false, skipped: 'email_no_configurado' }
+  if (!to) return { ok: false, skipped: 'sin_email' }
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to: [to], subject, html: opts.html, text: opts.text }),
+    })
+    if (!res.ok) { const body = await res.text().catch(() => ''); return { ok: false, error: `resend_${res.status}: ${body.slice(0, 200)}` } }
+    return { ok: true }
+  } catch (e: any) { return { ok: false, error: e?.message ?? 'red' } }
+}
+
 /**
  * Plantillas de email por cambio de estado. No mandamos para todos
  * los estados: sólo los que el cliente quiere saber.
