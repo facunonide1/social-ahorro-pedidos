@@ -30,7 +30,16 @@ export default async function ImportarPage({ searchParams }: { searchParams: { p
     <>
       <PageHeader title="Importar" description="Subí los archivos que exporta SIFACO. NORA los lee, valida y aplica con rollback."
         breadcrumbs={[{ label: 'Centro de Datos', href: '/admin/centro-datos' }, { label: 'Importar' }]} />
-      <div className="p-4 md:p-6">
+      <div className="space-y-4 p-4 md:p-6">
+        <div className="rounded-lg border border-dashed border-border bg-muted/20 p-3">
+          <div className="text-sm font-medium">¿Querés practicar? Descargá un archivo de ejemplo estilo SIFACO</div>
+          <p className="mt-0.5 text-xs text-muted-foreground">Archivos ficticios con el formato real para probar el flujo de importación antes de usar los de SIFACO.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <a href="/api/centro-datos/archivo-ejemplo?tipo=productos" className="rounded-md border border-border bg-card px-3 py-1.5 text-xs hover:border-primary/40">⬇ productos_sifaco_demo.xls</a>
+            <a href="/api/centro-datos/archivo-ejemplo?tipo=ventas" className="rounded-md border border-border bg-card px-3 py-1.5 text-xs hover:border-primary/40">⬇ ventas_diarias_demo.csv</a>
+            <a href="/api/centro-datos/archivo-ejemplo?tipo=clientes" className="rounded-md border border-border bg-card px-3 py-1.5 text-xs hover:border-primary/40">⬇ clientes_demo.xls</a>
+          </div>
+        </div>
         <ImportarClient
           perfiles={(perfiles ?? []) as PerfilDatos[]}
           sucursales={(sucursales ?? []) as { id: string; nombre: string }[]}
