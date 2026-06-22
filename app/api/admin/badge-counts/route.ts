@@ -37,7 +37,9 @@ export async function GET() {
     ? sb.from('items_sin_match').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente')
     : Promise.resolve({ count: 0 } as any)
 
-  const [t, v, a, f, sm] = await Promise.all([misTareas, verif, aprob, faltantes, sinMatch])
+  const noraAvisos = sb.from('nora_avisos').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente')
+
+  const [t, v, a, f, sm, na] = await Promise.all([misTareas, verif, aprob, faltantes, sinMatch, noraAvisos])
 
   // mensajes no leídos en mis canales (aprox, acotado)
   let mensajesNoLeidos = 0
@@ -59,6 +61,7 @@ export async function GET() {
     aprobacionesPendientes: a.count ?? 0,
     faltantesPendientes: f.count ?? 0,
     sinMatchearPendientes: sm.count ?? 0,
+    noraAvisosPendientes: na.count ?? 0,
     mensajesNoLeidos,
   })
 }

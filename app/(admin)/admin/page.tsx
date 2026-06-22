@@ -8,6 +8,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { KpiCard } from '@/components/cards/kpi-card'
 
 import { CentroDatosMCCard } from '@/components/centro-datos/centro-datos-mc-card'
+import { NoraFeedCard } from '@/components/nora/nora-feed-card'
 import { RecomendacionesComprasCard } from '@/components/compras/recomendaciones-card'
 import { ClientesMCCard } from '@/components/crm/clientes-mc-card'
 import { NoraBriefingCard } from './nora-briefing-card'
@@ -238,6 +239,8 @@ export default async function MissionControlPage() {
       )}
 
       <QuickActions />
+
+      {esTransversal && <NoraFeedCard />}
 
       {esTransversal && <SucursalesLive />}
 
