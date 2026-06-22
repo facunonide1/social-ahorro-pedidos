@@ -19,7 +19,8 @@ returns jsonb language sql stable security definer set search_path = public as $
     'tareas', (select count(*) from tareas where es_demo)
   );
 $$;
-grant execute on function public.contar_demo() to authenticated;
+revoke execute on function public.contar_demo() from public;
+grant execute on function public.contar_demo() to service_role;
 
 create or replace function public.limpiar_demo()
 returns jsonb language plpgsql security definer set search_path = public as $$
@@ -49,4 +50,5 @@ begin
   get diagnostics n = row_count; total := total + n;
   return jsonb_build_object('borrados', total);
 end $$;
-grant execute on function public.limpiar_demo() to authenticated;
+revoke execute on function public.limpiar_demo() from public;
+grant execute on function public.limpiar_demo() to service_role;

@@ -270,11 +270,23 @@ Permisos: `lib/types/permisos.ts` (módulos × acciones, presets, `permisosEfect
 > depósito. `stock_sucursal` y `caja(s)_diaria(s)` son legacy (cajas_diarias
 > eliminada; stock_sucursal vacía, drop diferido). Ver `docs/MERGE-STOCK-CAJA.md`.
 
-### NORA (IA) — transversal
+### NORA (IA) — transversal · 3 capas (v0.30, ver `docs/NORA.md`)
 - Cliente: `lib/ai/client.ts` (`getAnthropic`, `hasAnthropicKey`), `config.ts`
   (`CHAT_MODEL`, `OCR_MODEL`, tokens).
-- Chat: `components/ai/ai-chat-dock.tsx` (escucha evento `window 'nora:open'`),
+- Chat: `components/ai/ai-chat-dock.tsx` (dock flotante global, evento
+  `window 'nora:open'`) + **chat central** `/admin/nora` (canvas + historial),
   `app/api/ai/chat`, tools en `lib/ai/tools.ts` (registry `AI_TOOLS`).
+- **Núcleo 3 capas:** `lib/ai/tool-meta.ts` (clasifica tools lectura/acción +
+  módulo de permiso), `lib/ai/nora.ts` (`registrarAccion`→`nora_acciones`,
+  `emitirAviso`→`nora_avisos`, `modoDeAccion`/`usuarioPermiteTool`). Tablas
+  migr. 0065: `nora_acciones` (auditoría "hace"), `nora_config` (confirmar/auto
+  por acción), `nora_avisos` (feed). Feed `/admin/nora/feed` + card MC
+  `components/nora/nora-feed-card.tsx` + badge `noraAvisosPendientes`.
+- **Auditor proactivo:** `lib/ai/auditor.ts` (`correrAuditor`) → cron
+  `nora-auditor` + botón "Revisar ahora" (`/api/nora/{auditar,feed}`).
+- **Demo:** `seed_demo_maestro()`/`limpiar_demo()`/`contar_demo()` (migr.
+  0066/0067, service_role-only) vía `/api/admin/demo-maestro`. Archivos SIFACO de
+  ejemplo: `/api/centro-datos/archivo-ejemplo`. Ver `docs/DEMO.md`.
 - Tareas IA: `lib/ai/verify-evidence.ts` (visión), `nora/parse-task`,
   `nora/verify-evidence`, `nora/employee-coaching/[id]`.
 - Prompts/personalidad: `lib/ai/prompts.ts`, `lib/nora/context.ts`.

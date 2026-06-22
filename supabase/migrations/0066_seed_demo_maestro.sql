@@ -129,4 +129,6 @@ begin
   return jsonb_build_object('productos', v_n_prod, 'ventas_diarias', v_n_vd, 'clientes', v_n_cli, 'arqueos', v_n_arq);
 end $$;
 
-grant execute on function public.seed_demo_maestro() to authenticated;
+-- Solo la API (service_role) puede sembrar; nunca un usuario autenticado por RPC.
+revoke execute on function public.seed_demo_maestro() from public;
+grant execute on function public.seed_demo_maestro() to service_role;

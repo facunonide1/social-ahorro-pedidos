@@ -12,7 +12,35 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — CRM / CLIENTES ✅ (v0.29-crm-clientes)
+## 🟢 SESIÓN ACTUAL — NORA TRANSVERSAL + DEMO + LIMPIEZA ✅ (v0.30-nora-demo)
+
+NORA como IA presente en todo el sistema (3 capas: explica/sugiere/hace) con chat
+central + auditor proactivo; datos demo coherentes en todos los sectores; archivos
+de ejemplo SIFACO; botón para limpiar el demo. Migr. 0065/0066/0067. Detalle:
+`docs/NORA.md` + `docs/DEMO.md`.
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 · Núcleo NORA: `nora_acciones` (auditoría capa "hace"), `nora_config` (qué hace sola vs confirma), `nora_avisos` (feed). `lib/ai/tool-meta.ts` (lectura/acción + módulo) y `lib/ai/nora.ts` (registrarAccion/emitirAvisar/modoDeAccion/usuarioPermiteTool). | ✅ |
+| T2 · Chat central `/admin/nora`: canvas completo reusando `/api/ai/chat` + historial; botón flotante global ya existía (dock). | ✅ |
+| T3 · 3 capas + feed: explica (NoraCards), sugiere (`/admin/nora/feed` aprobar/descartar/accionar), hace (acciones reversibles + registradas). | ✅ |
+| T4 · Auditor proactivo `lib/ai/auditor.ts`: caja descuadrada, VIP inactivo, quiebres, dormido, oferta por vencer, docs por pagar, ventas sin cargar → feed. Cron `nora-auditor` (07:00) + "Revisar ahora". Card MC + badge. | ✅ |
+| T5 · Seed maestro `seed_demo_maestro()`: 120 productos, stock 4 sucursales, 7.6k ventas (45d), 150 clientes, 48 arqueos (con descuadres), 3 ofertas. Enciende recomendaciones/dormido/caja/segmentos/auditor. | ✅ |
+| T6 · Archivos SIFACO de ejemplo (productos .xls 26col / ventas .csv / clientes .xls) descargables en Centro de Datos → Importar. | ✅ |
+| T7 · Cargar/Limpiar demo en Configuración: `limpiar_demo()` borra SOLO es_demo + DEMO- (FK-safe), CONFIRMAR + conteo, solo super_admin. | ✅ |
+| T8 · Build verde, verificación de seguridad (limpiar deja lo real intacto), execute revocado de PUBLIC, docs, tag. | ✅ |
+
+> **Reglas NORA/demo:** NORA "hace" solo acciones reversibles y registradas, por
+> defecto con confirmación (soltar de a poco vía `nora_config`); respeta permisos
+> del usuario. "Limpiar demo" SOLO toca `es_demo`/`DEMO-` (verificado con
+> centinelas reales). Las funciones del demo son service_role-only.
+> **Follow-ups:** habilitar acciones en modo `auto` cuando el dueño confíe; sumar
+> más tools de acción (generar CSV SIFACO directo, borrador de orden); `nora_avisos`
+> demo se limpian con el resto.
+
+---
+
+## 🟢 SESIÓN PREVIA — CRM / CLIENTES ✅ (v0.29-crm-clientes)
 
 CRM unificado B2C+B2B y accionable: ficha 360, segmentos, comunicación masiva
 multicanal, automatizaciones y motor de puntos. NO toca la cuponera (Supabase
