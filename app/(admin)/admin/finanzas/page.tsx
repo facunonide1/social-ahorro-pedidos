@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { formatARS } from '@/lib/utils/format'
 import { PageHeader } from '@/components/shared/page-header'
+import { AccionesSector } from '@/components/shared/acciones-sector'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { NoraCard } from '@/components/nora/nora-card'
 import { Button } from '@/components/ui/button'
@@ -56,6 +57,7 @@ export default async function FinanzasTableroPage() {
       <PageHeader title="Finanzas" description="Tablero de cuentas por pagar y tesorería."
         breadcrumbs={[{ label: 'Finanzas' }]} />
       <div className="space-y-5 p-4 md:p-6">
+        <AccionesSector sector="finanzas" />
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard label="Deuda a proveedores" value={deuda} format="currency" icon={FileText} href="/admin/finanzas/documentos" />
           <KpiCard label="Vencido sin pagar" value={vencido} format="currency" icon={AlertTriangle} variant={vencido > 0 ? 'danger' : 'default'} href="/admin/finanzas/documentos" />

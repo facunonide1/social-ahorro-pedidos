@@ -5,6 +5,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { formatARS } from '@/lib/utils/format'
 import { PageHeader } from '@/components/shared/page-header'
+import { AccionesSector } from '@/components/shared/acciones-sector'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { NoraCard } from '@/components/nora/nora-card'
 import { RubroFilter } from '@/components/compras/rubro-filter'
@@ -46,6 +47,7 @@ export default async function ComprasTablero({ searchParams }: { searchParams: {
       <PageHeader title="Compras" description="Sistema de compras multisucursal conectado a stock, ventas y finanzas."
         breadcrumbs={[{ label: 'Compras' }]} />
       <div className="space-y-5 p-4 md:p-6">
+        <AccionesSector sector="compras" />
         <RubroFilter />
 
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">

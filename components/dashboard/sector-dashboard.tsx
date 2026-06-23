@@ -38,6 +38,7 @@ export function SectorDashboard({
   kpis,
   nora,
   accesos,
+  acciones,
   children,
 }: {
   title: string
@@ -46,12 +47,14 @@ export function SectorDashboard({
   kpis: SectorKpi[]
   nora?: React.ReactNode
   accesos: SectorAcceso[]
+  acciones?: React.ReactNode
   children?: React.ReactNode
 }) {
   return (
     <>
       <PageHeader title={title} description={descripcion} breadcrumbs={breadcrumbs} />
       <div className="space-y-5 p-4 md:p-6">
+        {acciones}
         {kpis.length > 0 && (
           <section aria-label="Indicadores del sector" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {kpis.map((k, i) => (

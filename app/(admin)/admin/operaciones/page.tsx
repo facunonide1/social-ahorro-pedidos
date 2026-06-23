@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { formatARS } from '@/lib/utils/format'
 import { SectorDashboard, type SectorKpi, type SectorAcceso } from '@/components/dashboard/sector-dashboard'
+import { AccionesSector } from '@/components/shared/acciones-sector'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Operaciones' }
@@ -66,6 +67,7 @@ export default async function OperacionesDashboard() {
       kpis={kpis}
       nora={nora}
       accesos={accesos}
+      acciones={<AccionesSector sector="operacion" />}
     />
   )
 }

@@ -4,6 +4,7 @@ import { Tag, Clock, CheckSquare, TrendingUp, ArrowRight, CalendarDays, Sparkles
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { AccionesSector } from '@/components/shared/acciones-sector'
 import { AccesoCentroDatos } from '@/components/centro-datos/acceso-centro-datos'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { NoraCard } from '@/components/nora/nora-card'
@@ -48,6 +49,7 @@ export default async function OfertasPage() {
         breadcrumbs={[{ label: 'Comercial' }, { label: 'Ofertas' }]}
         actions={<AccesoCentroDatos accion={{ tipo: 'exportar-ofertas' }} />} />
       <div className="space-y-5 p-4 md:p-6">
+        <AccionesSector sector="comercial" />
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard label="Ofertas activas" value={activas} icon={Tag} />
           <KpiCard label="Pendientes de aprobación" value={pendientes} icon={Clock} variant={pendientes > 0 ? 'warning' : 'default'} />

@@ -12,6 +12,7 @@ import { NoraFeedCard } from '@/components/nora/nora-feed-card'
 import { RecomendacionesComprasCard } from '@/components/compras/recomendaciones-card'
 import { ClientesMCCard } from '@/components/crm/clientes-mc-card'
 import { NoraBriefingCard } from './nora-briefing-card'
+import { AccionesSector } from '@/components/shared/acciones-sector'
 import { NoraPrediccionesPanel } from './nora-predicciones-panel'
 import { QuickActions } from './quick-actions'
 import { SucursalesLive } from './sucursales-live'
@@ -141,6 +142,8 @@ export default async function MissionControlPage() {
           {ADMIN_ROLE_LABELS[profile.rol]} · NORA HQ
         </p>
       </header>
+
+      <AccionesSector sector="inicio" />
 
       <NoraBriefingCard />
 

@@ -4,6 +4,7 @@ import { Upload, Download, ShoppingBag, Layers, History, AlertCircle, ArrowRight
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { AccionesSector } from '@/components/shared/acciones-sector'
 import { Badge } from '@/components/ui/badge'
 import { FRECUENCIA_HORAS, FRECUENCIA_LABEL, type FrecuenciaDatos } from '@/lib/types/centro-datos'
 import { DemoButton } from './demo-button'
@@ -48,6 +49,7 @@ export default async function CentroDatosPage() {
       <PageHeader title="Centro de Datos" description="El puente bidireccional con SIFACO: importá y exportá por archivos."
         breadcrumbs={[{ label: 'Centro de Datos' }]} actions={<DemoButton />} />
       <div className="space-y-5 p-4 md:p-6">
+        <AccionesSector sector="centro_datos" />
         {/* Estado / recordatorios */}
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-lg border border-border bg-card p-4">
