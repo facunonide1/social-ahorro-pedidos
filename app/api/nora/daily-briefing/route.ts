@@ -74,14 +74,10 @@ export async function GET(_req: NextRequest) {
   ).length
   const lotesPorVencer = lotesRes.count ?? 0
 
-  // Saludo personalizado: nombre del profile
-  const { data: prof } = await sb
-    .from('users_admin')
-    .select('nombre, email')
-    .eq('id', user.id)
-    .maybeSingle<{ nombre: string | null; email: string }>()
+  // Saludo personalizado: nombre/email viven en auth.users (NO en users_admin).
+  const metaNombre = ((user.user_metadata as Record<string, any> | null)?.nombre as string) ?? null
   const nombre =
-    prof?.nombre?.split(' ')[0] ?? prof?.email?.split('@')[0] ?? 'equipo'
+    metaNombre?.split(' ')[0] ?? user.email?.split('@')[0] ?? 'equipo'
 
   const fechaHumano = new Date().toLocaleDateString('es-AR', {
     weekday: 'long',

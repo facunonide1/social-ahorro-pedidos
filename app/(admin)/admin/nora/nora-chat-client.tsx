@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Sparkles, Send, Loader2, Plus, MessageSquare, Wrench, ShoppingCart, Users, TrendingUp, FileDown } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -10,6 +11,7 @@ type ChatMessage = { role: 'user' | 'assistant'; content: string }
 export type ConversacionLite = { id: string; titulo: string; fecha: string; mensajes: ChatMessage[] }
 type StreamEvent =
   | { type: 'text'; delta: string } | { type: 'tool_start'; name: string; label: string }
+  | { type: 'navigate'; href: string; label: string }
   | { type: 'done'; conversationId: string | null } | { type: 'error'; message: string }
 
 const SUGERENCIAS = [
@@ -20,6 +22,7 @@ const SUGERENCIAS = [
 ]
 
 export function NoraChatClient({ nombre, historial, iaConfigurada }: { nombre: string | null; historial: ConversacionLite[]; iaConfigurada: boolean }) {
+  const router = useRouter()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
@@ -60,6 +63,7 @@ export function NoraChatClient({ nombre, historial, iaConfigurada }: { nombre: s
           let evt: StreamEvent; try { evt = JSON.parse(line) } catch { continue }
           if (evt.type === 'text') { setToolStatus(null); setMessages((arr) => { const c = [...arr]; const l = c[c.length - 1]; if (l?.role === 'assistant') c[c.length - 1] = { ...l, content: l.content + evt.delta }; return c }) }
           else if (evt.type === 'tool_start') setToolStatus(evt.label)
+          else if (evt.type === 'navigate') { const href = evt.href; setTimeout(() => router.push(href), 600) }
           else if (evt.type === 'done') conversationId.current = evt.conversationId
           else if (evt.type === 'error') setError(evt.message)
         }

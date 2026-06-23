@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Bot,
   Loader2,
@@ -20,11 +20,13 @@ type ChatMessage = { role: 'user' | 'assistant'; content: string }
 type StreamEvent =
   | { type: 'text'; delta: string }
   | { type: 'tool_start'; name: string; label: string }
+  | { type: 'navigate'; href: string; label: string }
   | { type: 'done'; conversationId: string | null }
   | { type: 'error'; message: string }
 
 export function AiChatDock() {
   const pathname = usePathname() || ''
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -118,6 +120,9 @@ export function AiChatDock() {
             })
           } else if (evt.type === 'tool_start') {
             setToolStatus(evt.label)
+          } else if (evt.type === 'navigate') {
+            const href = evt.href
+            setTimeout(() => router.push(href), 600)
           } else if (evt.type === 'done') {
             conversationId.current = evt.conversationId
           } else if (evt.type === 'error') {

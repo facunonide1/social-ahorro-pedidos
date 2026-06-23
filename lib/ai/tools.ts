@@ -1127,7 +1127,60 @@ const clientesEnRiesgo: ToolDef = {
   },
 }
 
+/* ---------- navegación (abrir pantallas / flujos) ---------- */
+
+/**
+ * Mapa de pantallas/flujos a los que NORA puede llevar al usuario cuando pide
+ * "cargar/crear/abrir X". Cada flujo apunta a una ruta real existente. Los
+ * módulos que NO existen (ej. recetas) NO están acá → NORA debe explicar que no
+ * existen en vez de inventar.
+ */
+const PANTALLAS: Record<string, { href: string; label: string }> = {
+  nuevo_pago: { href: '/admin/finanzas/pagos', label: 'Pagos' },
+  nuevo_documento: { href: '/admin/finanzas/documentos', label: 'Documentos a pagar' },
+  nuevo_cheque: { href: '/admin/finanzas/cheques/nueva', label: 'Nuevo cheque' },
+  cerrar_caja: { href: '/admin/finanzas/caja', label: 'Caja / arqueos' },
+  nuevo_gasto: { href: '/admin/sucursales/gastos', label: 'Gastos operativos' },
+  nueva_orden_compra: { href: '/admin/compras/ordenes/nueva', label: 'Nueva orden de compra' },
+  nueva_recepcion: { href: '/admin/recepciones/nueva', label: 'Nueva recepción' },
+  que_comprar: { href: '/admin/compras/recomendaciones', label: 'Qué comprar' },
+  nueva_oferta: { href: '/admin/ofertas', label: 'Ofertas' },
+  nuevo_cliente: { href: '/admin/clientes/nuevo', label: 'Nuevo cliente' },
+  nueva_campania: { href: '/admin/clientes/comunicacion', label: 'Comunicación a clientes' },
+  nueva_tarea: { href: '/admin/tareas', label: 'Tareas' },
+  nueva_transferencia: { href: '/admin/operaciones/transferencias/nueva', label: 'Nueva transferencia' },
+  nuevo_empleado: { href: '/admin/rrhh/empleados/nuevo', label: 'Nuevo empleado' },
+  importar_sifaco: { href: '/admin/centro-datos/importar', label: 'Importar (SIFACO)' },
+  cargar_ventas: { href: '/admin/centro-datos/ventas-diarias', label: 'Ventas diarias' },
+  exportar_sifaco: { href: '/admin/centro-datos/exportar', label: 'Exportar (SIFACO)' },
+}
+
+const irAPantalla: ToolDef = {
+  definition: {
+    name: 'ir_a_pantalla',
+    description:
+      'Lleva al usuario a la pantalla/flujo correcto cuando pide cargar, crear, registrar o abrir algo (ej. "quiero cargar un pago", "nueva orden de compra", "cerrar la caja"). Usá el destino que mejor matchee. Si el usuario pide algo que NO está en la lista de destinos (ej. recetas), NO llames esta tool: explicale en lenguaje natural que ese módulo todavía no existe en el sistema.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        destino: {
+          type: 'string',
+          enum: Object.keys(PANTALLAS),
+          description: 'Clave del flujo a abrir.',
+        },
+      },
+      required: ['destino'],
+    },
+  },
+  async execute(_sb, input) {
+    const p = PANTALLAS[String(input.destino)]
+    if (!p) return { existe: false, mensaje: 'Ese módulo todavía no existe en el sistema.' }
+    return { existe: true, href: p.href, label: p.label }
+  },
+}
+
 export const AI_TOOLS: Record<string, ToolDef> = {
+  ir_a_pantalla: irAPantalla,
   buscar_cliente: buscarCliente,
   perfil_cliente: perfilCliente,
   clientes_en_riesgo: clientesEnRiesgo,
@@ -1164,6 +1217,7 @@ export const AI_TOOL_DEFINITIONS: Anthropic.Tool[] = Object.values(AI_TOOLS).map
 
 /** Etiquetas legibles para mostrar en la UI ("Consultando…"). */
 export const TOOL_LABELS: Record<string, string> = {
+  ir_a_pantalla: 'Abriendo la pantalla',
   buscar_cliente: 'Buscando el cliente',
   perfil_cliente: 'Abriendo la ficha del cliente',
   clientes_en_riesgo: 'Buscando clientes en riesgo',

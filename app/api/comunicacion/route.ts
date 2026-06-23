@@ -13,9 +13,12 @@ async function gate() {
   const sb = createClient()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return { error: 'no autenticado', status: 401 as const }
-  const { data: me } = await sb.from('users_admin').select('rol, activo, nombre, sucursal_id').eq('id', user.id).maybeSingle<{ rol: AdminRole; activo: boolean; nombre: string | null; sucursal_id: string | null }>()
+  // El nombre vive en auth.users.user_metadata, no en users_admin (que no tiene
+  // columna 'nombre' → seleccionarla rompía el gate).
+  const { data: me } = await sb.from('users_admin').select('rol, activo, sucursal_id').eq('id', user.id).maybeSingle<{ rol: AdminRole; activo: boolean; sucursal_id: string | null }>()
   if (!me || !me.activo) return { error: 'sin permiso', status: 403 as const }
-  return { ok: true as const, userId: user.id, rol: me.rol, nombre: me.nombre, sucursalId: me.sucursal_id }
+  const nombre = ((user.user_metadata as Record<string, any> | null)?.nombre as string) ?? null
+  return { ok: true as const, userId: user.id, rol: me.rol, nombre, sucursalId: me.sucursal_id }
 }
 
 const TAREA_CODIGO = () => `CHT-${Date.now().toString(36).slice(-6).toUpperCase()}`
