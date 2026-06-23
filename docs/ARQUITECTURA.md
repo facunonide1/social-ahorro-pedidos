@@ -40,16 +40,32 @@ Complemento de `RESUMEN-SISTEMA.md` (qué hace) — esto es el **cómo y el dón
 | `/hub/*` | — (eliminado) | — | **Redirige** a `/admin/*` (308, `next.config.mjs`). Ya no existe shell propio. |
 | `/dashboard`, `/pedidos`, `/clientes` (raíz) | `components/crm/*` | `crm-sidebar.tsx` + `crm-top-bar.tsx` | CRM de pedidos (app aparte; link externo "CRM Pedidos ↗" en el sidebar) |
 
-**Para agregar un ítem al sidebar de NORA HQ:** editar `lib/constants/navegacion.ts`
-→ array `NAVEGACION` (grupos × items con `rolesPermitidos`, `estado`, `badge`).
-`navegacionParaRol(rol)` filtra. Badges dinámicos: `app/api/admin/badge-counts/route.ts`
-+ fetch en `sidebar.tsx`. Estados de item: `activo` | `placeholder` (toast "en
-construcción") | `fase2` | `externo`.
+**Sidebar de 9 sectores colapsables (v0.31).** `lib/constants/navegacion.ts` →
+array `NAVEGACION` (un solo sistema; el viejo `NAVEGACION_DEPARTAMENTAL` se borró).
+Los 9 sectores: **Inicio · Operación · Compras · Finanzas · Comercial · Equipo ·
+Comunicación interna · Inteligencia · Sistema**. Cada item lleva `subsector?`
+(sub-encabezado visual dentro del sector), `badge?`, `estado?`, `rolesPermitidos?`.
+El `sidebar.tsx` los renderiza colapsables (el sector del item activo abre por
+defecto, el resto colapsa; badge agregado por sector cuando está cerrado).
+
+- **Para agregar un ítem:** sumarlo al sector/subsector en `NAVEGACION`. Si la ruta
+  no está en `moduloDeHref`, agregar la regla (prefijo → módulo de permiso).
+- **Filtro:** `navegacionParaUsuario(rol, custom)` muestra un item si
+  `puede(modulo,'ver')` **y** (sin `rolesPermitidos` o el rol está incluido).
+  super_admin ve todo (`navegacionParaRol`). Badges: `api/admin/badge-counts` +
+  fetch en `sidebar.tsx`.
+- **Comunicación** dejó de estar duplicada: "Comunicación interna" (sector) vs
+  "Comunicación a clientes" (item de Comercial → módulo `clientes`).
+
+**`<AccionesSector>`** (`components/shared/acciones-sector.tsx`) — server component
+que renderiza la fila de botones de acción rápida arriba del dashboard de un
+sector. Filtra por permiso fino (`puede(modulo, accion)`); la sucursal activa la
+resuelve cada flujo destino. Primera acción violeta, resto secundarias, SIFACO
+(import/export) en menta. Sets en el mapa `ACCIONES` por `SectorKey`. Se inserta
+con `<AccionesSector sector="…" />` (o el slot `acciones` de `SectorDashboard`).
 
 > ✅ Resuelto (v0.18): `/hub` se unificó dentro de `/admin` (un solo shell +
-> `NAVEGACION`). El CRM de pedidos queda aparte como link externo. Queda como
-> follow-up opcional unificar también el shell del CRM. `NAVEGACION_DEPARTAMENTAL`
-> (viejo) sigue por `departamentosPermitidos` (no usado por el sidebar actual).
+> `NAVEGACION`). El CRM de pedidos queda aparte como link externo (en sector Inicio).
 
 ### 2.1 Unificación de shells (v0.18 · en curso) — Mapa de migración `/hub → /admin`
 

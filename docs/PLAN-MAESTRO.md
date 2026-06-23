@@ -6,13 +6,33 @@
 >
 > **Regla permanente:** actualizar este archivo después de CADA sub-tanda.
 
-**Última actualización:** 2026-06-18 · **Rama:** `main` · **Sistema:** NORA HQ
+**Última actualización:** 2026-06-23 · **Rama:** `main` · **Sistema:** NORA HQ
 (orquestador, NO factura ni reemplaza SIFACO) · single-tenant (Social Ahorro)
 con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — NORA TRANSVERSAL + DEMO + LIMPIEZA ✅ (v0.30-nora-demo)
+## 🟢 SESIÓN ACTUAL — REORGANIZACIÓN DE NAVEGACIÓN ✅ (v0.31-reorg-navegacion)
+
+Sidebar reordenado en **9 sectores colapsables** con subsectores + **barra de
+acciones por sector**. Bajo riesgo: se reagrupó el menú y se agregaron accesos;
+las páginas/rutas no se reescribieron (hrefs intactos → cero redirects).
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 · Borrado el nav viejo muerto (`NAVEGACION_DEPARTAMENTAL`, `departamentosPermitidos`, `DepartamentoNav`, `SubmenuItem`, `use-departamentos.ts`, `department-card.tsx`). Un solo sistema: `NAVEGACION`. | ✅ |
+| T2 · `NAVEGACION` reescrito en 9 sectores (Inicio · Operación · Compras · Finanzas · Comercial · Equipo · Comunicación interna · Inteligencia · Sistema) con `subsector` por item. Resuelto el duplicado "Comunicación" (interna vs a clientes). Sidebar colapsable: sector del item activo abierto, resto colapsado, sub-encabezados por subsector, badge agregado por sector. | ✅ |
+| T3 · `<AccionesSector>` (server, `components/shared/acciones-sector.tsx`): fila de botones por sector, filtra por permiso fino + sucursal activa; SIFACO en menta. Insertado en 8 dashboards + slot `acciones` en `SectorDashboard`. | ✅ |
+| T4 · Build verde. Verificación runtime: super_admin 9 sectores; cajero 6 (sin Compras/Inteligencia/Sistema, Finanzas solo Caja); comprador sin Administración. Docs + tag. | ✅ |
+
+> **Reglas:** hrefs existentes intactos (`mantener href` → sin redirects).
+> `navegacionParaUsuario` filtra por `puede(modulo,'ver')` + `rolesPermitidos`
+> (Administración = super_admin). Estructura de nav y `<AccionesSector>`
+> documentadas en `ARQUITECTURA.md`.
+
+---
+
+## 🟢 SESIÓN PREVIA — NORA TRANSVERSAL + DEMO + LIMPIEZA ✅ (v0.30-nora-demo)
 
 NORA como IA presente en todo el sistema (3 capas: explica/sugiere/hace) con chat
 central + auditor proactivo; datos demo coherentes en todos los sectores; archivos
