@@ -1,195 +1,37 @@
 /**
- * Navegación declarativa del Admin Hub (ERP).
+ * Navegación de NORA HQ — sidebar de 9 sectores colapsables (v0.31).
  *
- * Cada departamento tiene un submenú con sus rutas. El `estado` de
- * cada item determina si es navegable o muestra un toast informativo:
- *
- * - 'activo'      → ruta real, click navega.
- * - 'placeholder' → muestra toast "En construcción".
- * - 'fase2'       → muestra toast "Disponible en fase 2".
- * - 'externo'     → abre URL externa en nueva pestaña.
+ * Un solo sistema: `NAVEGACION` (NavGrupo[]). Cada sector agrupa items por
+ * `subsector` (sub-encabezado visual). El sidebar muestra los sectores
+ * colapsables (el del item activo abierto). La visibilidad por item se resuelve
+ * con el sistema de permisos finos (`navegacionParaUsuario` → `puede(modulo,'ver')`)
+ * + `rolesPermitidos` opcional. Los href existentes NO cambian (solo se reagrupan).
  */
 
-import type { AdminRole, Departamento } from '@/lib/types/admin'
-import {
-  DEPARTAMENTOS_INFO,
-  type DeptEstado,
-  type DeptInfo,
-} from '@/lib/constants/departamentos'
+import type { AdminRole } from '@/lib/types/admin'
+import type { DeptEstado } from '@/lib/constants/departamentos'
 import { puede, type PermisoModulo, type PermisosCustom } from '@/lib/types/permisos'
 
 export type LucideIconName = string
-
-export type SubmenuItem = {
-  label: string
-  path: string
-  icon: LucideIconName
-  /** Clave de un contador (ej: 'pedidosPendientes') para badge dinámico. */
-  badge?: string
-  rolesRequeridos?: AdminRole[]
-  estado: DeptEstado
-}
-
-export type DepartamentoNav = DeptInfo & {
-  rolesPermitidos: AdminRole[]
-  submenu: SubmenuItem[]
-}
-
-/**
- * Roles legacy v1 que pueden ver cada departamento. Cuando llegue el
- * refactor v2, esto pasa a inferirse de `rol_departamento`.
- */
-const ROLES_TODOS: AdminRole[] = [
-  'super_admin', 'gerente', 'comprador', 'administrativo',
-  'tesoreria', 'auditor', 'sucursal',
-]
-const ROLES_TRANSV: AdminRole[] = ['super_admin', 'gerente', 'auditor']
-const ROLES_COMPRAS: AdminRole[] = ['super_admin', 'gerente', 'comprador', 'auditor']
-const ROLES_FINANZAS: AdminRole[] = ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'auditor']
-const ROLES_SUCURSAL: AdminRole[] = ['super_admin', 'gerente', 'sucursal', 'administrativo', 'auditor']
-
-export const NAVEGACION_DEPARTAMENTAL: Record<Departamento, DepartamentoNav> = {
-  ejecutivo: {
-    ...DEPARTAMENTOS_INFO.ejecutivo,
-    rolesPermitidos: ROLES_TRANSV,
-    submenu: [
-      { label: 'Dashboard ejecutivo',  path: '/admin',                icon: 'LayoutDashboard', estado: 'activo' },
-      { label: 'Centro de aprobaciones', path: '/admin/aprobaciones', icon: 'CheckCircle2',    estado: 'placeholder' },
-      { label: 'Reportes globales',    path: '/admin/reportes',       icon: 'FileBarChart',    estado: 'placeholder' },
-    ],
-  },
-
-  equipo: {
-    ...DEPARTAMENTOS_INFO.equipo,
-    rolesPermitidos: ROLES_TODOS,
-    submenu: [
-      { label: 'Tareas',          path: '/admin/tareas',          icon: 'ListChecks',     badge: 'tareasPendientes', estado: 'activo' },
-      { label: 'Mi panel',        path: '/admin/mi-panel',        icon: 'LayoutDashboard', estado: 'activo' },
-      { label: 'Mi equipo',       path: '/admin/mi-equipo',       icon: 'UsersRound',     rolesRequeridos: ['super_admin','gerente','sucursal','administrativo','auditor'], estado: 'activo' },
-      { label: 'Empleados',       path: '/admin/empleados',       icon: 'UserSquare2',    rolesRequeridos: ['super_admin','gerente','administrativo','auditor'], estado: 'activo' },
-      { label: 'Objetivos',       path: '/admin/objetivos',       icon: 'Target',         rolesRequeridos: ['super_admin','gerente','administrativo','auditor'], estado: 'activo' },
-      { label: 'Ranking',         path: '/admin/ranking',         icon: 'Trophy',         estado: 'activo' },
-      { label: 'Reportes tareas', path: '/admin/tareas/reportes', icon: 'FileBarChart',   rolesRequeridos: ['super_admin','gerente','auditor'], estado: 'activo' },
-    ],
-  },
-
-  compras: {
-    ...DEPARTAMENTOS_INFO.compras,
-    rolesPermitidos: ROLES_COMPRAS,
-    submenu: [
-      { label: 'Dashboard',            path: '/admin/compras',              icon: 'LayoutGrid',    estado: 'placeholder' },
-      { label: 'Proveedores',          path: '/admin/compras/proveedores',  icon: 'Building2',     estado: 'placeholder' },
-      { label: 'Pedidos',              path: '/admin/compras/pedidos',      icon: 'ClipboardList', badge: 'pedidosPendientes', estado: 'placeholder' },
-      { label: 'Recepciones',          path: '/admin/compras/recepciones',  icon: 'PackageCheck',  estado: 'placeholder' },
-      { label: 'Devoluciones',         path: '/admin/compras/devoluciones', icon: 'PackageX',      estado: 'placeholder' },
-      { label: 'Comparativa precios',  path: '/admin/compras/precios',      icon: 'TrendingUp',    estado: 'fase2' },
-    ],
-  },
-
-  finanzas: {
-    ...DEPARTAMENTOS_INFO.finanzas,
-    rolesPermitidos: ROLES_FINANZAS,
-    submenu: [
-      { label: 'Dashboard financiero', path: '/admin/finanzas',              icon: 'LayoutGrid',    estado: 'placeholder' },
-      { label: 'Facturas a pagar',     path: '/admin/finanzas/facturas',     icon: 'FileText',      badge: 'facturasPendientes', estado: 'placeholder' },
-      { label: 'Pagos',                path: '/admin/finanzas/pagos',        icon: 'Banknote',      estado: 'placeholder' },
-      { label: 'Cuentas bancarias',    path: '/admin/finanzas/cuentas',      icon: 'Landmark',      estado: 'fase2' },
-      { label: 'Conciliación',         path: '/admin/finanzas/conciliacion', icon: 'GitMerge',      estado: 'fase2' },
-      { label: 'Cash flow',            path: '/admin/finanzas/cash-flow',    icon: 'LineChart',     estado: 'fase2' },
-      { label: 'Impuestos',            path: '/admin/finanzas/impuestos',    icon: 'Calculator',    estado: 'fase2' },
-    ],
-  },
-
-  sucursales: {
-    ...DEPARTAMENTOS_INFO.sucursales,
-    rolesPermitidos: ROLES_SUCURSAL,
-    submenu: [
-      { label: 'Dashboard',         path: '/admin/sucursales',             icon: 'LayoutGrid',  estado: 'placeholder' },
-      { label: 'Listado',           path: '/admin/sucursales/listado',     icon: 'Building2',   estado: 'placeholder' },
-      { label: 'Performance',       path: '/admin/sucursales/performance', icon: 'Activity',    estado: 'placeholder' },
-      { label: 'Caja diaria',       path: '/admin/sucursales/caja',        icon: 'Wallet',      estado: 'fase2' },
-      { label: 'Gastos operativos', path: '/admin/sucursales/gastos',      icon: 'Receipt',     estado: 'fase2' },
-    ],
-  },
-
-  operaciones: {
-    ...DEPARTAMENTOS_INFO.operaciones,
-    rolesPermitidos: ROLES_TODOS, // todos visualizan; submenú todo en fase2
-    submenu: [
-      { label: 'Stock e inventario', path: '/admin/operaciones/stock',           icon: 'Boxes',        estado: 'fase2' },
-      { label: 'Transferencias',     path: '/admin/operaciones/transferencias',  icon: 'ArrowRightLeft', estado: 'fase2' },
-      { label: 'Vencimientos',       path: '/admin/operaciones/vencimientos',    icon: 'CalendarClock', estado: 'fase2' },
-    ],
-  },
-
-  comercial: {
-    ...DEPARTAMENTOS_INFO.comercial,
-    rolesPermitidos: ROLES_TODOS,
-    submenu: [
-      { label: 'Promociones', path: 'https://cuponera.socialahorro.com',          icon: 'Megaphone',   estado: 'externo' },
-      { label: 'Comunicación', path: 'https://cuponera.socialahorro.com/mensajes', icon: 'MessageSquare', estado: 'externo' },
-    ],
-  },
-
-  clientes: {
-    ...DEPARTAMENTOS_INFO.clientes,
-    rolesPermitidos: ROLES_TODOS,
-    submenu: [
-      { label: 'Maestro de clientes', path: 'https://cuponera.socialahorro.com/clientes', icon: 'Users',  estado: 'externo' },
-      { label: 'Segmentación',         path: 'https://cuponera.socialahorro.com/segmentos', icon: 'PieChart', estado: 'externo' },
-    ],
-  },
-
-  rrhh: {
-    ...DEPARTAMENTOS_INFO.rrhh,
-    rolesPermitidos: ROLES_TRANSV,
-    submenu: [
-      { label: 'Empleados',  path: '/admin/rrhh/empleados', icon: 'UserSquare2', estado: 'fase2' },
-      { label: 'Turnos',     path: '/admin/rrhh/turnos',    icon: 'CalendarDays', estado: 'fase2' },
-      { label: 'Ausencias',  path: '/admin/rrhh/ausencias', icon: 'CalendarX',   estado: 'fase2' },
-      { label: 'Sueldos',    path: '/admin/rrhh/sueldos',   icon: 'DollarSign',  estado: 'fase2' },
-    ],
-  },
-
-  bi: {
-    ...DEPARTAMENTOS_INFO.bi,
-    rolesPermitidos: ROLES_TRANSV,
-    submenu: [
-      { label: 'Reportes',    path: '/admin/bi/reportes',    icon: 'FileBarChart', estado: 'fase2' },
-      { label: 'Dashboards',  path: '/admin/bi/dashboards',  icon: 'BarChart3',    estado: 'fase2' },
-      { label: 'Exploración', path: '/admin/bi/exploracion', icon: 'Search',       estado: 'fase2' },
-    ],
-  },
-}
-
-/** Lista plana de departamentos visibles para un rol legacy v1. */
-export function departamentosPermitidos(rol: AdminRole | null): DepartamentoNav[] {
-  if (!rol) return []
-  return Object.values(NAVEGACION_DEPARTAMENTAL).filter((d) => d.rolesPermitidos.includes(rol))
-}
-
-// ============================================================================
-// NAVEGACIÓN POR PILARES (F6.5.T3) — sidebar unificado de NORA HQ
-// ============================================================================
-//
-// Reemplaza el modelo "departamento activo → submenú contextual" por un
-// sidebar agrupado en 8 pilares, siempre visible y filtrado por rol. Los
-// items apuntan a rutas reales de cualquier shell (/admin, /hub, /dashboard).
 
 export type NavItem = {
   label: string
   href: string
   icon: LucideIconName
+  /** Sub-encabezado dentro del sector (ej. "Depósito y stock"). Opcional. */
+  subsector?: string
   /** Clave de contador para badge dinámico (el valor lo resuelve el sidebar). */
   badge?: string
   /** Default 'activo'. 'placeholder'/'fase2' muestran toast; 'externo' abre URL. */
   estado?: DeptEstado
-  /** Roles que ven el item. Omitido = todos los roles. */
+  /** Roles que ven el item (además del permiso de módulo). Omitido = todos. */
   rolesPermitidos?: AdminRole[]
 }
 
 export type NavGrupo = {
   grupo: string
+  /** Ícono del sector (encabezado colapsable). */
+  icon?: LucideIconName
   /** Si true, solo super_admin ve el grupo completo. */
   soloSuperAdmin?: boolean
   /** Roles que ven el grupo. Omitido = todos. */
@@ -197,166 +39,144 @@ export type NavGrupo = {
   items: NavItem[]
 }
 
-const ROLES_SUPERVISOR: AdminRole[] = ['super_admin', 'gerente', 'sucursal', 'administrativo', 'auditor']
-const ROLES_GESTION_EQUIPO: AdminRole[] = ['super_admin', 'gerente', 'administrativo', 'auditor']
+const ROLES_SUPERVISOR: AdminRole[] = ['super_admin', 'gerente', 'sucursal', 'encargado_sucursal', 'administrativo', 'auditor']
+const ROLES_GESTION_EQUIPO: AdminRole[] = ['super_admin', 'gerente', 'administrativo', 'rrhh', 'auditor']
+const SOLO_SUPER: AdminRole[] = ['super_admin']
 
-/**
- * Estructura del sidebar de NORA HQ. El item "Mission Control" va suelto
- * arriba (grupo de 1). Las rutas de `/admin/configuracion/*` que aún no
- * existen quedan en 'placeholder' hasta que su sub-tanda las cree.
- */
+/** Los 9 sectores de NORA HQ. Los href existentes se conservan (solo se reagrupan). */
 export const NAVEGACION: NavGrupo[] = [
+  // ───────────────────────── 1 · INICIO ─────────────────────────
   {
-    grupo: 'Mission Control',
+    grupo: 'Inicio', icon: 'LayoutDashboard',
     items: [
-      { label: 'Mission Control', href: '/admin', icon: 'LayoutDashboard' },
-      { label: 'NORA', href: '/admin/nora', icon: 'Sparkles' },
-      { label: 'Feed de NORA', href: '/admin/nora/feed', icon: 'Bot', badge: 'noraAvisosPendientes' },
+      { label: 'Mission Control', href: '/admin',                          icon: 'LayoutDashboard' },
+      { label: 'NORA',            href: '/admin/nora',                      icon: 'Sparkles' },
+      { label: 'Feed de NORA',    href: '/admin/nora/feed',                 icon: 'Bot', badge: 'noraAvisosPendientes' },
+      { label: 'Mi panel',        href: '/admin/mi-panel',                  icon: 'User' },
+      { label: 'Mi bandeja',      href: '/admin/comunicacion/mi-bandeja',   icon: 'Megaphone' },
+      { label: 'CRM Pedidos',     href: '/dashboard',                       icon: 'Package', subsector: 'Apps', estado: 'externo' },
+      { label: 'Cuponera',        href: 'https://cuponera.socialahorro.com', icon: 'Ticket', subsector: 'Apps', estado: 'externo' },
     ],
   },
+  // ───────────────────────── 2 · OPERACIÓN ─────────────────────────
   {
-    grupo: 'Comunicación',
+    grupo: 'Operación', icon: 'Boxes',
+    items: [
+      { label: 'Panel operaciones', href: '/admin/operaciones',               icon: 'LayoutGrid',     subsector: 'Depósito y stock' },
+      { label: 'Stock',             href: '/admin/operaciones/stock',          icon: 'Boxes',          subsector: 'Depósito y stock' },
+      { label: 'Transferencias',    href: '/admin/operaciones/transferencias', icon: 'ArrowRightLeft', subsector: 'Depósito y stock' },
+      { label: 'Vencimientos',      href: '/admin/operaciones/vencimientos',   icon: 'CalendarClock',  subsector: 'Depósito y stock' },
+      { label: 'Inventarios',       href: '/admin/operaciones/inventarios',    icon: 'ClipboardCheck', subsector: 'Depósito y stock' },
+      { label: 'Tareas',            href: '/admin/tareas',                     icon: 'ListChecks',     subsector: 'Tareas', badge: 'tareasPendientes' },
+      { label: 'Verificaciones',    href: '/admin/verificaciones',             icon: 'CheckCircle2',   subsector: 'Tareas', badge: 'verificacionesPendientes' },
+    ],
+  },
+  // ───────────────────────── 3 · COMPRAS ─────────────────────────
+  {
+    grupo: 'Compras', icon: 'ShoppingCart',
+    items: [
+      { label: 'Tablero',               href: '/admin/compras',                icon: 'LayoutGrid',    subsector: 'Decidir' },
+      { label: 'Qué comprar',           href: '/admin/compras/recomendaciones', icon: 'Sparkles',     subsector: 'Decidir' },
+      { label: 'Avisos de faltantes',   href: '/admin/compras/faltantes',      icon: 'AlertTriangle', subsector: 'Decidir', badge: 'faltantesPendientes' },
+      { label: 'Comparador de precios', href: '/admin/compras/comparador',     icon: 'Scale',         subsector: 'Decidir' },
+      { label: 'Órdenes de compra',     href: '/admin/compras/ordenes',        icon: 'ShoppingCart',  subsector: 'Gestionar' },
+      { label: 'Recepciones',           href: '/admin/compras/recepciones',    icon: 'PackageCheck',  subsector: 'Gestionar' },
+      { label: 'Devoluciones',          href: '/admin/compras/devoluciones',   icon: 'Undo2',         subsector: 'Gestionar' },
+      { label: 'Listas de precios',     href: '/admin/compras/listas-precios', icon: 'FileText',      subsector: 'Datos' },
+      { label: 'Proveedores',           href: '/admin/proveedores',            icon: 'Truck',         subsector: 'Datos' },
+    ],
+  },
+  // ───────────────────────── 4 · FINANZAS ─────────────────────────
+  {
+    grupo: 'Finanzas', icon: 'Wallet',
+    items: [
+      { label: 'Caja / arqueos',        href: '/admin/finanzas/caja',         icon: 'Wallet',       subsector: 'Caja' },
+      { label: 'Gastos operativos',     href: '/admin/sucursales/gastos',     icon: 'Receipt',      subsector: 'Caja' },
+      { label: 'Tablero',               href: '/admin/finanzas',              icon: 'LayoutGrid',   subsector: 'Pagos' },
+      { label: 'Documentos a pagar',    href: '/admin/finanzas/documentos',   icon: 'FileText',     subsector: 'Pagos' },
+      { label: 'Pagos',                 href: '/admin/finanzas/pagos',        icon: 'CreditCard',   subsector: 'Pagos' },
+      { label: 'Gastos fijos',          href: '/admin/finanzas/gastos-fijos', icon: 'Repeat',       subsector: 'Pagos' },
+      { label: 'Cheques',               href: '/admin/finanzas/cheques',      icon: 'FileBadge',    subsector: 'Pagos' },
+      { label: 'Calendario de pagos',   href: '/admin/finanzas/calendario',   icon: 'CalendarDays', subsector: 'Pagos' },
+      { label: 'Cuentas y movimientos', href: '/admin/finanzas/cuentas',      icon: 'Building2',    subsector: 'Bancos' },
+      { label: 'Conciliación',          href: '/admin/finanzas/conciliacion', icon: 'Scale',        subsector: 'Bancos' },
+      { label: 'Cash flow',             href: '/admin/finanzas/cash-flow',    icon: 'TrendingUp',   subsector: 'Bancos' },
+      { label: 'Impuestos',             href: '/admin/finanzas/impuestos',    icon: 'Receipt',      subsector: 'Bancos' },
+    ],
+  },
+  // ───────────────────────── 5 · COMERCIAL ─────────────────────────
+  {
+    grupo: 'Comercial', icon: 'Tag',
+    items: [
+      { label: 'Ofertas',                href: '/admin/ofertas',                   icon: 'Tag',       subsector: 'Ofertas' },
+      { label: 'Propuestas de NORA',     href: '/admin/ofertas/propuestas',        icon: 'Sparkles',  subsector: 'Ofertas' },
+      { label: 'Calendario',             href: '/admin/ofertas/calendario',        icon: 'CalendarDays', subsector: 'Ofertas' },
+      { label: 'Rendimiento',            href: '/admin/ofertas/rendimiento',       icon: 'BarChart3', subsector: 'Ofertas' },
+      { label: 'Para ofrecer',           href: '/admin/ofertas/panel',             icon: 'Megaphone', subsector: 'Ofertas' },
+      { label: 'Clientes',               href: '/admin/clientes',                  icon: 'Users',     subsector: 'Clientes (CRM)' },
+      { label: 'Segmentos',              href: '/admin/clientes/segmentos',        icon: 'PieChart',  subsector: 'Clientes (CRM)' },
+      { label: 'B2B',                    href: '/admin/clientes/b2b',              icon: 'Building2', subsector: 'Clientes (CRM)' },
+      { label: 'Puntos',                 href: '/admin/clientes/puntos',           icon: 'Coins',     subsector: 'Clientes (CRM)' },
+      { label: 'Automatizaciones',       href: '/admin/clientes/automatizaciones', icon: 'Repeat',    subsector: 'Clientes (CRM)' },
+      { label: 'Comunicación a clientes', href: '/admin/clientes/comunicacion',    icon: 'Megaphone', subsector: 'Campañas' },
+      { label: 'Validación de tickets',  href: '/admin/ia/tickets',                icon: 'Ticket',    subsector: 'Campañas' },
+    ],
+  },
+  // ───────────────────────── 6 · EQUIPO (RRHH) ─────────────────────────
+  {
+    grupo: 'Equipo', icon: 'UserCheck',
+    items: [
+      { label: 'Resumen',      href: '/admin/rrhh',           icon: 'LayoutGrid' },
+      { label: 'Empleados',    href: '/admin/rrhh/empleados',  icon: 'UserCheck', rolesPermitidos: ROLES_GESTION_EQUIPO },
+      { label: 'Mi equipo',    href: '/admin/mi-equipo',       icon: 'UsersRound', rolesPermitidos: ROLES_SUPERVISOR },
+      { label: 'Ranking',      href: '/admin/ranking',         icon: 'Trophy' },
+      { label: 'Objetivos',    href: '/admin/objetivos',       icon: 'Target' },
+      { label: 'Aprobaciones', href: '/admin/aprobaciones',    icon: 'CheckCircle2', badge: 'aprobacionesPendientes', rolesPermitidos: ROLES_SUPERVISOR },
+    ],
+  },
+  // ───────────────────────── 7 · COMUNICACIÓN INTERNA ─────────────────────────
+  {
+    grupo: 'Comunicación interna', icon: 'MessageSquare',
     items: [
       { label: 'Inbox',       href: '/admin/comunicacion',             icon: 'MessageSquare', badge: 'mensajesNoLeidos' },
       { label: 'Comunicados', href: '/admin/comunicacion/comunicados', icon: 'CheckCheck' },
-      { label: 'Mi bandeja',  href: '/admin/comunicacion/mi-bandeja',  icon: 'Megaphone' },
     ],
   },
+  // ───────────────────────── 8 · INTELIGENCIA ─────────────────────────
   {
-    grupo: 'Operación',
+    grupo: 'Inteligencia', icon: 'BarChart3',
     items: [
-      { label: 'Mi panel',       href: '/admin/mi-panel',                 icon: 'User' },
-      { label: 'Mi equipo',      href: '/admin/mi-equipo',                icon: 'UsersRound', rolesPermitidos: ROLES_SUPERVISOR },
-      { label: 'Tareas',         href: '/admin/tareas',                   icon: 'ListChecks', badge: 'tareasPendientes' },
-      { label: 'Verificaciones', href: '/admin/verificaciones',           icon: 'CheckCircle2', badge: 'verificacionesPendientes' },
-      { label: 'Panel operaciones', href: '/admin/operaciones',           icon: 'LayoutGrid' },
-      { label: 'Stock',          href: '/admin/operaciones/stock',          icon: 'Boxes' },
-      { label: 'Vencimientos',   href: '/admin/operaciones/vencimientos',   icon: 'CalendarClock' },
-      { label: 'Transferencias', href: '/admin/operaciones/transferencias', icon: 'ArrowRightLeft' },
-      { label: 'Inventarios',    href: '/admin/operaciones/inventarios',    icon: 'ClipboardCheck' },
+      { label: 'BI / Reportes',            href: '/admin/bi',                     icon: 'PieChart' },
+      { label: 'Resumen IA del día',       href: '/admin/ia/resumen',             icon: 'Sparkles' },
+      { label: 'Panel IA',                 href: '/admin/ia',                     icon: 'LayoutGrid' },
+      { label: 'Performance de sucursales', href: '/admin/sucursales/performance', icon: 'Activity', rolesPermitidos: ROLES_SUPERVISOR },
+      { label: 'Listado de sucursales',    href: '/admin/sucursales',             icon: 'Store', rolesPermitidos: ['super_admin', 'gerente'] },
     ],
   },
+  // ───────────────────────── 9 · SISTEMA ─────────────────────────
   {
-    grupo: 'Centro de Datos',
-    rolesPermitidos: ['super_admin', 'gerente'],
+    grupo: 'Sistema', icon: 'Settings',
     items: [
-      { label: 'Centro de Datos', href: '/admin/centro-datos',               icon: 'Database' },
-      { label: 'Importar',        href: '/admin/centro-datos/importar',       icon: 'Upload' },
-      { label: 'Exportar',        href: '/admin/centro-datos/exportar',       icon: 'Download' },
-      { label: 'Ventas diarias',  href: '/admin/centro-datos/ventas-diarias', icon: 'ShoppingBag' },
-      { label: 'Perfiles',        href: '/admin/centro-datos/perfiles',       icon: 'Layers' },
-      { label: 'Historial',       href: '/admin/centro-datos/historial',      icon: 'History' },
-      { label: 'Sin matchear',    href: '/admin/centro-datos/sin-matchear',   icon: 'AlertCircle', badge: 'sinMatchearPendientes' },
-    ],
-  },
-  {
-    grupo: 'Finanzas',
-    rolesPermitidos: ROLES_FINANZAS,
-    items: [
-      { label: 'Tablero',               href: '/admin/finanzas',              icon: 'LayoutGrid' },
-      { label: 'Documentos a pagar',    href: '/admin/finanzas/documentos',   icon: 'FileText' },
-      { label: 'Pagos',                 href: '/admin/finanzas/pagos',        icon: 'CreditCard' },
-      { label: 'Gastos fijos',          href: '/admin/finanzas/gastos-fijos', icon: 'Repeat' },
-      { label: 'Cuentas y movimientos', href: '/admin/finanzas/cuentas',      icon: 'Building2' },
-      { label: 'Cash flow',             href: '/admin/finanzas/cash-flow',    icon: 'TrendingUp' },
-      { label: 'Conciliación',          href: '/admin/finanzas/conciliacion', icon: 'Scale' },
-      { label: 'Cheques',               href: '/admin/finanzas/cheques',      icon: 'FileBadge' },
-      { label: 'Impuestos',             href: '/admin/finanzas/impuestos',    icon: 'Receipt' },
-      { label: 'Calendario de pagos',   href: '/admin/finanzas/calendario',   icon: 'CalendarDays' },
-    ],
-  },
-  {
-    grupo: 'Compras',
-    rolesPermitidos: ROLES_COMPRAS,
-    items: [
-      { label: 'Tablero',                href: '/admin/compras',               icon: 'LayoutGrid' },
-      { label: 'Qué comprar',            href: '/admin/compras/recomendaciones', icon: 'Sparkles' },
-      { label: 'Avisos de faltantes',    href: '/admin/compras/faltantes',     icon: 'AlertTriangle', badge: 'faltantesPendientes' },
-      { label: 'Órdenes de compra',      href: '/admin/compras/ordenes',       icon: 'ShoppingCart' },
-      { label: 'Comparador de precios',  href: '/admin/compras/comparador',    icon: 'Scale' },
-      { label: 'Listas de precios',      href: '/admin/compras/listas-precios', icon: 'FileText' },
-      { label: 'Recepciones',            href: '/admin/compras/recepciones',   icon: 'PackageCheck' },
-      { label: 'Devoluciones',           href: '/admin/compras/devoluciones',  icon: 'Undo2' },
-      { label: 'Proveedores',            href: '/admin/proveedores',           icon: 'Truck' },
-    ],
-  },
-  {
-    grupo: 'Sucursales',
-    rolesPermitidos: ROLES_SUCURSAL,
-    items: [
-      { label: 'Listado de sucursales', href: '/admin/sucursales',             icon: 'Store', rolesPermitidos: ['super_admin', 'gerente'] },
-      { label: 'Caja',                  href: '/admin/finanzas/caja',          icon: 'Wallet' },
-      { label: 'Gastos operativos',     href: '/admin/sucursales/gastos',      icon: 'Receipt' },
-      { label: 'Performance',           href: '/admin/sucursales/performance', icon: 'BarChart3', rolesPermitidos: ROLES_SUPERVISOR },
-    ],
-  },
-  {
-    grupo: 'Equipo',
-    items: [
-      { label: 'Resumen',      href: '/admin/rrhh',                     icon: 'LayoutGrid' },
-      { label: 'Empleados',    href: '/admin/rrhh/empleados',           icon: 'UserCheck', rolesPermitidos: ROLES_GESTION_EQUIPO },
-      { label: 'Ranking',      href: '/admin/ranking',                icon: 'Trophy' },
-      { label: 'Aprobaciones', href: '/admin/aprobaciones',             icon: 'CheckCircle2', badge: 'aprobacionesPendientes', rolesPermitidos: ROLES_SUPERVISOR },
-    ],
-  },
-  {
-    grupo: 'Comercial',
-    items: [
-      { label: 'Ofertas',             href: '/admin/ofertas',             icon: 'Tag' },
-      { label: 'Propuestas de NORA',  href: '/admin/ofertas/propuestas',  icon: 'Sparkles' },
-      { label: 'Calendario',          href: '/admin/ofertas/calendario',  icon: 'CalendarDays' },
-      { label: 'Rendimiento',         href: '/admin/ofertas/rendimiento', icon: 'BarChart3' },
-      { label: 'Para ofrecer',        href: '/admin/ofertas/panel',       icon: 'Megaphone' },
-    ],
-  },
-  {
-    grupo: 'Clientes / CRM',
-    items: [
-      { label: 'Clientes',          href: '/admin/clientes',                  icon: 'Users' },
-      { label: 'Segmentos',         href: '/admin/clientes/segmentos',        icon: 'PieChart' },
-      { label: 'Comunicación',      href: '/admin/clientes/comunicacion',     icon: 'Megaphone' },
-      { label: 'Automatizaciones',  href: '/admin/clientes/automatizaciones', icon: 'Repeat' },
-      { label: 'Puntos',            href: '/admin/clientes/puntos',           icon: 'Coins' },
-      { label: 'B2B',               href: '/admin/clientes/b2b',              icon: 'Building2' },
-      { label: 'Validación tickets', href: '/admin/ia/tickets',               icon: 'Ticket' },
-    ],
-  },
-  {
-    grupo: 'Inteligencia',
-    rolesPermitidos: ROLES_TRANSV,
-    items: [
-      { label: 'Panel IA',            href: '/admin/ia',         icon: 'LayoutGrid' },
-      { label: 'BI / Reportes',       href: '/admin/bi',         icon: 'PieChart' },
-      { label: 'Resumen IA del día',  href: '/admin/ia/resumen', icon: 'Sparkles' },
-    ],
-  },
-  {
-    grupo: 'Administración',
-    soloSuperAdmin: true,
-    items: [
-      { label: 'Usuarios y permisos',   href: '/admin/configuracion/usuarios',         icon: 'Shield' },
-      { label: 'Catálogo de productos', href: '/admin/configuracion/catalogo',         icon: 'Package' },
-      { label: 'Tipos de tareas',       href: '/admin/configuracion/tipos-tareas',     icon: 'ListChecks' },
-      { label: 'Recurrencias',          href: '/admin/configuracion/recurrencias',     icon: 'Repeat' },
-      { label: 'Turnos',                href: '/admin/configuracion/turnos',           icon: 'Clock' },
-      { label: 'Supervisores',          href: '/admin/configuracion/supervisores',     icon: 'UserCheck' },
-      { label: 'Triggers automáticos',  href: '/admin/configuracion/triggers-tareas',  icon: 'Zap' },
-      { label: 'Integraciones / APIs',  href: '/admin/configuracion/integraciones',    icon: 'Plug',      estado: 'placeholder' },
-      { label: 'Configuración IA',      href: '/admin/configuracion/ia',               icon: 'Bot',       estado: 'placeholder' },
-      { label: 'Auditoría',             href: '/admin/configuracion/auditoria',        icon: 'FileSearch', estado: 'placeholder' },
-      { label: 'Configuración general', href: '/admin/configuracion/general',          icon: 'Settings' },
-    ],
-  },
-  {
-    grupo: 'Apps',
-    items: [
-      { label: 'CRM Pedidos', href: '/dashboard',                          icon: 'Package', estado: 'externo' },
-      { label: 'Cuponera',    href: 'https://cuponera.socialahorro.com',   icon: 'Ticket',  estado: 'externo' },
+      { label: 'Centro de Datos', href: '/admin/centro-datos',               icon: 'Database',    subsector: 'Centro de Datos (SIFACO)' },
+      { label: 'Importar',        href: '/admin/centro-datos/importar',       icon: 'Upload',      subsector: 'Centro de Datos (SIFACO)' },
+      { label: 'Exportar',        href: '/admin/centro-datos/exportar',       icon: 'Download',    subsector: 'Centro de Datos (SIFACO)' },
+      { label: 'Ventas diarias',  href: '/admin/centro-datos/ventas-diarias', icon: 'ShoppingBag', subsector: 'Centro de Datos (SIFACO)' },
+      { label: 'Perfiles',        href: '/admin/centro-datos/perfiles',       icon: 'Layers',      subsector: 'Centro de Datos (SIFACO)' },
+      { label: 'Historial',       href: '/admin/centro-datos/historial',      icon: 'History',     subsector: 'Centro de Datos (SIFACO)' },
+      { label: 'Sin matchear',    href: '/admin/centro-datos/sin-matchear',   icon: 'AlertCircle', subsector: 'Centro de Datos (SIFACO)', badge: 'sinMatchearPendientes' },
+      { label: 'Usuarios y permisos',   href: '/admin/configuracion/usuarios',     icon: 'Shield',     subsector: 'Administración', rolesPermitidos: SOLO_SUPER },
+      { label: 'Catálogo de productos', href: '/admin/configuracion/catalogo',     icon: 'Package',    subsector: 'Administración', rolesPermitidos: SOLO_SUPER },
+      { label: 'Tipos de tareas',       href: '/admin/configuracion/tipos-tareas', icon: 'ListChecks', subsector: 'Administración', rolesPermitidos: SOLO_SUPER },
+      { label: 'Recurrencias',          href: '/admin/configuracion/recurrencias', icon: 'Repeat',     subsector: 'Administración', rolesPermitidos: SOLO_SUPER },
+      { label: 'Turnos',                href: '/admin/configuracion/turnos',       icon: 'Clock',      subsector: 'Administración', rolesPermitidos: SOLO_SUPER },
+      { label: 'Supervisores',          href: '/admin/configuracion/supervisores', icon: 'UserCheck',  subsector: 'Administración', rolesPermitidos: SOLO_SUPER },
+      { label: 'Datos demo',            href: '/admin/configuracion/general',      icon: 'Database',   subsector: 'Administración', rolesPermitidos: SOLO_SUPER },
+      { label: 'Configuración general', href: '/admin/configuracion/general',      icon: 'Settings',   subsector: 'Administración', rolesPermitidos: SOLO_SUPER },
     ],
   },
 ]
 
-/** Filtra NAVEGACION según rol: grupos e items visibles. */
+/** Filtra NAVEGACION según rol legacy (super_admin ve todo, respeta rolesPermitidos). */
 export function navegacionParaRol(rol: AdminRole | null): NavGrupo[] {
   if (!rol) return []
   const esSuper = rol === 'super_admin'
@@ -365,9 +185,7 @@ export function navegacionParaRol(rol: AdminRole | null): NavGrupo[] {
     .filter((g) => (g.rolesPermitidos ? g.rolesPermitidos.includes(rol) : true))
     .map((g) => ({
       ...g,
-      items: g.items.filter((it) =>
-        it.rolesPermitidos ? it.rolesPermitidos.includes(rol) : true,
-      ),
+      items: g.items.filter((it) => (it.rolesPermitidos ? it.rolesPermitidos.includes(rol) : true)),
     }))
     .filter((g) => g.items.length > 0)
 }
@@ -392,6 +210,7 @@ export function moduloDeHref(href: string): PermisoModulo | null {
     ['/admin/ofertas', 'ofertas'],
     ['/admin/ia/tickets', 'clientes'],
     ['/admin/clientes', 'clientes'],
+    ['/admin/sucursales/gastos', 'caja'],
     ['/admin/sucursales', 'sucursales'],
     ['/admin/rrhh', 'rrhh'],
     ['/admin/aprobaciones', 'aprobaciones'],
@@ -413,17 +232,17 @@ export function moduloDeHref(href: string): PermisoModulo | null {
 
 /**
  * Filtra NAVEGACION por permisos finos reales (rol + overrides). Un item se ve
- * si `puede(modulo, 'ver')`; los items sin módulo (links externos) se muestran
- * siempre. Los grupos sin items quedan ocultos. super_admin ve todo.
+ * si `puede(modulo, 'ver')` Y (sin `rolesPermitidos` o el rol está incluido).
+ * Los items sin módulo (links externos) se muestran siempre. super_admin ve todo.
  */
 export function navegacionParaUsuario(rol: AdminRole | null, custom?: PermisosCustom | null): NavGrupo[] {
   if (!rol) return []
   if (rol === 'super_admin') return navegacionParaRol(rol)
   return NAVEGACION
-    .filter((g) => (g.soloSuperAdmin ? false : true))
     .map((g) => ({
       ...g,
       items: g.items.filter((it) => {
+        if (it.rolesPermitidos && !it.rolesPermitidos.includes(rol)) return false
         if (it.estado === 'externo') return true
         const modulo = moduloDeHref(it.href)
         if (!modulo) return true

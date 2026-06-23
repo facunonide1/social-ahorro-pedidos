@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   ChevronsLeft,
   ChevronsRight,
+  ChevronDown,
   Star,
   StarOff,
   Clock,
@@ -67,6 +68,20 @@ export function Sidebar({
 
   const grupos = navegacionParaUsuario(rol, permisosCustom)
 
+  // El sector que contiene la ruta activa (para abrirlo por defecto).
+  const grupoActivo =
+    grupos.find((g) =>
+      g.items.some((it) => pathname === it.href || pathname.startsWith(it.href + '/')),
+    )?.grupo ?? grupos[0]?.grupo
+
+  // Sectores expandidos: el activo abierto, el resto colapsados (toggle manual).
+  const [abiertos, setAbiertos] = useState<Record<string, boolean>>({})
+  useEffect(() => {
+    if (grupoActivo) setAbiertos((prev) => ({ ...prev, [grupoActivo]: true }))
+  }, [grupoActivo])
+  const estaAbierto = (g: string) => abiertos[g] ?? g === grupoActivo
+  const toggleGrupo = (g: string) => setAbiertos((prev) => ({ ...prev, [g]: !estaAbierto(g) }))
+
   useEffect(() => {
     if (!isHydrated) return
     const item = navItemPorHref(pathname)
@@ -121,34 +136,63 @@ export function Sidebar({
             </SidebarSection>
           )}
 
-          {/* Pilares */}
-          {grupos.map((g) => (
-            <div key={g.grupo} className="mb-3">
-              {!collapsed && (
-                <div className="mb-1 px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  {g.grupo}
-                </div>
-              )}
-              <ul className="flex flex-col gap-0.5">
-                {g.items.map((it) => (
-                  <SidebarItem
-                    key={it.href}
-                    item={it}
-                    pathname={pathname}
-                    collapsed={collapsed}
-                    count={it.badge ? badgeCounts[it.badge] ?? 0 : 0}
-                    fav={isFavorito(it.href)}
-                    onFav={() =>
-                      isFavorito(it.href)
-                        ? removeFavorito(it.href)
-                        : addFavorito(it.href)
-                    }
-                    onNavigate={() => pushReciente(it.href, it.label)}
-                  />
-                ))}
-              </ul>
-            </div>
-          ))}
+          {/* 9 sectores colapsables (con subsectores) */}
+          {grupos.map((g) => {
+            const open = collapsed ? true : estaAbierto(g.grupo)
+            // badge total del sector (suma de badges de sus items) para mostrar colapsado
+            const totalBadge = g.items.reduce((a, it) => a + (it.badge ? badgeCounts[it.badge] ?? 0 : 0), 0)
+            return (
+              <div key={g.grupo} className="mb-1.5">
+                {!collapsed ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleGrupo(g.grupo)}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:bg-accent/40 hover:text-foreground"
+                    aria-expanded={open}
+                  >
+                    {g.icon && <Icon name={g.icon} className="size-3.5" />}
+                    <span className="truncate">{g.grupo}</span>
+                    {!open && totalBadge > 0 && (
+                      <span className="rounded-full bg-primary/15 px-1.5 text-[10px] font-bold tabular-nums text-primary">{totalBadge > 99 ? '99+' : totalBadge}</span>
+                    )}
+                    <ChevronDown className={cn('ml-auto size-3.5 transition-transform', open ? '' : '-rotate-90')} />
+                  </button>
+                ) : (
+                  g.icon && (
+                    <div className="mb-0.5 mt-2 flex justify-center text-muted-foreground/50">
+                      <Icon name={g.icon} className="size-3.5" />
+                    </div>
+                  )
+                )}
+                {open && (
+                  <ul className="mt-0.5 flex flex-col gap-0.5">
+                    {g.items.map((it, i) => {
+                      const prev = g.items[i - 1]
+                      const showSub = !collapsed && it.subsector && it.subsector !== prev?.subsector
+                      return (
+                        <Fragment key={it.href}>
+                          {showSub && (
+                            <li className="mb-0.5 mt-1.5 px-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">
+                              {it.subsector}
+                            </li>
+                          )}
+                          <SidebarItem
+                            item={it}
+                            pathname={pathname}
+                            collapsed={collapsed}
+                            count={it.badge ? badgeCounts[it.badge] ?? 0 : 0}
+                            fav={isFavorito(it.href)}
+                            onFav={() => (isFavorito(it.href) ? removeFavorito(it.href) : addFavorito(it.href))}
+                            onNavigate={() => pushReciente(it.href, it.label)}
+                          />
+                        </Fragment>
+                      )
+                    })}
+                  </ul>
+                )}
+              </div>
+            )
+          })}
         </nav>
 
         {/* Toggle colapsar */}
