@@ -92,6 +92,43 @@ puede reusar el mismo núcleo sin la capa de archivos.
 
 ---
 
+## Importador de productos completo (v0.32)
+
+**Ofertas en el archivo.** El perfil de productos mapea, además del precio normal
+(`precio`), columnas **opcionales** de oferta (configurables y guardadas en el
+perfil): `precio_oferta` (precio con descuento), `descuento` (% off), `oferta_tipo`
+(2x1 / % / precio fijo…), `oferta_vigencia` (fecha fin), `nom_promo`/`def_promo`
+(nombre/descripción). No todos los productos necesitan tenerlas.
+
+**Crear productos nuevos con confirmación.** En el preview, los productos cuyo SKU
+**no existe** se listan aparte con checkbox (default todos los que traen SKU). El
+usuario decide cuáles crear → se pasan en `crear_skus` al confirmar. Los que deja
+sin tildar van a la cola "Sin matchear" (NO se crean solos). Nunca se crea un
+producto sin confirmación.
+
+**Ofertas automáticas.** Si una fila (producto nuevo creado **o** existente) trae
+datos de oferta, `construirOferta()` arma la oferta y `crearOfertaDesdeProducto()`
+la crea en **borrador**, enlazada al producto por id, con dedup por
+`productos_ids @> [id]` + nombre (no duplica en re-imports). Snapshot incluye los
+productos y ofertas creados → el rollback los borra.
+
+**Resumen NORA.** "Actualizo X · creo Y de N nuevos · Z con oferta · suben/bajan
+precio · sin match". La pantalla final informa creados + ofertas con link a Ofertas.
+
+**SKU global, stock por sucursal.** El SKU/precio es uno para las 4 sucursales; lo
+que cambia por sucursal es el stock (`stock_items.cantidad_gondola` en la sucursal
+elegida). Nunca se duplica un producto por sucursal.
+
+## Ofertas desde productos ya creados
+
+En **Ofertas → Crear**, el buscador (`/api/ofertas/buscar-producto`) busca por
+**SKU / nombre / EAN (BARRAS)** indistintamente (server-side con debounce, escala
+al catálogo real), muestra EAN + **precio actual** y enlaza la oferta al producto
+por SKU. La oferta creada se exporta a SIFACO con la acción de export existente
+(formato de promo).
+
+---
+
 ## Las 10 mejoras
 
 1. **Historial** — `import_jobs` / `export_jobs` con detalle (Historial).

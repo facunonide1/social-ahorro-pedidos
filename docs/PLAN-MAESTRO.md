@@ -6,13 +6,33 @@
 >
 > **Regla permanente:** actualizar este archivo después de CADA sub-tanda.
 
-**Última actualización:** 2026-06-23 · **Rama:** `main` · **Sistema:** NORA HQ
+**Última actualización:** 2026-06-24 · **Rama:** `main` · **Sistema:** NORA HQ
 (orquestador, NO factura ni reemplaza SIFACO) · single-tenant (Social Ahorro)
 con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — REORGANIZACIÓN DE NAVEGACIÓN ✅ (v0.31-reorg-navegacion)
+## 🟢 SESIÓN ACTUAL — IMPORTADOR DE PRODUCTOS COMPLETO ✅ (v0.32-importador-ofertas)
+
+Importador de productos con precios de oferta en el archivo, crear nuevos con
+confirmación, detección de cambios, y buscador SKU/nombre/EAN en Ofertas. Reusa el
+flujo existente (subir→mapear→preview→confirmar). Detalle: `docs/CENTRO-DATOS.md`.
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 · Mapeo flexible de columnas de oferta en el perfil de productos: `precio_oferta`, `oferta_tipo`, `oferta_vigencia` (+ descuento/nom_promo/def_promo). Guardado en el perfil. | ✅ |
+| T2 · Preview inteligente: detecta oferta por fila + resumen "actualizo X / creo Y de N nuevos / Z con oferta". Productos NUEVOS con checkbox (no se crean solos). Al crear un nuevo con oferta → crea la oferta (borrador) enlazada. Stock por sucursal (SKU global). Snapshot/rollback de productos+ofertas creados. | ✅ |
+| T3 · Ofertas desde productos ya creados: `/api/ofertas/buscar-producto` (SKU/nombre/EAN), autocomplete server-side con precio actual, enlace por SKU. Export SIFACO existente. | ✅ |
+| T4 · Build verde, smoke DB (crear nuevo + oferta + dedup + búsqueda), docs, tag. | ✅ |
+
+> **Reglas:** SKU global / stock por sucursal (nunca duplica). Productos nuevos
+> SIEMPRE con confirmación. Match CODIGO→BARRAS→nombre. Reusa el importador, no
+> crea uno nuevo. Prerequisito: el fix de `sin_permiso` del importador (commit
+> a0a52ed) ya estaba aplicado y verde.
+
+---
+
+## 🟢 SESIÓN PREVIA — REORGANIZACIÓN DE NAVEGACIÓN ✅ (v0.31-reorg-navegacion)
 
 Sidebar reordenado en **9 sectores colapsables** con subsectores + **barra de
 acciones por sector**. Bajo riesgo: se reagrupó el menú y se agregaron accesos;
