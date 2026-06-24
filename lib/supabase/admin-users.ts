@@ -2,6 +2,46 @@ import { createAdminClient } from '@/lib/supabase/server'
 import type { AdminRole } from '@/lib/types/admin'
 import type { PermisosCustom } from '@/lib/types/permisos'
 
+export type AdminUserLite = {
+  id: string
+  nombre: string | null
+  email: string | null
+  rol: AdminRole
+  sucursal_id: string | null
+  activo: boolean
+}
+
+/**
+ * Lista los usuarios admin con su nombre/email. Importante: el nombre y el email
+ * viven en auth.users (user_metadata.nombre / email), NO en users_admin (que solo
+ * tiene rol/sucursal/activo). Seleccionar 'nombre'/'email' de users_admin rompía
+ * el query. Acá mergeamos ambas fuentes. Recibe un admin client (service role).
+ */
+export async function listAdminUsersLite(
+  adm: ReturnType<typeof createAdminClient>,
+  opts?: { soloActivos?: boolean },
+): Promise<AdminUserLite[]> {
+  let q = adm.from('users_admin').select('id, rol, sucursal_id, activo')
+  if (opts?.soloActivos) q = q.eq('activo', true)
+  const [{ data: rows }, authRes] = await Promise.all([
+    q,
+    adm.auth.admin.listUsers({ perPage: 1000 }),
+  ])
+  const meta = new Map(
+    (authRes.data?.users ?? []).map((u) => [
+      u.id,
+      { nombre: ((u.user_metadata as Record<string, any> | null)?.nombre as string) ?? null, email: u.email ?? null },
+    ]),
+  )
+  return ((rows ?? []) as any[]).map((r) => ({
+    id: r.id,
+    rol: r.rol,
+    sucursal_id: r.sucursal_id,
+    activo: r.activo,
+    ...(meta.get(r.id) ?? { nombre: null, email: null }),
+  }))
+}
+
 export type CreateAdminUserInput = {
   email: string
   password: string

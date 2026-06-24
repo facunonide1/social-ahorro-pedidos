@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { listAdminUsersLite } from '@/lib/supabase/admin-users'
 import { PageHeader } from '@/components/shared/page-header'
 import { Badge } from '@/components/ui/badge'
 import { OfertaGestion, type TareaLite, type ConfRow } from './gestion-client'
@@ -17,14 +18,14 @@ export default async function OfertaDetallePage({ params }: { params: { id: stri
   const { data: of } = await sb.from('ofertas').select('*').eq('id', params.id).maybeSingle<any>()
   if (!of) notFound()
 
-  const [{ data: tareas }, { data: confs }, { data: prods }, { data: users }] = await Promise.all([
+  const [{ data: tareas }, { data: confs }, { data: prods }, users] = await Promise.all([
     adm.from('tareas').select('id, titulo, estado, sucursal_id, datos_custom').contains('datos_custom', { oferta_id: params.id }).limit(200),
     adm.from('ofertas_confirmaciones').select('empleado_user_id, version_confirmada').eq('oferta_id', params.id),
     of.productos_ids?.length ? adm.from('productos_catalogo').select('id, nombre, sku').in('id', of.productos_ids) : Promise.resolve({ data: [] as any[] }),
-    adm.from('users_admin').select('id, nombre, email, sucursal_id').eq('activo', true),
+    listAdminUsersLite(adm, { soloActivos: true }),
   ])
 
-  const userMap = new Map(((users ?? []) as any[]).map((u) => [u.id, u]))
+  const userMap = new Map((users as any[]).map((u) => [u.id, u]))
   const confList = (confs ?? []) as any[]
   const confirmadas = confList.filter((c) => c.version_confirmada >= (of.version ?? 1)).length
   const faltan = confList.filter((c) => c.version_confirmada < (of.version ?? 1)).map((c) => {

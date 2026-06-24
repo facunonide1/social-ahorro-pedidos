@@ -1,5 +1,6 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { listAdminUsersLite } from '@/lib/supabase/admin-users'
 import { ComunicacionClient, type CanalRow, type UserLite } from './comunicacion-client'
 
 export const dynamic = 'force-dynamic'
@@ -9,9 +10,9 @@ export default async function ComunicacionPage({ searchParams }: { searchParams:
   const profile = await requireAdminHubAccess()
   const adm = createAdminClient()
 
-  const [{ data: miembros }, { data: users }] = await Promise.all([
+  const [{ data: miembros }, users] = await Promise.all([
     adm.from('canal_miembros').select('canal_id, ultima_lectura_at').eq('user_id', profile.id),
-    adm.from('users_admin').select('id, nombre, email, rol, sucursal_id').eq('activo', true).limit(200),
+    listAdminUsersLite(adm, { soloActivos: true }),
   ])
   const miembroDe = new Map(((miembros ?? []) as any[]).map((m) => [m.canal_id, m.ultima_lectura_at]))
   const canalIds = [...miembroDe.keys()]
