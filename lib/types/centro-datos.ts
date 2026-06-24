@@ -17,6 +17,8 @@ export type CampoSistema =
   | 'laboratorio' | 'droga' | 'estado' | 'tipo'
   | 'venta_mes' | 'ant_1' | 'ant_2' | 'ant_3' | 'ant_4' | 'ant_5' | 'ant_6'
   | 'nom_promo' | 'def_promo' | 'descuento' | 'recargo'
+  // oferta dentro del archivo de productos (opcionales)
+  | 'precio_oferta' | 'oferta_tipo' | 'oferta_vigencia'
   // ventas diarias
   | 'cantidad' | 'monto'
   // clientes
@@ -27,7 +29,7 @@ export const CAMPOS_SISTEMA: { value: CampoSistema; label: string; tipos: TipoPe
   { value: 'sku', label: 'CODIGO → SKU (llave)', tipos: ['productos', 'stock', 'ventas', 'dif_stock', 'ofertas'] },
   { value: 'codigo_barras', label: 'BARRAS / EAN', tipos: ['productos', 'stock', 'ventas'] },
   { value: 'nombre', label: 'Descripción / Nombre', tipos: ['productos', 'stock', 'ventas', 'clientes'] },
-  { value: 'precio', label: 'Precio', tipos: ['productos', 'ofertas'] },
+  { value: 'precio', label: 'Precio normal / lista', tipos: ['productos', 'ofertas'] },
   { value: 'stock', label: 'Stock', tipos: ['productos', 'stock', 'dif_stock'] },
   { value: 'rubro', label: 'Rubro', tipos: ['productos'] },
   { value: 'laboratorio', label: 'Laboratorio', tipos: ['productos'] },
@@ -41,9 +43,12 @@ export const CAMPOS_SISTEMA: { value: CampoSistema; label: string; tipos: TipoPe
   { value: 'ant_4', label: 'ANT_4 (mes -4)', tipos: ['productos'] },
   { value: 'ant_5', label: 'ANT_5 (mes -5)', tipos: ['productos'] },
   { value: 'ant_6', label: 'ANT_6 (mes -6)', tipos: ['productos'] },
-  { value: 'nom_promo', label: 'NOM_PROMO', tipos: ['productos', 'ofertas'] },
-  { value: 'def_promo', label: 'DEF_PROMO', tipos: ['productos', 'ofertas'] },
-  { value: 'descuento', label: 'DESCU (descuento)', tipos: ['productos', 'ofertas'] },
+  { value: 'nom_promo', label: 'Oferta: nombre (NOM_PROMO)', tipos: ['productos', 'ofertas'] },
+  { value: 'def_promo', label: 'Oferta: descripción (DEF_PROMO)', tipos: ['productos', 'ofertas'] },
+  { value: 'descuento', label: 'Oferta: % descuento (DESCU)', tipos: ['productos', 'ofertas'] },
+  { value: 'precio_oferta', label: 'Oferta: precio con descuento', tipos: ['productos', 'ofertas'] },
+  { value: 'oferta_tipo', label: 'Oferta: tipo (2x1, %, precio fijo…)', tipos: ['productos', 'ofertas'] },
+  { value: 'oferta_vigencia', label: 'Oferta: vigencia / fecha fin', tipos: ['productos', 'ofertas'] },
   { value: 'recargo', label: 'RECAR (recargo)', tipos: ['productos'] },
   { value: 'cantidad', label: 'Cantidad vendida', tipos: ['ventas'] },
   { value: 'monto', label: 'Monto vendido', tipos: ['ventas'] },
@@ -108,6 +113,7 @@ export type ResumenImport = {
   subieron_precio?: number
   bajaron_precio?: number
   cambio_stock?: number
+  con_oferta?: number
 }
 
 export type ImportJob = {

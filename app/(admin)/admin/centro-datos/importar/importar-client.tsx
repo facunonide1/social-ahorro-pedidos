@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Upload, FileSpreadsheet, ArrowLeft, CheckCircle2, Loader2, AlertTriangle,
-  Info, XCircle, Sparkles, TrendingUp, TrendingDown, PackagePlus, Clock,
+  Info, XCircle, Sparkles, TrendingUp, TrendingDown, PackagePlus, Clock, Tag,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -26,6 +26,7 @@ type ItemPreview = {
   nombre_match: string | null; via: string | null; precio_nuevo: number | null
   precio_anterior: number | null; delta_precio_pct: number | null; stock_nuevo: number | null
   cantidad: number | null; monto: number | null; es_nuevo: boolean
+  tiene_oferta?: boolean; precio_oferta?: number | null; oferta_label?: string | null
 }
 type Analisis = { total: number; matcheados: number; sin_match: number; anomalias: Anomalia[]; resumen: ResumenImport; preview: ItemPreview[] }
 
@@ -101,7 +102,14 @@ function FlujoImport({ perfil, sucursales, sucursalActiva, onBack }: { perfil: P
   const [analisis, setAnalisis] = useState<Analisis | null>(null)
   const [cargando, setCargando] = useState(false)
   const [aplicando, setAplicando] = useState(false)
-  const [hecho, setHecho] = useState<{ filas_ok: number; sin_match: number; job: string } | null>(null)
+  const [hecho, setHecho] = useState<{ filas_ok: number; sin_match: number; job: string; creados: number; ofertas: number } | null>(null)
+  // SKUs nuevos que el usuario confirma crear (default: todos los que tienen SKU)
+  const [crearSel, setCrearSel] = useState<Set<string>>(new Set())
+
+  const nuevos = useMemo(() => (analisis?.preview ?? []).filter((i) => i.es_nuevo && i.sku), [analisis])
+  function toggleCrear(sku: string) {
+    setCrearSel((p) => { const n = new Set(p); n.has(sku) ? n.delete(sku) : n.add(sku); return n })
+  }
 
   const requiereSucursal = perfil.tipo === 'ventas'
   const sucursalParaStock = perfil.tipo === 'productos' || perfil.tipo === 'stock'
@@ -126,6 +134,8 @@ function FlujoImport({ perfil, sucursales, sucursalActiva, onBack }: { perfil: P
       })
       const j = await r.json(); if (!r.ok) throw new Error(j?.error)
       setAnalisis(j)
+      // por defecto, crear todos los nuevos que tienen SKU
+      setCrearSel(new Set(((j.preview ?? []) as ItemPreview[]).filter((i) => i.es_nuevo && i.sku).map((i) => i.sku as string)))
     } catch (e: any) { toast.error(e?.message ?? 'Error al analizar') } finally { setCargando(false) }
   }
 
@@ -134,15 +144,15 @@ function FlujoImport({ perfil, sucursales, sucursalActiva, onBack }: { perfil: P
     try {
       const r = await fetch('/api/centro-datos/import', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ accion: 'confirmar', perfil_id: perfil.id, headers, rows, sucursal_id: sucursal || null, fecha, archivo_nombre: archivo?.name ?? null, forzar }),
+        body: JSON.stringify({ accion: 'confirmar', perfil_id: perfil.id, headers, rows, sucursal_id: sucursal || null, fecha, archivo_nombre: archivo?.name ?? null, forzar, crear_skus: [...crearSel] }),
       })
       const j = await r.json(); if (!r.ok) throw new Error(j?.error)
       if (j?.duplicado && !forzar) {
         if (confirm(`${j.mensaje}\n\n¿Aplicar igual?`)) return confirmar(true)
         return
       }
-      setHecho({ filas_ok: j.filas_ok, sin_match: j.filas_sin_match, job: j.import_job_id })
-      toast.success(`Importación aplicada: ${j.filas_ok} filas`)
+      setHecho({ filas_ok: j.filas_ok, sin_match: j.filas_sin_match, job: j.import_job_id, creados: j.creados ?? 0, ofertas: j.ofertas_creadas ?? 0 })
+      toast.success(`Importación aplicada: ${j.filas_ok} filas${j.creados ? `, ${j.creados} creados` : ''}`)
     } catch (e: any) { toast.error(e?.message ?? 'Error al aplicar') } finally { setAplicando(false) }
   }
 
@@ -158,7 +168,15 @@ function FlujoImport({ perfil, sucursales, sucursalActiva, onBack }: { perfil: P
       <div className="mx-auto max-w-lg space-y-4 rounded-lg border border-border bg-card p-6 text-center">
         <CheckCircle2 className="mx-auto size-12 text-emerald-500" />
         <div className="text-lg font-semibold">Importación aplicada</div>
-        <div className="text-sm text-muted-foreground">{hecho.filas_ok} filas procesadas{hecho.sin_match > 0 ? ` · ${hecho.sin_match} sin matchear` : ''}.</div>
+        <div className="text-sm text-muted-foreground">
+          {hecho.filas_ok} filas procesadas
+          {hecho.creados > 0 ? ` · ${hecho.creados} producto(s) creado(s)` : ''}
+          {hecho.ofertas > 0 ? ` · ${hecho.ofertas} oferta(s)` : ''}
+          {hecho.sin_match > 0 ? ` · ${hecho.sin_match} sin matchear` : ''}.
+        </div>
+        {hecho.ofertas > 0 && (
+          <Button variant="outline" size="sm" onClick={() => router.push('/admin/ofertas')}>Ver ofertas creadas (borrador)</Button>
+        )}
         <div className="flex flex-wrap justify-center gap-2">
           <Button variant="outline" onClick={onBack}><ArrowLeft className="size-4" /> Volver</Button>
           {hecho.sin_match > 0 && <Button variant="outline" onClick={() => router.push('/admin/centro-datos/sin-matchear')}>Resolver {hecho.sin_match} sin match</Button>}
@@ -222,13 +240,39 @@ function FlujoImport({ perfil, sucursales, sucursalActiva, onBack }: { perfil: P
             <div className="flex items-center gap-2 text-sm font-medium text-primary"><Sparkles className="size-4" /> NORA leyó el archivo</div>
             <div className="mt-1.5 text-sm">{analisis.resumen.texto}</div>
             <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
-              <span>{analisis.matcheados} matcheados</span>
-              {analisis.sin_match > 0 && <span className="text-amber-600">{analisis.sin_match} sin match</span>}
-              {!!analisis.resumen.nuevos && <span className="inline-flex items-center gap-1"><PackagePlus className="size-3" /> {analisis.resumen.nuevos} nuevos</span>}
+              <span>Actualizo <b>{analisis.matcheados}</b></span>
+              {nuevos.length > 0 && <span className="inline-flex items-center gap-1 text-primary"><PackagePlus className="size-3" /> creo <b>{crearSel.size}</b> de {nuevos.length} nuevos</span>}
+              {!!analisis.resumen.con_oferta && <span className="inline-flex items-center gap-1 text-violet-600"><Tag className="size-3" /> {analisis.resumen.con_oferta} con oferta</span>}
               {!!analisis.resumen.subieron_precio && <span className="inline-flex items-center gap-1 text-red-600"><TrendingUp className="size-3" /> {analisis.resumen.subieron_precio} suben</span>}
               {!!analisis.resumen.bajaron_precio && <span className="inline-flex items-center gap-1 text-emerald-600"><TrendingDown className="size-3" /> {analisis.resumen.bajaron_precio} bajan</span>}
+              {analisis.sin_match > 0 && <span className="text-amber-600">{analisis.sin_match} sin match</span>}
             </div>
           </div>
+
+          {/* Productos NUEVOS: el usuario confirma cuáles crear */}
+          {nuevos.length > 0 && (
+            <div className="rounded-lg border border-primary/30 bg-card p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-medium"><PackagePlus className="size-4 text-primary" /> {nuevos.length} producto(s) nuevo(s) — ¿cuáles creo?</div>
+                <div className="flex gap-2 text-xs">
+                  <button className="text-primary hover:underline" onClick={() => setCrearSel(new Set(nuevos.map((n) => n.sku as string)))}>Todos</button>
+                  <button className="text-muted-foreground hover:underline" onClick={() => setCrearSel(new Set())}>Ninguno</button>
+                </div>
+              </div>
+              <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+                {nuevos.map((n) => (
+                  <label key={n.fila} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-muted/40">
+                    <input type="checkbox" checked={crearSel.has(n.sku as string)} onChange={() => toggleCrear(n.sku as string)} className="size-4 accent-[hsl(var(--primary))]" />
+                    <span className="font-mono text-[11px] text-muted-foreground">{n.sku}</span>
+                    <span className="min-w-0 flex-1 truncate">{n.nombre ?? '—'}</span>
+                    {n.precio_nuevo != null && <span className="text-xs text-muted-foreground">${n.precio_nuevo.toLocaleString('es-AR')}</span>}
+                    {n.tiene_oferta && <Badge variant="outline" className="border-violet-500/40 text-[10px] text-violet-600">{n.oferta_label ?? 'oferta'}</Badge>}
+                  </label>
+                ))}
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">Los que dejes sin tildar quedan en la cola "Sin matchear" (no se crean). Los nuevos con oferta crean también su oferta en borrador.</div>
+            </div>
+          )}
 
           {/* mejora 2: semáforo */}
           <div className="space-y-2">
@@ -251,7 +295,7 @@ function FlujoImport({ perfil, sucursales, sucursalActiva, onBack }: { perfil: P
                   <th className="px-3 py-2">CODIGO</th><th className="px-3 py-2">Descripción</th>
                   <th className="px-3 py-2">Match</th>
                   {perfil.tipo === 'ventas' ? <><th className="px-3 py-2 text-right">Cant.</th><th className="px-3 py-2 text-right">Monto</th></>
-                    : <><th className="px-3 py-2 text-right">Precio</th><th className="px-3 py-2 text-right">Δ%</th><th className="px-3 py-2 text-right">Stock</th></>}
+                    : <><th className="px-3 py-2 text-right">Precio</th><th className="px-3 py-2 text-right">Δ%</th><th className="px-3 py-2 text-right">Stock</th><th className="px-3 py-2">Oferta</th></>}
                 </tr>
               </thead>
               <tbody>
@@ -270,6 +314,7 @@ function FlujoImport({ perfil, sucursales, sucursalActiva, onBack }: { perfil: P
                         <td className="px-3 py-1.5 text-right">{it.precio_nuevo != null ? `$${it.precio_nuevo.toLocaleString('es-AR')}` : '—'}</td>
                         <td className={cn('px-3 py-1.5 text-right', (it.delta_precio_pct ?? 0) > 0 ? 'text-red-600' : (it.delta_precio_pct ?? 0) < 0 ? 'text-emerald-600' : '')}>{it.delta_precio_pct != null ? `${it.delta_precio_pct > 0 ? '+' : ''}${it.delta_precio_pct}%` : '—'}</td>
                         <td className="px-3 py-1.5 text-right">{it.stock_nuevo ?? '—'}</td>
+                        <td className="px-3 py-1.5">{it.tiene_oferta ? <Badge variant="outline" className="border-violet-500/40 text-[10px] text-violet-600">{it.oferta_label ?? 'oferta'}</Badge> : ''}</td>
                       </>
                     )}
                   </tr>

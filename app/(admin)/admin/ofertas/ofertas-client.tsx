@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Plus, Download, Search, Tag, Check, X, Send, Trash2 } from 'lucide-react'
@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 
-export type ProdLite = { id: string; sku: string | null; nombre: string; precio: number; costo: number }
+export type ProdLite = { id: string; sku: string | null; nombre: string; precio: number; costo: number; codigo_barras?: string | null }
 export type CampLite = { id: string; nombre: string; estado: string }
 export type OfertaRow = {
   id: string; codigo: string | null; nombre: string; tipo: string; valor: number | null; nProductos: number
@@ -118,11 +118,32 @@ function CrearOferta({ productos, campanias, onClose }: { productos: ProdLite[];
   const [canales, setCanales] = useState<string[]>(['cartel', 'cuponera'])
   const [sel, setSel] = useState<ProdLite[]>([])
   const [q, setQ] = useState('')
+  const [matches, setMatches] = useState<ProdLite[]>([])
+  const [buscando, setBuscando] = useState(false)
   const [busy, setBusy] = useState(false)
   function set<K extends keyof typeof f>(k: K, v: (typeof f)[K]) { setF((p) => ({ ...p, [k]: v })) }
   function toggleCanal(c: string) { setCanales((p) => p.includes(c) ? p.filter((x) => x !== c) : [...p, c]) }
 
-  const matches = useMemo(() => { const t = q.trim().toLowerCase(); if (!t) return []; const ids = new Set(sel.map((s) => s.id)); return productos.filter((p) => !ids.has(p.id) && `${p.nombre} ${p.sku ?? ''}`.toLowerCase().includes(t)).slice(0, 6) }, [q, productos, sel])
+  // Búsqueda server-side por SKU / nombre / EAN (escala al catálogo real).
+  const debRef = useRef<any>(null)
+  useEffect(() => {
+    const t = q.trim()
+    if (debRef.current) clearTimeout(debRef.current)
+    if (t.length < 2) { setMatches([]); setBuscando(false); return }
+    setBuscando(true)
+    debRef.current = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/ofertas/buscar-producto?q=${encodeURIComponent(t)}`)
+        const j = await r.json()
+        const ids = new Set(sel.map((s) => s.id))
+        setMatches((Array.isArray(j) ? j : []).filter((p: any) => !ids.has(p.id)).map((p: any) => ({
+          id: p.id, sku: p.sku, nombre: p.nombre, codigo_barras: p.codigo_barras,
+          precio: Number(p.precio_sugerido ?? 0), costo: 0,
+        })))
+      } catch { setMatches([]) } finally { setBuscando(false) }
+    }, 250)
+    return () => { if (debRef.current) clearTimeout(debRef.current) }
+  }, [q, sel])
 
   async function submit() {
     if (!f.nombre.trim()) { toast.error('Poné un nombre.'); return }
@@ -163,9 +184,24 @@ function CrearOferta({ productos, campanias, onClose }: { productos: ProdLite[];
 
           <div className="space-y-1.5">
             <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Productos</Label>
-            {sel.map((p) => <div key={p.id} className="flex items-center justify-between rounded-md border border-border px-2.5 py-1.5 text-sm"><span>{p.nombre} <span className="font-mono text-[10px] text-muted-foreground">{p.sku}</span></span><Button size="sm" variant="ghost" className="h-6 px-2 text-rose-600" onClick={() => setSel((s) => s.filter((x) => x.id !== p.id))}><Trash2 className="size-3.5" /></Button></div>)}
-            <div className="relative"><Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" /><Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar producto…" className="pl-8" /></div>
-            {matches.length > 0 && <div className="rounded-md border border-border">{matches.map((m) => <button key={m.id} type="button" onClick={() => { setSel((s) => [...s, m]); setQ('') }} className="flex w-full items-center justify-between px-3 py-1.5 text-left text-sm hover:bg-accent"><span>{m.nombre}</span><span className="font-mono text-[10px] text-muted-foreground">{m.sku}</span></button>)}</div>}
+            {sel.map((p) => <div key={p.id} className="flex items-center justify-between rounded-md border border-border px-2.5 py-1.5 text-sm"><span className="min-w-0"><span className="truncate">{p.nombre}</span> <span className="font-mono text-[10px] text-muted-foreground">{p.sku}</span>{p.precio > 0 && <span className="ml-1 text-[10px] text-muted-foreground">· actual ${p.precio.toLocaleString('es-AR')}</span>}</span><Button size="sm" variant="ghost" className="h-6 px-2 text-rose-600" onClick={() => setSel((s) => s.filter((x) => x.id !== p.id))}><Trash2 className="size-3.5" /></Button></div>)}
+            <div className="relative"><Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" /><Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por SKU, nombre o código de barras…" className="pl-8" /></div>
+            {q.trim().length >= 2 && (
+              <div className="rounded-md border border-border">
+                {buscando && <div className="px-3 py-1.5 text-xs text-muted-foreground">Buscando…</div>}
+                {!buscando && matches.length === 0 && <div className="px-3 py-1.5 text-xs text-muted-foreground">Sin coincidencias para "{q.trim()}".</div>}
+                {matches.map((m) => (
+                  <button key={m.id} type="button" onClick={() => { setSel((s) => [...s, m]); setQ('') }} className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm hover:bg-accent">
+                    <span className="min-w-0 truncate">{m.nombre}</span>
+                    <span className="flex shrink-0 items-center gap-2 text-[10px] text-muted-foreground">
+                      {m.codigo_barras && <span className="font-mono">EAN {m.codigo_barras}</span>}
+                      <span className="font-mono">{m.sku}</span>
+                      {m.precio > 0 && <span>${m.precio.toLocaleString('es-AR')}</span>}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <Field label="Canales">

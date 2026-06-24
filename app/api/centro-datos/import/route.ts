@@ -70,10 +70,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const crearSkus: string[] = Array.isArray(b?.crear_skus) ? b.crear_skus : []
   const r = await aplicar(adm, {
     tipo: perfil.tipo, perfilId: perfil.id, sucursalId, fecha,
     archivoNombre, archivoHash: hash, filas, analisis,
-    usuarioId: g.userId, usuarioNombre: g.nombre, esDemo: false,
+    usuarioId: g.userId, usuarioNombre: g.nombre, esDemo: false, crearSkus,
   })
   return NextResponse.json({ ok: true, ...r, matcheados: analisis.matcheados })
 }

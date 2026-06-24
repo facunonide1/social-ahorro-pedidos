@@ -33,6 +33,10 @@ export type FilaMapeada = {
   ventas_mensuales?: Record<string, number>
   nom_promo?: string | null
   def_promo?: string | null
+  descuento?: number | null
+  precio_oferta?: number | null
+  oferta_tipo?: string | null
+  oferta_vigencia?: string | null
   cliente_nombre?: string | null
   cliente_doc?: string | null
   cliente_tel?: string | null
@@ -89,6 +93,10 @@ export function mapearFilas(
         case 'estado': f.estado = val || null; break
         case 'nom_promo': f.nom_promo = val || null; break
         case 'def_promo': f.def_promo = val || null; break
+        case 'oferta_tipo': f.oferta_tipo = val || null; break
+        case 'oferta_vigencia': f.oferta_vigencia = val || null; break
+        case 'descuento': f.descuento = parseNum(val, dec); break
+        case 'precio_oferta': f.precio_oferta = parseNum(val, dec); break
         case 'cliente_nombre': f.cliente_nombre = val || null; break
         case 'cliente_doc': f.cliente_doc = val || null; break
         case 'cliente_tel': f.cliente_tel = val || null; break
@@ -141,6 +149,73 @@ export function matchFila(f: FilaMapeada, m: Matcher): { producto: Catalogo | nu
   return { producto: null, via: null }
 }
 
+// ===== Oferta dentro del archivo de productos =====
+export type OfertaConstruida = {
+  tipo: string          // enum oferta_tipo
+  valor: number | null
+  nombre: string
+  fecha_fin: string | null
+  label: string         // texto humano para el preview
+}
+
+const TIPOS_OFERTA = ['porcentaje_descuento', 'precio_fijo', '2x1', 'nxm', 'combo', 'segunda_unidad_pct', 'descuento_por_cantidad', 'combo_dinamico', 'oferta_cruzada']
+
+function mapTipoOferta(txt?: string | null): string | null {
+  if (!txt) return null
+  const t = norm(txt)
+  if (TIPOS_OFERTA.includes(txt.trim())) return txt.trim()
+  if (/2.?x.?1/.test(t)) return '2x1'
+  if (t.includes('fijo')) return 'precio_fijo'
+  if (t.includes('segunda') || t.includes('2da')) return 'segunda_unidad_pct'
+  if (t.includes('combo')) return 'combo'
+  if (t.includes('porc') || t.includes('desc') || txt.includes('%')) return 'porcentaje_descuento'
+  return null
+}
+
+/** Parsea una vigencia (dd/mm/aaaa o aaaa-mm-dd) a fecha ISO YYYY-MM-DD. */
+export function parseFechaVig(v?: string | null): string | null {
+  if (!v) return null
+  const s = String(v).trim()
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`
+  m = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/)
+  if (m) {
+    const yyyy = m[3].length === 2 ? `20${m[3]}` : m[3]
+    return `${yyyy}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`
+  }
+  return null
+}
+
+/**
+ * Si la fila trae datos de oferta (precio con descuento, % o nombre de promo),
+ * construye la oferta a crear. precioRef = precio normal del producto.
+ */
+export function construirOferta(f: FilaMapeada, precioRef: number | null): OfertaConstruida | null {
+  const tieneOferta = (f.precio_oferta != null && f.precio_oferta > 0) || (f.descuento != null && f.descuento > 0) || !!f.nom_promo
+  if (!tieneOferta) return null
+  let tipo = mapTipoOferta(f.oferta_tipo)
+  let valor: number | null = null
+  if (!tipo) {
+    if (f.descuento != null && f.descuento > 0) { tipo = 'porcentaje_descuento'; valor = f.descuento }
+    else if (f.precio_oferta != null) { tipo = 'precio_fijo'; valor = f.precio_oferta }
+    else tipo = 'porcentaje_descuento'
+  }
+  if (valor == null) {
+    if (tipo === 'precio_fijo') valor = f.precio_oferta ?? null
+    else if (tipo === 'porcentaje_descuento') {
+      valor = f.descuento ?? (precioRef && f.precio_oferta != null && precioRef > 0
+        ? Math.round(((precioRef - f.precio_oferta) / precioRef) * 100) : null)
+    }
+  }
+  const nombre = (f.nom_promo || f.def_promo || `Oferta ${f.nombre ?? f.sku ?? ''}`).toString().slice(0, 120).trim()
+  const fechaFin = parseFechaVig(f.oferta_vigencia)
+  const label = tipo === 'precio_fijo' ? (valor != null ? `Precio fijo $${valor.toLocaleString('es-AR')}` : 'Precio fijo')
+    : tipo === '2x1' ? '2x1'
+    : tipo === 'porcentaje_descuento' ? (valor != null ? `${valor}% off` : 'Descuento')
+    : (f.nom_promo ?? tipo)
+  return { tipo, valor, nombre, fecha_fin: fechaFin, label }
+}
+
 // ===== Análisis (preview) =====
 export type ItemAnalizado = {
   fila: number
@@ -157,6 +232,9 @@ export type ItemAnalizado = {
   cantidad: number | null
   monto: number | null
   es_nuevo: boolean
+  tiene_oferta: boolean
+  precio_oferta: number | null
+  oferta_label: string | null
 }
 
 export type Analisis = {
@@ -189,6 +267,7 @@ export async function analizar(
     if (precioAnt != null && precioNue != null && precioAnt > 0) {
       delta = ((precioNue - precioAnt) / precioAnt) * 100
     }
+    const of = construirOferta(f, precioAnt ?? precioNue)
     return {
       fila: f.fila, sku: f.sku ?? null, codigo_barras: f.codigo_barras ?? null,
       nombre: f.nombre ?? null, producto_id: producto?.id ?? null,
@@ -197,6 +276,7 @@ export async function analizar(
       delta_precio_pct: delta != null ? Math.round(delta * 10) / 10 : null,
       stock_nuevo: f.stock ?? null, cantidad: f.cantidad ?? null, monto: f.monto ?? null,
       es_nuevo: !producto,
+      tiene_oferta: !!of, precio_oferta: f.precio_oferta ?? null, oferta_label: of?.label ?? null,
     }
   })
 
@@ -239,12 +319,14 @@ export async function analizar(
   const bajaron = items.filter((i) => i.delta_precio_pct != null && i.delta_precio_pct < 0).length
   const conStock = filas.filter((f) => (f.stock ?? 0) > 0).length
   const conPrecio = filas.filter((f) => (f.precio ?? 0) > 0).length
+  const conOferta = items.filter((i) => i.tiene_oferta).length
   const rubros = Array.from(new Set(filas.map((f) => f.rubro).filter(Boolean))).slice(0, 8) as string[]
 
   const resumen: ResumenImport = {
     total: filas.length, con_stock: conStock, con_precio: conPrecio,
     rubros, nuevos, subieron_precio: subieron, bajaron_precio: bajaron,
     cambio_stock: tipo === 'stock' || tipo === 'productos' ? filas.length : 0,
+    con_oferta: conOferta,
     texto: explicar(tipo, filas, { conStock, nuevos, rubros }),
   }
 
@@ -277,6 +359,8 @@ export type ResultadoAplicar = {
   filas_ok: number
   filas_sin_match: number
   snapshot_id: string | null
+  creados: number
+  ofertas_creadas: number
 }
 
 /**
@@ -297,10 +381,13 @@ export async function aplicar(
     usuarioId: string | null
     usuarioNombre: string | null
     esDemo?: boolean
+    /** SKUs nuevos que el usuario CONFIRMÓ crear (los demás no-match van a la cola). */
+    crearSkus?: string[]
   },
 ): Promise<ResultadoAplicar> {
   const { tipo, filas } = opts
   const { matcher } = await buildMatcher(adm)
+  const stats = { creados: 0, ofertas: 0 }
 
   // 1) import_job en preview
   const { data: job, error: eJob } = await adm.from('import_jobs').insert({
@@ -320,7 +407,7 @@ export async function aplicar(
   let ok = 0
 
   if (tipo === 'productos' || tipo === 'stock') {
-    ok = await aplicarProductos(adm, { ...opts, jobId, matcher, snapshot, sinMatch })
+    ok = await aplicarProductos(adm, { ...opts, jobId, matcher, snapshot, sinMatch, stats })
   } else if (tipo === 'ventas') {
     ok = await aplicarVentas(adm, { ...opts, jobId, matcher, snapshot, sinMatch })
   } else if (tipo === 'clientes') {
@@ -362,20 +449,89 @@ export async function aplicar(
     await adm.from('perfiles_datos').update({ ultima_carga: new Date().toISOString() }).eq('id', opts.perfilId)
   }
 
-  return { import_job_id: jobId, filas_ok: ok, filas_sin_match: sinMatch.length, snapshot_id: snapshotId }
+  return { import_job_id: jobId, filas_ok: ok, filas_sin_match: sinMatch.length, snapshot_id: snapshotId, creados: stats.creados, ofertas_creadas: stats.ofertas }
+}
+
+/**
+ * Crea una oferta (borrador) a partir de una fila de producto que trae datos de
+ * oferta, enlazada al producto por su id. Dedup: si ya existe una oferta con el
+ * mismo nombre y producto en borrador/activa, no la duplica. Snapshot para revert.
+ */
+async function crearOfertaDesdeProducto(
+  adm: Adm, productoId: string, of: OfertaConstruida,
+  ctx: { rubro?: string | null; usuarioId: string | null; esDemo?: boolean }, snapshot: SnapRow[],
+): Promise<boolean> {
+  const { data: dup } = await adm.from('ofertas')
+    .select('id').contains('productos_ids', [productoId]).eq('nombre', of.nombre)
+    .in('estado', ['borrador', 'activa', 'aprobada', 'pendiente_aprobacion']).limit(1).maybeSingle()
+  if (dup) return false
+  const { data: nueva, error } = await adm.from('ofertas').insert({
+    nombre: of.nombre, tipo: of.tipo, valor: of.valor,
+    productos_ids: [productoId], rubro: ctx.rubro ?? null,
+    canales: ['cartel', 'cuponera'],
+    vigencia_tipo: of.fecha_fin ? 'con_fecha' : 'permanente',
+    fecha_inicio: of.fecha_fin ? new Date().toISOString().slice(0, 10) : null,
+    fecha_fin: of.fecha_fin,
+    estado: 'borrador', es_demo: !!ctx.esDemo, created_by: ctx.usuarioId,
+  }).select('id').single()
+  if (error || !nueva) return false
+  snapshot.push({ tabla: 'ofertas', pk: { id: nueva.id }, datos_previos: null })
+  return true
 }
 
 async function aplicarProductos(adm: Adm, a: any): Promise<number> {
-  const { tipo, filas, sucursalId, snapshot, sinMatch, matcher } = a
+  const { tipo, filas, sucursalId, snapshot, sinMatch, matcher, stats, usuarioId, esDemo } = a
+  // SKUs nuevos confirmados por el usuario (normalizados).
+  const crearSet = new Set<string>(((a.crearSkus ?? []) as string[]).map((s) => String(s).trim().toLowerCase()))
   let ok = 0
   for (const f of filas as FilaMapeada[]) {
-    const { producto } = matchFila(f, matcher)
+    let { producto } = matchFila(f, matcher)
+    // ---- producto NUEVO confirmado: crearlo ----
     if (!producto) {
-      sinMatch.push({
-        sku: f.sku ?? null, codigo: f.sku ?? null, barras: f.codigo_barras ?? null,
-        descripcion_origen: f.nombre ?? null, datos: f._raw,
-      })
+      const skuKey = f.sku ? f.sku.trim().toLowerCase() : ''
+      const confirmado = skuKey && crearSet.has(skuKey)
+      if (!confirmado || (!f.sku && !f.codigo_barras)) {
+        sinMatch.push({
+          sku: f.sku ?? null, codigo: f.sku ?? null, barras: f.codigo_barras ?? null,
+          descripcion_origen: f.nombre ?? null, datos: f._raw,
+        })
+        continue
+      }
+      const { data: nuevo, error: eIns } = await adm.from('productos_catalogo').insert({
+        sku: f.sku ?? null, codigo_barras: f.codigo_barras ?? null,
+        nombre: f.nombre ?? f.sku ?? 'Sin nombre',
+        precio_sugerido: f.precio ?? null, rubro: f.rubro ?? null,
+        laboratorio: f.laboratorio ?? null, droga_principal: f.droga ?? null,
+        ventas_mensuales: f.ventas_mensuales ? { ...f.ventas_mensuales, actualizado: new Date().toISOString().slice(0, 10) } : null,
+        activo: true,
+      }).select('id, sku, codigo_barras, nombre, precio_sugerido').single()
+      if (eIns || !nuevo) {
+        sinMatch.push({ sku: f.sku ?? null, codigo: f.sku ?? null, barras: f.codigo_barras ?? null, descripcion_origen: f.nombre ?? null, datos: f._raw })
+        continue
+      }
+      snapshot.push({ tabla: 'productos_catalogo', pk: { id: nuevo.id }, datos_previos: null })
+      // registrar en el matcher para evitar duplicados si el archivo repite el SKU
+      const cat: Catalogo = { id: nuevo.id, sku: nuevo.sku, codigo_barras: nuevo.codigo_barras, nombre: nuevo.nombre, precio_sugerido: nuevo.precio_sugerido }
+      if (cat.sku) matcher.porSku.set(cat.sku.trim().toLowerCase(), cat)
+      if (cat.codigo_barras) matcher.porEan.set(String(cat.codigo_barras).trim(), cat)
+      matcher.porNombre.set(norm(cat.nombre), cat)
+      producto = cat
+      stats.creados++
+      // oferta del archivo para el producto recién creado
+      const of = construirOferta(f, f.precio ?? null)
+      if (of && await crearOfertaDesdeProducto(adm, producto.id, of, { rubro: f.rubro, usuarioId, esDemo }, snapshot)) stats.ofertas++
+      // stock en la sucursal elegida
+      if (f.stock != null && sucursalId) {
+        await adm.from('stock_items').upsert({ producto_id: producto.id, sucursal_id: sucursalId, cantidad_gondola: f.stock, updated_at: new Date().toISOString() }, { onConflict: 'producto_id,sucursal_id' })
+        snapshot.push({ tabla: 'stock_items', pk: { producto_id: producto.id, sucursal_id: sucursalId }, datos_previos: null })
+      }
+      ok++
       continue
+    }
+    // ---- producto EXISTENTE: oferta del archivo (dedup) ----
+    {
+      const of = construirOferta(f, producto.precio_sugerido ?? f.precio ?? null)
+      if (of && await crearOfertaDesdeProducto(adm, producto.id, of, { rubro: f.rubro, usuarioId, esDemo }, snapshot)) stats.ofertas++
     }
     // ---- catálogo (productos: precio/rubro/lab/droga/ventas_mensuales) ----
     if (tipo === 'productos') {
