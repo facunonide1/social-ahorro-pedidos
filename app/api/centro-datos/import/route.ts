@@ -4,6 +4,7 @@ import { createHash } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/server'
 import { gateCentroDatos } from '@/lib/centro-datos/gate'
 import { mapearFilas, analizar, aplicar } from '@/lib/centro-datos/import'
+import { detectarMapeo } from '@/lib/centro-datos/deteccion'
 import type { TipoPerfilDatos, CampoSistema, OpcionesPerfil } from '@/lib/types/centro-datos'
 
 export const dynamic = 'force-dynamic'
@@ -38,13 +39,23 @@ export async function POST(req: NextRequest) {
     .select('id, tipo, mapeo_columnas, opciones').eq('id', b.perfil_id).maybeSingle<Perfil>()
   if (!perfil) return NextResponse.json({ error: 'perfil no encontrado' }, { status: 404 })
 
+  // ---- mapeo inteligente: NORA lee encabezados + muestra y propone el mapeo ----
+  if (accion === 'mapear') {
+    const muestra = rows.slice(0, 8)
+    const prop = await detectarMapeo(headers, muestra, perfil.tipo, { base: perfil.mapeo_columnas ?? {}, usarLLM: true })
+    return NextResponse.json({ tipo: perfil.tipo, headers, ...prop })
+  }
+
   const sucursalId = b?.sucursal_id ?? null
   const fecha = b?.fecha ?? null
   if (perfil.tipo === 'ventas' && (!sucursalId || !fecha)) {
     return NextResponse.json({ error: 'ventas requiere sucursal y fecha' }, { status: 400 })
   }
 
-  const filas = mapearFilas(headers, rows, perfil.mapeo_columnas ?? {}, perfil.opciones ?? {})
+  // mapeo a usar: el que confirmó el usuario (override) o el guardado en el perfil
+  const mapeoUsar: Record<string, CampoSistema | string> =
+    (b?.mapeo && typeof b.mapeo === 'object' && Object.keys(b.mapeo).length) ? b.mapeo : (perfil.mapeo_columnas ?? {})
+  const filas = mapearFilas(headers, rows, mapeoUsar, perfil.opciones ?? {})
   if (!filas.length) return NextResponse.json({ error: 'no se detectaron filas con datos (¿mapeo correcto?)' }, { status: 400 })
 
   const analisis = await analizar(adm, perfil.tipo, filas, { sucursalId, perfilId: perfil.id, fecha })

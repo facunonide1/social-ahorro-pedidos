@@ -29,6 +29,8 @@ type ItemPreview = {
   tiene_oferta?: boolean; precio_oferta?: number | null; oferta_label?: string | null
 }
 type Analisis = { total: number; matcheados: number; sin_match: number; anomalias: Anomalia[]; resumen: ResumenImport; preview: ItemPreview[] }
+type CampoProp = { campo: string; label: string; header: string | null; score: number; confianza: 'alta' | 'media' | 'baja'; razon: string }
+type Propuesta = { tipo: string; headers: string[]; campos: CampoProp[]; mapeo: Record<string, string>; sin_usar: string[]; falta_sku: boolean; uso_llm: boolean }
 
 function horasDesde(iso: string | null): number | null {
   if (!iso) return null
@@ -105,32 +107,75 @@ function FlujoImport({ perfil, sucursales, sucursalActiva, onBack }: { perfil: P
   const [hecho, setHecho] = useState<{ filas_ok: number; sin_match: number; job: string; creados: number; ofertas: number } | null>(null)
   // SKUs nuevos que el usuario confirma crear (default: todos los que tienen SKU)
   const [crearSel, setCrearSel] = useState<Set<string>>(new Set())
+  // mapeo inteligente: propuesta de NORA + edición del usuario (campo → header)
+  const [propuesta, setPropuesta] = useState<Propuesta | null>(null)
+  const [mapeoCampo, setMapeoCampo] = useState<Record<string, string>>({})
+  const [mapeando, setMapeando] = useState(false)
+
+  // header → campo, para mandar a analizar/confirmar
+  const mapeoHeaderCampo = useMemo(() => {
+    const o: Record<string, string> = {}
+    for (const [campo, h] of Object.entries(mapeoCampo)) if (h) o[h] = campo
+    return o
+  }, [mapeoCampo])
+  const skuAsignado = !!mapeoCampo['sku']
+  const requiereSku = perfil.tipo === 'productos' || perfil.tipo === 'stock' || perfil.tipo === 'ventas' || perfil.tipo === 'dif_stock'
 
   const nuevos = useMemo(() => (analisis?.preview ?? []).filter((i) => i.es_nuevo && i.sku), [analisis])
   function toggleCrear(sku: string) {
     setCrearSel((p) => { const n = new Set(p); n.has(sku) ? n.delete(sku) : n.add(sku); return n })
   }
 
+  async function guardarPerfil() {
+    const nombre = window.prompt('Nombre del perfil (para reusar este mapeo con archivos iguales):', archivo?.name?.replace(/\.[^.]+$/, '') ?? 'Mi formato')
+    if (!nombre) return
+    try {
+      const r = await fetch('/api/centro-datos/perfiles', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ nombre, tipo: perfil.tipo, direccion: 'import', formato: 'xlsx', mapeo_columnas: mapeoHeaderCampo, opciones: perfil.opciones ?? {} }),
+      })
+      const j = await r.json(); if (!r.ok) throw new Error(j?.error)
+      toast.success(`Perfil "${nombre}" guardado. La próxima vez ya viene resuelto.`)
+    } catch (e: any) { toast.error(e?.message ?? 'No pude guardar el perfil') }
+  }
+
   const requiereSucursal = perfil.tipo === 'ventas'
   const sucursalParaStock = perfil.tipo === 'productos' || perfil.tipo === 'stock'
 
   async function elegirArchivo(f: File) {
-    setArchivo(f); setAnalisis(null); setHecho(null)
+    setArchivo(f); setAnalisis(null); setHecho(null); setPropuesta(null); setMapeoCampo({})
     try {
       const { headers, rows } = await parseSpreadsheet(f)
       if (!headers.length) { toast.error('No se detectaron columnas en el archivo'); return }
       setHeaders(headers); setRows(rows)
+      await detectar(headers, rows)
     } catch (e: any) { toast.error('No se pudo leer el archivo: ' + (e?.message ?? '')) }
+  }
+
+  // NORA lee encabezados + muestra y propone el mapeo
+  async function detectar(hs: string[], rs: string[][]) {
+    setMapeando(true)
+    try {
+      const r = await fetch('/api/centro-datos/import', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ accion: 'mapear', perfil_id: perfil.id, headers: hs, rows: rs }),
+      })
+      const j = await r.json(); if (!r.ok) throw new Error(j?.error)
+      const p = j as Propuesta
+      setPropuesta(p)
+      setMapeoCampo(Object.fromEntries((p.campos ?? []).map((c) => [c.campo, c.header ?? ''])))
+    } catch (e: any) { toast.error(e?.message ?? 'No pude leer las columnas') } finally { setMapeando(false) }
   }
 
   async function analizar() {
     if (!headers.length) { toast.error('Subí un archivo primero'); return }
     if (requiereSucursal && !sucursal) { toast.error('Elegí una sucursal'); return }
+    if (requiereSku && !skuAsignado) { toast.error('Asigná la columna del CODIGO/SKU antes de seguir.'); return }
     setCargando(true)
     try {
       const r = await fetch('/api/centro-datos/import', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ accion: 'analizar', perfil_id: perfil.id, headers, rows, sucursal_id: sucursal || null, fecha }),
+        body: JSON.stringify({ accion: 'analizar', perfil_id: perfil.id, headers, rows, mapeo: mapeoHeaderCampo, sucursal_id: sucursal || null, fecha }),
       })
       const j = await r.json(); if (!r.ok) throw new Error(j?.error)
       setAnalisis(j)
@@ -144,7 +189,7 @@ function FlujoImport({ perfil, sucursales, sucursalActiva, onBack }: { perfil: P
     try {
       const r = await fetch('/api/centro-datos/import', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ accion: 'confirmar', perfil_id: perfil.id, headers, rows, sucursal_id: sucursal || null, fecha, archivo_nombre: archivo?.name ?? null, forzar, crear_skus: [...crearSel] }),
+        body: JSON.stringify({ accion: 'confirmar', perfil_id: perfil.id, headers, rows, mapeo: mapeoHeaderCampo, sucursal_id: sucursal || null, fecha, archivo_nombre: archivo?.name ?? null, forzar, crear_skus: [...crearSel] }),
       })
       const j = await r.json(); if (!r.ok) throw new Error(j?.error)
       if (j?.duplicado && !forzar) {
@@ -224,13 +269,21 @@ function FlujoImport({ perfil, sucursales, sucursalActiva, onBack }: { perfil: P
           </button>
         </div>
 
-        {!analisis && (
-          <Button className="mt-4 w-full" disabled={!rows.length || cargando} onClick={analizar}>
-            {cargando ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-            NORA: leer y validar
-          </Button>
+        {mapeando && (
+          <div className="mt-4 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-primary">
+            <Loader2 className="size-4 animate-spin" /> NORA está leyendo las columnas y armando el mapeo…
+          </div>
         )}
       </div>
+
+      {/* Pantalla de mapeo: NORA propuso, el usuario revisa/corrige */}
+      {propuesta && !analisis && !mapeando && (
+        <MapeoScreen
+          propuesta={propuesta} headers={headers} mapeoCampo={mapeoCampo} setMapeoCampo={setMapeoCampo}
+          requiereSku={requiereSku} skuAsignado={skuAsignado} cargando={cargando}
+          onConfirmar={analizar} onGuardarPerfil={guardarPerfil}
+        />
+      )}
 
       {/* Resultado del análisis */}
       {analisis && (
@@ -336,6 +389,94 @@ function FlujoImport({ perfil, sucursales, sucursalActiva, onBack }: { perfil: P
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ───────────────────────── Pantalla de mapeo inteligente ─────────────────────────
+const CONF_UI: Record<string, { cls: string; txt: string }> = {
+  alta: { cls: 'text-emerald-600 border-emerald-500/40 bg-emerald-500/5', txt: '✓ seguro' },
+  media: { cls: 'text-amber-600 border-amber-500/40 bg-amber-500/5', txt: '¿confirmás?' },
+  baja: { cls: 'text-muted-foreground border-border', txt: 'sin asignar' },
+  manual: { cls: 'text-primary border-primary/40 bg-primary/5', txt: 'elegido por vos' },
+}
+
+function MapeoScreen({ propuesta, headers, mapeoCampo, setMapeoCampo, requiereSku, skuAsignado, cargando, onConfirmar, onGuardarPerfil }: {
+  propuesta: Propuesta; headers: string[]; mapeoCampo: Record<string, string>
+  setMapeoCampo: (f: (p: Record<string, string>) => Record<string, string>) => void
+  requiereSku: boolean; skuAsignado: boolean; cargando: boolean
+  onConfirmar: () => void; onGuardarPerfil: () => void
+}) {
+  function asignar(campo: string, header: string) {
+    setMapeoCampo((prev) => {
+      const n = { ...prev }
+      if (header) for (const k of Object.keys(n)) if (n[k] === header && k !== campo) n[k] = ''
+      n[campo] = header
+      return n
+    })
+  }
+  const usados = new Set(Object.values(mapeoCampo).filter(Boolean))
+  const sinUsar = headers.filter((h) => !usados.has(h))
+  const asignados = propuesta.campos.filter((c) => mapeoCampo[c.campo])
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border bg-card p-4">
+      <div className="flex items-center gap-2">
+        <Sparkles className="size-5 text-primary" />
+        <div>
+          <div className="font-medium">NORA propuso el mapeo de columnas</div>
+          <div className="text-xs text-muted-foreground">
+            {asignados.length} de {propuesta.campos.length} campos asignados · {headers.length} columnas en el archivo
+            {propuesta.uso_llm ? ' · reforzado con IA' : ''}. Revisá y corregí lo que haga falta.
+          </div>
+        </div>
+      </div>
+
+      {requiereSku && !skuAsignado && (
+        <div className="flex items-start gap-2 rounded-lg border border-red-500/40 bg-red-500/5 px-3 py-2 text-sm text-red-600">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+          <div>No detecté la columna del <b>CODIGO/SKU</b> (obligatoria). Asignala abajo antes de seguir.</div>
+        </div>
+      )}
+
+      <div className="divide-y divide-border/60 rounded-lg border border-border">
+        {propuesta.campos.map((c) => {
+          const cur = mapeoCampo[c.campo] ?? ''
+          const estado = !cur ? 'baja' : (cur === c.header ? c.confianza : 'manual')
+          const ui = CONF_UI[estado]
+          const obligatorio = requiereSku && c.campo === 'sku'
+          return (
+            <div key={c.campo} className="flex flex-wrap items-center gap-2 px-3 py-2">
+              <div className="min-w-[160px] flex-1">
+                <div className="text-sm font-medium">{c.label}{obligatorio && <span className="text-red-500"> *</span>}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {cur ? (cur === c.header && c.razon ? `NORA: ${c.razon}${c.score ? ` · ${Math.round(c.score * 100)}%` : ''}` : 'asignado manualmente') : 'sin columna'}
+                </div>
+              </div>
+              <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-medium', ui.cls)}>{ui.txt}</span>
+              <Select value={cur || '__none__'} onValueChange={(v) => asignar(c.campo, v === '__none__' ? '' : v)}>
+                <SelectTrigger className="h-9 w-56"><SelectValue placeholder="Elegí columna" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— ninguna —</SelectItem>
+                  {headers.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )
+        })}
+      </div>
+
+      {sinUsar.length > 0 && (
+        <div className="text-xs text-muted-foreground">+ {sinUsar.length} columna(s) sin usar: <span className="font-mono">{sinUsar.slice(0, 8).join(', ')}{sinUsar.length > 8 ? '…' : ''}</span></div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+        <Button variant="outline" onClick={onGuardarPerfil}>Guardar como perfil</Button>
+        <Button disabled={cargando || (requiereSku && !skuAsignado)} onClick={onConfirmar}>
+          {cargando ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+          Confirmar mapeo y validar
+        </Button>
+      </div>
     </div>
   )
 }
