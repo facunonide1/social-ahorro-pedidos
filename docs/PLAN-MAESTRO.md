@@ -12,7 +12,27 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — IMPORTADOR DE PRODUCTOS COMPLETO ✅ (v0.32-importador-ofertas)
+## 🟢 SESIÓN ACTUAL — IRREGULARIDADES DE STOCK ✅ (v0.33-irregularidades-stock)
+
+Cruce diario stock vs ventas por sucursal que detecta faltantes, sobrantes y
+patrones (robos/mermas/errores). Migr. 0068. Datos sensibles (pérdidas): solo
+roles autorizados.
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 · `stock_snapshots` + `irregularidades_stock` + RLS. `calcular_irregularidades_stock(suc,fecha)`: esperado = anterior − ventas (entre dos fotos), registra TODA diferencia ≠ 0 (sin umbral), recálculo idempotente que no pisa revisadas/justificadas. `snapshot_stock_sucursal()`. Hook en el import (snapshot + cruce). seed + limpiar_demo. | ✅ |
+| T2 · Vista `/admin/operaciones/irregularidades`: KPIs, tabla ordenada por valor $, filtros suc/fecha/tipo/estado, marcar revisada/justificada con motivo, export Excel, empty-state. Selector de sucursal + gate de roles. API marcar/recalcular. | ✅ |
+| T3 · Patrones (SKU recurrente / sucursal concentrada / caja Y stock / cajero) cruzando `arqueos_caja` → narrativa unificada de pérdidas. Card MC + aviso en feed (auditor) + badge. | ✅ |
+
+> **Reglas:** SKU global / stock por sucursal → la irregularidad SIEMPRE indica
+> la sucursal. Toda diferencia ≠ 0 se registra; la UI prioriza por valor $. Si
+> falta el stock o ventas de un día, avisa que no se puede cruzar (no inventa).
+> Smoke: 108 irregularidades demo, aritmética verificada, justificar+recalcular
+> preserva el trabajo manual.
+
+---
+
+## 🟢 SESIÓN PREVIA — IMPORTADOR DE PRODUCTOS COMPLETO ✅ (v0.32-importador-ofertas)
 
 Importador de productos con precios de oferta en el archivo, crear nuevos con
 confirmación, detección de cambios, y buscador SKU/nombre/EAN en Ofertas. Reusa el
