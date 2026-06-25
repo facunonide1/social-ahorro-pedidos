@@ -92,6 +92,28 @@ puede reusar el mismo núcleo sin la capa de archivos.
 
 ---
 
+## Mapeo inteligente de columnas (v0.34)
+
+El perfil ya no necesita que el archivo tenga los nombres exactos. Al subir,
+**NORA lee los encabezados + una muestra de filas y propone el mapeo**
+columna→campo (`lib/centro-datos/deteccion.ts`):
+- **Sinónimos ES** por campo (COD_PROD/CODIGO→sku, DETALLE/DESCRIP→nombre,
+  PVENTA/PVP→precio, EXIST→stock, CODBAR/EAN→barras, FAMILIA→rubro…).
+- **Análisis de contenido** (13 dígitos→EAN, texto largo→nombre, decimales/altos→
+  precio, enteros chicos→stock, `@`→email, 7-11 dígitos→documento) con asignación
+  **greedy global** que resuelve ambigüedades (importe→precio vs monto).
+- **Refuerzo LLM** (1 sola llamada con headers + muestra) para los campos core que
+  quedaron dudosos, con **fallback** a la heurística si no hay API key o falla.
+- El perfil guardado se usa como **base** (sus columnas presentes ya vienen ✓).
+
+Flujo: subir → **NORA propone** (pantalla con % de confianza, verde ✓ / amarillo
+¿confirmás?, dropdown a cualquier columna o "ninguna", "+N sin usar") → el usuario
+corrige lo dudoso → **Confirmar mapeo y validar** → preview (cuántos crear/
+actualizar, nuevos a confirmar…) → aplicar con rollback. Si NORA no encuentra el
+**SKU** (obligatorio), avisa antes de seguir. **"Guardar como perfil"** persiste el
+mapeo (`accion 'mapear'` + perfiles API) para reusarlo con archivos iguales. La UI
+maneja 50+ columnas; las que no mapean se ignoran.
+
 ## Importador de productos completo (v0.32)
 
 **Ofertas en el archivo.** El perfil de productos mapea, además del precio normal

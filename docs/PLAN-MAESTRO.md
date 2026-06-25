@@ -12,7 +12,27 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — IRREGULARIDADES DE STOCK ✅ (v0.33-irregularidades-stock)
+## 🟢 SESIÓN ACTUAL — MAPEO INTELIGENTE DE COLUMNAS ✅ (v0.34-mapeo-inteligente)
+
+Al subir un archivo, NORA lee los encabezados + una muestra y propone el mapeo
+columna→campo automáticamente; el usuario solo confirma/corrige. Resuelve el
+"no se detectaron filas con datos" cuando el archivo tiene nombres de columna
+distintos a los del perfil. Detalle: `docs/CENTRO-DATOS.md`.
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 · Motor `lib/centro-datos/deteccion.ts`: sinónimos ES + análisis de contenido (EAN/precio/stock/texto/email) + asignación greedy global + refuerzo LLM (1 call) con fallback heurístico. Respeta el perfil guardado como base. Acción `mapear` en el route; analizar/confirmar aceptan `mapeo` override. | ✅ |
+| T2 · Pantalla de mapeo: campo→columna con % de confianza (verde ✓ / amarillo ¿confirmás?), dropdown a cualquier columna o ninguna, "+N sin usar", guard de SKU obligatorio, botones Confirmar+validar / Guardar como perfil. | ✅ |
+| T3 · Flujo subir→detectar→confirmar→preview→aplicar. Todos los tipos (productos/ventas/clientes). Guardar mapeo = perfil reutilizable. Maneja 50+ columnas. | ✅ |
+
+> **Smoke:** archivo con nombres no estándar (COD_PROD/DETALLE/PVENTA/P_OFERTA/
+> EXIST/CODBAR) → 8/8 mapeados por nombre; sin nombres útiles → EAN/nombre/precio
+> por contenido; los ambiguos quedan en baja confianza para que el usuario los
+> confirme. Si falta el SKU (obligatorio), avisa antes de seguir.
+
+---
+
+## 🟢 SESIÓN PREVIA — IRREGULARIDADES DE STOCK ✅ (v0.33-irregularidades-stock)
 
 Cruce diario stock vs ventas por sucursal que detecta faltantes, sobrantes y
 patrones (robos/mermas/errores). Migr. 0068. Datos sensibles (pérdidas): solo
