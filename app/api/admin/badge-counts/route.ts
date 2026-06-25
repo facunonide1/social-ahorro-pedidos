@@ -39,7 +39,13 @@ export async function GET() {
 
   const noraAvisos = sb.from('nora_avisos').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente')
 
-  const [t, v, a, f, sm, na] = await Promise.all([misTareas, verif, aprob, faltantes, sinMatch, noraAvisos])
+  // Irregularidades de stock pendientes — dato sensible, solo roles autorizados.
+  const ROLES_IRREG = ['super_admin', 'gerente', 'auditor', 'administrativo', 'tesoreria']
+  const irreg = ROLES_IRREG.includes(me.rol)
+    ? sb.from('irregularidades_stock').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente')
+    : Promise.resolve({ count: 0 } as any)
+
+  const [t, v, a, f, sm, na, ir] = await Promise.all([misTareas, verif, aprob, faltantes, sinMatch, noraAvisos, irreg])
 
   // mensajes no leídos en mis canales (aprox, acotado)
   let mensajesNoLeidos = 0
@@ -62,6 +68,7 @@ export async function GET() {
     faltantesPendientes: f.count ?? 0,
     sinMatchearPendientes: sm.count ?? 0,
     noraAvisosPendientes: na.count ?? 0,
+    irregularidadesPendientes: ir.count ?? 0,
     mensajesNoLeidos,
   })
 }

@@ -16,6 +16,32 @@ export async function correrAuditor(adm: Adm): Promise<{ avisos: number }> {
   let n = 0
   const inc = () => { n++ }
 
+  // 0) Irregularidades de stock pendientes (descuadres del cruce stock vs ventas)
+  try {
+    const { data } = await adm.from('irregularidades_stock')
+      .select('sucursal_id, valor_diferencia, tipo, fecha, es_demo, sucursales(nombre)')
+      .eq('estado', 'pendiente').order('fecha', { ascending: false }).limit(2000)
+    const filas = (data ?? []) as any[]
+    if (filas.length) {
+      const porSuc = new Map<string, { suc: string; sucursal_id: string; n: number; valor: number; demo: boolean }>()
+      for (const r of filas) {
+        const g = porSuc.get(r.sucursal_id) ?? { suc: r.sucursales?.nombre ?? 'Sucursal', sucursal_id: r.sucursal_id, n: 0, valor: 0, demo: false }
+        g.n++; g.valor += Math.abs(Number(r.valor_diferencia)); g.demo = g.demo || !!r.es_demo
+        porSuc.set(r.sucursal_id, g)
+      }
+      const top = Array.from(porSuc.values()).sort((a, b) => b.valor - a.valor)[0]
+      const totalVal = filas.reduce((a, r) => a + Math.abs(Number(r.valor_diferencia)), 0)
+      const ultima = filas[0]?.fecha
+      await emitirAviso(adm, {
+        tipo: 'irregularidad_stock', severidad: 'alerta', modulo: 'operaciones', sucursalId: top?.sucursal_id ?? null,
+        titulo: `${filas.length} descuadre(s) de stock por $${Math.round(totalVal).toLocaleString('es-AR')}`,
+        detalle: `El cruce stock vs ventas detectó diferencias sin revisar${top ? `; el mayor foco es ${top.suc} ($${Math.round(top.valor).toLocaleString('es-AR')})` : ''}. Revisá el control de pérdidas.`,
+        accionLabel: 'Ver irregularidades', accionHref: '/admin/operaciones/irregularidades',
+        claveDedup: `irregularidad_stock:${ultima}`, esDemo: top?.demo ?? false,
+      }); inc()
+    }
+  } catch { /* */ }
+
   // 1) Caja que no cuadra (arqueos observados recientes)
   try {
     const { data } = await adm.from('arqueos_caja').select('id, fecha, diferencia_cierre, sucursal_id, cajero_nombre, es_demo')

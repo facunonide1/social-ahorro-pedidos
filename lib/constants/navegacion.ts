@@ -67,6 +67,7 @@ export const NAVEGACION: NavGrupo[] = [
       { label: 'Transferencias',    href: '/admin/operaciones/transferencias', icon: 'ArrowRightLeft', subsector: 'Depósito y stock' },
       { label: 'Vencimientos',      href: '/admin/operaciones/vencimientos',   icon: 'CalendarClock',  subsector: 'Depósito y stock' },
       { label: 'Inventarios',       href: '/admin/operaciones/inventarios',    icon: 'ClipboardCheck', subsector: 'Depósito y stock' },
+      { label: 'Irregularidades',   href: '/admin/operaciones/irregularidades', icon: 'ShieldAlert',   subsector: 'Depósito y stock', badge: 'irregularidadesPendientes', rolesPermitidos: ['super_admin', 'gerente', 'auditor', 'administrativo', 'tesoreria'] },
       { label: 'Tareas',            href: '/admin/tareas',                     icon: 'ListChecks',     subsector: 'Tareas', badge: 'tareasPendientes' },
       { label: 'Verificaciones',    href: '/admin/verificaciones',             icon: 'CheckCircle2',   subsector: 'Tareas', badge: 'verificacionesPendientes' },
     ],

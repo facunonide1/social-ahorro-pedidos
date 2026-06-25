@@ -76,5 +76,17 @@ export async function POST(req: NextRequest) {
     archivoNombre, archivoHash: hash, filas, analisis,
     usuarioId: g.userId, usuarioNombre: g.nombre, esDemo: false, crearSkus,
   })
-  return NextResponse.json({ ok: true, ...r, matcheados: analisis.matcheados })
+
+  // Cruce de irregularidades: snapshot del stock de la sucursal + comparación
+  // contra la foto anterior (stock_anterior − ventas = esperado vs real).
+  let irregularidades: any = null
+  if ((perfil.tipo === 'productos' || perfil.tipo === 'stock') && sucursalId) {
+    const hoy = new Date().toISOString().slice(0, 10)
+    try {
+      await adm.rpc('snapshot_stock_sucursal', { p_sucursal: sucursalId, p_fecha: hoy, p_job: r.import_job_id, p_es_demo: false })
+      const { data: cruce } = await adm.rpc('calcular_irregularidades_stock', { p_sucursal: sucursalId, p_fecha: hoy })
+      irregularidades = cruce
+    } catch { /* el cruce no bloquea el import */ }
+  }
+  return NextResponse.json({ ok: true, ...r, matcheados: analisis.matcheados, irregularidades })
 }

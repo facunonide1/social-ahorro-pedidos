@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
   if (b?.accion === 'cargar') {
     const { data, error } = await adm.rpc('seed_demo_maestro')
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    try { await adm.rpc('seed_irregularidades_demo') } catch { /* irregularidades best-effort */ }
     return NextResponse.json({ ok: true, resultado: data })
   }
   if (b?.accion === 'limpiar') {
