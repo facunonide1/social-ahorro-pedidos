@@ -1,175 +1,50 @@
 import { notFound } from 'next/navigation'
 
-import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
-import { ESTADO_TRANSFERENCIA_LABELS } from '@/lib/types/admin'
-import type { EstadoTransferencia, TransferenciaSucursal } from '@/lib/types/admin'
-
+import { createAdminClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
-import { Badge } from '@/components/ui/badge'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-
-import TransferenciaEstadoActions from './estado-actions'
+import { TransferenciaDetalle } from './detalle-client'
 
 export const dynamic = 'force-dynamic'
 
-type TransDetail = TransferenciaSucursal & {
-  origen: { nombre: string | null } | null
-  destino: { nombre: string | null } | null
+async function signed(adm: any, path: string | null): Promise<string | null> {
+  if (!path) return null
+  try { const { data } = await adm.storage.from('transferencias-fotos').createSignedUrl(path, 3600); return data?.signedUrl ?? null } catch { return null }
 }
 
-type ItemRow = {
-  id: string
-  cantidad_solicitada: number
-  cantidad_enviada: number | null
-  cantidad_recibida: number | null
-  observaciones: string | null
-  productos: { nombre: string | null } | null
-}
-
-const ESTADO_VARIANT: Record<
-  EstadoTransferencia,
-  React.ComponentProps<typeof Badge>['variant']
-> = {
-  solicitada: 'warning',
-  aprobada: 'info',
-  en_transito: 'info',
-  recibida: 'success',
-  cancelada: 'outline',
-}
-
-export default async function TransferenciaDetailPage({
-  params,
-}: {
-  params: { id: string }
-}) {
-  const profile = await requireAdminHubAccess({
-    allowedRoles: ['super_admin', 'gerente', 'administrativo', 'sucursal'],
-  })
-  const sb = createClient()
-
-  const [transRes, itemsRes] = await Promise.all([
-    sb
-      .from('transferencias_sucursal')
-      .select(
-        '*, origen:sucursales!transferencias_sucursal_sucursal_origen_id_fkey(nombre), destino:sucursales!transferencias_sucursal_sucursal_destino_id_fkey(nombre)',
-      )
-      .eq('id', params.id)
-      .maybeSingle(),
-    sb
-      .from('transferencia_items')
-      .select('*, productos(nombre)')
-      .eq('transferencia_id', params.id),
-  ])
-
-  const t = transRes.data as TransDetail | null
+export default async function TransferenciaDetallePage({ params }: { params: { id: string } }) {
+  await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'sucursal', 'encargado_sucursal', 'administrativo', 'auditor'] })
+  const adm = createAdminClient()
+  const { data: t } = await adm.from('transferencias_sucursal').select('*').eq('id', params.id).maybeSingle<any>()
   if (!t) notFound()
 
-  const items = (itemsRes.data ?? []) as ItemRow[]
-  const canManage = ['super_admin', 'gerente', 'administrativo'].includes(profile.rol)
+  const [{ data: items }, { data: sucs }, fc, fs, fr] = await Promise.all([
+    adm.from('transferencia_items').select('id, producto_id, cantidad_enviada, cantidad_recibida, ubicacion, productos_catalogo(nombre, sku)').eq('transferencia_id', t.id),
+    adm.from('sucursales').select('id, nombre'),
+    signed(adm, t.foto_creacion), signed(adm, t.foto_salida), signed(adm, t.foto_recepcion),
+  ])
+  const nombreSuc = new Map<string, string>(((sucs ?? []) as any[]).map((s) => [s.id, s.nombre]))
+  const lineas = ((items ?? []) as any[]).map((i) => ({
+    id: i.id, producto: i.productos_catalogo?.nombre ?? '—', sku: i.productos_catalogo?.sku ?? null,
+    ubicacion: i.ubicacion, enviada: Number(i.cantidad_enviada), recibida: i.cantidad_recibida == null ? null : Number(i.cantidad_recibida),
+  }))
 
   return (
     <>
-      <PageHeader
-        title={`${t.origen?.nombre || '—'} → ${t.destino?.nombre || '—'}`}
-        description={`Solicitada el ${new Date(t.fecha_solicitud).toLocaleDateString('es-AR')}`}
-        breadcrumbs={[
-          { label: 'Transferencias', href: '/admin/operaciones/transferencias' },
-          { label: 'Detalle' },
-        ]}
-        actions={
-          <Badge variant={ESTADO_VARIANT[t.estado]}>
-            {ESTADO_TRANSFERENCIA_LABELS[t.estado]}
-          </Badge>
-        }
-      />
-
-      <div className="mx-auto w-full max-w-4xl space-y-4 p-4 md:p-6">
-        {canManage && (
-          <TransferenciaEstadoActions
-            transferenciaId={t.id}
-            currentEstado={t.estado}
-          />
-        )}
-
-        <Card className="overflow-hidden">
-          <CardHeader>
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Productos ({items.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Producto</TableHead>
-                  <TableHead className="text-right">Solicitado</TableHead>
-                  <TableHead className="text-right">Enviado</TableHead>
-                  <TableHead className="text-right">Recibido</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={4}
-                      className="py-8 text-center text-sm text-muted-foreground"
-                    >
-                      Sin productos en esta transferencia.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  items.map((it) => (
-                    <TableRow key={it.id}>
-                      <TableCell className="font-medium">
-                        {it.productos?.nombre || '—'}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {Number(it.cantidad_solicitada).toLocaleString('es-AR')}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
-                        {it.cantidad_enviada != null
-                          ? Number(it.cantidad_enviada).toLocaleString('es-AR')
-                          : '—'}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
-                        {it.cantidad_recibida != null
-                          ? Number(it.cantidad_recibida).toLocaleString('es-AR')
-                          : '—'}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        {t.observaciones && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Observaciones
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="whitespace-pre-wrap text-sm">
-              {t.observaciones}
-            </CardContent>
-          </Card>
-        )}
+      <PageHeader title={`${nombreSuc.get(t.sucursal_origen_id) ?? '—'} → ${nombreSuc.get(t.sucursal_destino_id) ?? '—'}`}
+        description="Recorrido completo con foto en cada paso."
+        breadcrumbs={[{ label: 'Operación', href: '/admin/operaciones' }, { label: 'Transferencias', href: '/admin/operaciones/transferencias' }, { label: 'Detalle' }]} />
+      <div className="p-4 md:p-6">
+        <TransferenciaDetalle
+          id={t.id} estado={t.estado} diferencia={!!t.diferencia_detectada} notas={t.notas}
+          origen={nombreSuc.get(t.sucursal_origen_id) ?? '—'} destino={nombreSuc.get(t.sucursal_destino_id) ?? '—'}
+          pasos={{
+            creacion: { fecha: t.fecha_solicitud, foto: fc },
+            salida: { fecha: t.fecha_envio, foto: fs },
+            recepcion: { fecha: t.fecha_recepcion, foto: fr },
+          }}
+          items={lineas}
+        />
       </div>
     </>
   )

@@ -42,6 +42,22 @@ export async function correrAuditor(adm: Adm): Promise<{ avisos: number }> {
     }
   } catch { /* */ }
 
+  // 0.b) Transferencias en tránsito sin recibir hace >48hs
+  try {
+    const limite = new Date(Date.now() - 48 * 3600 * 1000).toISOString()
+    const { data } = await adm.from('transferencias_sucursal')
+      .select('id, fecha_envio, sucursal_destino_id, es_demo, sucursales:sucursal_destino_id(nombre)')
+      .eq('estado', 'en_transito').lt('fecha_envio', limite).limit(20)
+    for (const t of (data ?? []) as any[]) {
+      await emitirAviso(adm, {
+        tipo: 'transferencia_sin_recibir', severidad: 'alerta', modulo: 'operaciones', sucursalId: t.sucursal_destino_id,
+        titulo: 'Transferencia sin recibir', detalle: `Salió hace más de 2 días y ${t.sucursales?.nombre ?? 'el destino'} todavía no confirmó la recepción. ¿Llegó la mercadería?`,
+        accionLabel: 'Ver transferencia', accionHref: `/admin/operaciones/transferencias/${t.id}`,
+        claveDedup: `transf_sin_recibir:${t.id}`, esDemo: !!t.es_demo,
+      }); inc()
+    }
+  } catch { /* */ }
+
   // 1) Caja que no cuadra (arqueos observados recientes)
   try {
     const { data } = await adm.from('arqueos_caja').select('id, fecha, diferencia_cierre, sucursal_id, cajero_nombre, es_demo')
