@@ -58,6 +58,28 @@ export async function correrAuditor(adm: Adm): Promise<{ avisos: number }> {
     }
   } catch { /* */ }
 
+  // 0.c) Vencimientos urgentes (≤30 días) con plata en riesgo
+  try {
+    const en30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
+    const { data } = await adm.from('vencimientos')
+      .select('cantidad, fecha_vencimiento, es_demo, productos_catalogo(precio_costo_promedio, precio_sugerido)')
+      .eq('estado', 'vigente').lte('fecha_vencimiento', en30).limit(2000)
+    const filas = (data ?? []) as any[]
+    if (filas.length) {
+      const valor = filas.reduce((a, v) => {
+        const costo = Number(v.productos_catalogo?.precio_costo_promedio ?? 0) || Number(v.productos_catalogo?.precio_sugerido ?? 0) * 0.6
+        return a + Number(v.cantidad) * costo
+      }, 0)
+      await emitirAviso(adm, {
+        tipo: 'vencimiento_riesgo', severidad: 'alerta', modulo: 'operaciones',
+        titulo: `${filas.length} producto(s) por vencer — $${Math.round(valor).toLocaleString('es-AR')} en riesgo`,
+        detalle: 'Vencen en menos de 30 días. NORA sugiere reponer góndola, liquidar con oferta o transferir antes de perderlos.',
+        accionLabel: 'Ver vencimientos', accionHref: '/admin/operaciones/vencimientos',
+        claveDedup: `vencimiento_riesgo:${hoy()}`, esDemo: filas.some((v) => v.es_demo),
+      }); inc()
+    }
+  } catch { /* */ }
+
   // 1) Caja que no cuadra (arqueos observados recientes)
   try {
     const { data } = await adm.from('arqueos_caja').select('id, fecha, diferencia_cierre, sucursal_id, cajero_nombre, es_demo')
