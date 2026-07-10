@@ -5,11 +5,12 @@ import { useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { AlertCircle, ArrowRight, Loader2 } from 'lucide-react'
+import { AlertCircle, ArrowRight, Hash, Loader2 } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/client'
 
 import { NoraLogo } from '@/components/nora/nora-logo'
+import PinLogin from './pin-login'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -49,6 +50,7 @@ export default function LoginForm() {
       : '',
   )
   const [mfa, setMfa] = useState<null | { factorId: string; challengeId: string }>(null)
+  const [modo, setModo] = useState<'email' | 'pin'>('email')
 
   const loginForm = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -148,6 +150,10 @@ export default function LoginForm() {
             <NoraLogo size="md" />
             NORA HQ
           </div>
+          {modo === 'pin' ? (
+            <PinLogin onVolver={() => setModo('email')} />
+          ) : (
+          <>
           <div className="mb-5 space-y-1.5">
             <h2 className="text-xl font-bold tracking-tight">
               {mfa ? 'Verificación 2FA' : 'Iniciar sesión'}
@@ -271,6 +277,27 @@ export default function LoginForm() {
           </form>
         </Form>
       )}
+
+          {!mfa && (
+            <>
+              <div className="my-5 flex items-center gap-3">
+                <span className="h-px flex-1 bg-border" />
+                <span className="text-[11px] uppercase tracking-wider text-muted-foreground">o</span>
+                <span className="h-px flex-1 bg-border" />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 w-full"
+                onClick={() => setModo('pin')}
+              >
+                <Hash className="size-4" />
+                Ingresá con N° de empleado y PIN
+              </Button>
+            </>
+          )}
+          </>
+          )}
 
           <p className="mt-6 text-center text-[11px] text-muted-foreground">
             Social Ahorro · {new Date().getFullYear()}

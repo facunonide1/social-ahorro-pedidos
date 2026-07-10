@@ -69,3 +69,44 @@ overrideadas se resaltan (`esOverride`). Todo en `lib/types/permisos.ts`:
 - Un super_admin no puede auto-desactivarse ni bajarse el rol (UI + API).
 - "Dar acceso" reusa el auth user existente del empleado si ya lo tiene (no
   duplica cuentas).
+
+---
+
+## Login por N° de empleado + PIN (v0.36-login-vista-rol)
+
+Método de acceso **ADICIONAL** para empleados operativos (NO reemplaza el login
+por email del dueño/admins). Pantalla tipo "fichar": teclado numérico mobile-first
+en `/login` → botón **"Ingresá con N° de empleado y PIN"**.
+
+- **Datos** (en `users_admin`, migr. `0072`): `numero_empleado` (único, opcional),
+  `pin_hash` (scrypt, **nunca** texto plano), `pin_intentos`, `pin_bloqueado_hasta`.
+- **Hash**: `lib/auth/pin.ts` (scrypt nativo, sal por PIN, comparación de tiempo
+  constante). Formato `scrypt$N$r$p$salt$hash`.
+- **Login**: `lib/auth/pin-login.ts` → `loginConPin(numero, pin)`: busca por N°
+  (service role), verifica activo + no-bloqueo + PIN; si es correcto genera un
+  magic-link OTP para el email del auth user y lo verifica (`verifyOtp`) dejando
+  la sesión con cookies **idéntica a un login normal**. Server action en
+  `app/login/actions.ts`. El PIN habilita ACCESO; las acciones sensibles siguen
+  gateadas por permisos.
+- **Bloqueo**: 5 intentos fallidos → 15 min de bloqueo. Se resetea al ingresar bien.
+- **Setear/resetear**: en Usuarios (ficha → "Ingreso por N° de empleado + PIN"),
+  solo super_admin/gerente. Endpoint `POST|DELETE /api/admin/usuarios/[id]/pin`
+  (`setPinEmpleado`/`quitarPinEmpleado`). En alta nueva se manda con el body de
+  `/api/admin/personas`. El hash **nunca** viaja al cliente (la UI solo sabe
+  `pin_set: boolean`).
+
+## Vista por rol — modo simple (v0.36)
+
+Misma app mostrando **menos** según el rol. `lib/constants/vista-rol.ts`:
+
+- `ROLES_VISTA_SIMPLE = ['cajero', 'repartidor', 'empleado_general']` →
+  `esVistaSimple(rol)`. El resto (encargado/gerente/dueño/etc.) ve el panel
+  completo de 9 sectores sin cambios.
+- **Home operativo** (`app/(admin)/admin/home-operativo.tsx`): pocos botones
+  GRANDES, mobile-first, con SOLO lo que su rol `puede()` — catálogo
+  `ACCESOS_SIMPLES` filtrado por permisos (`accesosSimplesPara`). NORA siempre.
+- **Shell mínimo**: `AdminShell` recibe `vistaSimple` y renderiza `SimpleTopBar`
+  (marca + Inicio + notificaciones + usuario) **sin el sidebar de 9 sectores**.
+  El usuario operativo no ve que existan Finanzas/Compras/BI.
+- **Preview**: la ficha de Usuarios (tab "Vista previa") avisa cuándo el rol usa
+  la vista simple y lista los botones grandes que vería.

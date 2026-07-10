@@ -28,6 +28,10 @@ export type PersonaRow = {
   permisos_custom: PermisosCustom
   ultimo_login: string | null
   caller: boolean
+  /** N° de empleado para login por PIN (users_admin). */
+  numero_empleado: string | null
+  /** ¿Ya tiene PIN configurado? (nunca enviamos el hash al cliente) */
+  pin_set: boolean
 }
 
 export default async function UsuariosConfigPage() {
@@ -35,7 +39,7 @@ export default async function UsuariosConfigPage() {
   const sb = createClient()
 
   const [{ data: uaRows }, { data: empRows }, { data: sucursalesData }] = await Promise.all([
-    sb.from('users_admin').select('id, rol, sucursal_id, sucursales_acceso, activo, permisos_custom, sucursales(nombre)').order('activo', { ascending: false }),
+    sb.from('users_admin').select('id, rol, sucursal_id, sucursales_acceso, activo, permisos_custom, numero_empleado, pin_hash, sucursales(nombre)').order('activo', { ascending: false }),
     sb.from('empleados').select('id, nombre_completo, email, dni, puesto, sucursal_id, sucursales_acceso, activo, user_id, sucursales(nombre)').order('activo', { ascending: false }),
     sb.from('sucursales').select('id, nombre, activa').eq('activa', true).order('nombre'),
   ])
@@ -79,6 +83,8 @@ export default async function UsuariosConfigPage() {
       permisos_custom: (u.permisos_custom ?? {}) as PermisosCustom,
       ultimo_login: au?.ultimo_login ?? null,
       caller: u.id === me.id,
+      numero_empleado: u.numero_empleado ?? null,
+      pin_set: Boolean(u.pin_hash),
     })
   }
 
@@ -101,6 +107,8 @@ export default async function UsuariosConfigPage() {
       permisos_custom: {},
       ultimo_login: null,
       caller: false,
+      numero_empleado: null,
+      pin_set: false,
     })
   }
 

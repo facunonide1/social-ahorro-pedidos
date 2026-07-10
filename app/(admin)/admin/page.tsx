@@ -17,6 +17,9 @@ import { AccionesSector } from '@/components/shared/acciones-sector'
 import { NoraPrediccionesPanel } from './nora-predicciones-panel'
 import { QuickActions } from './quick-actions'
 import { SucursalesLive } from './sucursales-live'
+import { HomeOperativo } from './home-operativo'
+import { esVistaSimple, accesosSimplesPara } from '@/lib/constants/vista-rol'
+import type { PermisosCustom } from '@/lib/types/permisos'
 
 export const dynamic = 'force-dynamic'
 
@@ -119,6 +122,27 @@ async function getResumenGerencial(): Promise<ResumenGerencial> {
  */
 export default async function MissionControlPage() {
   const profile = await requireAdminHubAccess()
+
+  // Vista simple: roles operativos ven un home reducido de botones grandes,
+  // SOLO con lo que su rol puede hacer (mismos permisos finos). Sin el panel
+  // completo de 9 sectores.
+  if (esVistaSimple(profile.rol)) {
+    const { data: fila } = await createAdminClient()
+      .from('users_admin')
+      .select('permisos_custom')
+      .eq('id', profile.id)
+      .maybeSingle<{ permisos_custom: PermisosCustom | null }>()
+    const accesos = accesosSimplesPara(profile.rol, fila?.permisos_custom ?? null)
+    return (
+      <HomeOperativo
+        nombre={profile.nombre}
+        email={profile.email}
+        rol={profile.rol}
+        accesos={accesos}
+      />
+    )
+  }
+
   const esTransversal = ROLES_TRANSVERSALES.includes(profile.rol)
   const { sucursalId, esTodas } = getSucursalActiva()
   const fecha = new Date().toLocaleDateString('es-AR', {

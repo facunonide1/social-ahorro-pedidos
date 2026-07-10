@@ -14,6 +14,7 @@ import {
   PRESET_POR_ROL, permisosEfectivos, diffContraPreset, esOverride,
   type MatrizPermisos, type PermisosCustom, type PermisoModulo,
 } from '@/lib/types/permisos'
+import { esVistaSimple, ACCESOS_SIMPLES } from '@/lib/constants/vista-rol'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -192,6 +193,12 @@ function PersonaSheet({
   const [activo, setActivo] = useState<boolean>(persona?.activo ?? true)
   const [tab, setTab] = useState<'datos' | 'permisos' | 'preview'>('datos')
 
+  // Acceso por N° de empleado + PIN (login numérico).
+  const [numeroEmpleado, setNumeroEmpleado] = useState(persona?.numero_empleado ?? '')
+  const [pin, setPin] = useState('')
+  const [pinSet, setPinSet] = useState<boolean>(persona?.pin_set ?? false)
+  const [pinBusy, setPinBusy] = useState(false)
+
   const [personalizar, setPersonalizar] = useState<boolean>(Object.keys(persona?.permisos_custom ?? {}).length > 0)
   const [matriz, setMatriz] = useState<MatrizPermisos>(() => permisosEfectivos(persona?.rol ?? 'empleado_general', persona?.permisos_custom))
 
@@ -214,6 +221,29 @@ function PersonaSheet({
   }
   function toggleSuc(id: string) {
     setSucAcceso((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
+  }
+
+  // PIN (solo modo editar: acción inmediata contra el endpoint dedicado).
+  async function guardarPin() {
+    if (!numeroEmpleado.trim()) { toast.error('Ingresá el N° de empleado.'); return }
+    if (!/^\d{4}$/.test(pin)) { toast.error('El PIN debe ser de 4 dígitos.'); return }
+    setPinBusy(true)
+    try {
+      const r = await fetch(`/api/admin/usuarios/${persona!.userId}/pin`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ numero_empleado: numeroEmpleado, pin }),
+      })
+      const j = await r.json(); if (!r.ok) throw new Error(j?.error || 'No se pudo guardar el PIN.')
+      toast.success('N° de empleado y PIN guardados.'); setPinSet(true); setPin(''); router.refresh()
+    } catch (e: any) { toast.error(e?.message ?? 'Error.') } finally { setPinBusy(false) }
+  }
+  async function quitarPin() {
+    setPinBusy(true)
+    try {
+      const r = await fetch(`/api/admin/usuarios/${persona!.userId}/pin`, { method: 'DELETE' })
+      const j = await r.json(); if (!r.ok) throw new Error(j?.error || 'No se pudo quitar.')
+      toast.success('Acceso por PIN quitado.'); setPinSet(false); setNumeroEmpleado(''); setPin(''); router.refresh()
+    } catch (e: any) { toast.error(e?.message ?? 'Error.') } finally { setPinBusy(false) }
   }
 
   async function submit() {
@@ -243,6 +273,7 @@ function PersonaSheet({
           body: JSON.stringify({
             accion: 'dar_acceso', empleado_id: persona?.empleadoId ?? null,
             nombre, email, password, rol, sucursal_id, sucursales_acceso: sucAcceso, permisos_custom,
+            numero_empleado: numeroEmpleado.trim() || null, pin: /^\d{4}$/.test(pin) ? pin : null,
           }),
         })
         const j = await r.json(); if (!r.ok) throw new Error(j?.error || 'No se pudo crear el acceso.')
@@ -313,6 +344,42 @@ function PersonaSheet({
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">Vacío = solo la principal (o global si no hay principal). Se cruza con el selector de sucursal.</p>
               </Field>
+
+              {/* Ingreso por N° de empleado + PIN (login numérico) */}
+              <div className="space-y-3 rounded-lg border border-border p-3">
+                <div className="flex items-center gap-1.5 text-sm font-medium">
+                  <KeyRound className="size-4" /> Ingreso por N° de empleado + PIN
+                  {pinSet && <Badge variant="secondary" className="ml-auto text-[10px] text-emerald-600">Configurado</Badge>}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Acceso rápido desde el teclado numérico (como fichar). El PIN se guarda encriptado y nunca en texto plano. Ideal para cajeros y repositores. No reemplaza el ingreso por email.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="N° de empleado">
+                    <Input value={numeroEmpleado} inputMode="numeric" placeholder="Ej. 1024"
+                      onChange={(e) => setNumeroEmpleado(e.target.value.replace(/\D/g, '').slice(0, 10))} />
+                  </Field>
+                  <Field label={pinSet ? 'Nuevo PIN (4 dígitos)' : 'PIN (4 dígitos)'}>
+                    <Input value={pin} inputMode="numeric" maxLength={4} placeholder="••••" className="tracking-[0.3em]"
+                      onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))} />
+                  </Field>
+                </div>
+                {mode === 'editar' ? (
+                  <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" size="sm" disabled={pinBusy} onClick={guardarPin}>
+                      {pinBusy ? <Loader2 className="size-4 animate-spin" /> : null}
+                      {pinSet ? 'Actualizar N° y PIN' : 'Guardar N° y PIN'}
+                    </Button>
+                    {pinSet && (
+                      <Button type="button" variant="ghost" size="sm" disabled={pinBusy} onClick={quitarPin} className="text-destructive hover:text-destructive">
+                        Quitar
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Opcional. Se guarda junto con el alta del usuario.</p>
+                )}
+              </div>
 
               {mode === 'editar' && (
                 <label className="flex items-center gap-2 text-sm">
@@ -389,6 +456,10 @@ function PreviewAcceso({ rol, matriz, sucursalId, sucAcceso, sucursales }: {
 }) {
   const visibles = (Object.keys(PERMISO_MODULO_LABELS) as PermisoModulo[]).filter((m) => matriz[m].ver)
   const sucNombres = [sucursalId !== NONE ? sucursales.find((s) => s.id === sucursalId)?.nombre : null, ...sucAcceso.map((id) => sucursales.find((s) => s.id === id)?.nombre)].filter(Boolean)
+  const simple = esVistaSimple(rol)
+  const botones = simple
+    ? ACCESOS_SIMPLES.filter((a) => a.modulo === null || matriz[a.modulo]?.[a.accion])
+    : []
 
   return (
     <div className="space-y-3">
@@ -396,6 +467,20 @@ function PreviewAcceso({ rol, matriz, sucursalId, sucAcceso, sucursales }: {
         <div className="flex items-center gap-1.5 text-sm font-medium"><Eye className="size-4" /> Qué ve este usuario</div>
         <p className="mt-1 text-xs text-muted-foreground">Rol: <b>{ADMIN_ROLE_LABELS[rol]}</b> · Sucursales: {sucNombres.length ? sucNombres.join(', ') : 'global (todas)'}</p>
       </div>
+
+      {simple && (
+        <div className="rounded-lg border border-nora/30 bg-nora-bg/40 p-3">
+          <div className="text-sm font-medium text-primary">Vista simple (home de botones grandes)</div>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Este rol es operativo: al entrar NO ve el panel de 9 sectores, sino un home mobile-first con {botones.length} botones grandes:
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {botones.map((a) => (
+              <span key={a.key} className="rounded-md border border-nora/30 bg-background px-2 py-1 text-xs">{a.label}</span>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="rounded-lg border border-border p-3">
         <div className="mb-2 text-xs font-medium text-muted-foreground">Sectores visibles ({visibles.length}/{Object.keys(PERMISO_MODULO_LABELS).length})</div>
         <div className="space-y-1">

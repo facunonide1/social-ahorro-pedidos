@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { AdminShell } from '@/components/layout/admin-shell'
 import { SucursalScopeBadge } from '@/components/shared/sucursal-scope-badge'
+import { esVistaSimple } from '@/lib/constants/vista-rol'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,8 +30,13 @@ export const viewport: Viewport = {
  */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const profile = await requireAdminHubAccess()
+  const vistaSimple = esVistaSimple(profile.rol)
   return (
-    <AdminShell profile={profile} scopeBadge={<SucursalScopeBadge />}>
+    <AdminShell
+      profile={profile}
+      vistaSimple={vistaSimple}
+      scopeBadge={vistaSimple ? undefined : <SucursalScopeBadge />}
+    >
       {children}
     </AdminShell>
   )

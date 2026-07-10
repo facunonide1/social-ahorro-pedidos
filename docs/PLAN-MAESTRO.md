@@ -6,13 +6,34 @@
 >
 > **Regla permanente:** actualizar este archivo después de CADA sub-tanda.
 
-**Última actualización:** 2026-06-24 · **Rama:** `main` · **Sistema:** NORA HQ
+**Última actualización:** 2026-07-10 · **Rama:** `main` · **Sistema:** NORA HQ
 (orquestador, NO factura ni reemplaza SIFACO) · single-tenant (Social Ahorro)
 con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — SECTOR OPERACIÓN A MEDIDA (5 mejoras) ✅ (v0.35-operacion-a-medida)
+## 🟢 SESIÓN ACTUAL — LOGIN SIMPLE (N° + PIN) + VISTA POR ROL ✅ (v0.36-login-vista-rol)
+
+Ataca "el empleado ve demasiado" SIN partir la app: login rápido para empleados
++ home reducido por rol usando los permisos que YA existen. Migr. `0072`.
+Detalle: `docs/PERMISOS.md`.
+
+| Sub-tanda | Estado |
+|-----------|--------|
+| T1 · **Login N° empleado + PIN**: columnas en `users_admin` (`numero_empleado` único, `pin_hash` scrypt, `pin_intentos`, `pin_bloqueado_hasta`). `lib/auth/pin.ts` (hash/verify) + `lib/auth/pin-login.ts` (`loginConPin` = lookup service-role → verifica → magic-link OTP + `verifyOtp` = sesión con cookies). Teclado numérico mobile-first en `/login` (toggle "Ingreso de empleado"), MANTIENE el login por email. Bloqueo 5 intentos → 15 min. | ✅ |
+| T2 · **Vista por rol** ⭐: `lib/constants/vista-rol.ts` (`esVistaSimple`, `ACCESOS_SIMPLES`, `accesosSimplesPara`). Roles operativos (cajero/repartidor/empleado_general) → home de botones GRANDES (`home-operativo.tsx`) + shell mínimo (`SimpleTopBar`, sin sidebar de 9 sectores). Encargado/gerente/dueño = panel completo sin cambios. | ✅ |
+| T3 · **Config + cierre**: en Usuarios, setear/resetear N° + PIN (endpoint `/api/admin/usuarios/[id]/pin`, super_admin/gerente) + en el alta (`/api/admin/personas`); preview "qué ve" avisa vista simple y lista los botones. Build verde, smoke e2e (login ok / PIN erróneo / lockout / sesión). | ✅ |
+
+> **Reglas:** el numérico es ADICIONAL (no rompe el login del dueño); MISMA app
+> (no se separa), solo cambia QUÉ VE cada rol usando el sistema de permisos 18×5;
+> PIN siempre hasheado (scrypt), nunca en texto plano, con bloqueo por intentos.
+> Smoke e2e contra Supabase real: hash round-trip, login correcto→sesión, PIN
+> erróneo suma intento, 5 fallos→bloqueo 15 min. `generateLink`+`verifyOtp`
+> validado.
+
+---
+
+## 🟢 SESIÓN PREVIA — SECTOR OPERACIÓN A MEDIDA (5 mejoras) ✅ (v0.35-operacion-a-medida)
 
 Rediseño profundo de Operación según cómo trabaja el negocio. Migr. 0069/0070/0071.
 

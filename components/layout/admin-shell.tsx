@@ -5,6 +5,7 @@ import { useSucursalStore } from '@/lib/stores/sucursal-store'
 import { useNotificationsStore } from '@/lib/stores/notifications-store'
 import { AiChatDock } from '@/components/ai/ai-chat-dock'
 import { TopNav } from '@/components/layout/top-nav'
+import { SimpleTopBar } from '@/components/layout/simple-top-bar'
 import { Sidebar } from '@/components/layout/sidebar'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import type { HubProfile } from '@/lib/admin-hub/auth'
@@ -24,10 +25,13 @@ export function AdminShell({
   profile,
   children,
   scopeBadge,
+  vistaSimple = false,
 }: {
   profile: HubProfile
   children: ReactNode
   scopeBadge?: ReactNode
+  /** Roles operativos: shell mínimo (sin sidebar de 9 sectores). */
+  vistaSimple?: boolean
 }) {
   const loadSucursales = useSucursalStore((s) => s.loadSucursales)
   const isHydratedSuc  = useSucursalStore((s) => s.isHydrated)
@@ -47,6 +51,20 @@ export function AdminShell({
       unsubscribe()
     }
   }, [profile.id, subscribe, unsubscribe])
+
+  // Vista simple (roles operativos): shell mínimo, sin sidebar de 9 sectores.
+  // El usuario navega desde los botones grandes del home; el logo vuelve al home.
+  if (vistaSimple) {
+    return (
+      <TooltipProvider delayDuration={250}>
+        <div className="flex min-h-screen flex-col bg-background text-foreground">
+          <SimpleTopBar profile={profile} />
+          <main className="flex-1 overflow-x-hidden">{children}</main>
+          <AiChatDock />
+        </div>
+      </TooltipProvider>
+    )
+  }
 
   return (
     <TooltipProvider delayDuration={250}>
