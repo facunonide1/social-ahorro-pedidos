@@ -1,3 +1,6 @@
+import Link from 'next/link'
+import { Sparkles, ArrowRight } from 'lucide-react'
+
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { getSucursalActiva } from '@/lib/sucursal/server'
@@ -111,6 +114,9 @@ export default async function TareasBandejaPage({
       />
 
       <div className="space-y-4 p-4 md:p-6">
+        <Link href="/admin/tareas/agenda" className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-primary hover:bg-primary/10">
+          <Sparkles className="size-4" /> <span className="flex-1">NORA te arma la agenda del día (vencimientos, faltantes, descuadres)</span> <ArrowRight className="size-4" />
+        </Link>
         {error ? (
           <Alert variant="destructive">
             <AlertDescription>

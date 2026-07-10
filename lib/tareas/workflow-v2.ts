@@ -59,9 +59,13 @@ export function accionesResponsable(estado: EstadoV2): AccionV2[] {
   }
 }
 
-/** Estado destino al completar, según si requiere verificación humana. */
-export function estadoAlCompletar(verificacionHumana: boolean): EstadoV2 {
-  return verificacionHumana ? 'en_verificacion' : 'completada'
+/**
+ * Estado destino al completar. Control OBLIGATORIO (M5): ninguna tarea se cierra
+ * sin que el encargado la verifique — toda tarea completada pasa a la cola de
+ * verificación, sin excepción.
+ */
+export function estadoAlCompletar(_verificacionHumana: boolean): EstadoV2 {
+  return 'en_verificacion'
 }
 
 export function esEnCurso(estado: EstadoV2): boolean {
