@@ -85,6 +85,16 @@ client components co-ubicados viajan con el folder (imports `@/` absolutos).
 | Grupo | `/hub/*` → `/admin/*` |
 |-------|------------------------|
 | Operaciones | `operaciones/{stock,stock/[id],stock/nuevo,transferencias,transferencias/[id],transferencias/nueva,vencimientos,alertas,analisis,importaciones,inventarios,inventarios/[id],reposicion}` → idem en `/admin` |
+
+**Operación a medida (v0.35, migr. 0069-0071):** transferencias con **triple foto**
+(crea/sale/recibe; `movimientos_stock` por paso; bucket `transferencias-fotos`);
+**vencimientos** por producto (tabla `vencimientos`, NORA decide reponer/oferta/
+transferir cruzando stock); **control por zonas** (`zonas`/`controles_zona`/
+`control_zona_items`, `generar_controles_zona()` + cron, contado vs sistema);
+**irregularidades** con pérdidas unificadas (stock+caja+zonas+transferencias) y
+rankings (`lib/operaciones/irregularidades.ts`); **tareas** con control obligatorio
+(`estadoAlCompletar`→en_verificación siempre) + **agenda del día** de NORA
+(`/api/tareas/agenda`). APIs en `app/api/operaciones/{transferencias,vencimientos,zonas,irregularidades}`.
 | Finanzas | `finanzas/*` (índice, caja, calendario, cash-flow, cheques(+nueva), conciliacion, cuentas(+[id]+nueva), documentos, gastos-fijos, impuestos, pagos, proveedores(+[id])) → `/admin/finanzas/*` |
 | Finanzas (legacy top-level) | `facturas(+[id]+nueva)`, `pagos(+[id]+nuevo)` → `/admin/facturas/*`, `/admin/pagos/*` |
 | Compras | `proveedores(+[id]+nuevo)`→`/admin/proveedores/*`; `recepciones(+[id]+nueva)`→`/admin/recepciones/*`; `compras/devoluciones(+[id]+nueva)`→`/admin/compras/devoluciones/*` |

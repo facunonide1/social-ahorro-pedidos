@@ -12,7 +12,25 @@ con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — MAPEO INTELIGENTE DE COLUMNAS ✅ (v0.34-mapeo-inteligente)
+## 🟢 SESIÓN ACTUAL — SECTOR OPERACIÓN A MEDIDA (5 mejoras) ✅ (v0.35-operacion-a-medida)
+
+Rediseño profundo de Operación según cómo trabaja el negocio. Migr. 0069/0070/0071.
+
+| Mejora | Estado |
+|--------|--------|
+| M1 · **Transferencias triple foto**: crea → sale (descuenta origen) → recibe (suma destino), cada paso con foto (bucket `transferencias-fotos`). Diferencia enviado/recibido registrada. NORA avisa "sin recibir" (>48hs). `movimientos_stock` por paso. | ✅ |
+| M2 · **Vencimientos rediseño** (por producto, sin lotes): carga manual múltiple; vista con días/cantidad/ubicación/stock góndola/$ riesgo; NORA decide acción (reponer/oferta/transferir/tarea) cruzando vencimiento+stock. Feed con $ en riesgo. | ✅ |
+| M3 · **Control por zonas**: `zonas`+`controles_zona`+`control_zona_items`. Zonas por sucursal con responsable+día. `generar_controles_zona()` crea control+tarea semanal (cron diario). Conteo contado vs sistema → diferencias. Ranking "qué zona descuadra más". | ✅ |
+| M4 · **Anti-robo reforzado**: pérdidas UNIFICADAS (stock+caja+zonas+transferencias) + rankings (productos/sucursales/zonas/cajeros). Cruza M1/M3 con caja e irregularidades. | ✅ |
+| M5 · **Tareas control obligatorio + agenda NORA**: `estadoAlCompletar` siempre → en_verificación (ninguna se cierra sin control del encargado). `/api/tareas/agenda` propone la agenda del día (vencimientos/faltantes/irregularidades) que el usuario ajusta. El resto (foto de evidencia, loop de rechazo, panel del empleado, objetivos, gamificación) ya existía. | ✅ |
+
+> **Nota:** reusa `stock_items`, `movimientos_stock`, `arqueos_caja`, Ofertas,
+> Tareas/verificaciones, gamificación. Smoke por mejora (stock se mueve por paso;
+> 8 zonas→8 controles+tareas; pérdidas $3.6M+). Build verde por mejora.
+
+---
+
+## 🟢 SESIÓN PREVIA — MAPEO INTELIGENTE DE COLUMNAS ✅ (v0.34-mapeo-inteligente)
 
 Al subir un archivo, NORA lee los encabezados + una muestra y propone el mapeo
 columna→campo automáticamente; el usuario solo confirma/corrige. Resuelve el
