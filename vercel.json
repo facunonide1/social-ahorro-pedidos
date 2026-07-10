@@ -14,6 +14,7 @@
     { "path": "/api/cron/comunicacion-recordatorios", "schedule": "0 13 * * *" },
     { "path": "/api/cron/comunicacion-resumen",       "schedule": "0 22 * * *" },
     { "path": "/api/cron/correr-automatizaciones",    "schedule": "0 9 * * *" },
-    { "path": "/api/cron/nora-auditor",               "schedule": "0 7 * * *" }
+    { "path": "/api/cron/nora-auditor",               "schedule": "0 7 * * *" },
+    { "path": "/api/cron/controles-zona",             "schedule": "0 6 * * *" }
   ]
 }
