@@ -2,7 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
-import { getIrregularidades, getResumenIrregularidades, getPatrones } from '@/lib/operaciones/irregularidades'
+import { getIrregularidades, getResumenIrregularidades, getPatrones, getPerdidasUnificadas, getRankings } from '@/lib/operaciones/irregularidades'
 import { IrregularidadesClient } from './irregularidades-client'
 
 export const dynamic = 'force-dynamic'
@@ -14,10 +14,12 @@ export default async function IrregularidadesPage() {
   const { sucursalId, esTodas } = getSucursalActiva()
   const f = { sucursalId, esTodas }
 
-  const [filas, resumen, patrones, { data: sucs }] = await Promise.all([
+  const [filas, resumen, patrones, perdidas, rankings, { data: sucs }] = await Promise.all([
     getIrregularidades(adm, f, 500),
     getResumenIrregularidades(adm, f),
     getPatrones(adm, f),
+    getPerdidasUnificadas(adm, f),
+    getRankings(adm, f),
     adm.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
   ])
 
@@ -29,6 +31,7 @@ export default async function IrregularidadesPage() {
       <div className="p-4 md:p-6">
         <IrregularidadesClient
           filas={filas} resumen={resumen} patrones={patrones}
+          perdidas={perdidas} rankings={rankings}
           sucursales={(sucs ?? []) as { id: string; nombre: string }[]}
           esTodas={esTodas}
         />

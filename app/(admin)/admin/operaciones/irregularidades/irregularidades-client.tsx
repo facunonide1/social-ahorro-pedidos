@@ -9,13 +9,15 @@ import { exportExcel } from '@/lib/utils/export-excel'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import type { IrregularidadRow, ResumenIrreg, Patron } from '@/lib/operaciones/irregularidades'
+import type { IrregularidadRow, ResumenIrreg, Patron, PerdidasUnificadas, Rankings, RankItem } from '@/lib/operaciones/irregularidades'
 
 const MOTIVOS = ['rotura', 'vencimiento', 'error de carga', 'robo sospechado', 'otro']
 
-export function IrregularidadesClient({ filas, resumen, patrones, sucursales, esTodas }: {
+export function IrregularidadesClient({ filas, resumen, patrones, perdidas, rankings, sucursales, esTodas }: {
   filas: IrregularidadRow[]; resumen: ResumenIrreg; patrones: Patron[]
+  perdidas: PerdidasUnificadas; rankings: Rankings
   sucursales: { id: string; nombre: string }[]; esTodas: boolean
 }) {
   const router = useRouter()
@@ -62,9 +64,10 @@ export function IrregularidadesClient({ filas, resumen, patrones, sucursales, es
   if (filas.length === 0) {
     return (
       <div className="space-y-4">
+        <Perdidas perdidas={perdidas} rankings={rankings} />
         <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-16 text-center">
           <PackageX className="size-8 text-muted-foreground" />
-          <div className="text-sm font-medium">Sin irregularidades para cruzar</div>
+          <div className="text-sm font-medium">Sin irregularidades de stock para cruzar</div>
           <div className="max-w-md text-sm text-muted-foreground">
             El cruce necesita al menos <b>dos días</b> de stock cargado por sucursal (más las ventas del medio).
             Cargá el stock un par de días seguidos en el Centro de Datos y NORA empieza a detectar descuadres.
@@ -76,6 +79,8 @@ export function IrregularidadesClient({ filas, resumen, patrones, sucursales, es
 
   return (
     <div className="space-y-4">
+      <Perdidas perdidas={perdidas} rankings={rankings} />
+
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Irregularidades" value={resumen.total.toLocaleString('es-AR')} sub={`${resumen.pendientes} pendientes`} icon={AlertTriangle} cls="text-amber-600" />
@@ -169,6 +174,53 @@ function Kpi({ label, value, sub, icon: Icon, cls }: { label: string; value: str
       <div className="flex items-center justify-between"><span className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</span><Icon className={cn('size-4', cls)} /></div>
       <div className="mt-1 text-xl font-semibold tabular-nums">{value}</div>
       <div className="text-xs text-muted-foreground">{sub}</div>
+    </div>
+  )
+}
+
+// ───── Pérdidas unificadas (caja + stock + zonas + transferencias) + rankings ─────
+function Perdidas({ perdidas, rankings }: { perdidas: PerdidasUnificadas; rankings: Rankings }) {
+  const hayRank = rankings.productos.length || rankings.sucursales.length || rankings.zonas.length || rankings.cajeros.length
+  return (
+    <div className="space-y-3 rounded-lg border border-rose-500/30 bg-rose-500/5 p-4">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <div className="flex items-center gap-1.5 text-sm font-semibold text-rose-700"><ShieldAlert className="size-4" /> Pérdidas totales</div>
+        <div className="text-2xl font-bold tabular-nums text-rose-700">${perdidas.total.toLocaleString('es-AR')}</div>
+        <div className="text-xs text-muted-foreground">
+          stock ${perdidas.stock_faltante.toLocaleString('es-AR')} · caja ${perdidas.caja_diferencia.toLocaleString('es-AR')} · zonas ${perdidas.zona_descuadre.toLocaleString('es-AR')}
+          {perdidas.transferencia_diferencia > 0 ? ` · ${perdidas.transferencia_diferencia} transf. con diferencia` : ''}
+        </div>
+      </div>
+      {hayRank ? (
+        <Tabs defaultValue="productos">
+          <TabsList className="h-8">
+            <TabsTrigger value="productos" className="text-xs">Productos</TabsTrigger>
+            <TabsTrigger value="sucursales" className="text-xs">Sucursales</TabsTrigger>
+            <TabsTrigger value="zonas" className="text-xs">Zonas</TabsTrigger>
+            <TabsTrigger value="cajeros" className="text-xs">Cajeros</TabsTrigger>
+          </TabsList>
+          <TabsContent value="productos"><RankList items={rankings.productos} vacio="Sin faltantes de productos aún." /></TabsContent>
+          <TabsContent value="sucursales"><RankList items={rankings.sucursales} vacio="Sin datos por sucursal." /></TabsContent>
+          <TabsContent value="zonas"><RankList items={rankings.zonas} vacio="Cerrá controles de zona para ver el ranking." /></TabsContent>
+          <TabsContent value="cajeros"><RankList items={rankings.cajeros} vacio="Sin diferencias de caja por cajero." /></TabsContent>
+        </Tabs>
+      ) : <div className="text-xs text-muted-foreground">Todavía sin datos suficientes para los rankings de pérdidas.</div>}
+    </div>
+  )
+}
+
+function RankList({ items, vacio }: { items: RankItem[]; vacio: string }) {
+  if (!items.length) return <div className="py-2 text-xs text-muted-foreground">{vacio}</div>
+  return (
+    <div className="mt-1 divide-y divide-border/60 rounded-md border border-border bg-card">
+      {items.map((r, i) => (
+        <div key={i} className="flex items-center gap-2 px-3 py-1.5 text-sm">
+          <span className="w-5 text-xs text-muted-foreground">{i + 1}.</span>
+          <span className="min-w-0 flex-1 truncate">{r.nombre}{r.sub ? <span className="ml-1 text-[10px] text-muted-foreground">{r.sub}</span> : null}</span>
+          <span className="text-xs text-muted-foreground">{r.casos} caso(s)</span>
+          <span className="w-24 text-right font-medium tabular-nums text-rose-600">${Math.round(r.valor).toLocaleString('es-AR')}</span>
+        </div>
+      ))}
     </div>
   )
 }

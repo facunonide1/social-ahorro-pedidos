@@ -183,3 +183,83 @@ export async function getPatrones(adm: Adm, f: { sucursalId: string | null; esTo
 
   return patrones.sort((a, b) => b.valor - a.valor).slice(0, 20)
 }
+
+// ============================================================================
+// Pérdidas UNIFICADAS (caja + stock + zonas + transferencias) y rankings (M4)
+// ============================================================================
+export type PerdidasUnificadas = {
+  total: number
+  stock_faltante: number
+  caja_diferencia: number
+  zona_descuadre: number
+  transferencia_diferencia: number
+}
+
+export async function getPerdidasUnificadas(adm: Adm, f: { sucursalId: string | null; esTodas: boolean }): Promise<PerdidasUnificadas> {
+  const scope = (q: any, col = 'sucursal_id') => (!f.esTodas && f.sucursalId ? q.eq(col, f.sucursalId) : q)
+  const [irr, caja, zona, transf] = await Promise.all([
+    scope(adm.from('irregularidades_stock').select('valor_diferencia').eq('tipo', 'faltante')),
+    scope(adm.from('arqueos_caja').select('diferencia_cierre').neq('diferencia_cierre', 0)),
+    scope(adm.from('controles_zona').select('valor_diferencia').eq('estado', 'cerrado')),
+    adm.from('transferencias_sucursal').select('id').eq('diferencia_detectada', true),
+  ])
+  const stockFalt = ((irr.data ?? []) as any[]).reduce((a, r) => a + Math.abs(Number(r.valor_diferencia)), 0)
+  const cajaDif = ((caja.data ?? []) as any[]).reduce((a, r) => a + Math.abs(Number(r.diferencia_cierre)), 0)
+  const zonaDif = ((zona.data ?? []) as any[]).reduce((a, r) => a + Math.abs(Number(r.valor_diferencia)), 0)
+  const transfDif = ((transf.data ?? []) as any[]).length
+  return {
+    stock_faltante: Math.round(stockFalt), caja_diferencia: Math.round(cajaDif),
+    zona_descuadre: Math.round(zonaDif), transferencia_diferencia: transfDif,
+    total: Math.round(stockFalt + cajaDif + zonaDif),
+  }
+}
+
+export type RankItem = { nombre: string; sub: string | null; casos: number; valor: number }
+export type Rankings = { productos: RankItem[]; sucursales: RankItem[]; zonas: RankItem[]; cajeros: RankItem[] }
+
+export async function getRankings(adm: Adm, f: { sucursalId: string | null; esTodas: boolean }): Promise<Rankings> {
+  const rows = await getIrregularidades(adm, f, 5000)
+  const falt = rows.filter((r) => r.tipo === 'faltante')
+
+  const acc = <T,>(arr: T[], key: (t: T) => string, nombre: (t: T) => string, sub: (t: T) => string | null, valor: (t: T) => number) => {
+    const m = new Map<string, RankItem>()
+    for (const it of arr) { const k = key(it); const g = m.get(k) ?? { nombre: nombre(it), sub: sub(it), casos: 0, valor: 0 }; g.casos++; g.valor += Math.abs(valor(it)); m.set(k, g) }
+    return Array.from(m.values()).sort((a, b) => b.valor - a.valor).slice(0, 10)
+  }
+
+  const productos = acc(falt, (r) => r.sku, (r) => r.producto, (r) => r.sku, (r) => r.valor_diferencia)
+  // sucursales: stock + caja + zonas
+  const bySuc = new Map<string, RankItem>()
+  for (const r of falt) { const g = bySuc.get(r.sucursal_id) ?? { nombre: r.sucursal, sub: 'stock', casos: 0, valor: 0 }; g.casos++; g.valor += Math.abs(r.valor_diferencia); bySuc.set(r.sucursal_id, g) }
+  try {
+    let qc = adm.from('arqueos_caja').select('sucursal_id, diferencia_cierre, sucursales(nombre)').neq('diferencia_cierre', 0)
+    if (!f.esTodas && f.sucursalId) qc = qc.eq('sucursal_id', f.sucursalId)
+    const { data: caja } = await qc
+    for (const a of (caja ?? []) as any[]) { const g = bySuc.get(a.sucursal_id) ?? { nombre: a.sucursales?.nombre ?? '—', sub: null, casos: 0, valor: 0 }; g.casos++; g.valor += Math.abs(Number(a.diferencia_cierre)); bySuc.set(a.sucursal_id, g) }
+  } catch { /* */ }
+  const sucursales = Array.from(bySuc.values()).sort((a, b) => b.valor - a.valor).slice(0, 10)
+
+  // zonas: de controles cerrados
+  const zonas: RankItem[] = []
+  try {
+    let qz = adm.from('controles_zona').select('zona_id, valor_diferencia, n_diferencias, zonas(nombre), sucursales(nombre)').eq('estado', 'cerrado')
+    if (!f.esTodas && f.sucursalId) qz = qz.eq('sucursal_id', f.sucursalId)
+    const { data } = await qz
+    const m = new Map<string, RankItem>()
+    for (const c of (data ?? []) as any[]) { const g = m.get(c.zona_id) ?? { nombre: c.zonas?.nombre ?? '—', sub: c.sucursales?.nombre ?? null, casos: 0, valor: 0 }; g.casos += c.n_diferencias; g.valor += Math.abs(Number(c.valor_diferencia)); m.set(c.zona_id, g) }
+    zonas.push(...Array.from(m.values()).sort((a, b) => b.valor - a.valor).slice(0, 10))
+  } catch { /* */ }
+
+  // cajeros: de arqueos con diferencia
+  const cajeros: RankItem[] = []
+  try {
+    let qk = adm.from('arqueos_caja').select('cajero_nombre, diferencia_cierre').neq('diferencia_cierre', 0).not('cajero_nombre', 'is', null)
+    if (!f.esTodas && f.sucursalId) qk = qk.eq('sucursal_id', f.sucursalId)
+    const { data } = await qk
+    const m = new Map<string, RankItem>()
+    for (const a of (data ?? []) as any[]) { const g = m.get(a.cajero_nombre) ?? { nombre: a.cajero_nombre, sub: 'caja', casos: 0, valor: 0 }; g.casos++; g.valor += Math.abs(Number(a.diferencia_cierre)); m.set(a.cajero_nombre, g) }
+    cajeros.push(...Array.from(m.values()).sort((a, b) => b.valor - a.valor).slice(0, 10))
+  } catch { /* */ }
+
+  return { productos, sucursales, zonas, cajeros }
+}
