@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, Users, Clock, CheckCircle2, ListChecks, Hand } from 'lucide-react'
+import { Search, Users, Clock, CheckCircle2, ListChecks, Hand, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { cn } from '@/lib/utils'
@@ -26,6 +26,7 @@ type Row = {
   fecha_vencimiento: string | null
   hora_limite: string | null
   creado_por_nombre: string | null
+  _esperando?: string[]
   tipo?: { nombre?: string; color?: string; categoria?: string; evidencia_requerida?: string[] } | null
 }
 
@@ -140,9 +141,11 @@ function TaskCardV2({
   const esPool = t.asignacion_tipo === 'pool_turno' || t.asignacion_tipo === 'pool_sucursal'
   const responsable = t.responsable_id ? usersMap[t.responsable_id] : null
   const cd = countdown(t.fecha_vencimiento)
+  const esperando = t._esperando ?? []
+  const bloqueada = esperando.length > 0
 
   const inner = (
-    <div className="relative overflow-hidden rounded-lg border bg-card transition-colors hover:border-primary/40">
+    <div className={cn('relative overflow-hidden rounded-lg border bg-card transition-colors hover:border-primary/40', bloqueada && 'opacity-60')}>
       <span aria-hidden className="absolute inset-y-0 left-0 w-1" style={{ background: colorBar }} />
       <div className="space-y-2 p-3 pl-4">
         <div className="flex items-start justify-between gap-2">
@@ -174,6 +177,12 @@ function TaskCardV2({
             </span>
           )}
         </div>
+
+        {bloqueada && (
+          <div className="flex items-center gap-1 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+            <Lock className="size-3" /> Esperando: {esperando.join(' · ')}
+          </div>
+        )}
 
         {(t.tipo?.evidencia_requerida?.length ?? 0) > 0 && (
           <div className="text-[10px] text-muted-foreground">

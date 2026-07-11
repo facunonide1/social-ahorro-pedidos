@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { CheckCircle2, ThumbsUp, ThumbsDown, Sparkles, Clock, MapPin, FileText } from 'lucide-react'
@@ -27,15 +27,23 @@ export type VerifItem = {
   evidencias: { tipo: string; valor: string | null; signedUrl: string | null }[]
 }
 
-export function VerificacionesClient({ items }: { items: VerifItem[] }) {
+export function VerificacionesClient({ items: initial }: { items: VerifItem[] }) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [sel, setSel] = useState<Set<string>>(new Set())
+  // Estado local para que las cards resueltas se vayan al instante (sin recargar).
+  const [items, setItems] = useState<VerifItem[]>(initial)
+  useEffect(() => { setItems(initial) }, [initial])
 
   const aprobables = useMemo(
     () => items.filter((i) => i.preVerif?.resultado === 'aprobada').map((i) => i.id),
     [items],
   )
+
+  function quitar(id: string) {
+    setItems((prev) => prev.filter((i) => i.id !== id))
+    setSel((prev) => { const n = new Set(prev); n.delete(id); return n })
+  }
 
   function toggle(id: string) {
     setSel((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -54,10 +62,9 @@ export function VerificacionesClient({ items }: { items: VerifItem[] }) {
     if (ids.length === 0) { toast.error('Seleccioná tareas que NORA haya pre-aprobado.'); return }
     setBusy(true)
     let ok = 0
-    for (const id of ids) if (await accion(id, 'aprobar')) ok++
+    for (const id of ids) if (await accion(id, 'aprobar')) { ok++; quitar(id) }
     setBusy(false)
     toast.success(`${ok} tarea${ok === 1 ? '' : 's'} aprobada${ok === 1 ? '' : 's'}.`)
-    setSel(new Set())
     router.refresh()
   }
 
@@ -90,8 +97,8 @@ export function VerificacionesClient({ items }: { items: VerifItem[] }) {
         {items.map((it) => (
           <VerifCard key={it.id} it={it} busy={busy} setBusy={setBusy} selected={sel.has(it.id)}
             seleccionable={aprobables.includes(it.id)} onToggle={() => toggle(it.id)}
-            onAprobar={async () => { setBusy(true); const ok = await accion(it.id, 'aprobar'); setBusy(false); ok ? (toast.success('Aprobada.'), router.refresh()) : toast.error('Error') }}
-            onRechazar={async (m) => { setBusy(true); const ok = await accion(it.id, 'rechazar', m); setBusy(false); ok ? (toast.success('Rechazada.'), router.refresh()) : toast.error('Error') }} />
+            onAprobar={async () => { setBusy(true); const ok = await accion(it.id, 'aprobar'); setBusy(false); ok ? (toast.success('Aprobada.'), quitar(it.id), router.refresh()) : toast.error('Error') }}
+            onRechazar={async (m) => { setBusy(true); const ok = await accion(it.id, 'rechazar', m); setBusy(false); ok ? (toast.success('Rechazada.'), quitar(it.id), router.refresh()) : toast.error('Error') }} />
         ))}
       </div>
     </div>

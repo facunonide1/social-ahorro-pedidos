@@ -95,9 +95,21 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Reportes', ruta: '/admin/tareas/reportes' },
       { nombre: 'Verificaciones', ruta: '/admin/verificaciones' },
     ],
-    badge: async (sb, userId) => {
-      const n = await cuenta(sb.from('tareas').select('id', { count: 'exact', head: true })
+    badge: async (sb, userId, rol) => {
+      // Mis tareas activas + las que me toca verificar (OS-2a · C).
+      const propias = await cuenta(sb.from('tareas').select('id', { count: 'exact', head: true })
         .eq('responsable_id', userId).in('estado', ['pendiente', 'reclamada', 'en_progreso', 'rechazada']))
+      let verif = 0
+      if (['super_admin', 'gerente', 'auditor'].includes(rol)) {
+        verif = await cuenta(sb.from('tareas').select('id', { count: 'exact', head: true }).eq('estado', 'en_verificacion'))
+      } else {
+        const { data: sups } = await sb.from('supervisores_tareas').select('sucursal_id').eq('user_id', userId).eq('activo', true)
+        const ids = (sups ?? []).map((s: any) => s.sucursal_id)
+        if (ids.length > 0) {
+          verif = await cuenta(sb.from('tareas').select('id', { count: 'exact', head: true }).eq('estado', 'en_verificacion').in('sucursal_id', ids))
+        }
+      }
+      const n = propias + verif
       return n > 0 ? { count: n, severidad: 'warn' } : null
     },
     quickActions: [

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, Layers } from 'lucide-react'
+import { ExternalLink, Layers, Lock, GitBranch, CameraOff } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
@@ -24,6 +24,7 @@ import { WorkflowStepper } from '@/components/tareas/workflow-stepper'
 import { TaskExecutionPanel } from '@/components/tareas/task-execution-panel'
 import { TaskComments } from '@/components/tareas/task-comments'
 import { TaskHistoryTimeline } from '@/components/tareas/task-history-timeline'
+import { DependenciasEditor } from '@/components/tareas/dependencias-editor'
 import { EmpleadoAvatar } from '@/components/empleados/empleado-avatar'
 
 export const dynamic = 'force-dynamic'
@@ -43,6 +44,8 @@ export default async function TareaDetallePage({
     .maybeSingle<Tarea>()
   if (error || !tarea) notFound()
 
+  const depIds: string[] = Array.isArray((tarea as any).dependencias_ids) ? (tarea as any).dependencias_ids : []
+
   const [
     { data: tipo },
     { data: comentarios },
@@ -50,6 +53,8 @@ export default async function TareaDetallePage({
     usersMap,
     { data: sucursal },
     { data: subtareas },
+    { data: depsData },
+    { data: candidatosData },
   ] = await Promise.all([
     tarea.tipo_tarea_id
       ? sb
@@ -83,7 +88,24 @@ export default async function TareaDetallePage({
       .select('id, codigo, titulo, estado, prioridad, fecha_vencimiento')
       .eq('tarea_padre_id', tarea.id)
       .order('created_at', { ascending: true }),
+    depIds.length > 0
+      ? sb.from('tareas').select('id, codigo, titulo, estado').in('id', depIds)
+      : Promise.resolve({ data: [] as any[] }),
+    tarea.sucursal_id
+      ? sb.from('tareas').select('id, codigo, titulo').eq('sucursal_id', tarea.sucursal_id)
+          .neq('id', tarea.id).in('estado', ['pendiente', 'asignada', 'reclamada', 'en_progreso', 'en_verificacion'])
+          .order('created_at', { ascending: false }).limit(60)
+      : sb.from('tareas').select('id, codigo, titulo').neq('id', tarea.id)
+          .in('estado', ['pendiente', 'asignada', 'reclamada', 'en_progreso', 'en_verificacion'])
+          .order('created_at', { ascending: false }).limit(60),
   ])
+
+  const deps = (depsData ?? []) as { id: string; codigo: string; titulo: string; estado: string }[]
+  const candidatos = (candidatosData ?? []) as { id: string; codigo: string; titulo: string }[]
+  const bloqueantes = deps.filter((d) => d.estado !== 'completada' && d.estado !== 'descartada')
+  const bloqueada = bloqueantes.length > 0
+  const puedeEditarDeps =
+    profile.rol === 'super_admin' || profile.rol === 'gerente' || (tarea as any).creado_por === profile.id
 
   function uName(uid: string | null): string {
     if (!uid) return '—'
@@ -123,6 +145,24 @@ export default async function TareaDetallePage({
       <div className="grid gap-4 p-4 lg:grid-cols-[1fr_320px] md:p-6">
         {/* Columna izquierda */}
         <div className="space-y-4">
+          {bloqueada && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 px-3 py-2.5 text-sm text-amber-700 dark:text-amber-400">
+              <Lock className="mt-0.5 size-4 shrink-0" />
+              <div>
+                <div className="font-medium">Tarea bloqueada</div>
+                <div className="text-xs">
+                  Esperando: {bloqueantes.map((b) => b.titulo).join(' · ')}. Se libera cuando se
+                  {bloqueantes.length > 1 ? ' completen todas.' : ' complete.'}
+                </div>
+              </div>
+            </div>
+          )}
+          {(tarea as any).evidencia_opt_out && (
+            <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+              <CameraOff className="size-3.5 shrink-0" />
+              Sin evidencia — decisión de {uName((tarea as any).evidencia_opt_out_por)}
+            </div>
+          )}
           <Card>
             <CardContent className="space-y-3 p-4">
               <div className="flex flex-wrap items-center gap-2">
@@ -139,7 +179,7 @@ export default async function TareaDetallePage({
                 estado={tarea.estado}
                 esResponsable={esResponsable}
                 esSupervisor={esSupervisor}
-                requeridas={(tipoAny?.evidencia_requerida ?? []) as string[]}
+                requeridas={(tareaAny.evidencia_opt_out ? [] : (tipoAny?.evidencia_requerida ?? [])) as string[]}
                 checklistItems={(tipoAny?.checklist_items ?? null) as string[] | null}
                 verificacionHumana={tareaAny.verificacion_humana !== false}
                 preVerificacion={tareaAny.pre_verificacion_ia ?? null}
@@ -236,6 +276,23 @@ export default async function TareaDetallePage({
               </CardContent>
             </Card>
           )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                <GitBranch className="size-3.5" />
+                Dependencias
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DependenciasEditor
+                tareaId={tarea.id}
+                deps={deps}
+                candidates={candidatos}
+                canEdit={puedeEditarDeps || esSupervisor}
+              />
+            </CardContent>
+          </Card>
 
           <TaskComments
             tareaId={tarea.id}

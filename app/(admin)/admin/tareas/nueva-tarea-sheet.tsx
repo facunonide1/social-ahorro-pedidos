@@ -82,6 +82,8 @@ export function NuevaTareaSheet({
     fecha_vencimiento: '',
   })
   const [datosCustom, setDatosCustom] = useState<Record<string, unknown>>({})
+  // Evidencia por default (OS-2a · B): toda tarea la exige salvo opt-out explícito.
+  const [exigirEvidencia, setExigirEvidencia] = useState(true)
 
   const tipo = useMemo(
     () => tipos.find((t) => t.id === tipoId) ?? null,
@@ -135,6 +137,8 @@ export function NuevaTareaSheet({
         fecha_vencimiento: vencimientoISO,
         sla_horas: tipo?.sla_horas ?? null,
         datos_custom: datosCustom,
+        evidencia_opt_out: !exigirEvidencia,
+        evidencia_opt_out_por: !exigirEvidencia ? currentUserId : null,
         entidad_relacionada: defaultEntidad?.tipo ?? null,
         entidad_id: defaultEntidad?.id ?? null,
         entidad_url: defaultEntidad?.url ?? null,
@@ -184,6 +188,7 @@ export function NuevaTareaSheet({
       fecha_vencimiento: '',
     })
     setDatosCustom({})
+    setExigirEvidencia(true)
     router.push(`/admin/tareas/${data.id}`)
     router.refresh()
   }
@@ -324,6 +329,27 @@ export function NuevaTareaSheet({
               </SelectContent>
             </Select>
           </Field>
+
+          {tipo && tipo.evidencia_requerida.length > 0 && (
+            <div className="rounded-md border border-border p-3">
+              <label className="flex items-start gap-2.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={exigirEvidencia}
+                  onChange={(e) => setExigirEvidencia(e.target.checked)}
+                  className="mt-0.5 size-4 accent-[hsl(var(--primary))]"
+                />
+                <span>
+                  <span className="font-medium">Exigir evidencia al completar</span>
+                  <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                    {exigirEvidencia
+                      ? `Se pedirá: ${tipo.evidencia_requerida.join(', ')}.`
+                      : 'Sin evidencia — quedará registrado que vos lo decidiste.'}
+                  </span>
+                </span>
+              </label>
+            </div>
+          )}
 
           {tipo && tipo.campos_custom.length > 0 && (
             <div className="space-y-3 rounded-md border border-border p-3">

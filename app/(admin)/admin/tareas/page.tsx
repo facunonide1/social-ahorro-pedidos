@@ -11,17 +11,21 @@ import { PageHeader } from '@/components/shared/page-header'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 import { BandejaV2Client } from './bandeja-v2-client'
+import { MiDiaMobile } from './mi-dia-mobile'
+import { KanbanClient } from './kanban-client'
 
 export const dynamic = 'force-dynamic'
 
-type Tab = 'mi_dia' | 'pool' | 'mi_sucursal' | 'todas'
-const TABS: Tab[] = ['mi_dia', 'pool', 'mi_sucursal', 'todas']
+type Tab = 'mi_dia' | 'pool' | 'mi_sucursal' | 'tablero' | 'todas'
+const TABS: Tab[] = ['mi_dia', 'pool', 'mi_sucursal', 'tablero', 'todas']
 const TAB_LABELS: Record<Tab, string> = {
   mi_dia: 'Mi día',
   pool: 'Pool de mi turno',
   mi_sucursal: 'Mi sucursal',
+  tablero: 'Tablero',
   todas: 'Todas',
 }
+const ESTADOS_KANBAN = ['pendiente', 'asignada', 'reclamada', 'en_progreso', 'en_verificacion']
 const ROLES_TODAS = ['super_admin', 'gerente', 'auditor']
 const ROLES_SUC = ['super_admin', 'gerente', 'auditor', 'sucursal', 'administrativo']
 const ACTIVOS = ['pendiente', 'asignada', 'reclamada', 'en_progreso', 'en_verificacion', 'rechazada']
@@ -43,6 +47,8 @@ export default async function TareasBandejaPage({
   let tab: Tab = TABS.includes(searchParams.tab as Tab) ? (searchParams.tab as Tab) : 'mi_dia'
   if (tab === 'todas' && !esTransversal) tab = 'mi_dia'
   if (tab === 'mi_sucursal' && !ROLES_SUC.includes(profile.rol)) tab = 'mi_dia'
+  const puedeTablero = esTransversal || ROLES_SUC.includes(profile.rol)
+  if (tab === 'tablero' && !puedeTablero) tab = 'mi_dia'
 
   // Fecha/turno AR
   const fechaAR = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date())
@@ -69,7 +75,37 @@ export default async function TareasBandejaPage({
   const { sucursalId: sucActiva, esTodas: sucTodas } = getSucursalActiva()
   if (!sucTodas && sucActiva && (tab === 'todas' || tab === 'pool')) q = q.eq('sucursal_id', sucActiva)
 
-  const { data: rows, error } = await q
+  const { data: rows, error } = tab === 'tablero' ? { data: [] as any[], error: null } : await q
+
+  // Tablero / kanban (OS-2a · E): activas + verificadas de hoy, scope por sucursal.
+  let tareasTablero: any[] = []
+  if (tab === 'tablero') {
+    const scope = (b: any) =>
+      !sucTodas && sucActiva ? b.eq('sucursal_id', sucActiva)
+      : profile.sucursal_id && !esTransversal ? b.eq('sucursal_id', profile.sucursal_id)
+      : b
+    const [act, done] = await Promise.all([
+      scope(sb.from('tareas').select(SELECT).in('estado', ESTADOS_KANBAN)).limit(400),
+      scope(sb.from('tareas').select(SELECT).eq('estado', 'completada').gte('fecha_completada', inicioHoy)).limit(200),
+    ])
+    tareasTablero = [...((act.data ?? []) as any[]), ...((done.data ?? []) as any[])]
+  }
+
+  // Estado "bloqueada" (OS-2a · D): una tarea con dependencias no resueltas.
+  // Un solo query extra para todas las dependencias referenciadas en la bandeja.
+  const enrich = (rows ?? []) as any[]
+  const allDepIds = [...new Set(enrich.flatMap((r) => (Array.isArray(r.dependencias_ids) ? r.dependencias_ids : [])))]
+  if (allDepIds.length > 0) {
+    const { data: depRows } = await sb.from('tareas').select('id, titulo, estado').in('id', allDepIds as string[])
+    const depMap = Object.fromEntries((depRows ?? []).map((d: any) => [d.id, d]))
+    for (const r of enrich) {
+      const ids = Array.isArray(r.dependencias_ids) ? r.dependencias_ids : []
+      r._esperando = ids
+        .map((id: string) => depMap[id])
+        .filter((d: any) => d && d.estado !== 'completada' && d.estado !== 'descartada')
+        .map((d: any) => d.titulo as string)
+    }
+  }
 
   // Progreso de "Mi día": completadas hoy / total de hoy (mías)
   const [{ count: totalHoy }, { count: completadasHoy }, { count: poolCount }] = await Promise.all([
@@ -96,6 +132,7 @@ export default async function TareasBandejaPage({
   const tabsVisibles = TABS.filter((t) => {
     if (t === 'todas') return esTransversal
     if (t === 'mi_sucursal') return ROLES_SUC.includes(profile.rol)
+    if (t === 'tablero') return puedeTablero
     return true
   })
 
@@ -126,10 +163,46 @@ export default async function TareasBandejaPage({
               )}
             </AlertDescription>
           </Alert>
+        ) : tab === 'tablero' ? (
+          <KanbanClient
+            tareas={tareasTablero}
+            usersMap={usersMap}
+            users={users}
+            puedeReasignar={puedeTablero}
+          />
+        ) : tab === 'mi_dia' ? (
+          <>
+            {/* Mobile-first (OS-2a · A): la pantalla que abre un repositor en el teléfono. */}
+            <div className="md:hidden">
+              <MiDiaMobile
+                tareas={enrich}
+                tipos={(tipoData ?? []) as TipoTarea[]}
+                users={users}
+                sucursales={(sucursalesData ?? []) as { id: string; nombre: string }[]}
+                currentUserId={profile.id}
+                progresoDia={{ total: totalHoy ?? 0, completadas: completadasHoy ?? 0 }}
+              />
+            </div>
+            {/* Desktop: la bandeja de siempre. */}
+            <div className="hidden md:block">
+              <BandejaV2Client
+                tab={tab}
+                tareas={enrich}
+                usersMap={usersMap}
+                tipos={(tipoData ?? []) as TipoTarea[]}
+                users={users}
+                sucursales={(sucursalesData ?? []) as { id: string; nombre: string }[]}
+                currentUserId={profile.id}
+                currentUserRol={profile.rol}
+                esSuper={esSuper}
+                progresoDia={{ total: totalHoy ?? 0, completadas: completadasHoy ?? 0 }}
+              />
+            </div>
+          </>
         ) : (
           <BandejaV2Client
             tab={tab}
-            tareas={(rows ?? []) as any[]}
+            tareas={enrich}
             usersMap={usersMap}
             tipos={(tipoData ?? []) as TipoTarea[]}
             users={users}

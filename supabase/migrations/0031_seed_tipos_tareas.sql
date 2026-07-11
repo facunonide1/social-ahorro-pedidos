@@ -16,7 +16,7 @@ insert into public.tipos_tareas (
    'Revisión y aprobación de un pago a proveedor antes de la ejecución.',
    'finanzas', 'BadgeCheck', '#22c55e',
    'alta', 24, true, 2,
-   '["aprobacion_digital"]'::jsonb, 'tesoreria', 'gerente',
+   '["archivo"]'::jsonb, 'tesoreria', 'gerente',
    true, false, 'Aprobar pago a {proveedor} por {monto}',
    15),
 
@@ -128,7 +128,7 @@ insert into public.tipos_tareas (
    'Contactar a cliente VIP en seguimiento comercial.',
    'comercial', 'PhoneCall', '#8b5cf6',
    'media', 168, false, 1,
-   '["nota","duracion"]'::jsonb, 'administrativo', null,
+   '["nota"]'::jsonb, 'administrativo', null,
    true, false, 'Llamar a {cliente}',
    15),
 
