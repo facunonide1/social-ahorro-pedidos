@@ -38,15 +38,27 @@ export async function POST(req: NextRequest) {
   let b: any
   try { b = await req.json() } catch { return NextResponse.json({ error: 'body inválido' }, { status: 400 }) }
 
+  const adm = createAdminClient()
+  const r = await crearPago(adm, b, g.userId)
+  if ('error' in r) return NextResponse.json({ error: r.error, frena: r.frena }, { status: r.status })
+  return NextResponse.json(r)
+}
+
+/**
+ * Crea un pago a proveedor con origen explícito. Núcleo REUSADO por el endpoint
+ * y por el motor conversacional de NORA (N-01: misma lógica, mismos permisos —
+ * quien llama ya validó el permiso finanzas:aprobar). Aplica el umbral de
+ * aprobación de OS-4b. Devuelve { error, status } o { ok, id, ... }.
+ */
+export async function crearPago(adm: any, b: any, userId: string): Promise<any> {
   const proveedor_id = b?.proveedor_id
   const origen_tipo = String(b?.origen_tipo ?? '')
   const aplicaciones = Array.isArray(b?.aplicaciones) ? b.aplicaciones : []
   const retenciones = Math.max(0, Number(b?.retenciones ?? 0))
-  if (!proveedor_id) return NextResponse.json({ error: 'proveedor requerido' }, { status: 400 })
-  if (!ORIGEN_METODO[origen_tipo]) return NextResponse.json({ error: 'elegí un origen del pago (banco, caja o cheque)' }, { status: 400 })
-  if (!aplicaciones.length) return NextResponse.json({ error: 'seleccioná al menos un documento' }, { status: 400 })
+  if (!proveedor_id) return { error: 'proveedor requerido', status: 400 }
+  if (!ORIGEN_METODO[origen_tipo]) return { error: 'elegí un origen del pago (banco, caja o cheque)', status: 400 }
+  if (!aplicaciones.length) return { error: 'seleccioná al menos un documento', status: 400 }
 
-  const adm = createAdminClient()
   const ids = aplicaciones.map((a: any) => a.factura_id)
   const { data: facts } = await adm.from('facturas_proveedor').select('id, total, tipo_documento, estado').in('id', ids)
   const factById = new Map((facts ?? []).map((f) => [f.id, f]))
@@ -54,32 +66,30 @@ export async function POST(req: NextRequest) {
   let bruto = 0
   for (const a of aplicaciones) {
     const f = factById.get(a.factura_id)
-    if (!f) return NextResponse.json({ error: 'documento inexistente' }, { status: 400 })
+    if (!f) return { error: 'documento inexistente', status: 400 }
     const m = Number(a.monto)
-    if (!Number.isFinite(m) || m <= 0) return NextResponse.json({ error: 'monto de aplicación inválido' }, { status: 400 })
+    if (!Number.isFinite(m) || m <= 0) return { error: 'monto de aplicación inválido', status: 400 }
     bruto += f.tipo_documento === 'nota_credito' ? -m : m
   }
-  if (bruto <= 0) return NextResponse.json({ error: 'el neto a pagar debe ser positivo' }, { status: 400 })
+  if (bruto <= 0) return { error: 'el neto a pagar debe ser positivo', status: 400 }
 
   const montoEgreso = Math.max(0, bruto - retenciones)
   const fecha_pago = b?.fecha_pago ?? new Date().toISOString().slice(0, 10)
   const pendiente = montoEgreso > UMBRAL_PAGO_APROBACION
 
-  // Validación de datos de origen (+ saldo si se ejecuta ya).
   if (origen_tipo === 'efectivo_sucursal') {
-    if (!b?.origen_sucursal_id) return NextResponse.json({ error: 'sucursal de efectivo requerida' }, { status: 400 })
+    if (!b?.origen_sucursal_id) return { error: 'sucursal de efectivo requerida', status: 400 }
     if (!pendiente) {
       const { data: cg } = await adm.from('caja_general').select('saldo_actual').eq('sucursal_id', b.origen_sucursal_id).eq('tipo', 'caja_general').maybeSingle()
-      if (Number(cg?.saldo_actual ?? 0) < montoEgreso) return NextResponse.json({ error: 'Efectivo insuficiente en la caja general.', frena: true }, { status: 422 })
+      if (Number(cg?.saldo_actual ?? 0) < montoEgreso) return { error: 'Efectivo insuficiente en la caja general.', frena: true, status: 422 }
     }
   } else if (origen_tipo === 'cuenta_bancaria') {
-    if (!b?.origen_cuenta_id) return NextResponse.json({ error: 'cuenta bancaria requerida' }, { status: 400 })
+    if (!b?.origen_cuenta_id) return { error: 'cuenta bancaria requerida', status: 400 }
   } else if (origen_tipo === 'cheque') {
-    if (!b?.cheque?.numero || !b?.cheque?.banco) return NextResponse.json({ error: 'número y banco del cheque requeridos' }, { status: 400 })
+    if (!b?.cheque?.numero || !b?.cheque?.banco) return { error: 'número y banco del cheque requeridos', status: 400 }
   }
 
   const numero_orden_pago = `OP-${fecha_pago.replace(/-/g, '')}-${Math.floor(Number(String(bruto).replace('.', '')) % 10000).toString().padStart(4, '0')}`
-  // El intento de cheque se guarda para ejecutarlo al aprobar (pagos no tiene bag propio).
   const retDetalle = origen_tipo === 'cheque' ? { ...(b?.retencion_detalle ?? {}), _cheque: b.cheque } : (b?.retencion_detalle ?? null)
 
   const { data: pago, error: ePago } = await adm.from('pagos').insert({
@@ -90,11 +100,11 @@ export async function POST(req: NextRequest) {
     origen_sucursal_id: origen_tipo === 'efectivo_sucursal' ? b.origen_sucursal_id : null,
     origen_cuenta_id: origen_tipo === 'cuenta_bancaria' ? b.origen_cuenta_id : null,
     retencion_detalle: retDetalle, observaciones: b?.observaciones ?? null, comprobante_url: b?.comprobante_url ?? null,
-    solicitado_por: g.userId, aprobado_por: pendiente ? null : g.userId, ejecutado_por: pendiente ? null : g.userId,
+    origen_registro: b?.origen_registro ?? null,
+    solicitado_por: userId, aprobado_por: pendiente ? null : userId, ejecutado_por: pendiente ? null : userId,
   }).select('id').single()
-  if (ePago) return NextResponse.json({ error: ePago.message }, { status: 400 })
+  if (ePago) return { error: ePago.message, status: 400 }
 
-  // Registra las aplicaciones (siempre; los efectos sobre la factura van al ejecutar).
   for (const a of aplicaciones) await adm.from('pago_facturas').insert({ pago_id: pago.id, factura_id: a.factura_id, monto_aplicado: Number(a.monto) })
 
   if (pendiente) {
@@ -102,15 +112,15 @@ export async function POST(req: NextRequest) {
     await adm.from('aprobaciones').insert({
       tipo: 'pago_alto', entidad_tipo: 'pago', entidad_id: pago.id, monto_afectado: montoEgreso,
       descripcion: `Pago ${numero_orden_pago} a ${prov?.razon_social ?? 'proveedor'} por $${Math.round(montoEgreso).toLocaleString('es-AR')}`,
-      solicitante_id: g.userId, rol_aprobador: 'super_admin', estado: 'pendiente',
+      solicitante_id: userId, rol_aprobador: 'super_admin', estado: 'pendiente',
     })
     const { data: sup } = await adm.from('users_admin').select('id').eq('rol', 'super_admin').eq('activo', true)
     if (sup?.length) await adm.from('notificaciones_admin').insert((sup as any[]).map((s) => ({ user_id: s.id, tipo: 'aprobacion', prioridad: 'alta', titulo: 'Pago pendiente de aprobación', mensaje: `${numero_orden_pago} por $${Math.round(montoEgreso).toLocaleString('es-AR')} espera tu OK.`, url_accion: '/admin/aprobaciones' })))
-    return NextResponse.json({ ok: true, id: pago.id, numero_orden_pago, pendiente: true, monto_egreso: montoEgreso })
+    return { ok: true, id: pago.id, numero_orden_pago, pendiente: true, monto_egreso: montoEgreso }
   }
 
-  await ejecutarEfectosPago(adm, pago.id, g.userId)
-  return NextResponse.json({ ok: true, id: pago.id, numero_orden_pago, monto_total: bruto, monto_egreso: montoEgreso })
+  await ejecutarEfectosPago(adm, pago.id, userId)
+  return { ok: true, id: pago.id, numero_orden_pago, monto_total: bruto, monto_egreso: montoEgreso, pendiente: false }
 }
 
 /**

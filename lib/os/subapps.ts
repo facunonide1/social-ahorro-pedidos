@@ -222,6 +222,7 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Conciliación', ruta: '/admin/finanzas/conciliacion' },
       { nombre: 'Cash flow', ruta: '/admin/finanzas/cash-flow' },
       { nombre: 'Calendario de pagos', ruta: '/admin/finanzas/calendario' },
+      { nombre: 'NORA (asistente)', ruta: '/admin/finanzas/asistente' },
       { nombre: 'Aprobaciones', ruta: '/admin/aprobaciones' },
     ],
     badge: async (sb) => {
@@ -236,6 +237,7 @@ export const SUBAPPS: SubAppManifest[] = [
         { id: 'arqueo-turno', nombre: 'Arqueo de turno', icono: 'Wallet', destino: '/admin/finanzas/caja', modulo: 'caja', accion: 'crear' },
         { id: 'retiro-fondo', nombre: 'Retiro de fondo (socios)', icono: 'Banknote', destino: '/admin/finanzas/caja', modulo: 'caja', accion: 'aprobar', roles: ['super_admin', 'gerente', 'tesoreria'] },
       ] },
+      { id: 'nora-asistente', nombre: 'Pedirle a NORA', icono: 'Sparkles', destino: '/admin/finanzas/asistente', modulo: 'finanzas', accion: 'ver', primary: true },
       { id: 'pago', nombre: 'Registrar pago', icono: 'CreditCard', destino: '/admin/finanzas/pagos', modulo: 'finanzas', accion: 'aprobar', primary: true },
       { id: 'documento', nombre: 'Nuevo documento a pagar', icono: 'FileText', destino: '/admin/finanzas/documentos', modulo: 'finanzas', accion: 'crear', primary: true },
       { id: 'gasto', nombre: 'Registrar gasto', icono: 'Receipt', destino: '/admin/finanzas/gastos-fijos', modulo: 'caja', accion: 'crear', primary: true },
