@@ -18,6 +18,7 @@ import { OsDock } from '@/components/os/os-dock'
 import { MobileBottomBar } from '@/components/os/mobile-bottom-bar'
 import { CommandPalette } from '@/components/os/command-palette'
 import { QuickActionsMenu } from '@/components/os/quick-actions-menu'
+import { PanicButton } from '@/components/os/panic-button'
 import { subAppDeRuta } from '@/lib/os/subapps'
 import type { HubProfile } from '@/lib/admin-hub/auth'
 import { cn } from '@/lib/utils'
@@ -121,6 +122,9 @@ export function OsShell({ profile, children }: { profile: HubProfile; children: 
         </div>
 
         <MobileBottomBar />
+
+        {/* Botón de pánico (mobile, long-press) */}
+        <PanicButton />
 
         {/* FAB "+" mobile */}
         <button

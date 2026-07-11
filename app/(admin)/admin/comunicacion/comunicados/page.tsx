@@ -1,10 +1,9 @@
-import Link from 'next/link'
-
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createAdminClient } from '@/lib/supabase/server'
+import { listAdminUsersLite } from '@/lib/supabase/admin-users'
 import { PageHeader } from '@/components/shared/page-header'
-import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
+
+import { ComunicadosClient, type ComRow, type Cronico } from './comunicados-client'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Comunicados' }
@@ -17,42 +16,47 @@ export default async function ComunicadosPage() {
   const ids = ((coms ?? []) as any[]).map((c) => c.id)
   const canalIds = [...new Set(((coms ?? []) as any[]).map((c) => c.canal_id))]
 
-  const lecturas = new Map<string, number>(); const miembrosPorCanal = new Map<string, number>()
-  if (ids.length) {
-    const { data: lec } = await adm.from('mensaje_lecturas').select('mensaje_id').in('mensaje_id', ids)
-    for (const l of (lec ?? []) as any[]) lecturas.set(l.mensaje_id, (lecturas.get(l.mensaje_id) ?? 0) + 1)
-  }
-  if (canalIds.length) {
-    const { data: mm } = await adm.from('canal_miembros').select('canal_id').in('canal_id', canalIds)
-    for (const m of (mm ?? []) as any[]) miembrosPorCanal.set(m.canal_id, (miembrosPorCanal.get(m.canal_id) ?? 0) + 1)
-  }
+  const [{ data: miembros }, { data: lecturas }, users] = await Promise.all([
+    canalIds.length ? adm.from('canal_miembros').select('canal_id, user_id').in('canal_id', canalIds) : Promise.resolve({ data: [] as any[] }),
+    ids.length ? adm.from('mensaje_lecturas').select('mensaje_id, user_id').in('mensaje_id', ids) : Promise.resolve({ data: [] as any[] }),
+    listAdminUsersLite(adm, { soloActivos: false }),
+  ])
 
-  const rows = ((coms ?? []) as any[]).map((c) => {
-    const total = miembrosPorCanal.get(c.canal_id) ?? 0
-    const leido = lecturas.get(c.id) ?? 0
-    return { id: c.id, canal_id: c.canal_id, canal: c.canales?.nombre ?? '—', contenido: c.contenido ?? '', fecha: c.created_at, leido, total, pct: total > 0 ? Math.round((leido / total) * 100) : 0 }
+  const nombre = new Map(((users ?? []) as any[]).map((u) => [u.id, u.nombre || u.email]))
+  const miembrosPorCanal = new Map<string, string[]>()
+  for (const m of (miembros ?? []) as any[]) { const a = miembrosPorCanal.get(m.canal_id) ?? []; a.push(m.user_id); miembrosPorCanal.set(m.canal_id, a) }
+  const leyeronPorMsg = new Map<string, Set<string>>()
+  for (const l of (lecturas ?? []) as any[]) { const s = leyeronPorMsg.get(l.mensaje_id) ?? new Set<string>(); s.add(l.user_id); leyeronPorMsg.set(l.mensaje_id, s) }
+
+  const rows: ComRow[] = ((coms ?? []) as any[]).map((c) => {
+    const members = miembrosPorCanal.get(c.canal_id) ?? []
+    const leyeron = leyeronPorMsg.get(c.id) ?? new Set<string>()
+    const leidoMiembros = members.filter((u) => leyeron.has(u)).length
+    const total = members.length
+    const faltantes = members.filter((u) => !leyeron.has(u)).map((u) => ({ id: u, nombre: nombre.get(u) ?? 'Usuario' }))
+    return {
+      id: c.id, canal_id: c.canal_id, canal: c.canales?.nombre ?? '—', contenido: c.contenido ?? '', fecha: c.created_at,
+      leido: leidoMiembros, total, pct: total > 0 ? Math.round((leidoMiembros / total) * 100) : 0, faltantes,
+    }
   })
+
+  // No-lectores crónicos: pendientes en comunicados de más de 48hs.
+  const hace48 = Date.now() - 48 * 3600 * 1000
+  const pendientesPorUsuario = new Map<string, number>()
+  for (const r of rows) {
+    if (new Date(r.fecha).getTime() >= hace48) continue
+    for (const f of r.faltantes) pendientesPorUsuario.set(f.id, (pendientesPorUsuario.get(f.id) ?? 0) + 1)
+  }
+  const cronicos: Cronico[] = [...pendientesPorUsuario.entries()]
+    .sort((a, b) => b[1] - a[1]).slice(0, 8)
+    .map(([id, pendientes]) => ({ id, nombre: nombre.get(id) ?? 'Usuario', pendientes }))
 
   return (
     <>
-      <PageHeader title="Comunicados" description="Avisos importantes con confirmación de lectura (protocolos, cambios ANMAT…)."
+      <PageHeader title="Comunicados" description="Avisos importantes con confirmación de lectura. Recordá a los que faltan."
         breadcrumbs={[{ label: 'Comunicación', href: '/admin/comunicacion' }, { label: 'Comunicados' }]} />
-      <div className="space-y-3 p-4 md:p-6">
-        {rows.length === 0 ? (
-          <div className="rounded-lg border border-dashed py-12 text-center text-sm text-muted-foreground">Sin comunicados. Enviá un mensaje tipo comunicado desde un canal.</div>
-        ) : rows.map((c) => (
-          <div key={c.id} className="rounded-lg border border-border p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <Link href={`/admin/comunicacion?canal=${c.canal_id}`} className="text-xs text-primary hover:underline">{c.canal}</Link>
-                <p className="mt-0.5 text-sm">{c.contenido}</p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">{String(c.fecha).slice(0, 16).replace('T', ' ')}</p>
-              </div>
-              <Badge variant={c.pct === 100 ? 'success' : 'warning'} className="shrink-0 font-normal">{c.leido}/{c.total} leyeron</Badge>
-            </div>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted"><div className={cn('h-full rounded-full', c.pct === 100 ? 'bg-emerald-500' : 'bg-primary')} style={{ width: `${c.pct}%` }} /></div>
-          </div>
-        ))}
+      <div className="p-4 md:p-6">
+        <ComunicadosClient rows={rows} cronicos={cronicos} />
       </div>
     </>
   )

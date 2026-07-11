@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { puede, type PermisosCustom } from '@/lib/types/permisos'
 import type { AdminRole } from '@/lib/types/admin'
 
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export type OsSearchHit = {
-  tipo: 'producto' | 'cliente' | 'proveedor' | 'tarea'
+  tipo: 'producto' | 'cliente' | 'proveedor' | 'tarea' | 'mensaje'
   id: string
   titulo: string
   subtitulo?: string
@@ -63,6 +63,38 @@ export async function GET(req: NextRequest) {
   for (const r of (p.data ?? []) as any[]) hits.push({ tipo: 'producto', id: r.id, titulo: r.nombre ?? r.sku, subtitulo: [r.sku, r.codigo_barras].filter(Boolean).join(' · '), ruta: `/admin/operaciones/stock?q=${encodeURIComponent(r.sku ?? '')}` })
   for (const r of (c.data ?? []) as any[]) hits.push({ tipo: 'cliente', id: r.id, titulo: r.nombre ?? 'Cliente', subtitulo: [r.dni, r.cuit].filter(Boolean).join(' · '), ruta: `/admin/clientes/${r.id}` })
   for (const r of (pr.data ?? []) as any[]) hits.push({ tipo: 'proveedor', id: r.id, titulo: r.razon_social ?? 'Proveedor', subtitulo: r.cuit ?? undefined, ruta: `/admin/proveedores/${r.id}` })
+
+  // Mensajes: full-text, SOLO de canales donde el usuario es miembro o públicos.
+  if (ver('comunicacion')) {
+    try {
+      const adm = createAdminClient()
+      const [{ data: miembro }, { data: publicos }] = await Promise.all([
+        adm.from('canal_miembros').select('canal_id').eq('user_id', user.id),
+        adm.from('canales').select('id').eq('es_privado', false),
+      ])
+      const canalIds = [...new Set([
+        ...((miembro ?? []) as any[]).map((m) => m.canal_id),
+        ...((publicos ?? []) as any[]).map((c2) => c2.id),
+      ])]
+      if (canalIds.length) {
+        const { data: msgs } = await adm
+          .from('mensajes')
+          .select('id, canal_id, contenido, canales(nombre)')
+          .in('canal_id', canalIds)
+          .textSearch('contenido', q, { type: 'websearch', config: 'spanish' })
+          .order('created_at', { ascending: false })
+          .limit(5)
+        for (const r of (msgs ?? []) as any[]) {
+          hits.push({
+            tipo: 'mensaje', id: r.id,
+            titulo: (r.contenido ?? '').slice(0, 80) || 'Mensaje',
+            subtitulo: r.canales?.nombre ?? undefined,
+            ruta: `/admin/comunicacion?canal=${r.canal_id}&msg=${r.id}`,
+          })
+        }
+      }
+    } catch { /* búsqueda de mensajes best-effort */ }
+  }
 
   return NextResponse.json({ hits })
 }

@@ -6,7 +6,7 @@ import { ComunicacionClient, type CanalRow, type UserLite } from './comunicacion
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Comunicación' }
 
-export default async function ComunicacionPage({ searchParams }: { searchParams: { canal?: string } }) {
+export default async function ComunicacionPage({ searchParams }: { searchParams: { canal?: string; msg?: string } }) {
   const profile = await requireAdminHubAccess()
   const adm = createAdminClient()
 
@@ -41,7 +41,7 @@ export default async function ComunicacionPage({ searchParams }: { searchParams:
 
   return (
     <ComunicacionClient
-      canales={rows} canalActivo={searchParams.canal ?? null} totalNoLeidos={totalNoLeidos}
+      canales={rows} canalActivo={searchParams.canal ?? null} msgFocus={searchParams.msg ?? null} totalNoLeidos={totalNoLeidos}
       yo={{ id: profile.id, nombre: profile.nombre, email: profile.email, rol: profile.rol, sucursal_id: profile.sucursal_id }}
       usuarios={((users ?? []) as any[]).map((u) => ({ id: u.id, nombre: u.nombre, email: u.email, rol: u.rol, sucursal_id: u.sucursal_id })) as UserLite[]}
     />

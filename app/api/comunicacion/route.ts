@@ -100,6 +100,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
+  // ---- crear encuesta (encargados · OS-2b · E) ----
+  if (accion === 'crear_encuesta') {
+    if (!esEncargado) return NextResponse.json({ error: 'solo encargados crean encuestas' }, { status: 403 })
+    const pregunta = String(b?.pregunta ?? '').trim()
+    const opciones = (Array.isArray(b?.opciones) ? b.opciones : []).map((o: any) => String(o).trim()).filter(Boolean).slice(0, 6)
+    if (!b?.canal_id || !pregunta || opciones.length < 2) return NextResponse.json({ error: 'canal, pregunta y 2 opciones mínimo' }, { status: 400 })
+    const { data: msg, error } = await adm.from('mensajes').insert({ canal_id: b.canal_id, autor_user_id: g.userId, tipo: 'encuesta', contenido: pregunta }).select('id').single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    const { error: e2 } = await adm.from('encuestas').insert({ mensaje_id: msg.id, opciones, multi: !!b?.multi })
+    if (e2) return NextResponse.json({ error: e2.message }, { status: 400 })
+    return NextResponse.json({ ok: true, id: msg.id })
+  }
+
   // ---- votar encuesta ----
   if (accion === 'votar') {
     if (!b?.encuesta_id || !b?.opcion) return NextResponse.json({ error: 'datos requeridos' }, { status: 400 })
@@ -113,12 +126,24 @@ export async function POST(req: NextRequest) {
   if (accion === 'crear_tarea') {
     if (!esEncargado) return NextResponse.json({ error: 'solo encargados crean tareas' }, { status: 403 })
     if (!b?.mensaje_id || !b?.titulo) return NextResponse.json({ error: 'mensaje y título requeridos' }, { status: 400 })
-    const { data: msg } = await adm.from('mensajes').select('canal_id, contenido, entidad_relacionada').eq('id', b.mensaje_id).maybeSingle()
+    const { data: msg } = await adm.from('mensajes').select('canal_id, contenido, adjuntos, entidad_relacionada').eq('id', b.mensaje_id).maybeSingle()
+    // Idempotencia: si el mensaje ya se convirtió, devolver la tarea existente.
+    if (msg?.entidad_relacionada?.tipo === 'tarea') {
+      return NextResponse.json({ ok: true, tarea_id: msg.entidad_relacionada.id, codigo: msg.entidad_relacionada.codigo, ya: true })
+    }
+    // El adjunto foto del mensaje viaja como evidencia inicial de la tarea (OS-2b · C).
+    const adjs: any[] = Array.isArray(msg?.adjuntos) ? (msg!.adjuntos as any[]) : []
+    const evidencias = adjs
+      .filter((a) => (typeof a?.tipo === 'string' && a.tipo.startsWith('image')) || /\.(jpe?g|png|webp)$/i.test(String(a?.url ?? a?.path ?? a?.nombre ?? '')))
+      .map((a) => ({ tipo: 'foto', url: a.path ?? a.url ?? null, timestamp: new Date().toISOString(), user_id: g.userId }))
+      .filter((e) => e.url)
     const { data: tarea, error } = await adm.from('tareas').insert({
-      codigo: TAREA_CODIGO(), tipo_origen: 'manual', titulo: b.titulo, descripcion: b?.descripcion ?? msg?.contenido ?? null,
+      codigo: TAREA_CODIGO(), tipo_tarea_id: b?.tipo_tarea_id ?? null, tipo_origen: 'nora', titulo: b.titulo, descripcion: b?.descripcion ?? msg?.contenido ?? null,
       prioridad: b?.prioridad ?? 'media', estado: 'pendiente',
       asignacion_tipo: b?.responsable_id ? 'usuario_especifico' : 'pool_sucursal',
       responsable_id: b?.responsable_id ?? null, sucursal_id: b?.sucursal_id ?? null,
+      fecha_vencimiento: b?.fecha_vencimiento ?? null,
+      evidencias,
       datos_custom: { origen_mensaje_id: b.mensaje_id, canal_id: msg?.canal_id, creada_por: g.userId },
     }).select('id, codigo').single()
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
@@ -126,6 +151,85 @@ export async function POST(req: NextRequest) {
     await adm.from('mensajes').update({ entidad_relacionada: { tipo: 'tarea', id: tarea.id, codigo: tarea.codigo } }).eq('id', b.mensaje_id)
     if (msg?.canal_id) await adm.from('mensajes').insert({ canal_id: msg.canal_id, autor_user_id: null, tipo: 'sistema', contenido: `📋 Tarea creada: "${b.titulo}" (${tarea.codigo})${b?.responsable_id ? ', asignada' : ', al pool de la sucursal'}.`, entidad_relacionada: { tipo: 'tarea', id: tarea.id, codigo: tarea.codigo } })
     return NextResponse.json({ ok: true, tarea_id: tarea.id, codigo: tarea.codigo })
+  }
+
+  // ---- recordar comunicado a los que faltan (OS-2b · F) ----
+  if (accion === 'recordar_comunicado') {
+    if (!esEncargado) return NextResponse.json({ error: 'solo encargados recuerdan comunicados' }, { status: 403 })
+    if (!b?.mensaje_id) return NextResponse.json({ error: 'mensaje requerido' }, { status: 400 })
+    const { data: msg } = await adm.from('mensajes').select('canal_id, contenido').eq('id', b.mensaje_id).maybeSingle()
+    if (!msg) return NextResponse.json({ error: 'comunicado no encontrado' }, { status: 404 })
+    const [{ data: miembros }, { data: lecturas }] = await Promise.all([
+      adm.from('canal_miembros').select('user_id').eq('canal_id', msg.canal_id),
+      adm.from('mensaje_lecturas').select('user_id').eq('mensaje_id', b.mensaje_id),
+    ])
+    const leyeron = new Set(((lecturas ?? []) as any[]).map((l) => l.user_id))
+    const faltan = ((miembros ?? []) as any[]).map((m) => m.user_id).filter((u) => u !== g.userId && !leyeron.has(u))
+    if (faltan.length === 0) return NextResponse.json({ ok: true, recordados: 0 })
+    await adm.from('notificaciones_admin').insert(faltan.map((uid) => ({
+      user_id: uid, tipo: 'comunicado', prioridad: 'alta',
+      titulo: 'Recordatorio: comunicado sin confirmar',
+      mensaje: (msg.contenido ?? '').slice(0, 120),
+      url_accion: `/admin/comunicacion?canal=${msg.canal_id}&msg=${b.mensaje_id}`,
+    })))
+    return NextResponse.json({ ok: true, recordados: faltan.length })
+  }
+
+  // ---- BOTÓN DE PÁNICO (OS-2b · D) ----
+  if (accion === 'panico') {
+    const sucursalId = g.sucursalId
+    // Canal de la sucursal (para el mensaje urgente + banner).
+    let canalId: string | null = null
+    if (sucursalId) {
+      const { data: canal } = await adm.from('canales').select('id').eq('tipo', 'sucursal').eq('sucursal_id', sucursalId).limit(1).maybeSingle()
+      canalId = canal?.id ?? null
+    }
+    const { data: ev, error } = await adm.from('panico_eventos').insert({ user_id: g.userId, sucursal_id: sucursalId, canal_id: canalId, estado: 'activo' }).select('id').single()
+    if (error || !ev) return NextResponse.json({ error: error?.message ?? 'no se pudo registrar' }, { status: 400 })
+
+    if (canalId) {
+      const { data: msg } = await adm.from('mensajes').insert({
+        canal_id: canalId, autor_user_id: g.userId, tipo: 'texto',
+        contenido: `🚨 BOTÓN DE PÁNICO activado por ${g.nombre ?? 'un empleado'}. Necesita ayuda YA.`,
+        es_urgente: true, entidad_relacionada: { tipo: 'panico', id: ev.id },
+      }).select('id').single()
+      if (msg?.id) await adm.from('panico_eventos').update({ mensaje_id: msg.id }).eq('id', ev.id)
+    }
+
+    // Notificar a super_admin + encargados de la sucursal.
+    const targets = new Set<string>()
+    const { data: sadmins } = await adm.from('users_admin').select('id').eq('rol', 'super_admin').eq('activo', true)
+    for (const u of (sadmins ?? []) as any[]) targets.add(u.id)
+    if (sucursalId) {
+      const { data: encs } = await adm.from('users_admin').select('id').eq('sucursal_id', sucursalId).eq('activo', true).in('rol', ['gerente', 'sucursal', 'encargado_sucursal', 'administrativo'])
+      for (const u of (encs ?? []) as any[]) targets.add(u.id)
+    }
+    targets.delete(g.userId)
+    if (targets.size) {
+      await adm.from('notificaciones_admin').insert([...targets].map((uid) => ({
+        user_id: uid, tipo: 'urgente', prioridad: 'critica',
+        titulo: '🚨 PÁNICO', mensaje: `${g.nombre ?? 'Un empleado'} activó el botón de pánico.`,
+        url_accion: canalId ? `/admin/comunicacion?canal=${canalId}` : '/admin/comunicacion',
+      })))
+    }
+    return NextResponse.json({ ok: true, evento_id: ev.id, canal_id: canalId })
+  }
+
+  // ---- de-escalada de pánico ----
+  if (accion === 'resolver_panico') {
+    if (!b?.evento_id || !['falsa_alarma', 'resuelto'].includes(b?.estado)) return NextResponse.json({ error: 'datos requeridos' }, { status: 400 })
+    const { data: ev } = await adm.from('panico_eventos').select('id, user_id, canal_id, estado').eq('id', b.evento_id).maybeSingle()
+    if (!ev) return NextResponse.json({ error: 'evento no encontrado' }, { status: 404 })
+    // El emisor o un encargado pueden de-escalar.
+    if (ev.user_id !== g.userId && !esEncargado) return NextResponse.json({ error: 'no podés resolver este evento' }, { status: 403 })
+    await adm.from('panico_eventos').update({ estado: b.estado, resuelto_por: g.userId, resuelto_at: new Date().toISOString() }).eq('id', ev.id)
+    if (ev.canal_id) {
+      await adm.from('mensajes').insert({
+        canal_id: ev.canal_id, autor_user_id: null, tipo: 'sistema',
+        contenido: `✓ Pánico ${b.estado === 'falsa_alarma' ? 'marcado como falsa alarma' : 'resuelto'} por ${g.nombre ?? 'un encargado'}.`,
+      })
+    }
+    return NextResponse.json({ ok: true })
   }
 
   return NextResponse.json({ error: 'acción desconocida' }, { status: 400 })

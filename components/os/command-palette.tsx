@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Sparkles, Package, Users, Truck, ListChecks, CornerDownLeft } from 'lucide-react'
+import { Sparkles, Package, Users, Truck, ListChecks, CornerDownLeft, MessageSquare } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Dialog, DialogContent } from '@/components/ui/dialog'
@@ -16,7 +16,7 @@ import {
 } from '@/lib/os/subapps'
 import type { OsSearchHit } from '@/app/api/os/search/route'
 
-const TIPO_ICON = { producto: Package, cliente: Users, proveedor: Truck, tarea: ListChecks } as const
+const TIPO_ICON = { producto: Package, cliente: Users, proveedor: Truck, tarea: ListChecks, mensaje: MessageSquare } as const
 
 /**
  * NORA OS · ⌘K universal. Un solo buscador para: acciones, navegación
@@ -109,9 +109,9 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               </CommandGroup>
             )}
 
-            {hits.length > 0 && (
+            {hits.filter((h) => h.tipo !== 'mensaje').length > 0 && (
               <CommandGroup heading="Resultados">
-                {hits.map((h) => {
+                {hits.filter((h) => h.tipo !== 'mensaje').map((h) => {
                   const I = TIPO_ICON[h.tipo]
                   return (
                     <CommandItem key={`${h.tipo}-${h.id}`} value={`ent-${h.tipo}-${h.id}`} onSelect={() => go(h.ruta)} className="gap-2">
@@ -121,6 +121,18 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
                     </CommandItem>
                   )
                 })}
+              </CommandGroup>
+            )}
+
+            {hits.filter((h) => h.tipo === 'mensaje').length > 0 && (
+              <CommandGroup heading="Mensajes">
+                {hits.filter((h) => h.tipo === 'mensaje').map((h) => (
+                  <CommandItem key={`msg-${h.id}`} value={`msg-${h.id}`} onSelect={() => go(h.ruta)} className="gap-2">
+                    <MessageSquare className="size-4 text-muted-foreground" />
+                    <span className="truncate">{h.titulo}</span>
+                    {h.subtitulo && <span className="ml-auto truncate text-xs text-muted-foreground">{h.subtitulo}</span>}
+                  </CommandItem>
+                ))}
               </CommandGroup>
             )}
 

@@ -118,6 +118,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (destino === 'completada') {
       await premiar(adm, tarea.id)
       await liberarDependientes(adm, tarea.id)
+      await avisarChatResuelta(adm, tarea, (user.user_metadata as any)?.nombre ?? null)
     }
     return NextResponse.json({ ok: true, estado: destino, nora: preIA })
   }
@@ -135,6 +136,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     await hist('verificada', 'completada')
     await premiar(adm, tarea.id)
     await liberarDependientes(adm, tarea.id)
+    await avisarChatResuelta(adm, tarea, (user.user_metadata as any)?.nombre ?? null)
     return NextResponse.json({ ok: true, estado: 'completada' })
   }
 
@@ -227,6 +229,26 @@ async function liberarDependientes(adm: any, tareaCompletadaId: string) {
     }
   } catch {
     /* liberación best-effort */
+  }
+}
+
+/**
+ * Cierra el loop chat→tarea (OS-2b · B): si la tarea nació en un mensaje del
+ * chat (datos_custom.canal_id / origen_mensaje_id), publica un mensaje de
+ * sistema en ese canal cuando la tarea queda resuelta. Best-effort.
+ */
+async function avisarChatResuelta(adm: any, tarea: any, nombre: string | null) {
+  try {
+    const dc = tarea?.datos_custom ?? {}
+    const canalId = dc?.canal_id
+    if (!canalId || !dc?.origen_mensaje_id) return
+    await adm.from('mensajes').insert({
+      canal_id: canalId, autor_user_id: null, tipo: 'sistema',
+      contenido: `✓ Tarea ${tarea.codigo} resuelta${nombre ? ` por ${nombre}` : ''}.`,
+      entidad_relacionada: { tipo: 'tarea', id: tarea.id, codigo: tarea.codigo },
+    })
+  } catch {
+    /* aviso best-effort */
   }
 }
 
