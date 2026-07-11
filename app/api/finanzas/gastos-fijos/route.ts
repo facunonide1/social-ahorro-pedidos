@@ -24,10 +24,34 @@ export async function POST(req: NextRequest) {
 
   let b: any
   try { b = await req.json() } catch { return NextResponse.json({ error: 'body inválido' }, { status: 400 }) }
+  const adm = createAdminClient()
+
+  // OS-4b · E: marcar instancia pagada con monto REAL + alerta de desvío.
+  if (b?.accion === 'pagar_instancia') {
+    if (!b?.instancia_id) return NextResponse.json({ error: 'instancia requerida' }, { status: 400 })
+    const { data: inst } = await adm.from('gastos_fijos_instancias').select('id, monto, periodo, gastos_fijos(concepto, sucursal_id)').eq('id', b.instancia_id).maybeSingle<any>()
+    if (!inst) return NextResponse.json({ error: 'instancia inexistente' }, { status: 404 })
+    const esperado = Number(inst.monto ?? 0)
+    const montoReal = b?.monto_real != null && Number(b.monto_real) > 0 ? Number(b.monto_real) : esperado
+    await adm.from('gastos_fijos_instancias').update({ estado: 'pagado', monto_real: montoReal }).eq('id', inst.id)
+
+    const UMBRAL_DESVIO = 15
+    const desvio = esperado > 0 ? ((montoReal - esperado) / esperado) * 100 : 0
+    if (esperado > 0 && Math.abs(desvio) > UMBRAL_DESVIO) {
+      const { data: sup } = await adm.from('users_admin').select('id').eq('activo', true).in('rol', ['super_admin', 'gerente', 'tesoreria'])
+      if (sup?.length) await adm.from('notificaciones_admin').insert((sup as any[]).map((s) => ({
+        user_id: s.id, tipo: 'alerta', prioridad: 'alta',
+        titulo: `Desvío en ${inst.gastos_fijos?.concepto ?? 'gasto fijo'}`,
+        mensaje: `${inst.periodo}: vino ${desvio > 0 ? '+' : ''}${Math.round(desvio)}% (${'$' + Math.round(montoReal).toLocaleString('es-AR')} vs ${'$' + Math.round(esperado).toLocaleString('es-AR')}).`,
+        url_accion: '/admin/finanzas/gastos-fijos',
+      })))
+    }
+    return NextResponse.json({ ok: true, desvio: Math.round(desvio) })
+  }
+
   const concepto = String(b?.concepto ?? '').trim()
   if (!concepto) return NextResponse.json({ error: 'concepto requerido' }, { status: 400 })
 
-  const adm = createAdminClient()
   const payload = {
     concepto,
     tipo: b?.tipo ?? 'otro',

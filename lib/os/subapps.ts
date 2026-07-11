@@ -239,6 +239,7 @@ export const SUBAPPS: SubAppManifest[] = [
       { id: 'pago', nombre: 'Registrar pago', icono: 'CreditCard', destino: '/admin/finanzas/pagos', modulo: 'finanzas', accion: 'aprobar', primary: true },
       { id: 'documento', nombre: 'Nuevo documento a pagar', icono: 'FileText', destino: '/admin/finanzas/documentos', modulo: 'finanzas', accion: 'crear', primary: true },
       { id: 'gasto', nombre: 'Registrar gasto', icono: 'Receipt', destino: '/admin/finanzas/gastos-fijos', modulo: 'caja', accion: 'crear', primary: true },
+      { id: 'caja-chica', nombre: 'Gasto de caja chica', icono: 'Coins', destino: '/admin/finanzas/caja', modulo: 'caja', accion: 'crear' },
       { id: 'cheque', nombre: 'Nuevo cheque', icono: 'FileBadge', destino: '/admin/finanzas/cheques/nueva', modulo: 'finanzas', accion: 'crear', primary: true },
       { id: 'impuesto', nombre: 'Impuestos', icono: 'Landmark', destino: '/admin/finanzas/impuestos', modulo: 'finanzas', accion: 'ver' },
       { id: 'conciliar', nombre: 'Conciliación bancaria', icono: 'GitMerge', destino: '/admin/finanzas/conciliacion', modulo: 'finanzas', accion: 'ver' },

@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 
 export type GastoRow = { id: string; concepto: string; tipo: string; monto: number | null; frecuencia: string; dia_mes: number; activo: boolean; sucursal_id: string | null; proveedor_id: string | null; sucursal: string | null; proveedor: string | null }
-export type InstanciaRow = { id: string; periodo: string; monto: number; estado: string; vencimiento: string; concepto: string }
+export type InstanciaRow = { id: string; periodo: string; monto: number; estado: string; vencimiento: string; concepto: string; monto_real: number | null }
 type Suc = { id: string; nombre: string }
 type Prov = { id: string; nombre: string }
 
@@ -28,6 +28,18 @@ export function GastosFijosClient({ gastos, instancias, sucursales, proveedores 
   const [abierto, setAbierto] = useState(false)
   const [generando, setGenerando] = useState(false)
   const totalMensual = gastos.filter((g) => g.activo).reduce((a, g) => a + (g.monto ?? 0), 0)
+
+  async function pagarInstancia(i: InstanciaRow) {
+    const entrada = window.prompt(`Monto realmente pagado de "${i.concepto}" (${i.periodo})`, String(i.monto))
+    if (entrada == null) return
+    const montoReal = Number(entrada)
+    if (!(montoReal > 0)) { toast.error('Monto inválido.'); return }
+    try {
+      const r = await fetch('/api/finanzas/gastos-fijos', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ accion: 'pagar_instancia', instancia_id: i.id, monto_real: montoReal }) })
+      const j = await r.json(); if (!r.ok) throw new Error(j?.error)
+      toast.success(Math.abs(j.desvio) > 15 ? `Pagada. ⚠ Desvío ${j.desvio > 0 ? '+' : ''}${j.desvio}%` : 'Pagada.'); router.refresh()
+    } catch (e: any) { toast.error(e?.message ?? 'Error') }
+  }
 
   async function generarMes() {
     setGenerando(true)
@@ -84,17 +96,26 @@ export function GastosFijosClient({ gastos, instancias, sucursales, proveedores 
         ) : (
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">Concepto</th><th className="px-3 py-2">Período</th><th className="px-3 py-2">Vence</th><th className="px-3 py-2 text-right">Monto</th><th className="px-3 py-2">Estado</th></tr></thead>
+              <thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">Concepto</th><th className="px-3 py-2">Período</th><th className="px-3 py-2">Vence</th><th className="px-3 py-2 text-right">Esperado</th><th className="px-3 py-2 text-right">Real</th><th className="px-3 py-2">Estado</th><th className="px-3 py-2" /></tr></thead>
               <tbody>
-                {instancias.map((i) => (
-                  <tr key={i.id} className="border-t border-border">
-                    <td className="px-3 py-1.5 font-medium">{i.concepto}</td>
-                    <td className="px-3 py-1.5 font-mono text-xs">{i.periodo}</td>
-                    <td className="px-3 py-1.5 text-xs">{i.vencimiento}</td>
-                    <td className="px-3 py-1.5 text-right font-mono tabular-nums">{formatARS(i.monto)}</td>
-                    <td className="px-3 py-1.5"><Badge variant={i.estado === 'pagado' ? 'success' : 'warning'} className="font-normal">{i.estado}</Badge></td>
-                  </tr>
-                ))}
+                {instancias.map((i) => {
+                  const desvio = i.monto_real != null && i.monto > 0 ? Math.round(((i.monto_real - i.monto) / i.monto) * 100) : null
+                  const alerta = desvio != null && Math.abs(desvio) > 15
+                  return (
+                    <tr key={i.id} className="border-t border-border">
+                      <td className="px-3 py-1.5 font-medium">{i.concepto}</td>
+                      <td className="px-3 py-1.5 font-mono text-xs">{i.periodo}</td>
+                      <td className="px-3 py-1.5 text-xs">{i.vencimiento}</td>
+                      <td className="px-3 py-1.5 text-right font-mono tabular-nums text-muted-foreground">{formatARS(i.monto)}</td>
+                      <td className="px-3 py-1.5 text-right font-mono tabular-nums">
+                        {i.monto_real != null ? formatARS(i.monto_real) : '—'}
+                        {alerta && <span className="ml-1 rounded bg-rose-500/10 px-1 text-[10px] font-bold text-rose-600 dark:text-rose-400">desvío {desvio! > 0 ? '+' : ''}{desvio}%</span>}
+                      </td>
+                      <td className="px-3 py-1.5"><Badge variant={i.estado === 'pagado' ? 'success' : 'warning'} className="font-normal">{i.estado}</Badge></td>
+                      <td className="px-3 py-1.5 text-right">{i.estado !== 'pagado' && <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => pagarInstancia(i)}>Pagar</Button>}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

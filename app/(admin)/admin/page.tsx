@@ -143,6 +143,20 @@ async function getLoUrgente(rol: AdminRole, custom: PermisosCustom | null): Prom
   push(ve('operaciones'), vp.count ?? 0, { icono: 'Boxes', acento: '#6E3CDB', origen: 'Stock', texto: `${vp.count} productos vencen en 30 días`, ruta: '/admin/operaciones/vencimientos', severidad: 'warn' })
   push(ve('compras'), fn.count ?? 0, { icono: 'ShoppingCart', acento: '#F59E0B', origen: 'Compras', texto: `${fn.count} faltantes por comprar`, ruta: '/admin/compras/faltantes', severidad: 'warn' })
   push(ve('compras'), rc.count ?? 0, { icono: 'Undo2', acento: '#F59E0B', origen: 'Compras', texto: `${rc.count} reclamo(s) a proveedor sin nota de crédito`, ruta: '/admin/compras/devoluciones', severidad: 'danger' })
+
+  // Caja: cajeros con ≥3 arqueos observados en 30 días (OS-4b · B).
+  if (ve('caja') || ve('finanzas')) {
+    try {
+      const desde30 = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date(Date.now() - 30 * 86_400_000))
+      let cq = adm.from('arqueos_caja').select('cajero_nombre').eq('estado', 'observada').gte('fecha', desde30).limit(1000)
+      if (!esTodas && sucursalId) cq = cq.eq('sucursal_id', sucursalId)
+      const { data: obs } = await cq
+      const m = new Map<string, number>()
+      for (const a of (obs ?? []) as any[]) if (a.cajero_nombre) m.set(a.cajero_nombre, (m.get(a.cajero_nombre) ?? 0) + 1)
+      const conPatron = [...m.values()].filter((n) => n >= 3).length
+      push(true, conPatron, { icono: 'Wallet', acento: '#10B981', origen: 'Caja', texto: `${conPatron} cajero(s) con descuadres repetidos (30d)`, ruta: '/admin/finanzas/caja/historico', severidad: 'danger' })
+    } catch { /* */ }
+  }
   push(ve('ia'), na.count ?? 0, { icono: 'Sparkles', acento: '#A855F7', origen: 'NORA', texto: `${na.count} avisos de NORA sin revisar`, ruta: '/admin/nora/feed', severidad: 'info' })
   return items
 }

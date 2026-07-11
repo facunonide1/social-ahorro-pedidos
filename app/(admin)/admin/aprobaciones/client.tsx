@@ -179,32 +179,27 @@ export function AprobacionesList({
   async function resolver(a: Aprobacion, estado: EstadoAprobacion) {
     setWorkingId(a.id)
     const comentario = comentarios[a.id]?.trim() || null
-    const patch: Record<string, any> = {
-      estado,
-      aprobador_id: userId,
-      comentarios: comentario,
+    try {
+      // Aprobar/rechazar pasan por el endpoint (ejecuta los efectos del pago, etc.).
+      if (estado === 'aprobada' || estado === 'rechazada') {
+        const r = await fetch('/api/aprobaciones/resolver', {
+          method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ aprobacion_id: a.id, accion: estado === 'aprobada' ? 'aprobar' : 'rechazar', comentarios: comentario }),
+        })
+        const j = await r.json(); if (!r.ok) throw new Error(j?.error || 'Error')
+      } else {
+        // solicita_info: no ejecuta nada, solo marca el estado.
+        const { error } = await sb.from('aprobaciones').update({ estado, aprobador_id: userId, comentarios: comentario }).eq('id', a.id)
+        if (error) throw new Error(error.message)
+      }
+      setItems((arr) => arr.map((x) => (x.id === a.id ? { ...x, estado, comentarios: comentario, aprobador_id: userId } : x)))
+      toast.success(`Solicitud marcada como ${ESTADO_APROBACION_LABELS[estado]}.`)
+      router.refresh()
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Error')
+    } finally {
+      setWorkingId(null)
     }
-    if (estado !== 'solicita_info') {
-      patch.resolved_at = new Date().toISOString()
-    }
-    const { error } = await sb
-      .from('aprobaciones')
-      .update(patch)
-      .eq('id', a.id)
-    setWorkingId(null)
-    if (error) {
-      toast.error(error.message)
-      return
-    }
-    setItems((arr) =>
-      arr.map((x) =>
-        x.id === a.id
-          ? { ...x, estado, comentarios: comentario, aprobador_id: userId }
-          : x,
-      ),
-    )
-    toast.success(`Solicitud marcada como ${ESTADO_APROBACION_LABELS[estado]}.`)
-    router.refresh()
   }
 
   if (items.length === 0) {

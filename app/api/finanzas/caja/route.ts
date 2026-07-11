@@ -107,65 +107,117 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, esperado, diferencia, fondo_dejado: fondoDejado, retiro_a_general: retiro })
   }
 
-  // ---- cerrar arqueo manual ⭐ (modelo real: el cajero carga los totales de
-  //      SIFACO, sube la captura, cuadra en $0, suma al consolidado) ----
-  if (action === 'cerrar_arqueo') {
+  // ---- PASO 1: CONFIRMAR CONTEO (a ciegas) — sella el conteo, sin ver sistema ni diferencia (OS-4b · A) ----
+  if (action === 'confirmar_conteo') {
     if (!can('super_admin', 'gerente', 'tesoreria', 'sucursal', 'administrativo', 'cajero', 'encargado_sucursal')) {
       return NextResponse.json({ error: 'sin permiso' }, { status: 403 })
     }
     const { data: t } = await adm.from('caja_turnos').select('*').eq('id', b?.turno_id).maybeSingle()
     if (!t) return NextResponse.json({ error: 'turno inexistente' }, { status: 404 })
     if (t.estado !== 'abierto') return NextResponse.json({ error: 'el turno ya fue cerrado' }, { status: 409 })
-    // el cajero solo puede cerrar SU turno; encargado/super/gerente cualquiera
     const esSupervisor = can('super_admin', 'gerente', 'tesoreria', 'encargado_sucursal', 'administrativo')
     if (!esSupervisor && t.cajero_user_id !== g.userId) {
       return NextResponse.json({ error: 'solo podés cerrar tu propia caja' }, { status: 403 })
     }
-    // captura del arqueo SIFACO OBLIGATORIA
     if (!b?.captura_url) return NextResponse.json({ error: 'subí la captura del arqueo de SIFACO' }, { status: 400 })
+    // INMUTABILIDAD: si el conteo de este turno ya se confirmó, no se puede rehacer.
+    const { data: ya } = await adm.from('arqueos_caja').select('id, conteo_confirmado_at').eq('caja_turno_id', t.id).maybeSingle()
+    if (ya?.conteo_confirmado_at) return NextResponse.json({ error: 'el conteo de este turno ya fue confirmado y es inmutable' }, { status: 409 })
 
     const inicio = Number(b?.inicio_caja ?? t.apertura ?? 0)
     const efectivo = Number(b?.total_efectivo ?? 0)
     const mp = Number(b?.total_mercadopago ?? 0)
     const tarjetas = Number(b?.total_tarjetas ?? 0)
-    const sistema = Number(b?.total_sistema ?? 0)
-    const declarado = efectivo + mp + tarjetas
-    const diferencia = sistema > 0 ? declarado - sistema : 0
-    const estado = diferencia === 0 ? 'cerrada' : 'observada'
-
-    const { data: cfg } = await adm.from('config_caja_sucursal').select('fondo_fijo').eq('sucursal_id', t.sucursal_id).maybeSingle()
-    const fondo = Number(cfg?.fondo_fijo ?? inicio ?? 0)
-    const efectivoAGeneral = Math.max(0, efectivo - fondo)
-
-    // nombre del cajero (para el histórico)
     let cajeroNombre: string | null = null
     try { const { data: au } = await adm.auth.admin.getUserById(g.userId); cajeroNombre = (au?.user?.user_metadata as any)?.nombre ?? au?.user?.email ?? null } catch { /* */ }
 
     const { data: arqueo, error: eArq } = await adm.from('arqueos_caja').insert({
       sucursal_id: t.sucursal_id, caja_turno_id: t.id, cajero_id: g.userId, cajero_nombre: cajeroNombre,
       fecha: t.fecha, inicio_caja: inicio, total_efectivo: efectivo, total_mercadopago: mp, total_tarjetas: tarjetas,
-      total_sistema: sistema, diferencia_cierre: diferencia, efectivo_a_general: efectivoAGeneral,
-      captura_url: b.captura_url, estado, observacion: b?.observacion ?? null,
+      total_sistema: 0, diferencia_cierre: 0, efectivo_a_general: 0, captura_url: b.captura_url,
+      estado: 'en_contraste', conteo_confirmado_at: new Date().toISOString(),
     }).select('id').single()
     if (eArq) return NextResponse.json({ error: eArq.message }, { status: 400 })
+    return NextResponse.json({ ok: true, arqueo_id: arqueo.id, paso: 1 })
+  }
 
-    // cerrar el turno (declarativo; sin recálculo desde ventas)
-    await adm.from('caja_turnos').update({
-      contado: efectivo, esperado: sistema, diferencia, fondo_dejado: fondo,
-      retiro_a_general: efectivoAGeneral, ventas_efectivo: 0, pagos_efectivo: 0, estado: 'aprobado',
-    }).eq('id', t.id)
+  // ---- PASO 2: CONTRASTAR — recién ahora entra el total SIFACO + hora, y se revela la diferencia ----
+  if (action === 'contrastar') {
+    if (!can('super_admin', 'gerente', 'tesoreria', 'sucursal', 'administrativo', 'cajero', 'encargado_sucursal')) {
+      return NextResponse.json({ error: 'sin permiso' }, { status: 403 })
+    }
+    const { data: arq } = await adm.from('arqueos_caja').select('*').eq('id', b?.arqueo_id).maybeSingle()
+    if (!arq) return NextResponse.json({ error: 'arqueo inexistente' }, { status: 404 })
+    if (arq.estado !== 'en_contraste') return NextResponse.json({ error: 'este arqueo no está esperando contraste' }, { status: 409 })
 
-    // sumar el efectivo al consolidado (entrada auto-aprobada; el trigger aplica el saldo)
-    if (efectivoAGeneral > 0) {
-      const cg = await getCajaGeneral(adm, t.sucursal_id)
-      await adm.from('caja_general_movimientos').insert({
-        caja_general_id: cg.id, tipo: 'entrada_turno', monto: efectivoAGeneral,
-        referencia_tipo: 'arqueo_caja', referencia_id: arqueo.id, estado: 'aprobado',
-        solicitado_por: g.userId, aprobado_por: g.userId, notas: `Arqueo cierre ${t.fecha}`,
-      })
+    const sistema = Number(b?.total_sistema ?? 0)
+    const horaSifaco = String(b?.hora_cierre_sifaco ?? '').trim()
+    const declarado = Number(arq.total_efectivo) + Number(arq.total_mercadopago) + Number(arq.total_tarjetas)
+    const diferencia = sistema > 0 ? declarado - sistema : 0
+    const estado = diferencia === 0 ? 'cerrada' : 'observada'
+
+    // Defensa: si el cliente reenvía montos distintos a los sellados → secuencia alterada.
+    let secuenciaAlterada = Boolean(arq.secuencia_alterada)
+    if (b?.total_efectivo != null && Number(b.total_efectivo) !== Number(arq.total_efectivo)) secuenciaAlterada = true
+    if (b?.total_mercadopago != null && Number(b.total_mercadopago) !== Number(arq.total_mercadopago)) secuenciaAlterada = true
+    if (b?.total_tarjetas != null && Number(b.total_tarjetas) !== Number(arq.total_tarjetas)) secuenciaAlterada = true
+
+    // carga_posterior: el conteo se confirmó DESPUÉS de la hora de cierre del POS.
+    let cargaPosterior = false
+    const m = horaSifaco.match(/(\d{1,2}):(\d{2})/)
+    if (m && arq.conteo_confirmado_at) {
+      const sifacoMin = Number(m[1]) * 60 + Number(m[2])
+      const hhmm = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(arq.conteo_confirmado_at))
+      const cm = hhmm.match(/(\d{2}):(\d{2})/)
+      const conteoMin = cm ? Number(cm[1]) * 60 + Number(cm[2]) : 0
+      cargaPosterior = conteoMin > sifacoMin
     }
 
-    return NextResponse.json({ ok: true, arqueo_id: arqueo.id, total_declarado: declarado, diferencia, estado, efectivo_a_general: efectivoAGeneral })
+    const { data: cfg } = await adm.from('config_caja_sucursal').select('fondo_fijo').eq('sucursal_id', arq.sucursal_id).maybeSingle()
+    const fondo = Number(cfg?.fondo_fijo ?? arq.inicio_caja ?? 0)
+    const efectivoAGeneral = Math.max(0, Number(arq.total_efectivo) - fondo)
+
+    await adm.from('arqueos_caja').update({
+      total_sistema: sistema, diferencia_cierre: diferencia, efectivo_a_general: efectivoAGeneral, estado,
+      hora_cierre_sifaco: horaSifaco || null, carga_posterior: cargaPosterior, secuencia_alterada: secuenciaAlterada,
+      observacion: b?.observacion ?? arq.observacion,
+    }).eq('id', arq.id)
+
+    await adm.from('caja_turnos').update({
+      contado: Number(arq.total_efectivo), esperado: sistema, diferencia, fondo_dejado: fondo,
+      retiro_a_general: efectivoAGeneral, ventas_efectivo: 0, pagos_efectivo: 0, estado: 'aprobado',
+    }).eq('id', arq.caja_turno_id)
+
+    if (efectivoAGeneral > 0) {
+      const cg = await getCajaGeneral(adm, arq.sucursal_id)
+      await adm.from('caja_general_movimientos').insert({
+        caja_general_id: cg.id, tipo: 'entrada_turno', monto: efectivoAGeneral,
+        referencia_tipo: 'arqueo_caja', referencia_id: arq.id, estado: 'aprobado',
+        solicitado_por: g.userId, aprobado_por: g.userId, notas: `Arqueo cierre ${arq.fecha}`,
+      })
+    }
+    return NextResponse.json({ ok: true, total_declarado: declarado, diferencia, estado, efectivo_a_general: efectivoAGeneral, carga_posterior: cargaPosterior, secuencia_alterada: secuenciaAlterada })
+  }
+
+  // ---- caja chica: gasto desde caja general con foto obligatoria (OS-4b · D) ----
+  if (action === 'gasto_caja_chica') {
+    if (!can('super_admin', 'gerente', 'tesoreria', 'sucursal', 'administrativo', 'cajero', 'encargado_sucursal')) {
+      return NextResponse.json({ error: 'sin permiso' }, { status: 403 })
+    }
+    const CATS = ['libreria', 'limpieza', 'mantenimiento', 'viaticos', 'otros']
+    const categoria = CATS.includes(b?.categoria) ? b.categoria : 'otros'
+    const monto = Number(b?.monto ?? 0)
+    if (!b?.sucursal_id || !(monto > 0)) return NextResponse.json({ error: 'sucursal y monto (>0) requeridos' }, { status: 400 })
+    if (!b?.comprobante_url) return NextResponse.json({ error: 'la foto del comprobante es obligatoria' }, { status: 400 })
+    const cg = await getCajaGeneral(adm, b.sucursal_id)
+    if (Number(cg.saldo_actual ?? 0) < monto) return NextResponse.json({ error: 'Saldo insuficiente en la caja general.', frena: true }, { status: 422 })
+    const { error } = await adm.from('caja_general_movimientos').insert({
+      caja_general_id: cg.id, tipo: 'gasto_caja_chica', monto: -monto, categoria,
+      comprobante_url: b.comprobante_url, estado: 'aprobado', solicitado_por: g.userId, aprobado_por: g.userId,
+      notas: String(b?.descripcion ?? '').slice(0, 200) || categoria,
+    })
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ ok: true })
   }
 
   // ---- retiro de socios (salida de caja general, requiere aprobación) ----

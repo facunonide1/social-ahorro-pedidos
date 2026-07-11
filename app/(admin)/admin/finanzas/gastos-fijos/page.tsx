@@ -20,7 +20,7 @@ export default async function GastosFijosPage() {
 
   const [{ data: gastos }, { data: inst }, { data: sucs }, { data: provs }] = await Promise.all([
     gastosQ,
-    sb.from('gastos_fijos_instancias').select('id, periodo, monto, estado, vencimiento, gasto_fijo_id, gastos_fijos(concepto)').order('vencimiento', { ascending: false }).limit(300),
+    sb.from('gastos_fijos_instancias').select('id, periodo, monto, monto_real, estado, vencimiento, gasto_fijo_id, gastos_fijos(concepto)').order('vencimiento', { ascending: false }).limit(300),
     sb.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
     sb.from('proveedores').select('id, razon_social').eq('activo', true).order('razon_social'),
   ])
@@ -34,6 +34,7 @@ export default async function GastosFijosPage() {
   const instRows: InstanciaRow[] = ((inst ?? []) as any[]).map((i) => ({
     id: i.id, periodo: i.periodo, monto: i.monto != null ? Number(i.monto) : 0, estado: i.estado,
     vencimiento: i.vencimiento, concepto: i.gastos_fijos?.concepto ?? '—',
+    monto_real: i.monto_real != null ? Number(i.monto_real) : null,
   }))
 
   return (
