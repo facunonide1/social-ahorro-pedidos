@@ -2,7 +2,7 @@ import { FileText, Ticket, Users, AlertTriangle, TrendingUp, Wallet, Scale, Land
 
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { getSucursalActiva } from '@/lib/sucursal/server'
-import { ROLES_TRANSVERSALES, ADMIN_ROLE_LABELS } from '@/lib/types/admin'
+import { ROLES_TRANSVERSALES, ADMIN_ROLE_LABELS, type AdminRole } from '@/lib/types/admin'
 import { saludoHora } from '@/lib/utils/saludo'
 import { createAdminClient } from '@/lib/supabase/server'
 import { KpiCard } from '@/components/cards/kpi-card'
@@ -13,13 +13,12 @@ import { IrregularidadesMCCard } from '@/components/operaciones/irregularidades-
 import { RecomendacionesComprasCard } from '@/components/compras/recomendaciones-card'
 import { ClientesMCCard } from '@/components/crm/clientes-mc-card'
 import { NoraBriefingCard } from './nora-briefing-card'
-import { AccionesSector } from '@/components/shared/acciones-sector'
 import { NoraPrediccionesPanel } from './nora-predicciones-panel'
-import { QuickActions } from './quick-actions'
 import { SucursalesLive } from './sucursales-live'
-import { HomeOperativo } from './home-operativo'
-import { esVistaSimple, accesosSimplesPara } from '@/lib/constants/vista-rol'
-import type { PermisosCustom } from '@/lib/types/permisos'
+import { OsAccionesRapidas } from './os-acciones-rapidas'
+import { OsSubAppsGrid } from './os-subapps-grid'
+import { OsLoUrgente, type UrgenteItem } from './os-lo-urgente'
+import { puede, type PermisosCustom } from '@/lib/types/permisos'
 
 export const dynamic = 'force-dynamic'
 
@@ -114,34 +113,52 @@ async function getResumenGerencial(): Promise<ResumenGerencial> {
 }
 
 /**
- * Mission Control (F6.5.T4) — home de NORA HQ.
- *
- * Roles transversales ven el panel completo (greeting + KPIs + quick actions +
- * sucursales en vivo + predicciones). Roles operativos ven greeting + quick
- * actions. Todo tolera datos vacíos.
+ * Zona 3 · "Lo urgente": lista transversal de lo crítico ya calculable, gateada
+ * por permisos del usuario y por la sucursal activa. Contadores baratos sobre
+ * tablas existentes; una fuente que falle simplemente no aporta ítem.
+ */
+async function getLoUrgente(rol: AdminRole, custom: PermisosCustom | null): Promise<UrgenteItem[]> {
+  const adm = createAdminClient()
+  const ahora = new Date().toISOString()
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date())
+  const en30 = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date(Date.now() + 30 * 86_400_000))
+  const { sucursalId, esTodas } = getSucursalActiva()
+  const scope = <T,>(q: T): T => (esTodas || !sucursalId ? q : (q as any).eq('sucursal_id', sucursalId))
+  const ve = (m: Parameters<typeof puede>[2]) => rol === 'super_admin' || puede(rol, custom, m, 'ver')
+
+  const nulo = Promise.resolve({ count: 0 } as any)
+  const [tv, vp, dv, fn, na] = await Promise.all([
+    ve('tareas') ? scope(adm.from('tareas').select('id', { count: 'exact', head: true }).lt('fecha_vencimiento', ahora).in('estado', ['pendiente', 'asignada', 'reclamada', 'en_progreso', 'en_verificacion'])) : nulo,
+    ve('operaciones') ? scope(adm.from('vencimientos').select('id', { count: 'exact', head: true }).eq('estado', 'vigente').lte('fecha_vencimiento', en30)) : nulo,
+    ve('finanzas') ? scope(adm.from('facturas_proveedor').select('id', { count: 'exact', head: true }).lt('fecha_vencimiento', hoy).in('estado', ['pendiente_aprobacion', 'aprobada', 'programada_pago', 'pagada_parcial', 'vencida'])) : nulo,
+    ve('compras') ? scope(adm.from('avisos_faltante').select('id', { count: 'exact', head: true }).eq('estado', 'nuevo')) : nulo,
+    ve('ia') ? adm.from('nora_avisos').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente') : nulo,
+  ])
+
+  const items: UrgenteItem[] = []
+  const push = (cond: boolean, count: number, it: Omit<UrgenteItem, 'id'>) => { if (cond && count > 0) items.push({ id: it.origen, ...it }) }
+  push(ve('tareas'), tv.count ?? 0, { icono: 'ListChecks', acento: '#2EE1A8', origen: 'Tareas', texto: `${tv.count} tareas vencidas o en verificación`, ruta: '/admin/tareas', severidad: 'danger' })
+  push(ve('finanzas'), dv.count ?? 0, { icono: 'Wallet', acento: '#10B981', origen: 'Finanzas', texto: `${dv.count} documentos a pagar vencidos`, ruta: '/admin/finanzas/documentos', severidad: 'danger' })
+  push(ve('operaciones'), vp.count ?? 0, { icono: 'Boxes', acento: '#6E3CDB', origen: 'Stock', texto: `${vp.count} productos vencen en 30 días`, ruta: '/admin/operaciones/vencimientos', severidad: 'warn' })
+  push(ve('compras'), fn.count ?? 0, { icono: 'ShoppingCart', acento: '#F59E0B', origen: 'Compras', texto: `${fn.count} faltantes por comprar`, ruta: '/admin/compras/faltantes', severidad: 'warn' })
+  push(ve('ia'), na.count ?? 0, { icono: 'Sparkles', acento: '#A855F7', origen: 'NORA', texto: `${na.count} avisos de NORA sin revisar`, ruta: '/admin/nora/feed', severidad: 'info' })
+  return items
+}
+
+/**
+ * Mission Control (NORA OS) — home en 5 zonas: saludo NORA · acciones rápidas ·
+ * lo urgente · grilla de sub-apps · KPIs + sucursales en vivo (roles altos).
+ * Todo filtrado por rol/permisos y tolerante a datos vacíos.
  */
 export default async function MissionControlPage() {
   const profile = await requireAdminHubAccess()
 
-  // Vista simple: roles operativos ven un home reducido de botones grandes,
-  // SOLO con lo que su rol puede hacer (mismos permisos finos). Sin el panel
-  // completo de 9 sectores.
-  if (esVistaSimple(profile.rol)) {
-    const { data: fila } = await createAdminClient()
-      .from('users_admin')
-      .select('permisos_custom')
-      .eq('id', profile.id)
-      .maybeSingle<{ permisos_custom: PermisosCustom | null }>()
-    const accesos = accesosSimplesPara(profile.rol, fila?.permisos_custom ?? null)
-    return (
-      <HomeOperativo
-        nombre={profile.nombre}
-        email={profile.email}
-        rol={profile.rol}
-        accesos={accesos}
-      />
-    )
-  }
+  const { data: fila } = await createAdminClient()
+    .from('users_admin')
+    .select('permisos_custom')
+    .eq('id', profile.id)
+    .maybeSingle<{ permisos_custom: PermisosCustom | null }>()
+  const custom = fila?.permisos_custom ?? null
 
   const esTransversal = ROLES_TRANSVERSALES.includes(profile.rol)
   const { sucursalId, esTodas } = getSucursalActiva()
@@ -151,11 +168,15 @@ export default async function MissionControlPage() {
     month: 'long',
   })
 
-  const kpis = esTransversal ? await getKpis() : null
-  const gerencial = esTransversal ? await getResumenGerencial() : null
+  const [kpis, gerencial, urgente] = await Promise.all([
+    esTransversal ? getKpis() : Promise.resolve(null),
+    esTransversal ? getResumenGerencial() : Promise.resolve(null),
+    getLoUrgente(profile.rol, custom),
+  ])
 
   return (
     <div className="container mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-6 md:py-8">
+      {/* Zona 1 · Saludo NORA */}
       <header>
         <div className="text-[11px] font-medium uppercase tracking-[0.5px] text-muted-foreground">
           Mission Control · {fecha}
@@ -164,14 +185,22 @@ export default async function MissionControlPage() {
           {saludoHora(profile.nombre, profile.email)}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {ADMIN_ROLE_LABELS[profile.rol]} · NORA HQ
+          {ADMIN_ROLE_LABELS[profile.rol]} · NORA OS
         </p>
       </header>
 
-      <AccionesSector sector="inicio" />
-
       <NoraBriefingCard />
 
+      {/* Zona 2 · Acciones rápidas (por rol) */}
+      <OsAccionesRapidas />
+
+      {/* Zona 3 · Lo urgente (transversal) */}
+      <OsLoUrgente items={urgente} />
+
+      {/* Zona 4 · Grilla de sub-apps (permitidas) */}
+      <OsSubAppsGrid />
+
+      {/* Zona 5 · KPIs + resumen (roles altos) */}
       {kpis && (
         <section aria-label="KPIs del día">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -265,8 +294,6 @@ export default async function MissionControlPage() {
           </div>
         </section>
       )}
-
-      <QuickActions />
 
       {esTransversal && <NoraFeedCard />}
 

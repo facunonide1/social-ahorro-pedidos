@@ -50,11 +50,20 @@ export function AiChatDock() {
   }, [open])
 
   // Permite abrir el dock desde cualquier parte (ej. Mission Control →
-  // "Conversar con NORA") vía window.dispatchEvent(new Event('nora:open')).
+  // "Conversar con NORA", o el fallback de ⌘K) vía
+  //   window.dispatchEvent(new CustomEvent('nora:open', { detail: { text } }))
+  // Si viene `text`, se precarga en el input (no se envía solo).
   useEffect(() => {
-    const onOpen = () => setOpen(true)
-    window.addEventListener('nora:open', onOpen)
-    return () => window.removeEventListener('nora:open', onOpen)
+    const onOpen = (e: Event) => {
+      setOpen(true)
+      const text = (e as CustomEvent<{ text?: string }>).detail?.text
+      if (text) {
+        setInput(text)
+        setTimeout(() => inputRef.current?.focus(), 50)
+      }
+    }
+    window.addEventListener('nora:open', onOpen as EventListener)
+    return () => window.removeEventListener('nora:open', onOpen as EventListener)
   }, [])
 
   async function send(text: string) {
@@ -172,7 +181,9 @@ export function AiChatDock() {
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? 'Cerrar NORA' : 'Abrir NORA'}
         className={cn(
-          'fixed bottom-4 right-4 z-40 flex size-12 items-center justify-center rounded-full shadow-lg transition-all',
+          // En mobile NORA se abre desde la bottom bar del OS; el botón flotante
+          // queda solo en desktop para no pisar la bottom bar / FAB.
+          'fixed bottom-4 right-4 z-40 hidden size-12 items-center justify-center rounded-full shadow-lg transition-all lg:flex',
           'bg-primary text-primary-foreground hover:scale-105 active:scale-95',
           open && 'rotate-90',
         )}

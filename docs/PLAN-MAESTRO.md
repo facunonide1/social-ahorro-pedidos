@@ -6,13 +6,36 @@
 >
 > **Regla permanente:** actualizar este archivo después de CADA sub-tanda.
 
-**Última actualización:** 2026-07-10 · **Rama:** `main` · **Sistema:** NORA HQ
-(orquestador, NO factura ni reemplaza SIFACO) · single-tenant (Social Ahorro)
-con `sucursal_id` en todo para escalar.
+**Última actualización:** 2026-07-10 · **Rama:** `main` · **Sistema:** NORA OS
+(ex NORA HQ · orquestador, NO factura ni reemplaza SIFACO) · single-tenant
+(Social Ahorro) con `sucursal_id` en todo para escalar.
 
 ---
 
-## 🟢 SESIÓN ACTUAL — LOGIN SIMPLE (N° + PIN) + VISTA POR ROL ✅ (v0.36-login-vista-rol)
+## 🟢 SESIÓN ACTUAL — NORA OS SHELL (re-carcasa) ✅ (v0.37-os-shell)
+
+Convierte la "app con menú" en **NORA OS**: shell de sistema operativo (dock +
+Mission Control + ⌘K + catálogo de acciones) que envuelve las 110 páginas SIN
+reescribir ningún sector ni tocar rutas API. CERO migraciones. Detalle: `lib/os/`.
+
+| Entregable | Estado |
+|-----------|--------|
+| A · **Registry** `lib/os/subapps.ts`: `SubAppManifest` (rutas reales, permisos 18×5, badges baratos server-side, quickActions). 11 sub-apps mapeadas + Decisiones/Pedidos `proximamente`. Helpers `subAppsVisibles`/`subAppDeRuta`/`quickActionsVisibles`. | ✅ |
+| B · **Dock shell** (`components/os/*`): rail de íconos (desktop) filtrado por permisos + badge vivo (`/api/os/badges`) + "más" + avatar; header global (sucursal global + ⌘K + "+"); tira de módulos de la sub-app activa; bottom bar mobile (Inicio/Tareas/Chat/NORA) + FAB. `useSucursalGlobal()` expuesto. | ✅ |
+| C · **Mission Control 5 zonas**: saludo NORA · acciones rápidas (por rol) · **Lo urgente** (transversal: tareas/vencimientos/docs/faltantes/avisos, gateado por permisos+sucursal) · grilla de sub-apps · KPIs+sucursales (roles altos). | ✅ |
+| D · **⌘K universal** (`command-palette.tsx` + `/api/os/search`): acciones + navegación + entidades (productos/clientes/proveedores/tareas, ILIKE 5×tipo, gateado) + fallback "Preguntarle a NORA" con texto precargado. | ✅ |
+| E · **Acciones "+"** (`quick-actions-menu.tsx`): nivel 1 contextual (sub-app actual + 3 globales, "Me pidieron y no había" = placeholder) · nivel 2 catálogo completo con buscador. Todo filtrado por permisos. | ✅ |
+
+> **Reglas cumplidas:** no se tocó lógica de negocio ni rutas API ni coupons/offers;
+> CERO migraciones; reusa permisos 18×5 + selector de sucursal global existente;
+> rutas inventariadas (no inventadas). Supersede el shell TopNav+Sidebar y la
+> vista-simple v0.36 (el dock filtra por rol). Smoke: /login 200, /admin 307,
+> queries de badges/urgente/search verificadas (venc 19, faltantes 10, 115
+> clientes). Build verde + deploy Vercel verificado.
+
+---
+
+## 🟢 SESIÓN PREVIA — LOGIN SIMPLE (N° + PIN) + VISTA POR ROL ✅ (v0.36-login-vista-rol)
 
 Ataca "el empleado ve demasiado" SIN partir la app: login rápido para empleados
 + home reducido por rol usando los permisos que YA existen. Migr. `0072`.

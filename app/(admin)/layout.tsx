@@ -1,43 +1,27 @@
 import type { Metadata, Viewport } from 'next'
 import type { ReactNode } from 'react'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
-import { AdminShell } from '@/components/layout/admin-shell'
-import { SucursalScopeBadge } from '@/components/shared/sucursal-scope-badge'
-import { esVistaSimple } from '@/lib/constants/vista-rol'
+import { OsShell } from '@/components/os/os-shell'
 
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: { default: 'NORA HQ', template: '%s · NORA HQ' },
-  description: 'El centro de mando inteligente de Social Ahorro',
+  title: { default: 'NORA OS', template: '%s · NORA OS' },
+  description: 'El sistema operativo del negocio · Social Ahorro',
 }
 
 export const viewport: Viewport = {
-  themeColor: '#7c3aed',
+  themeColor: '#6E3CDB',
 }
 
 /**
- * Layout raíz del nuevo Admin ERP `(admin)/*`.
+ * Layout raíz del Admin ERP `(admin)/*` — ahora NORA OS.
  *
- * - Auth guard server-side via `requireAdminHubAccess()` (creado en
- *   T-A original; redirige a /login si no hay sesión activa, y a
- *   /logout?reason=sin_permiso si el user no está en `users_admin` o
- *   no está activo).
- * - Pasa el `profile` al `<AdminShell>` cliente, que monta los
- *   selectores y (en T-C.2) el TopNav + Sidebar.
- *
- * Convive con `app/hub/*` (legacy) durante la transición.
+ * Auth guard server-side (`requireAdminHubAccess`) → `<OsShell>` (dock + Mission
+ * Control + ⌘K + acciones). El shell envuelve las 110 páginas existentes sin
+ * reescribirlas; filtra el dock/acciones por los permisos 18×5 del usuario.
  */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const profile = await requireAdminHubAccess()
-  const vistaSimple = esVistaSimple(profile.rol)
-  return (
-    <AdminShell
-      profile={profile}
-      vistaSimple={vistaSimple}
-      scopeBadge={vistaSimple ? undefined : <SucursalScopeBadge />}
-    >
-      {children}
-    </AdminShell>
-  )
+  return <OsShell profile={profile}>{children}</OsShell>
 }
