@@ -5,7 +5,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
-import { AccionesSector } from '@/components/shared/acciones-sector'
+import { AccionesSubApp } from '@/components/os/acciones-subapp'
 import { AccesoCentroDatos } from '@/components/centro-datos/acceso-centro-datos'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { NoraCard } from '@/components/nora/nora-card'
@@ -61,7 +61,7 @@ export default async function ClientesCrmPage() {
         actions={<div className="flex gap-2"><CrmDemoButton /><AccesoCentroDatos accion={{ tipo: 'importar-clientes' }} /></div>} />
 
       <div className="space-y-5 p-4 md:p-6">
-        <AccionesSector sector="comercial" />
+        <AccionesSubApp app="clientes" />
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <KpiCard label="Clientes activos" value={activos} icon={Users} />
           <KpiCard label="En riesgo de churn" value={enRiesgo} icon={AlertTriangle} variant={enRiesgo > 0 ? 'warning' : 'default'} href="/admin/clientes/segmentos" />

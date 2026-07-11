@@ -4,7 +4,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { SectorDashboard, type SectorKpi, type SectorAcceso } from '@/components/dashboard/sector-dashboard'
-import { AccionesSector } from '@/components/shared/acciones-sector'
+import { AccionesSubApp } from '@/components/os/acciones-subapp'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Equipo / RRHH' }
@@ -50,7 +50,7 @@ export default async function RrhhDashboard() {
       kpis={kpis}
       nora={nora}
       accesos={accesos}
-      acciones={<AccionesSector sector="equipo" />}
+      acciones={<AccionesSubApp app="personas" />}
     />
   )
 }

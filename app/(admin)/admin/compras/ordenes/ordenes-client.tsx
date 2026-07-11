@@ -1,8 +1,10 @@
 'use client'
 
+import { EmptyConAccion } from '@/components/os/empty-con-accion'
+
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Plus, Download, ShoppingCart, Search } from 'lucide-react'
+import { Plus, Download, Search } from 'lucide-react'
 
 import { exportExcel } from '@/lib/utils/export-excel'
 import { formatARS } from '@/lib/utils/format'
@@ -41,9 +43,7 @@ export function OrdenesClient({ ordenes }: { ordenes: OrdenRow[] }) {
       <div className="text-xs text-muted-foreground">{rows.length} órdenes</div>
 
       {rows.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-14 text-center">
-          <ShoppingCart className="size-7 text-muted-foreground" /><div className="text-sm text-muted-foreground">Sin órdenes. Creá una o cargá el demo.</div>
-        </div>
+        <EmptyConAccion app="compras" accionId="orden-nueva" icono="ShoppingCart" titulo="Sin órdenes de compra" subtitulo="Creá una orden nueva o cargá el demo." />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">

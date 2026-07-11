@@ -3,7 +3,7 @@ import { Sparkles, Ticket, FileText } from 'lucide-react'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { SectorDashboard, type SectorKpi, type SectorAcceso } from '@/components/dashboard/sector-dashboard'
-import { AccionesSector } from '@/components/shared/acciones-sector'
+import { AccionesSubApp } from '@/components/os/acciones-subapp'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Inteligencia / IA' }
@@ -43,7 +43,7 @@ export default async function IaDashboard() {
       kpis={kpis}
       nora={nora}
       accesos={accesos}
-      acciones={<AccionesSector sector="inteligencia" />}
+      acciones={<AccionesSubApp app="inteligencia" />}
     />
   )
 }

@@ -113,8 +113,11 @@ export const SUBAPPS: SubAppManifest[] = [
       return n > 0 ? { count: n, severidad: 'warn' } : null
     },
     quickActions: [
-      { id: 'tarea-nueva', nombre: 'Crear tarea', icono: 'ListPlus', destino: '/admin/tareas', modulo: 'tareas', accion: 'crear', primary: true },
-      { id: 'verificar', nombre: 'Verificar tareas', icono: 'CheckCircle2', destino: '/admin/verificaciones', modulo: 'tareas', accion: 'aprobar' },
+      { id: 'tarea-nueva', nombre: 'Nueva tarea', icono: 'ListTodo', destino: '/admin/tareas', modulo: 'tareas', accion: 'crear', primary: true },
+      { id: 'tarea-agenda', nombre: 'Agenda del día', icono: 'CalendarClock', destino: '/admin/tareas/agenda', modulo: 'tareas', accion: 'ver', primary: true },
+      { id: 'verificar', nombre: 'Verificar tareas', icono: 'CheckCircle2', destino: '/admin/verificaciones', modulo: 'tareas', accion: 'aprobar', primary: true },
+      { id: 'tarea-reportes', nombre: 'Reportes de tareas', icono: 'FileBarChart', destino: '/admin/tareas/reportes', modulo: 'tareas', accion: 'ver' },
+      { id: 'tarea-plantillas', nombre: 'Plantillas de tarea', icono: 'ListChecks', destino: '/admin/configuracion/tipos-tareas', modulo: 'configuracion', accion: 'ver', roles: ['super_admin', 'gerente'] },
     ],
   },
   {
@@ -146,9 +149,18 @@ export const SUBAPPS: SubAppManifest[] = [
       return n > 0 ? { count: n, severidad: 'warn' } : null
     },
     quickActions: [
-      { id: 'transferencia-nueva', nombre: 'Nueva transferencia', icono: 'ArrowRightLeft', destino: '/admin/operaciones/transferencias/nueva', modulo: 'operaciones', accion: 'crear', primary: true },
+      { id: 'transferencia-nueva', nombre: 'Nueva transferencia', icono: 'ArrowRightLeft', destino: '/admin/operaciones/transferencias/nueva', modulo: 'operaciones', accion: 'crear', primary: true, children: [
+        { id: 'transferencia-ver', nombre: 'Ver transferencias en curso', icono: 'Truck', destino: '/admin/operaciones/transferencias', modulo: 'operaciones', accion: 'ver' },
+      ] },
+      { id: 'venc-cargar', nombre: 'Cargar vencimiento', icono: 'CalendarX', destino: '/admin/operaciones/vencimientos', modulo: 'operaciones', accion: 'crear', primary: true },
+      { id: 'reponer', nombre: 'Reponer góndola', icono: 'Boxes', destino: '/admin/operaciones/reposicion', modulo: 'operaciones', accion: 'ver', primary: true },
+      { id: 'inventario', nombre: 'Iniciar inventario', icono: 'ClipboardCheck', destino: '/admin/operaciones/inventarios', modulo: 'operaciones', accion: 'crear', primary: true },
+      { id: 'recartelado', nombre: 'Recartelado del día', icono: 'Tag', destino: '/admin/operaciones/recartelado', modulo: 'operaciones', accion: 'ver', primary: true },
+      { id: 'conteo-zona', nombre: 'Conteo por zona', icono: 'ClipboardList', destino: '/admin/operaciones/control-zonas', modulo: 'operaciones', accion: 'crear' },
+      { id: 'irregularidad', nombre: 'Reportar irregularidad', icono: 'AlertTriangle', destino: '/admin/operaciones/irregularidades', modulo: 'operaciones', accion: 'ver' },
       { id: 'stock-cargar', nombre: 'Cargar producto', icono: 'PackagePlus', destino: '/admin/operaciones/stock/nuevo', modulo: 'operaciones', accion: 'crear' },
-      { id: 'inventario', nombre: 'Inventarios', icono: 'ClipboardCheck', destino: '/admin/operaciones/inventarios', modulo: 'operaciones', accion: 'crear' },
+      { id: 'stock-alertas', nombre: 'Alertas de stock', icono: 'AlertCircle', destino: '/admin/operaciones/alertas', modulo: 'operaciones', accion: 'ver' },
+      { id: 'exportar-dif', nombre: 'Exportar dif. SIFACO', icono: 'Download', destino: '/admin/centro-datos/exportar', modulo: 'centro_datos', accion: 'ver' },
     ],
   },
   {
@@ -176,8 +188,16 @@ export const SUBAPPS: SubAppManifest[] = [
       return n > 0 ? { count: n, severidad: 'warn' } : null
     },
     quickActions: [
-      { id: 'orden-nueva', nombre: 'Nueva orden de compra', icono: 'ShoppingCart', destino: '/admin/compras/ordenes/nueva', modulo: 'compras', accion: 'crear', primary: true },
+      { id: 'orden-nueva', nombre: 'Nueva orden de compra', icono: 'ShoppingCart', destino: '/admin/compras/ordenes/nueva', modulo: 'compras', accion: 'crear', primary: true, children: [
+        { id: 'orden-sugerida', nombre: 'Desde sugerencia de reposición', icono: 'Sparkles', destino: '/admin/compras/recomendaciones', modulo: 'compras', accion: 'ver' },
+        { id: 'orden-manual', nombre: 'Orden manual', icono: 'FilePlus', destino: '/admin/compras/ordenes/nueva', modulo: 'compras', accion: 'crear' },
+      ] },
+      { id: 'recepcion', nombre: 'Registrar recepción', icono: 'PackageCheck', destino: '/admin/compras/recepciones', modulo: 'compras', accion: 'crear', primary: true },
+      { id: 'devolucion', nombre: 'Nueva devolución', icono: 'Undo2', destino: '/admin/compras/devoluciones/nueva', modulo: 'compras', accion: 'crear', primary: true },
+      { id: 'proveedor-nuevo', nombre: 'Nuevo proveedor', icono: 'Store', destino: '/admin/proveedores/nuevo', modulo: 'compras', accion: 'crear', primary: true },
       { id: 'faltante', nombre: 'Cargar un faltante', icono: 'AlertTriangle', destino: '/admin/compras/faltantes', modulo: 'compras', accion: 'crear' },
+      { id: 'comparador', nombre: 'Comparar precios', icono: 'Scale', destino: '/admin/compras/comparador', modulo: 'compras', accion: 'ver' },
+      { id: 'listas', nombre: 'Importar lista de precios', icono: 'Upload', destino: '/admin/compras/listas-precios', modulo: 'compras', accion: 'crear' },
     ],
   },
   {
@@ -211,9 +231,17 @@ export const SUBAPPS: SubAppManifest[] = [
       return n > 0 ? { count: n, severidad: 'danger' } : null
     },
     quickActions: [
+      { id: 'arqueo', nombre: 'Arqueo de caja', icono: 'Wallet', destino: '/admin/finanzas/caja', modulo: 'caja', accion: 'crear', primary: true, children: [
+        { id: 'arqueo-turno', nombre: 'Arqueo de turno', icono: 'Wallet', destino: '/admin/finanzas/caja', modulo: 'caja', accion: 'crear' },
+        { id: 'retiro-fondo', nombre: 'Retiro de fondo (socios)', icono: 'Banknote', destino: '/admin/finanzas/caja', modulo: 'caja', accion: 'aprobar', roles: ['super_admin', 'gerente', 'tesoreria'] },
+      ] },
       { id: 'pago', nombre: 'Registrar pago', icono: 'CreditCard', destino: '/admin/finanzas/pagos', modulo: 'finanzas', accion: 'aprobar', primary: true },
-      { id: 'factura', nombre: 'Cargar factura', icono: 'FileText', destino: '/admin/finanzas/documentos', modulo: 'finanzas', accion: 'crear' },
-      { id: 'arqueo', nombre: 'Cerrar caja', icono: 'Wallet', destino: '/admin/finanzas/caja', modulo: 'caja', accion: 'crear' },
+      { id: 'documento', nombre: 'Nuevo documento a pagar', icono: 'FileText', destino: '/admin/finanzas/documentos', modulo: 'finanzas', accion: 'crear', primary: true },
+      { id: 'gasto', nombre: 'Registrar gasto', icono: 'Receipt', destino: '/admin/finanzas/gastos-fijos', modulo: 'caja', accion: 'crear', primary: true },
+      { id: 'cheque', nombre: 'Nuevo cheque', icono: 'FileBadge', destino: '/admin/finanzas/cheques/nueva', modulo: 'finanzas', accion: 'crear', primary: true },
+      { id: 'impuesto', nombre: 'Impuestos', icono: 'Landmark', destino: '/admin/finanzas/impuestos', modulo: 'finanzas', accion: 'ver' },
+      { id: 'conciliar', nombre: 'Conciliación bancaria', icono: 'GitMerge', destino: '/admin/finanzas/conciliacion', modulo: 'finanzas', accion: 'ver' },
+      { id: 'calendario-pagos', nombre: 'Calendario de pagos', icono: 'CalendarDays', destino: '/admin/finanzas/calendario', modulo: 'finanzas', accion: 'ver' },
     ],
   },
   {
@@ -232,6 +260,9 @@ export const SUBAPPS: SubAppManifest[] = [
     ],
     quickActions: [
       { id: 'mensaje', nombre: 'Mandar mensaje', icono: 'MessageSquare', destino: '/admin/comunicacion', modulo: 'comunicacion', accion: 'crear', primary: true },
+      { id: 'comunicado', nombre: 'Nuevo comunicado', icono: 'Megaphone', destino: '/admin/comunicacion/comunicados', modulo: 'comunicacion', accion: 'crear', primary: true },
+      { id: 'encuesta', nombre: 'Nueva encuesta', icono: 'BarChart3', destino: '/admin/comunicacion', modulo: 'comunicacion', accion: 'crear', primary: true },
+      { id: 'mi-bandeja', nombre: 'Mi bandeja', icono: 'MessageSquare', destino: '/admin/comunicacion/mi-bandeja', modulo: 'comunicacion', accion: 'ver' },
     ],
   },
   {
@@ -253,7 +284,11 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Duplicados', ruta: '/admin/clientes/duplicados' },
     ],
     quickActions: [
-      { id: 'cliente-nuevo', nombre: 'Nuevo cliente', icono: 'UserPlus', destino: '/admin/clientes/nuevo', modulo: 'clientes', accion: 'crear', primary: true },
+      { id: 'cliente-nuevo', nombre: 'Nuevo cliente', icono: 'Users', destino: '/admin/clientes/nuevo', modulo: 'clientes', accion: 'crear', primary: true },
+      { id: 'cliente-campania', nombre: 'Campaña a clientes', icono: 'Megaphone', destino: '/admin/clientes/comunicacion', modulo: 'clientes', accion: 'crear', primary: true },
+      { id: 'cliente-segmentos', nombre: 'Segmentos', icono: 'PieChart', destino: '/admin/clientes/segmentos', modulo: 'clientes', accion: 'ver' },
+      { id: 'cliente-puntos', nombre: 'Puntos', icono: 'Star', destino: '/admin/clientes/puntos', modulo: 'clientes', accion: 'ver' },
+      { id: 'cliente-b2b', nombre: 'Clientes B2B', icono: 'Store', destino: '/admin/clientes/b2b', modulo: 'clientes', accion: 'ver' },
     ],
   },
   {
@@ -275,6 +310,10 @@ export const SUBAPPS: SubAppManifest[] = [
     ],
     quickActions: [
       { id: 'oferta-nueva', nombre: 'Nueva oferta', icono: 'Tag', destino: '/admin/ofertas', modulo: 'ofertas', accion: 'crear', primary: true },
+      { id: 'oferta-calendario', nombre: 'Calendario de ofertas', icono: 'CalendarDays', destino: '/admin/ofertas/calendario', modulo: 'ofertas', accion: 'ver', primary: true },
+      { id: 'oferta-propuestas', nombre: 'Propuestas de NORA', icono: 'Sparkles', destino: '/admin/ofertas/propuestas', modulo: 'ofertas', accion: 'ver' },
+      { id: 'oferta-panel', nombre: 'Para ofrecer', icono: 'Store', destino: '/admin/ofertas/panel', modulo: 'ofertas', accion: 'ver' },
+      { id: 'oferta-rendimiento', nombre: 'Rendimiento', icono: 'LineChart', destino: '/admin/ofertas/rendimiento', modulo: 'ofertas', accion: 'ver' },
     ],
   },
   {
@@ -294,7 +333,11 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Objetivos', ruta: '/admin/objetivos' },
     ],
     quickActions: [
-      { id: 'empleado-nuevo', nombre: 'Nuevo empleado', icono: 'UserPlus', destino: '/admin/rrhh/empleados/nuevo', modulo: 'rrhh', accion: 'crear', primary: true },
+      { id: 'empleado-nuevo', nombre: 'Nuevo empleado', icono: 'UserCheck', destino: '/admin/rrhh/empleados/nuevo', modulo: 'rrhh', accion: 'crear', primary: true },
+      { id: 'mi-equipo', nombre: 'Mi equipo', icono: 'UsersRound', destino: '/admin/mi-equipo', modulo: 'rrhh', accion: 'ver', primary: true },
+      { id: 'ranking', nombre: 'Ranking', icono: 'Trophy', destino: '/admin/ranking', modulo: 'rrhh', accion: 'ver', primary: true },
+      { id: 'objetivos', nombre: 'Objetivos', icono: 'Target', destino: '/admin/objetivos', modulo: 'rrhh', accion: 'ver', primary: true },
+      { id: 'rrhh-turnos', nombre: 'Cargar turnos', icono: 'Clock', destino: '/admin/configuracion/turnos', modulo: 'configuracion', accion: 'crear', roles: ['super_admin', 'gerente'] },
     ],
   },
   {
@@ -321,7 +364,14 @@ export const SUBAPPS: SubAppManifest[] = [
       return n > 0 ? { count: n, severidad: 'info' } : null
     },
     quickActions: [
-      { id: 'importar', nombre: 'Importar archivo', icono: 'Upload', destino: '/admin/centro-datos/importar', modulo: 'centro_datos', accion: 'crear', primary: true },
+      { id: 'importar', nombre: 'Importar archivo', icono: 'Upload', destino: '/admin/centro-datos/importar', modulo: 'centro_datos', accion: 'crear', primary: true, children: [
+        { id: 'import-stock', nombre: 'Matutino: stock / precios', icono: 'PackagePlus', destino: '/admin/centro-datos/importar?tipo=productos', modulo: 'centro_datos', accion: 'crear' },
+        { id: 'import-ventas', nombre: 'Nocturno: ventas', icono: 'ShoppingBag', destino: '/admin/centro-datos/importar?tipo=ventas', modulo: 'centro_datos', accion: 'crear' },
+        { id: 'import-venc', nombre: 'Vencimientos', icono: 'CalendarX', destino: '/admin/operaciones/vencimientos', modulo: 'operaciones', accion: 'crear' },
+      ] },
+      { id: 'exportar', nombre: 'Exportar', icono: 'Download', destino: '/admin/centro-datos/exportar', modulo: 'centro_datos', accion: 'ver', primary: true },
+      { id: 'ventas-dia', nombre: 'Cargar ventas del día', icono: 'ShoppingBag', destino: '/admin/centro-datos/ventas-diarias', modulo: 'centro_datos', accion: 'crear' },
+      { id: 'sin-match', nombre: 'Sin matchear', icono: 'AlertCircle', destino: '/admin/centro-datos/sin-matchear', modulo: 'centro_datos', accion: 'ver' },
     ],
   },
   {
@@ -348,6 +398,10 @@ export const SUBAPPS: SubAppManifest[] = [
     },
     quickActions: [
       { id: 'nora-chat', nombre: 'Preguntarle a NORA', icono: 'Sparkles', destino: '/admin/nora', primary: true },
+      { id: 'nora-feed', nombre: 'Feed de NORA', icono: 'Activity', destino: '/admin/nora/feed', modulo: 'ia', accion: 'ver', primary: true },
+      { id: 'bi', nombre: 'BI / Reportes', icono: 'BarChart3', destino: '/admin/bi', modulo: 'bi', accion: 'ver', primary: true },
+      { id: 'ia-resumen', nombre: 'Resumen IA del día', icono: 'FileBarChart', destino: '/admin/ia/resumen', modulo: 'ia', accion: 'ver' },
+      { id: 'suc-performance', nombre: 'Performance de sucursales', icono: 'LineChart', destino: '/admin/sucursales/performance', modulo: 'bi', accion: 'ver' },
     ],
   },
   {
@@ -370,7 +424,11 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'General', ruta: '/admin/configuracion/general' },
     ],
     quickActions: [
-      { id: 'usuario-nuevo', nombre: 'Nuevo usuario', icono: 'Shield', destino: '/admin/configuracion/usuarios', modulo: 'configuracion', accion: 'crear' },
+      { id: 'usuario-nuevo', nombre: 'Nuevo usuario', icono: 'Shield', destino: '/admin/configuracion/usuarios', modulo: 'configuracion', accion: 'crear', primary: true },
+      { id: 'cfg-catalogo', nombre: 'Catálogo de productos', icono: 'Package', destino: '/admin/configuracion/catalogo', modulo: 'configuracion', accion: 'ver', primary: true },
+      { id: 'cfg-tipos-tareas', nombre: 'Tipos de tarea', icono: 'ListChecks', destino: '/admin/configuracion/tipos-tareas', modulo: 'configuracion', accion: 'ver' },
+      { id: 'cfg-turnos', nombre: 'Turnos', icono: 'Clock', destino: '/admin/configuracion/turnos', modulo: 'configuracion', accion: 'ver' },
+      { id: 'cfg-supervisores', nombre: 'Supervisores', icono: 'UserCheck', destino: '/admin/configuracion/supervisores', modulo: 'configuracion', accion: 'ver' },
     ],
   },
 
@@ -406,7 +464,7 @@ export const SUBAPPS: SubAppManifest[] = [
 
 // ───────────────────────── Acciones globales (siempre en "+" nivel 1) ─────────────────────────
 export const ACCIONES_GLOBALES: QuickAction[] = [
-  { id: 'g-tarea', nombre: 'Crear tarea', icono: 'ListPlus', destino: '/admin/tareas', modulo: 'tareas', accion: 'crear', primary: true },
+  { id: 'g-tarea', nombre: 'Crear tarea', icono: 'ListTodo', destino: '/admin/tareas', modulo: 'tareas', accion: 'crear', primary: true },
   { id: 'g-mensaje', nombre: 'Mandar mensaje', icono: 'MessageSquare', destino: '/admin/comunicacion', modulo: 'comunicacion', accion: 'crear', primary: true },
   { id: 'g-demanda', nombre: 'Me pidieron y no había', icono: 'PackageX', destino: '#', primary: true, proximamente: true },
 ]

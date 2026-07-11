@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Download, Search, FileText } from 'lucide-react'
+import { Plus, Download, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { exportExcel } from '@/lib/utils/export-excel'
@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
+import { EmptyConAccion } from '@/components/os/empty-con-accion'
 
 export type DocRow = { id: string; tipo: string; numero: string; total: number; emision: string; vencimiento: string; estado: string; sucursal_id: string | null; proveedor: string }
 type Prov = { id: string; nombre: string; cuit: string; plazo: number; forma: string | null }
@@ -67,9 +68,7 @@ export function DocumentosClient({ docs, proveedores, sucursales }: { docs: DocR
       <div className="text-xs text-muted-foreground">{rows.length} documentos · pendiente de pago: <b className="text-foreground">{formatARS(pendiente)}</b></div>
 
       {rows.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-14 text-center">
-          <FileText className="size-7 text-muted-foreground" /><div className="text-sm text-muted-foreground">Sin documentos. Cargá uno o el demo.</div>
-        </div>
+        <EmptyConAccion app="finanzas" accionId="documento" icono="FileText" titulo="Sin documentos a pagar" subtitulo="Cargá un documento o el demo." />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
