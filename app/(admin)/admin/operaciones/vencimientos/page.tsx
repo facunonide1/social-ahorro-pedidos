@@ -13,9 +13,10 @@ export default async function VencimientosPage() {
   const adm = createAdminClient()
   const { sucursalId, esTodas } = getSucursalActiva()
 
-  const [filas, { data: sucs }] = await Promise.all([
+  const [filas, { data: sucs }, { data: provs }] = await Promise.all([
     getVencimientos(adm, { sucursalId, esTodas }),
     adm.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
+    adm.from('proveedores').select('id, razon_social, dias_ventana_devolucion').eq('activo', true).order('razon_social'),
   ])
   const resumen = resumenVencimientos(filas)
 
@@ -25,7 +26,7 @@ export default async function VencimientosPage() {
         description="Control manual por producto. NORA decide qué hacer cruzando vencimiento + stock."
         breadcrumbs={[{ label: 'Operación', href: '/admin/operaciones' }, { label: 'Vencimientos' }]} />
       <div className="p-4 md:p-6">
-        <VencimientosClient filas={filas} resumen={resumen} sucursales={(sucs ?? []) as any} sucursalActiva={sucursalId} esTodas={esTodas} />
+        <VencimientosClient filas={filas} resumen={resumen} sucursales={(sucs ?? []) as any} proveedores={(provs ?? []) as any} sucursalActiva={sucursalId} esTodas={esTodas} />
       </div>
     </>
   )

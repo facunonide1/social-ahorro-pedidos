@@ -14,12 +14,22 @@ export default async function ReposicionPage() {
   const { sucursalId, esTodas } = getSucursalActiva()
   const scope = <T,>(q: T): T => (esTodas || !sucursalId ? q : (q as any).eq('sucursal_id', sucursalId))
 
-  const [{ data: rot }, { data: stock }, { data: prods }, { data: sucs }] = await Promise.all([
+  const venceISO = new Date(Date.now() + 45 * 86400000).toISOString().slice(0, 10)
+  const [{ data: rot }, { data: stock }, { data: prods }, { data: sucs }, { data: lotes }] = await Promise.all([
     scope(sb.from('producto_rotacion').select('producto_id, sucursal_id, venta_diaria_prom_30d, dias_stock_restante')),
     scope(sb.from('stock_items').select('producto_id, sucursal_id, cantidad, stock_maximo')),
     sb.from('productos_catalogo').select('id, sku, nombre, laboratorio, precio_costo_promedio, droguerias_preferidas').eq('activo', true),
     sb.from('sucursales').select('id, nombre, codigo').eq('activa', true).order('nombre'),
+    scope(sb.from('lotes_productos').select('producto_id, sucursal_id, fecha_vencimiento').eq('es_demo', false).gt('cantidad_actual', 0).not('fecha_vencimiento', 'is', null).lte('fecha_vencimiento', venceISO)),
   ])
+
+  // Fecha del lote MÁS próximo a vencer en depósito, por producto|sucursal (OS-3 · F).
+  const venceDep = new Map<string, string>()
+  for (const l of (lotes ?? []) as any[]) {
+    const k = `${l.producto_id}|${l.sucursal_id}`
+    const prev = venceDep.get(k)
+    if (!prev || l.fecha_vencimiento < prev) venceDep.set(k, l.fecha_vencimiento)
+  }
 
   const prodMap = new Map(((prods ?? []) as any[]).map((p) => [p.id, p]))
   const stockMap = new Map<string, { cant: number; max: number | null }>()
@@ -38,6 +48,7 @@ export default async function ReposicionPage() {
       diasRestantes: r.dias_stock_restante == null ? null : Number(r.dias_stock_restante),
       costo: Number(p?.precio_costo_promedio ?? 0),
       drogueria: (p?.droguerias_preferidas?.[0] as string | undefined) ?? null,
+      venceDeposito: venceDep.get(k) ?? null,
     }
   }).filter((r) => r.ventaDia > 0 || r.stock > 0)
 

@@ -15,9 +15,11 @@ import type { IrregularidadRow, ResumenIrreg, Patron, PerdidasUnificadas, Rankin
 
 const MOTIVOS = ['rotura', 'vencimiento', 'error de carga', 'robo sospechado', 'otro']
 
-export function IrregularidadesClient({ filas, resumen, patrones, perdidas, rankings, sucursales, esTodas }: {
+export type BajasVencido = { persona: RankItem[]; sucursal: RankItem[]; total: number }
+
+export function IrregularidadesClient({ filas, resumen, patrones, perdidas, rankings, bajas, sucursales, esTodas }: {
   filas: IrregularidadRow[]; resumen: ResumenIrreg; patrones: Patron[]
-  perdidas: PerdidasUnificadas; rankings: Rankings
+  perdidas: PerdidasUnificadas; rankings: Rankings; bajas: BajasVencido
   sucursales: { id: string; nombre: string }[]; esTodas: boolean
 }) {
   const router = useRouter()
@@ -64,7 +66,7 @@ export function IrregularidadesClient({ filas, resumen, patrones, perdidas, rank
   if (filas.length === 0) {
     return (
       <div className="space-y-4">
-        <Perdidas perdidas={perdidas} rankings={rankings} />
+        <Perdidas perdidas={perdidas} rankings={rankings} bajas={bajas} />
         <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-16 text-center">
           <PackageX className="size-8 text-muted-foreground" />
           <div className="text-sm font-medium">Sin irregularidades de stock para cruzar</div>
@@ -79,7 +81,7 @@ export function IrregularidadesClient({ filas, resumen, patrones, perdidas, rank
 
   return (
     <div className="space-y-4">
-      <Perdidas perdidas={perdidas} rankings={rankings} />
+      <Perdidas perdidas={perdidas} rankings={rankings} bajas={bajas} />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -179,8 +181,8 @@ function Kpi({ label, value, sub, icon: Icon, cls }: { label: string; value: str
 }
 
 // ───── Pérdidas unificadas (caja + stock + zonas + transferencias) + rankings ─────
-function Perdidas({ perdidas, rankings }: { perdidas: PerdidasUnificadas; rankings: Rankings }) {
-  const hayRank = rankings.productos.length || rankings.sucursales.length || rankings.zonas.length || rankings.cajeros.length
+function Perdidas({ perdidas, rankings, bajas }: { perdidas: PerdidasUnificadas; rankings: Rankings; bajas: { persona: RankItem[]; sucursal: RankItem[]; total: number } }) {
+  const hayRank = rankings.productos.length || rankings.sucursales.length || rankings.zonas.length || rankings.cajeros.length || bajas.persona.length
   return (
     <div className="space-y-3 rounded-lg border border-rose-500/30 bg-rose-500/5 p-4">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -188,21 +190,26 @@ function Perdidas({ perdidas, rankings }: { perdidas: PerdidasUnificadas; rankin
         <div className="text-2xl font-bold tabular-nums text-rose-700">${perdidas.total.toLocaleString('es-AR')}</div>
         <div className="text-xs text-muted-foreground">
           stock ${perdidas.stock_faltante.toLocaleString('es-AR')} · caja ${perdidas.caja_diferencia.toLocaleString('es-AR')} · zonas ${perdidas.zona_descuadre.toLocaleString('es-AR')}
-          {perdidas.transferencia_diferencia > 0 ? ` · ${perdidas.transferencia_diferencia} transf. con diferencia` : ''}
+          {perdidas.transferencia_diferencia > 0 ? ` · transf. $${perdidas.transferencia_diferencia.toLocaleString('es-AR')}` : ''}
+          {bajas.total > 0 ? ` · bajas x vencido $${bajas.total.toLocaleString('es-AR')}` : ''}
         </div>
       </div>
       {hayRank ? (
         <Tabs defaultValue="productos">
-          <TabsList className="h-8">
+          <TabsList className="h-8 flex-wrap">
             <TabsTrigger value="productos" className="text-xs">Productos</TabsTrigger>
             <TabsTrigger value="sucursales" className="text-xs">Sucursales</TabsTrigger>
             <TabsTrigger value="zonas" className="text-xs">Zonas</TabsTrigger>
             <TabsTrigger value="cajeros" className="text-xs">Cajeros</TabsTrigger>
+            <TabsTrigger value="bajas_persona" className="text-xs">Bajas x persona</TabsTrigger>
+            <TabsTrigger value="bajas_suc" className="text-xs">Bajas x sucursal</TabsTrigger>
           </TabsList>
           <TabsContent value="productos"><RankList items={rankings.productos} vacio="Sin faltantes de productos aún." /></TabsContent>
           <TabsContent value="sucursales"><RankList items={rankings.sucursales} vacio="Sin datos por sucursal." /></TabsContent>
           <TabsContent value="zonas"><RankList items={rankings.zonas} vacio="Cerrá controles de zona para ver el ranking." /></TabsContent>
           <TabsContent value="cajeros"><RankList items={rankings.cajeros} vacio="Sin diferencias de caja por cajero." /></TabsContent>
+          <TabsContent value="bajas_persona"><RankList items={bajas.persona} vacio="Sin bajas por vencido en el período." /></TabsContent>
+          <TabsContent value="bajas_suc"><RankList items={bajas.sucursal} vacio="Sin bajas por vencido en el período." /></TabsContent>
         </Tabs>
       ) : <div className="text-xs text-muted-foreground">Todavía sin datos suficientes para los rankings de pérdidas.</div>}
     </div>

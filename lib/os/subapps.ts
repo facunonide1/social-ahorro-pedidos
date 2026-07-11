@@ -131,6 +131,7 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Stock', ruta: '/admin/operaciones/stock' },
       { nombre: 'Transferencias', ruta: '/admin/operaciones/transferencias' },
       { nombre: 'Vencimientos', ruta: '/admin/operaciones/vencimientos' },
+      { nombre: 'Recartelado', ruta: '/admin/operaciones/recartelado' },
       { nombre: 'Inventarios', ruta: '/admin/operaciones/inventarios' },
       { nombre: 'Control por zonas', ruta: '/admin/operaciones/control-zonas' },
       { nombre: 'Alertas', ruta: '/admin/operaciones/alertas' },

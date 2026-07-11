@@ -18,6 +18,7 @@ import ContactosSection from './contactos'
 import CuentasSection from './cuentas'
 import DocumentosSection from './documentos'
 import { ProveedorCtaCte, type MovCtaCte } from './cta-cte-client'
+import { DevolucionesSection, type RubroRow } from './devoluciones'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,7 +40,7 @@ export default async function ProveedorDetailPage({
 
   const sb = createClient()
 
-  const [provRes, contactosRes, cuentasRes, docsRes, factsRes, pagosRes] = await Promise.all([
+  const [provRes, contactosRes, cuentasRes, docsRes, factsRes, pagosRes, rubrosRes] = await Promise.all([
     sb.from('proveedores').select('*').eq('id', params.id).maybeSingle<Proveedor>(),
     sb
       .from('proveedor_contactos')
@@ -71,6 +72,11 @@ export default async function ProveedorDetailPage({
       .select('id, numero_orden_pago, monto_total, fecha_pago, origen_tipo')
       .eq('proveedor_id', params.id)
       .order('fecha_pago', { ascending: true }),
+    sb
+      .from('proveedor_devolucion_rubros')
+      .select('rubro, dias_ventana, condicion')
+      .eq('proveedor_id', params.id)
+      .order('rubro', { ascending: true }),
   ])
 
   const p = provRes.data
@@ -140,6 +146,13 @@ export default async function ProveedorDetailPage({
         <DocumentosSection
           proveedorId={p.id}
           initial={docsRes.data ?? []}
+          readOnly={!canEdit}
+        />
+
+        <DevolucionesSection
+          proveedorId={p.id}
+          diasDefault={(p as any).dias_ventana_devolucion ?? null}
+          rubrosInicial={(rubrosRes.data ?? []) as RubroRow[]}
           readOnly={!canEdit}
         />
 

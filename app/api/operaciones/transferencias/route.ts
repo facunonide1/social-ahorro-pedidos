@@ -97,6 +97,26 @@ export async function POST(req: NextRequest) {
       estado: 'completada', fecha_recepcion: new Date().toISOString(), recepcion_por: g.userId,
       foto_recepcion: b?.foto ?? null, diferencia_detectada: hayDif, notas: hayDif ? (b?.notas ?? 'Diferencia entre enviado y recibido') : tr.notas,
     }).eq('id', tr.id)
+
+    // OS-3 · E: si hay diferencia, coser una TAREA de verificación al encargado destino.
+    if (hayDif) {
+      const detalle = ((items ?? []) as any[])
+        .filter((it) => Number(it.cantidad_recibida) !== Number(it.cantidad_enviada))
+        .map((it) => `• ${it.producto_id?.slice(0, 8) ?? 'item'}: envió ${it.cantidad_enviada}, recibió ${it.cantidad_recibida}`)
+        .join('\n')
+      // Supervisor de la sucursal destino (si hay); si no, queda al pool de la sucursal.
+      const { data: sup } = await adm.from('supervisores_tareas').select('user_id').eq('sucursal_id', tr.sucursal_destino_id).eq('activo', true).limit(1).maybeSingle()
+      const { data: tarea } = await adm.from('tareas').insert({
+        titulo: 'Verificar diferencia en transferencia recibida',
+        descripcion: `Recepción con diferencia enviado vs recibido:\n${detalle}\n\nRevisá las 3 fotos en el detalle de la transferencia y dejá la nota de qué pasó.`,
+        tipo_origen: 'auto_sistema', prioridad: 'alta',
+        estado: sup?.user_id ? 'asignada' : 'pendiente', responsable_id: sup?.user_id ?? null,
+        asignacion_tipo: sup?.user_id ? 'usuario_especifico' : 'pool_sucursal',
+        sucursal_id: tr.sucursal_destino_id, entidad_relacionada: 'transferencia', entidad_id: tr.id,
+        entidad_url: `/admin/operaciones/transferencias/${tr.id}`, creado_por: g.userId,
+      }).select('id').single()
+      if (tarea?.id) await adm.from('transferencias_sucursal').update({ tarea_verificacion_id: tarea.id }).eq('id', tr.id)
+    }
     return NextResponse.json({ ok: true, diferencia: hayDif })
   }
 

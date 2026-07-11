@@ -85,6 +85,31 @@ async function run() {
       datos: { nombre: nombre(l.producto_id), sku: sku(l.producto_id), sucursal: sucMap.get(l.sucursal_id), lote: l.numero_lote, vence: f, cantidad: Number(l.cantidad_actual) } })
   }
 
+  // Ventana de devolución por cerrar (OS-3): ≤7 días para devolver a la droguería.
+  // Solo vencimientos manuales con proveedor+ventana (los lotes no tienen proveedor).
+  try {
+    const [{ data: vencs }, { data: provs }, { data: rubros }] = await Promise.all([
+      adm.from('vencimientos').select('producto_id, sucursal_id, sku, proveedor_id, fecha_vencimiento, cantidad, productos_catalogo(nombre, rubro)')
+        .eq('estado', 'vigente').eq('es_demo', false).not('proveedor_id', 'is', null),
+      adm.from('proveedores').select('id, dias_ventana_devolucion'),
+      adm.from('proveedor_devolucion_rubros').select('proveedor_id, rubro, dias_ventana'),
+    ])
+    const provDef = new Map(((provs ?? []) as any[]).map((p) => [p.id, p.dias_ventana_devolucion ?? null]))
+    const provRub = new Map<string, number>()
+    for (const r of (rubros ?? []) as any[]) provRub.set(`${r.proveedor_id}|${String(r.rubro).toLowerCase()}`, r.dias_ventana)
+    for (const v of (vencs ?? []) as any[]) {
+      const rubro = v.productos_catalogo?.rubro as string | null
+      const dias = (rubro && provRub.get(`${v.proveedor_id}|${rubro.toLowerCase()}`)) ?? provDef.get(v.proveedor_id) ?? null
+      if (dias == null) continue
+      const cierre = new Date(new Date(v.fecha_vencimiento).getTime() - Number(dias) * 86_400_000)
+      const restan = Math.ceil((cierre.getTime() - ahora) / 86_400_000)
+      if (restan >= 0 && restan <= 7) {
+        out.push({ tipo: 'ventana_devolucion_por_cerrar', producto_id: v.producto_id, sucursal_id: v.sucursal_id, severidad: 'critica',
+          datos: { nombre: v.productos_catalogo?.nombre ?? v.sku, sku: v.sku, sucursal: sucMap.get(v.sucursal_id), cierre: cierre.toISOString().slice(0, 10), dias: restan, cantidad: Number(v.cantidad) } })
+      }
+    }
+  } catch { /* la alerta de ventana no bloquea el cron */ }
+
   // Regenerar activas no-demo
   await adm.from('alertas_stock').delete().eq('estado', 'activa').eq('es_demo', false)
   if (out.length > 0) {

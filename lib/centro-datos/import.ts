@@ -237,6 +237,8 @@ export type ItemAnalizado = {
   oferta_label: string | null
 }
 
+export type CambioPrecio = { producto_id: string; sku: string | null; nombre: string; precio_anterior: number; precio_nuevo: number }
+
 export type Analisis = {
   total: number
   matcheados: number
@@ -245,6 +247,7 @@ export type Analisis = {
   resumen: ResumenImport
   preview: ItemAnalizado[]   // recortado para UI
   filas: FilaMapeada[]       // todas, para confirmar
+  cambios_precio: CambioPrecio[] // OS-3 · D: para la lista de recartelado (todos, no solo el preview)
 }
 
 /** Umbral de variación de precio para marcar anomalía. */
@@ -330,9 +333,13 @@ export async function analizar(
     texto: explicar(tipo, filas, { conStock, nuevos, rubros }),
   }
 
+  const cambios_precio: CambioPrecio[] = items
+    .filter((i) => i.producto_id && i.precio_anterior != null && i.precio_nuevo != null && Number(i.precio_anterior) !== Number(i.precio_nuevo))
+    .map((i) => ({ producto_id: i.producto_id as string, sku: i.sku, nombre: i.nombre_match ?? i.nombre ?? (i.sku ?? ''), precio_anterior: Number(i.precio_anterior), precio_nuevo: Number(i.precio_nuevo) }))
+
   return {
     total: filas.length, matcheados, sin_match: sinMatch,
-    anomalias, resumen, preview: items.slice(0, 300), filas,
+    anomalias, resumen, preview: items.slice(0, 300), filas, cambios_precio,
   }
 }
 

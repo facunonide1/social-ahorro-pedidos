@@ -17,6 +17,7 @@ export type RepoRow = {
   producto_id: string; sku: string | null; nombre: string; laboratorio: string | null
   sucursal_id: string; sucursal: string; stock: number; stockMax: number | null
   ventaDia: number; diasRestantes: number | null; costo: number; drogueria: string | null
+  venceDeposito: string | null
 }
 type Suc = { id: string; nombre: string; codigo: string | null }
 const ALL = '__all__'
@@ -34,7 +35,12 @@ export function ReposicionClient({ rows, sucursales }: { rows: RepoRow[]; sucurs
       return { ...r, sugerido }
     })
     .filter((r) => r.sugerido > 0)
-    .sort((a, b) => (a.diasRestantes ?? 999) - (b.diasRestantes ?? 999)),
+    // OS-3 · F: lo que vence primero en depósito va al tope; luego por quiebre inminente.
+    .sort((a, b) => {
+      if (!!a.venceDeposito !== !!b.venceDeposito) return a.venceDeposito ? -1 : 1
+      if (a.venceDeposito && b.venceDeposito && a.venceDeposito !== b.venceDeposito) return a.venceDeposito < b.venceDeposito ? -1 : 1
+      return (a.diasRestantes ?? 999) - (b.diasRestantes ?? 999)
+    }),
     [base, dias])
 
   const noComprar = useMemo(() => base.filter((r) => {
@@ -96,7 +102,7 @@ export function ReposicionClient({ rows, sucursales }: { rows: RepoRow[]; sucurs
                 {comprar.slice(0, 300).map((r) => (
                   <tr key={key(r)} className={cn('border-t border-border', (r.diasRestantes ?? 99) <= 3 && 'bg-rose-500/5')}>
                     <td className="px-3 py-1.5 font-mono text-xs">{r.sku ?? '—'}</td>
-                    <td className="px-3 py-1.5"><div className="font-medium">{r.nombre}</div></td>
+                    <td className="px-3 py-1.5"><div className="font-medium">{r.nombre}</div>{r.venceDeposito && <div className="text-[10px] font-medium text-rose-600 dark:text-rose-400">⏱ sacá primero el lote que vence {r.venceDeposito}</div>}</td>
                     <td className="px-2 py-1.5 text-muted-foreground">{r.sucursal}</td>
                     <td className="px-2 py-1.5 text-right tabular-nums">{r.stock}</td>
                     <td className="px-2 py-1.5 text-right tabular-nums">{r.ventaDia.toFixed(1)}</td>

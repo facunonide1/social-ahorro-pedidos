@@ -119,6 +119,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       await premiar(adm, tarea.id)
       await liberarDependientes(adm, tarea.id)
       await avisarChatResuelta(adm, tarea, (user.user_metadata as any)?.nombre ?? null)
+      await procesarDevolucionAlCompletar(adm, tarea)
     }
     return NextResponse.json({ ok: true, estado: destino, nora: preIA })
   }
@@ -137,6 +138,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     await premiar(adm, tarea.id)
     await liberarDependientes(adm, tarea.id)
     await avisarChatResuelta(adm, tarea, (user.user_metadata as any)?.nombre ?? null)
+    await procesarDevolucionAlCompletar(adm, tarea)
     return NextResponse.json({ ok: true, estado: 'completada' })
   }
 
@@ -249,6 +251,43 @@ async function avisarChatResuelta(adm: any, tarea: any, nombre: string | null) {
     })
   } catch {
     /* aviso best-effort */
+  }
+}
+
+/**
+ * Devolución a droguería (OS-3 · C): cuando la tarea de preparación se completa,
+ * RECIÉN AHÍ se descuenta el stock del depósito y la devolución pasa a "enviada".
+ * Best-effort (no bloquea el cierre de la tarea).
+ */
+async function procesarDevolucionAlCompletar(adm: any, tarea: any) {
+  try {
+    // OS-3 · E: la tarea de verificación de transferencia registra quién/cuándo la resolvió.
+    if (tarea?.entidad_relacionada === 'transferencia' && tarea?.entidad_id) {
+      await adm.from('transferencias_sucursal').update({
+        verificacion_resuelta_por: tarea.responsable_id ?? null, verificacion_resuelta_at: new Date().toISOString(),
+      }).eq('id', tarea.entidad_id)
+      return
+    }
+    if (tarea?.entidad_relacionada !== 'devolucion_drogueria' || !tarea?.entidad_id) return
+    const { data: dev } = await adm.from('devoluciones_drogueria').select('*').eq('id', tarea.entidad_id).maybeSingle<any>()
+    if (!dev || dev.stock_descontado) return
+    if (dev.producto_id && dev.sucursal_id) {
+      const { data: si } = await adm.from('stock_items').select('cantidad_deposito').eq('producto_id', dev.producto_id).eq('sucursal_id', dev.sucursal_id).maybeSingle<any>()
+      const prev = Number(si?.cantidad_deposito ?? 0)
+      await adm.from('stock_items').upsert({
+        producto_id: dev.producto_id, sucursal_id: dev.sucursal_id,
+        cantidad_deposito: Math.max(0, prev - Number(dev.cantidad)), updated_at: new Date().toISOString(),
+      }, { onConflict: 'producto_id,sucursal_id' })
+      await adm.from('movimientos_stock').insert({
+        producto_id: dev.producto_id, sucursal_id: dev.sucursal_id, tipo: 'devolucion',
+        cantidad: -Math.abs(Number(dev.cantidad)), ubicacion: 'deposito', motivo: 'Devolución a droguería (por vencimiento)',
+        referencia_tipo: 'devolucion', referencia_id: dev.id, costo_unitario: dev.costo_unitario, created_by: tarea.responsable_id ?? null,
+      })
+    }
+    await adm.from('devoluciones_drogueria').update({ stock_descontado: true, estado: 'enviada' }).eq('id', dev.id)
+    if (dev.lote_id) await adm.from('lotes_productos').update({ cantidad_actual: 0, estado: 'vencido' }).eq('id', dev.lote_id)
+  } catch {
+    /* descuento best-effort */
   }
 }
 

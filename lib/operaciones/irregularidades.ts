@@ -206,11 +206,63 @@ export async function getPerdidasUnificadas(adm: Adm, f: { sucursalId: string | 
   const stockFalt = ((irr.data ?? []) as any[]).reduce((a, r) => a + Math.abs(Number(r.valor_diferencia)), 0)
   const cajaDif = ((caja.data ?? []) as any[]).reduce((a, r) => a + Math.abs(Number(r.diferencia_cierre)), 0)
   const zonaDif = ((zona.data ?? []) as any[]).reduce((a, r) => a + Math.abs(Number(r.valor_diferencia)), 0)
-  const transfDif = ((transf.data ?? []) as any[]).length
+
+  // OS-3 · E: $ de las transferencias con diferencia = Σ |enviado − recibido| × costo.
+  let transfVal = 0
+  const trIds = ((transf.data ?? []) as any[]).map((t) => t.id)
+  if (trIds.length) {
+    const { data: its } = await adm.from('transferencia_items').select('producto_id, cantidad_enviada, cantidad_recibida').in('transferencia_id', trIds)
+    const prodIds = [...new Set(((its ?? []) as any[]).map((i) => i.producto_id).filter(Boolean))]
+    const { data: costos } = await adm.from('productos_catalogo').select('id, precio_costo_promedio').in('id', prodIds.length ? prodIds : ['00000000-0000-0000-0000-000000000000'])
+    const cmap = new Map(((costos ?? []) as any[]).map((c) => [c.id, Number(c.precio_costo_promedio ?? 0)]))
+    for (const it of (its ?? []) as any[]) {
+      const diff = Math.abs(Number(it.cantidad_enviada) - Number(it.cantidad_recibida ?? it.cantidad_enviada))
+      transfVal += diff * (cmap.get(it.producto_id) ?? 0)
+    }
+  }
   return {
     stock_faltante: Math.round(stockFalt), caja_diferencia: Math.round(cajaDif),
-    zona_descuadre: Math.round(zonaDif), transferencia_diferencia: transfDif,
-    total: Math.round(stockFalt + cajaDif + zonaDif),
+    zona_descuadre: Math.round(zonaDif), transferencia_diferencia: Math.round(transfVal),
+    total: Math.round(stockFalt + cajaDif + zonaDif + transfVal),
+  }
+}
+
+/**
+ * Bajas por vencido (OS-3 · F): la contracara — quién tira más plata.
+ * movimientos_stock tipo 'baja_vencimiento' del período, por persona y por sucursal.
+ */
+export async function getBajasVencido(adm: Adm, f: { sucursalId: string | null; esTodas: boolean }, dias = 60): Promise<{ persona: RankItem[]; sucursal: RankItem[]; total: number }> {
+  const desde = new Date(Date.now() - dias * 86400000).toISOString()
+  let q = adm.from('movimientos_stock').select('sucursal_id, cantidad, costo_unitario, created_by, sucursales(nombre)').eq('tipo', 'baja_vencimiento').gte('fecha', desde)
+  if (!f.esTodas && f.sucursalId) q = q.eq('sucursal_id', f.sucursalId)
+  const { data } = await q
+  const rows = (data ?? []) as any[]
+  if (!rows.length) return { persona: [], sucursal: [], total: 0 }
+
+  // Nombres de quienes ejecutaron la baja.
+  let nombreMap = new Map<string, string>()
+  try {
+    const { listAdminUsersLite } = await import('@/lib/supabase/admin-users')
+    const users = await listAdminUsersLite(adm, { soloActivos: false })
+    nombreMap = new Map(((users ?? []) as any[]).map((u) => [u.id, u.nombre || u.email]))
+  } catch { /* nombres best-effort */ }
+
+  const valor = (r: any) => Math.abs(Number(r.cantidad)) * Number(r.costo_unitario ?? 0)
+  const porPersona = new Map<string, RankItem>()
+  const porSuc = new Map<string, RankItem>()
+  let total = 0
+  for (const r of rows) {
+    const v = valor(r); total += v
+    const pk = r.created_by ?? 'sin_usuario'
+    const p = porPersona.get(pk) ?? { nombre: r.created_by ? (nombreMap.get(r.created_by) ?? 'Usuario') : 'Sin registrar', sub: 'bajas por vencido', casos: 0, valor: 0 }
+    p.casos++; p.valor += v; porPersona.set(pk, p)
+    const s = porSuc.get(r.sucursal_id) ?? { nombre: r.sucursales?.nombre ?? '—', sub: 'vencido', casos: 0, valor: 0 }
+    s.casos++; s.valor += v; porSuc.set(r.sucursal_id, s)
+  }
+  return {
+    persona: [...porPersona.values()].sort((a, b) => b.valor - a.valor).slice(0, 10),
+    sucursal: [...porSuc.values()].sort((a, b) => b.valor - a.valor).slice(0, 10),
+    total: Math.round(total),
   }
 }
 
