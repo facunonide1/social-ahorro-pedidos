@@ -24,6 +24,15 @@ export async function POST(req: NextRequest) {
   if (!b?.devolucion_id) return NextResponse.json({ error: 'devolucion requerida' }, { status: 400 })
 
   const adm = createAdminClient()
+
+  // OS-4a · B: descartar un reclamo (ej. diferencia a favor) con motivo registrado.
+  if (b?.accion === 'descartar') {
+    const motivo = String(b?.motivo ?? '').trim()
+    if (motivo.length < 3) return NextResponse.json({ error: 'poné un motivo para descartar' }, { status: 400 })
+    await adm.from('devoluciones_proveedor').update({ estado: 'descartada', descartado_por: user.id, descartado_motivo: motivo, proximo_recordatorio_at: null }).eq('id', b.devolucion_id)
+    return NextResponse.json({ ok: true, descartada: true })
+  }
+
   // Idempotencia
   const { count: yaAplicado } = await adm.from('movimientos_stock').select('id', { count: 'exact', head: true }).eq('referencia_tipo', 'devolucion').eq('referencia_id', b.devolucion_id)
   if ((yaAplicado ?? 0) > 0) return NextResponse.json({ ok: true, skipped: true })
@@ -52,6 +61,12 @@ export async function POST(req: NextRequest) {
 
   // 3) evento de score
   await adm.from('proveedor_score_eventos').insert({ proveedor_id: dev.proveedor_id, tipo: 'danado', nota: `Devolución: ${dev.motivo ?? 'sin motivo'}` })
+
+  // 4) OS-4a · seguimiento: pasa a 'enviada' y arma el próximo recordatorio (N días).
+  const N = Number(b?.dias_recordatorio) > 0 ? Number(b.dias_recordatorio) : 7
+  await adm.from('devoluciones_proveedor').update({
+    estado: 'enviada', proximo_recordatorio_at: new Date(Date.now() + N * 86_400_000).toISOString(),
+  }).eq('id', dev.id)
 
   return NextResponse.json({ ok: true })
 }

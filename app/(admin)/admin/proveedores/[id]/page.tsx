@@ -82,6 +82,10 @@ export default async function ProveedorDetailPage({
   const p = provRes.data
   if (!p) notFound()
 
+  // OS-4a · reclamos abiertos hace >7 días (alimenta la negociación).
+  const { contarReclamosAbiertosProveedor } = await import('@/lib/compras/reclamos')
+  const reclamosAbiertos = await contarReclamosAbiertosProveedor(sb, p.id)
+
   // Cuenta corriente: documentos (debe), notas de crédito y pagos (haber).
   const movs: MovCtaCte[] = []
   for (const f of (factsRes.data ?? []) as any[]) {
@@ -118,6 +122,11 @@ export default async function ProveedorDetailPage({
             {!p.activo && (
               <Badge variant="outline" className="ml-1">
                 Inactivo
+              </Badge>
+            )}
+            {reclamosAbiertos > 0 && (
+              <Badge variant="destructive" className="ml-1">
+                {reclamosAbiertos} reclamo{reclamosAbiertos === 1 ? '' : 's'} abierto{reclamosAbiertos === 1 ? '' : 's'} +7d
               </Badge>
             )}
           </span>

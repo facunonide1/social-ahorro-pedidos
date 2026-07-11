@@ -127,20 +127,22 @@ async function getLoUrgente(rol: AdminRole, custom: PermisosCustom | null): Prom
   const ve = (m: Parameters<typeof puede>[2]) => rol === 'super_admin' || puede(rol, custom, m, 'ver')
 
   const nulo = Promise.resolve({ count: 0 } as any)
-  const [tv, vp, dv, fn, na] = await Promise.all([
+  const [tv, vp, dv, fn, na, rc] = await Promise.all([
     ve('tareas') ? scope(adm.from('tareas').select('id', { count: 'exact', head: true }).lt('fecha_vencimiento', ahora).in('estado', ['pendiente', 'asignada', 'reclamada', 'en_progreso', 'en_verificacion'])) : nulo,
     ve('operaciones') ? scope(adm.from('vencimientos').select('id', { count: 'exact', head: true }).eq('estado', 'vigente').lte('fecha_vencimiento', en30)) : nulo,
     ve('finanzas') ? scope(adm.from('facturas_proveedor').select('id', { count: 'exact', head: true }).lt('fecha_vencimiento', hoy).in('estado', ['pendiente_aprobacion', 'aprobada', 'programada_pago', 'pagada_parcial', 'vencida'])) : nulo,
     ve('compras') ? scope(adm.from('avisos_faltante').select('id', { count: 'exact', head: true }).eq('estado', 'nuevo')) : nulo,
     ve('ia') ? adm.from('nora_avisos').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente') : nulo,
+    ve('compras') ? adm.from('devoluciones_proveedor').select('id', { count: 'exact', head: true }).eq('estado', 'enviada').not('proximo_recordatorio_at', 'is', null).lte('proximo_recordatorio_at', ahora) : nulo,
   ])
 
   const items: UrgenteItem[] = []
-  const push = (cond: boolean, count: number, it: Omit<UrgenteItem, 'id'>) => { if (cond && count > 0) items.push({ id: it.origen, ...it }) }
+  const push = (cond: boolean, count: number, it: Omit<UrgenteItem, 'id'>) => { if (cond && count > 0) items.push({ id: it.ruta, ...it }) }
   push(ve('tareas'), tv.count ?? 0, { icono: 'ListChecks', acento: '#2EE1A8', origen: 'Tareas', texto: `${tv.count} tareas vencidas o en verificación`, ruta: '/admin/tareas', severidad: 'danger' })
   push(ve('finanzas'), dv.count ?? 0, { icono: 'Wallet', acento: '#10B981', origen: 'Finanzas', texto: `${dv.count} documentos a pagar vencidos`, ruta: '/admin/finanzas/documentos', severidad: 'danger' })
   push(ve('operaciones'), vp.count ?? 0, { icono: 'Boxes', acento: '#6E3CDB', origen: 'Stock', texto: `${vp.count} productos vencen en 30 días`, ruta: '/admin/operaciones/vencimientos', severidad: 'warn' })
   push(ve('compras'), fn.count ?? 0, { icono: 'ShoppingCart', acento: '#F59E0B', origen: 'Compras', texto: `${fn.count} faltantes por comprar`, ruta: '/admin/compras/faltantes', severidad: 'warn' })
+  push(ve('compras'), rc.count ?? 0, { icono: 'Undo2', acento: '#F59E0B', origen: 'Compras', texto: `${rc.count} reclamo(s) a proveedor sin nota de crédito`, ruta: '/admin/compras/devoluciones', severidad: 'danger' })
   push(ve('ia'), na.count ?? 0, { icono: 'Sparkles', acento: '#A855F7', origen: 'NORA', texto: `${na.count} avisos de NORA sin revisar`, ruta: '/admin/nora/feed', severidad: 'info' })
   return items
 }

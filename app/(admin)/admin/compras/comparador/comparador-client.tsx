@@ -1,7 +1,9 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Search, Download, Scale, Sparkles, TrendingUp, Check } from 'lucide-react'
+import Link from 'next/link'
+import { Search, Download, Scale, Sparkles, TrendingUp, Check, Plus, ShoppingCart, ArrowRight } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { exportExcel } from '@/lib/utils/export-excel'
 import { formatARS } from '@/lib/utils/format'
@@ -17,6 +19,22 @@ export type ProvLite = { id: string; nombre: string; plazo: number | null; forma
 export function ComparadorClient({ productos, proveedores, rubro }: { productos: ProductoComp[]; proveedores: ProvLite[]; rubro: string }) {
   const [q, setQ] = useState('')
   const [split, setSplit] = useState(false)
+  const [cart, setCart] = useState<{ ordenes: number; items: number }>({ ordenes: 0, items: 0 })
+  const [adding, setAdding] = useState<string | null>(null)
+
+  async function agregar(p: ProductoComp, o: Oferta) {
+    const key = `${p.producto_id}|${o.proveedor_id}`
+    setAdding(key)
+    try {
+      const r = await fetch('/api/compras/comparador-orden', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ producto_id: p.producto_id, proveedor_id: o.proveedor_id, rubro, precio: o.precioFinal, nombre: p.nombre }),
+      })
+      const j = await r.json(); if (!r.ok) throw new Error(j?.error)
+      setCart({ ordenes: j.ordenes ?? 0, items: j.items ?? 0 })
+      toast.success(`${p.nombre} → orden borrador de ${o.proveedor}.`)
+    } catch (e: any) { toast.error(e?.message ?? 'Error') } finally { setAdding(null) }
+  }
 
   const rows = useMemo(() => {
     const t = q.trim().toLowerCase()
@@ -49,6 +67,14 @@ export function ComparadorClient({ productos, proveedores, rubro }: { productos:
         <Button variant={split ? 'default' : 'outline'} size="sm" onClick={() => setSplit((s) => !s)}><Sparkles className="size-4" /> Smart split</Button>
         <Button variant="outline" size="sm" disabled={!rows.length} onClick={() => exportExcel('comparador', rows.flatMap((p) => p.ofertas.map((o, i) => ({ SKU: p.sku ?? '', Producto: p.nombre, Proveedor: o.proveedor, Precio: o.precio, 'Precio final': o.precioFinal, Condicion: o.condicion, Mejor: i === 0 ? 'sí' : '' }))))}><Download className="size-4" /> Excel</Button>
       </div>
+
+      {cart.items > 0 && (
+        <div className="flex items-center gap-2 rounded-lg border border-primary/40 bg-nora-bg px-3 py-2 text-sm">
+          <ShoppingCart className="size-4 text-primary" />
+          <span className="flex-1"><b>{cart.items}</b> ítem(s) en <b>{cart.ordenes}</b> orden(es) borrador.</span>
+          <Button asChild size="sm"><Link href="/admin/compras/ordenes">Ver órdenes <ArrowRight className="size-4" /></Link></Button>
+        </div>
+      )}
 
       {split && (
         <div className="rounded-lg border border-primary/40 bg-nora-bg p-4">
@@ -91,6 +117,11 @@ export function ComparadorClient({ productos, proveedores, rubro }: { productos:
                       <td className="px-3 py-1.5 text-xs text-muted-foreground">{o.condicion}{o.descPP > 0 && ` · -${o.descPP}% PP`}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums">{o.subio && <TrendingUp className="mr-1 inline size-3 text-rose-500" />}{formatARS(o.precio)}</td>
                       <td className="px-4 py-1.5 text-right font-mono font-medium tabular-nums">{formatARS(o.precioFinal)}</td>
+                      <td className="px-3 py-1.5 text-right">
+                        <Button size="sm" variant={i === 0 ? 'default' : 'outline'} className="h-7 px-2 text-[11px]" disabled={adding === `${p.producto_id}|${o.proveedor_id}`} onClick={() => agregar(p, o)}>
+                          <Plus className="size-3.5" /> Agregar
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

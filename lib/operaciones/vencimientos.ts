@@ -117,7 +117,7 @@ export async function getVencimientos(adm: Adm, f: { sucursalId: string | null; 
       .select('id, producto_id, sku, sucursal_id, proveedor_id, fecha_vencimiento, cantidad, ubicacion, productos_catalogo(nombre, precio_sugerido, precio_costo_promedio, rubro), sucursales(nombre)')
       .eq('estado', 'vigente').eq('es_demo', false)).order('fecha_vencimiento', { ascending: true }).limit(600),
     scope(adm.from('lotes_productos')
-      .select('id, producto_id, sucursal_id, numero_lote, fecha_vencimiento, cantidad_actual, costo_unitario, productos_catalogo(nombre, sku, precio_sugerido, precio_costo_promedio, rubro), sucursales(nombre)')
+      .select('id, producto_id, sucursal_id, numero_lote, fecha_vencimiento, cantidad_actual, costo_unitario, proveedor_id, productos_catalogo(nombre, sku, precio_sugerido, precio_costo_promedio, rubro), sucursales(nombre)')
       .eq('es_demo', false).gt('cantidad_actual', 0).not('fecha_vencimiento', 'is', null).lte('fecha_vencimiento', horizonteISO)).order('fecha_vencimiento', { ascending: true }).limit(600),
     adm.from('proveedores').select('id, dias_ventana_devolucion'),
     adm.from('proveedor_devolucion_rubros').select('proveedor_id, rubro, dias_ventana'),
@@ -188,7 +188,7 @@ export async function getVencimientos(adm: Adm, f: { sucursalId: string | null; 
 
   const filasLote = lotes.map((v) => {
     const costo = Number(v.costo_unitario ?? 0) || Number(v.productos_catalogo?.precio_costo_promedio ?? 0) || Number(v.productos_catalogo?.precio_sugerido ?? 0) * 0.6
-    return armar(v.id, 'lote', v.producto_id, v.productos_catalogo?.sku ?? null, v.productos_catalogo?.nombre ?? '—', v.sucursal_id, v.sucursales?.nombre ?? '—', null, v.fecha_vencimiento, Number(v.cantidad_actual), 'deposito', v.numero_lote ?? null, v.id, v.productos_catalogo?.rubro ?? null, costo)
+    return armar(v.id, 'lote', v.producto_id, v.productos_catalogo?.sku ?? null, v.productos_catalogo?.nombre ?? '—', v.sucursal_id, v.sucursales?.nombre ?? '—', v.proveedor_id ?? null, v.fecha_vencimiento, Number(v.cantidad_actual), 'deposito', v.numero_lote ?? null, v.id, v.productos_catalogo?.rubro ?? null, costo)
   })
   const filasManual = manual.map((v) => {
     const costo = Number(v.productos_catalogo?.precio_costo_promedio ?? 0) || Number(v.productos_catalogo?.precio_sugerido ?? 0) * 0.6

@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { ArrowRight, Plus } from 'lucide-react'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
+import { procesarRecordatoriosReclamos } from '@/lib/compras/reclamos'
 import {
   ESTADO_DEVOLUCION_LABELS,
   MOTIVO_DEVOLUCION_LABELS,
@@ -41,6 +42,7 @@ const ESTADO_VARIANT: Record<
   enviada: 'info',
   nota_credito_recibida: 'info',
   cerrada: 'success',
+  descartada: 'outline',
 }
 
 export default async function DevolucionesPage() {
@@ -48,6 +50,9 @@ export default async function DevolucionesPage() {
     allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo'],
   })
   const sb = createClient()
+
+  // OS-4a · seguimiento (lazy-check): procesa recordatorios vencidos al abrir la lista.
+  await procesarRecordatoriosReclamos(createAdminClient())
 
   const { data: rawRows, error } = await sb
     .from('devoluciones_proveedor')

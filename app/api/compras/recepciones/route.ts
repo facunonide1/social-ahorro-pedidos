@@ -71,9 +71,9 @@ export async function POST(req: NextRequest) {
       motivo: `Recepción OC ${orden.codigo}`, referencia_tipo: 'recepcion', referencia_id: recep.id, created_by: g.userId,
       costo_unitario: oc?.costo_unitario ?? null,
     })
-    // lote con vencimiento
+    // lote con vencimiento (OS-4a · A: guardamos el proveedor para la ventana de devolución)
     if (it.fecha_vencimiento) {
-      await adm.from('lotes_productos').insert({ producto_id: pid, sucursal_id: compradora, cantidad_actual: rec, fecha_vencimiento: it.fecha_vencimiento, recepcion_id: recep.id, costo_unitario: oc?.costo_unitario ?? null })
+      await adm.from('lotes_productos').insert({ producto_id: pid, sucursal_id: compradora, cantidad_actual: rec, fecha_vencimiento: it.fecha_vencimiento, recepcion_id: recep.id, costo_unitario: oc?.costo_unitario ?? null, proveedor_id: orden.proveedor_id ?? null })
     }
   }
 
@@ -128,11 +128,47 @@ export async function POST(req: NextRequest) {
   })
   await adm.from('ordenes_compra').update({ estado: conDiferencias ? 'recibida_parcial' : 'recibida', updated_at: new Date().toISOString() }).eq('id', orden.id)
 
-  // alerta/tarea si diferencias
+  // OS-4a · B: si hay diferencias, AUTO-CREAR el reclamo (registrada) cosido a la
+  // recepción + tarea al responsable. No se envía solo: queda para revisión humana.
+  let reclamoId: string | null = null
   if (conDiferencias) {
+    const { data: prov } = await adm.from('proveedores').select('razon_social').eq('id', orden.proveedor_id).maybeSingle<any>()
+    const provNombre = prov?.razon_social ?? 'proveedor'
+
+    const diffItems: any[] = []
+    for (const it of reqItems) {
+      const ped = Number(it.cantidad_pedida ?? itemsById.get(it.producto_id)?.cantidad_total ?? 0)
+      const rec = Number(it.cantidad_recibida ?? 0)
+      const dan = Number(it.cantidad_danada ?? 0)
+      const faltante = Math.max(0, ped - rec)
+      if (faltante > 0) diffItems.push({ producto_id: it.producto_id, cantidad: faltante, motivo_especifico: `Faltante: pidió ${ped}, recibió ${rec}`, foto_url: it.foto_url ?? null })
+      if (dan > 0) diffItems.push({ producto_id: it.producto_id, cantidad: dan, motivo_especifico: `Dañado: ${dan} u.`, foto_url: it.foto_url ?? null })
+    }
+    const hayDan = reqItems.some((it) => Number(it.cantidad_danada ?? 0) > 0)
+    const motivo = hayDan ? 'dano' : 'error_pedido'
+
+    const { data: recl } = await adm.from('devoluciones_proveedor').insert({
+      proveedor_id: orden.proveedor_id, sucursal_id: compradora, fecha: new Date().toISOString().slice(0, 10),
+      motivo, estado: 'registrada', recepcion_id: recep.id, created_by: g.userId,
+      observaciones: `Auto-generado por diferencias en recepción OC ${orden.codigo}. Revisá y enviá a ${provNombre}.`,
+    }).select('id').single()
+    reclamoId = recl?.id ?? null
+
+    if (reclamoId) {
+      if (diffItems.length) await adm.from('devolucion_items').insert(diffItems.map((d) => ({ devolucion_id: reclamoId, producto_id: d.producto_id, cantidad: d.cantidad, motivo_especifico: d.motivo_especifico, foto_url: d.foto_url })))
+      await adm.from('recepciones_mercaderia').update({ reclamo_id: reclamoId }).eq('id', recep.id)
+      await adm.from('tareas').insert({
+        titulo: `Revisar y enviar reclamo a ${provNombre} por diferencias en recepción ${orden.codigo}`,
+        descripcion: `${diffItems.length} ítem(s) en diferencia. Confirmá el reclamo (pasa a "enviada") y adjuntá el screenshot/foto del envío a la droguería.`,
+        tipo_origen: 'auto_sistema', prioridad: 'alta', estado: 'pendiente', verificacion_humana: true,
+        sucursal_id: compradora, entidad_relacionada: 'reclamo_proveedor', entidad_id: reclamoId,
+        entidad_url: `/admin/compras/devoluciones/${reclamoId}`, creado_por: g.userId,
+      })
+    }
+
     const { data: sup } = await adm.from('users_admin').select('id').eq('activo', true).in('rol', ['super_admin', 'gerente', 'comprador'])
-    if (sup?.length) await adm.from('notificaciones_admin').insert(sup.map((s: any) => ({ user_id: s.id, tipo: 'alerta', prioridad: 'alta', titulo: `Diferencias en recepción OC ${orden.codigo}`, mensaje: 'Revisá el reclamo al proveedor.', url_accion: '/admin/compras/recepciones' })))
+    if (sup?.length) await adm.from('notificaciones_admin').insert(sup.map((s: any) => ({ user_id: s.id, tipo: 'alerta', prioridad: 'alta', titulo: `Diferencias en recepción OC ${orden.codigo}`, mensaje: `Reclamo a ${provNombre} listo para revisar y enviar.`, url_accion: reclamoId ? `/admin/compras/devoluciones/${reclamoId}` : '/admin/compras/recepciones' })))
   }
 
-  return NextResponse.json({ ok: true, recepcion_id: recep.id, transferencias, factura_id: facturaId, con_diferencias: conDiferencias })
+  return NextResponse.json({ ok: true, recepcion_id: recep.id, transferencias, factura_id: facturaId, con_diferencias: conDiferencias, reclamo_id: reclamoId })
 }

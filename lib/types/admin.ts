@@ -723,6 +723,7 @@ export type EstadoDevolucionProveedor =
   | 'enviada'
   | 'nota_credito_recibida'
   | 'cerrada'
+  | 'descartada'
 export type MotivoDevolucion = 'vencimiento' | 'dano' | 'error_pedido' | 'otro'
 
 export const ESTADO_DEVOLUCION_LABELS: Record<EstadoDevolucionProveedor, string> = {
@@ -730,6 +731,7 @@ export const ESTADO_DEVOLUCION_LABELS: Record<EstadoDevolucionProveedor, string>
   enviada: 'Enviada',
   nota_credito_recibida: 'Nota de crédito recibida',
   cerrada: 'Cerrada',
+  descartada: 'Descartada',
 }
 
 export const MOTIVO_DEVOLUCION_LABELS: Record<MotivoDevolucion, string> = {

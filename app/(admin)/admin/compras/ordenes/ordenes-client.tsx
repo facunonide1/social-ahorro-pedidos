@@ -47,7 +47,7 @@ export function OrdenesClient({ ordenes }: { ordenes: OrdenRow[] }) {
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">Código</th><th className="px-3 py-2">Proveedor</th><th className="px-3 py-2">Rubro</th><th className="px-3 py-2">Compra a nombre de</th><th className="px-3 py-2">Origen</th><th className="px-3 py-2 text-right">Total est.</th><th className="px-3 py-2">Estado</th></tr></thead>
+            <thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">Código</th><th className="px-3 py-2">Proveedor</th><th className="px-3 py-2">Rubro</th><th className="px-3 py-2">Compra a nombre de</th><th className="px-3 py-2">Origen</th><th className="px-3 py-2 text-right">Total est.</th><th className="px-3 py-2">Estado</th><th className="px-3 py-2" /></tr></thead>
             <tbody>
               {rows.map((o) => (
                 <tr key={o.id} className="border-t border-border">
@@ -58,6 +58,11 @@ export function OrdenesClient({ ordenes }: { ordenes: OrdenRow[] }) {
                   <td className="px-3 py-1.5 text-xs">{o.origen === 'sifaco' ? <Badge variant="info" className="font-normal">SIFACO</Badge> : o.origen.replace(/_/g, ' ')}</td>
                   <td className="px-3 py-1.5 text-right font-mono tabular-nums">{formatARS(o.total)}</td>
                   <td className="px-3 py-1.5"><Badge variant={ESTADO_VARIANT[o.estado] ?? 'outline'} className="font-normal">{o.estado.replace(/_/g, ' ')}</Badge></td>
+                  <td className="px-3 py-1.5 text-right">
+                    {['enviada', 'confirmada', 'recibida_parcial'].includes(o.estado) && (
+                      <Button asChild size="sm" variant="outline" className="h-7 px-2 text-[11px]"><Link href="/admin/compras/recepciones"><Plus className="size-3.5" /> Recibir</Link></Button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
