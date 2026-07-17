@@ -7,15 +7,31 @@
 import { puede, type PermisosCustom } from '@/lib/types/permisos'
 import type { AdminRole } from '@/lib/types/admin'
 import { HERRAMIENTAS_FINANZAS } from './finanzas'
+import { HERRAMIENTAS_TAREAS } from './tareas'
+import { HERRAMIENTAS_STOCK } from './stock'
+import { HERRAMIENTAS_COMPRAS } from './compras'
 import { matchOpciones, type Herramienta, type NoraCtx, type Opcion, type Valores } from './tipos'
 
 export * from './tipos'
 
-export const TODAS_HERRAMIENTAS: Herramienta[] = [...HERRAMIENTAS_FINANZAS]
+export const TODAS_HERRAMIENTAS: Herramienta[] = [
+  ...HERRAMIENTAS_FINANZAS.map((h) => ({ ...h, subapp: h.subapp ?? 'finanzas' })),
+  ...HERRAMIENTAS_TAREAS,
+  ...HERRAMIENTAS_STOCK,
+  ...HERRAMIENTAS_COMPRAS,
+]
 
-/** Herramientas que el usuario PUEDE ejecutar (se filtran antes de mandarlas al modelo). */
-export function herramientasParaUsuario(rol: AdminRole, custom: PermisosCustom | null): Herramienta[] {
-  return TODAS_HERRAMIENTAS.filter((h) => !h.permiso || rol === 'super_admin' || puede(rol, custom, h.permiso.modulo, h.permiso.accion))
+/**
+ * Herramientas que el usuario PUEDE ejecutar en su contexto. Filtra por permiso
+ * y por sub-app: en cada sub-app el modelo solo ve sus herramientas, más las
+ * lecturas marcadas como cruzables (lecturaGlobal). Sin subapp → todas.
+ */
+export function herramientasParaUsuario(rol: AdminRole, custom: PermisosCustom | null, subapp?: string | null): Herramienta[] {
+  return TODAS_HERRAMIENTAS.filter((h) => {
+    if (h.permiso && rol !== 'super_admin' && !puede(rol, custom, h.permiso.modulo, h.permiso.accion)) return false
+    if (!subapp) return true
+    return h.subapp === subapp || (!!h.soloLectura && !!h.lecturaGlobal)
+  })
 }
 
 /** Definiciones de tools para la API de Claude (evidencia no se extrae de texto). */
@@ -73,10 +89,10 @@ export async function resolverSlots(adm: any, h: Herramienta, valoresIn: Valores
   return { estado: 'completo', valores }
 }
 
-export function systemPrompt(nombre: string | null, rol: string, herrs: Herramienta[], subapp: string | null): string {
+export function systemPrompt(nombre: string | null, rol: string, herrs: Herramienta[], subapp: string | null, hoy?: string): string {
   return `Sos NORA, la asistente del ERP de Social Ahorro (una cadena de farmacias). Hablás en español rioplatense, profesional y cercana, en frases cortas.
 
-${nombre ? `Estás hablando con ${nombre} (rol: ${rol}).` : `Rol del usuario: ${rol}.`}${subapp ? ` Está en la sub-app ${subapp}.` : ''}
+${nombre ? `Estás hablando con ${nombre} (rol: ${rol}).` : `Rol del usuario: ${rol}.`}${subapp ? ` Está en la sub-app ${subapp}.` : ''}${hoy ? ` Hoy es ${hoy} (zona horaria Argentina). Usá esta fecha para resolver expresiones como "hoy", "mañana", "antes de las 3" a ISO 8601.` : ''}
 
 Tu trabajo es EJECUTAR ACCIONES por conversación usando SOLO las herramientas disponibles (ya están filtradas por lo que este usuario puede hacer). Reglas:
 - Si el usuario quiere hacer algo que tenés como herramienta, LLAMÁ la herramienta con los datos que puedas extraer del mensaje (proveedor, factura, monto, etc.). El sistema se encarga de pedir lo que falte con opciones reales — no inventes proveedores, facturas, montos ni cuentas.

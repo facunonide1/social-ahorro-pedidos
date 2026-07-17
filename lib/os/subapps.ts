@@ -94,6 +94,7 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Agenda del día', ruta: '/admin/tareas/agenda' },
       { nombre: 'Reportes', ruta: '/admin/tareas/reportes' },
       { nombre: 'Verificaciones', ruta: '/admin/verificaciones' },
+      { nombre: 'NORA (asistente)', ruta: '/admin/tareas/asistente' },
     ],
     badge: async (sb, userId, rol) => {
       // Mis tareas activas + las que me toca verificar (OS-2a · C).
@@ -113,6 +114,7 @@ export const SUBAPPS: SubAppManifest[] = [
       return n > 0 ? { count: n, severidad: 'warn' } : null
     },
     quickActions: [
+      { id: 'nora-asistente-tareas', nombre: 'Pedirle a NORA', icono: 'Sparkles', destino: '/admin/tareas/asistente', modulo: 'tareas', accion: 'ver', primary: true },
       { id: 'tarea-nueva', nombre: 'Nueva tarea', icono: 'ListTodo', destino: '/admin/tareas', modulo: 'tareas', accion: 'crear', primary: true },
       { id: 'tarea-agenda', nombre: 'Agenda del día', icono: 'CalendarClock', destino: '/admin/tareas/agenda', modulo: 'tareas', accion: 'ver', primary: true },
       { id: 'verificar', nombre: 'Verificar tareas', icono: 'CheckCircle2', destino: '/admin/verificaciones', modulo: 'tareas', accion: 'aprobar', primary: true },
@@ -141,6 +143,7 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Análisis', ruta: '/admin/operaciones/analisis' },
       { nombre: 'Reposición', ruta: '/admin/operaciones/reposicion' },
       { nombre: 'Irregularidades', ruta: '/admin/operaciones/irregularidades' },
+      { nombre: 'NORA (asistente)', ruta: '/admin/operaciones/asistente' },
     ],
     badge: async (sb) => {
       // Vencimientos vigentes que caen en los próximos 30 días.
@@ -149,6 +152,7 @@ export const SUBAPPS: SubAppManifest[] = [
       return n > 0 ? { count: n, severidad: 'warn' } : null
     },
     quickActions: [
+      { id: 'nora-asistente-stock', nombre: 'Pedirle a NORA', icono: 'Sparkles', destino: '/admin/operaciones/asistente', modulo: 'operaciones', accion: 'ver', primary: true },
       { id: 'transferencia-nueva', nombre: 'Nueva transferencia', icono: 'ArrowRightLeft', destino: '/admin/operaciones/transferencias/nueva', modulo: 'operaciones', accion: 'crear', primary: true, children: [
         { id: 'transferencia-ver', nombre: 'Ver transferencias en curso', icono: 'Truck', destino: '/admin/operaciones/transferencias', modulo: 'operaciones', accion: 'ver' },
       ] },
@@ -182,12 +186,14 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Devoluciones', ruta: '/admin/compras/devoluciones' },
       { nombre: 'Listas de precios', ruta: '/admin/compras/listas-precios' },
       { nombre: 'Proveedores', ruta: '/admin/proveedores' },
+      { nombre: 'NORA (asistente)', ruta: '/admin/compras/asistente' },
     ],
     badge: async (sb) => {
       const n = await cuenta(sb.from('avisos_faltante').select('id', { count: 'exact', head: true }).eq('estado', 'nuevo'))
       return n > 0 ? { count: n, severidad: 'warn' } : null
     },
     quickActions: [
+      { id: 'nora-asistente-compras', nombre: 'Pedirle a NORA', icono: 'Sparkles', destino: '/admin/compras/asistente', modulo: 'compras', accion: 'ver', primary: true },
       { id: 'orden-nueva', nombre: 'Nueva orden de compra', icono: 'ShoppingCart', destino: '/admin/compras/ordenes/nueva', modulo: 'compras', accion: 'crear', primary: true, children: [
         { id: 'orden-manual', nombre: 'Orden manual', icono: 'FilePlus', destino: '/admin/compras/ordenes/nueva', modulo: 'compras', accion: 'crear' },
         { id: 'orden-faltantes', nombre: 'Desde faltantes', icono: 'AlertTriangle', destino: '/admin/compras/faltantes', modulo: 'compras', accion: 'ver' },

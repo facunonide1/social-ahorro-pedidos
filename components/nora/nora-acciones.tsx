@@ -125,7 +125,7 @@ export function NoraAcciones({ subapp = 'finanzas' }: { subapp?: string }) {
                 <div className={cn('rounded-2xl px-3 py-2 text-sm', m.de === 'user' ? 'bg-primary text-primary-foreground' : m.degradado ? 'border border-amber-500/40 bg-amber-500/5' : 'bg-muted')}>
                   <div className="whitespace-pre-wrap">{renderMd(m.texto ?? m.descripcion ?? '')}</div>
                   {m.nota && <div className="mt-1 text-[11px] text-muted-foreground">{m.nota}</div>}
-                  {m.resultado?.entidad_id && <Link href="/admin/finanzas/pagos" className="mt-1 block text-[11px] underline">Ver en Pagos →</Link>}
+                  {m.resultado?.entidad_id && subapp === 'finanzas' && <Link href="/admin/finanzas/pagos" className="mt-1 block text-[11px] underline">Ver en Pagos →</Link>}
                 </div>
               )}
 

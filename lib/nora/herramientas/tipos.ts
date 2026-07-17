@@ -15,6 +15,8 @@ export type NoraCtx = {
   permisosCustom: PermisosCustom | null
   sucursalId: string | null
   esTodas: boolean
+  /** Fecha de hoy (YYYY-MM-DD, zona AR) para resolver vencimientos/deadlines. */
+  hoy?: string
 }
 
 export type Opcion = { valor: string; label: string; sub?: string }
@@ -38,10 +40,14 @@ export type Herramienta = {
   id: string
   nombre: string
   descripcion: string
+  /** Sub-app dueña de la herramienta (acota qué ve el modelo según el contexto). */
+  subapp?: string
   /** Permiso requerido (se filtra ANTES de mandar la herramienta al modelo). null = todos. */
   permiso: { modulo: PermisoModulo; accion: PermisoAccion } | null
   /** Read-only: responde sin card de confirmación. */
   soloLectura?: boolean
+  /** Lectura que puede cruzar de sub-app (ej: consultar stock desde Compras). */
+  lecturaGlobal?: boolean
   slots: Slot[]
   armarConfirmacion?: (adm: any, v: Valores, ctx: NoraCtx) => Promise<Confirmacion>
   ejecutar?: (adm: any, v: Valores, ctx: NoraCtx) => Promise<Resultado>

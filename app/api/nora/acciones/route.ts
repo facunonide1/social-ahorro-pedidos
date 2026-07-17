@@ -31,8 +31,9 @@ export async function POST(req: NextRequest) {
   try { b = await req.json() } catch { return NextResponse.json({ tipo: 'error', texto: 'No pude leer el mensaje.' }, { status: 400 }) }
 
   const { sucursalId, esTodas } = getSucursalActiva()
-  const ctx: NoraCtx = { userId: user.id, rol: me.rol, permisosCustom: me.permisos_custom ?? null, sucursalId, esTodas }
-  const herrs = herramientasParaUsuario(me.rol, me.permisos_custom ?? null)
+  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' })
+  const ctx: NoraCtx = { userId: user.id, rol: me.rol, permisosCustom: me.permisos_custom ?? null, sucursalId, esTodas, hoy }
+  const herrs = herramientasParaUsuario(me.rol, me.permisos_custom ?? null, b?.subapp ?? null)
   const adm = createAdminClient()
 
   async function guardar(cid: string | null, entidad?: string | null): Promise<string | null> {
@@ -90,7 +91,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const historial = (Array.isArray(b?.historial) ? b.historial : []).filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim()).slice(-12)
-    let sys = systemPrompt(nombre, me.rol, herrs, b?.subapp ?? null)
+    let sys = systemPrompt(nombre, me.rol, herrs, b?.subapp ?? null, hoy)
     if (b?.herramienta_id) sys += `\n\nCONTEXTO: estás completando "${b.herramienta_id}" con estos datos ya cargados: ${JSON.stringify(b.valores ?? {})}. Extraé lo nuevo del mensaje y llamá esa herramienta con los datos actualizados.`
 
     const anthropic = getAnthropic()
