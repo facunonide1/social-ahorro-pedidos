@@ -44,6 +44,8 @@ export type Herramienta = {
   subapp?: string
   /** Permiso requerido (se filtra ANTES de mandar la herramienta al modelo). null = todos. */
   permiso: { modulo: PermisoModulo; accion: PermisoAccion } | null
+  /** Roles habilitados (además del permiso). super_admin siempre pasa. Ej: encargado+. */
+  roles?: AdminRole[]
   /** Read-only: responde sin card de confirmación. */
   soloLectura?: boolean
   /** Lectura que puede cruzar de sub-app (ej: consultar stock desde Compras). */

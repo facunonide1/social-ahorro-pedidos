@@ -10,6 +10,10 @@ import { HERRAMIENTAS_FINANZAS } from './finanzas'
 import { HERRAMIENTAS_TAREAS } from './tareas'
 import { HERRAMIENTAS_STOCK } from './stock'
 import { HERRAMIENTAS_COMPRAS } from './compras'
+import { HERRAMIENTAS_CLIENTES } from './clientes'
+import { HERRAMIENTAS_OFERTAS } from './ofertas'
+import { HERRAMIENTAS_COMUNICACION } from './comunicacion'
+import { HERRAMIENTAS_PEDIDOS } from './pedidos'
 import { matchOpciones, type Herramienta, type NoraCtx, type Opcion, type Valores } from './tipos'
 
 export * from './tipos'
@@ -19,6 +23,10 @@ export const TODAS_HERRAMIENTAS: Herramienta[] = [
   ...HERRAMIENTAS_TAREAS,
   ...HERRAMIENTAS_STOCK,
   ...HERRAMIENTAS_COMPRAS,
+  ...HERRAMIENTAS_CLIENTES,
+  ...HERRAMIENTAS_OFERTAS,
+  ...HERRAMIENTAS_COMUNICACION,
+  ...HERRAMIENTAS_PEDIDOS,
 ]
 
 /**
@@ -29,6 +37,7 @@ export const TODAS_HERRAMIENTAS: Herramienta[] = [
 export function herramientasParaUsuario(rol: AdminRole, custom: PermisosCustom | null, subapp?: string | null): Herramienta[] {
   return TODAS_HERRAMIENTAS.filter((h) => {
     if (h.permiso && rol !== 'super_admin' && !puede(rol, custom, h.permiso.modulo, h.permiso.accion)) return false
+    if (h.roles && rol !== 'super_admin' && !h.roles.includes(rol)) return false
     if (!subapp) return true
     return h.subapp === subapp || (!!h.soloLectura && !!h.lecturaGlobal)
   })

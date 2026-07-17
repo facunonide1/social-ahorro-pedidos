@@ -268,8 +268,10 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Inbox', ruta: '/admin/comunicacion' },
       { nombre: 'Comunicados', ruta: '/admin/comunicacion/comunicados' },
       { nombre: 'Mi bandeja', ruta: '/admin/comunicacion/mi-bandeja' },
+      { nombre: 'NORA (asistente)', ruta: '/admin/comunicacion/asistente' },
     ],
     quickActions: [
+      { id: 'nora-asistente-comunicacion', nombre: 'Pedirle a NORA', icono: 'Sparkles', destino: '/admin/comunicacion/asistente', modulo: 'comunicacion', accion: 'ver', primary: true },
       { id: 'mensaje', nombre: 'Mandar mensaje', icono: 'MessageSquare', destino: '/admin/comunicacion', modulo: 'comunicacion', accion: 'crear', primary: true },
       { id: 'comunicado', nombre: 'Nuevo comunicado', icono: 'Megaphone', destino: '/admin/comunicacion/comunicados', modulo: 'comunicacion', accion: 'crear', primary: true },
       { id: 'encuesta', nombre: 'Nueva encuesta', icono: 'BarChart3', destino: '/admin/comunicacion', modulo: 'comunicacion', accion: 'crear', primary: true },
@@ -293,8 +295,10 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Automatizaciones', ruta: '/admin/clientes/automatizaciones' },
       { nombre: 'Comunicación a clientes', ruta: '/admin/clientes/comunicacion' },
       { nombre: 'Duplicados', ruta: '/admin/clientes/duplicados' },
+      { nombre: 'NORA (asistente)', ruta: '/admin/clientes/asistente' },
     ],
     quickActions: [
+      { id: 'nora-asistente-clientes', nombre: 'Pedirle a NORA', icono: 'Sparkles', destino: '/admin/clientes/asistente', modulo: 'clientes', accion: 'ver', primary: true },
       { id: 'cliente-nuevo', nombre: 'Nuevo cliente', icono: 'Users', destino: '/admin/clientes/nuevo', modulo: 'clientes', accion: 'crear', primary: true },
       { id: 'cliente-campania', nombre: 'Campaña a clientes', icono: 'Megaphone', destino: '/admin/clientes/comunicacion', modulo: 'clientes', accion: 'crear', primary: true },
       { id: 'cliente-segmentos', nombre: 'Segmentos', icono: 'PieChart', destino: '/admin/clientes/segmentos', modulo: 'clientes', accion: 'ver' },
@@ -318,8 +322,10 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Rendimiento', ruta: '/admin/ofertas/rendimiento' },
       { nombre: 'Para ofrecer', ruta: '/admin/ofertas/panel' },
       { nombre: 'Validación de tickets', ruta: '/admin/ia/tickets' },
+      { nombre: 'NORA (asistente)', ruta: '/admin/ofertas/asistente' },
     ],
     quickActions: [
+      { id: 'nora-asistente-ofertas', nombre: 'Pedirle a NORA', icono: 'Sparkles', destino: '/admin/ofertas/asistente', modulo: 'ofertas', accion: 'ver', primary: true },
       { id: 'oferta-nueva', nombre: 'Nueva oferta', icono: 'Tag', destino: '/admin/ofertas', modulo: 'ofertas', accion: 'crear', primary: true },
       { id: 'oferta-calendario', nombre: 'Calendario de ofertas', icono: 'CalendarDays', destino: '/admin/ofertas/calendario', modulo: 'ofertas', accion: 'ver', primary: true },
       { id: 'oferta-propuestas', nombre: 'Propuestas de NORA', icono: 'Sparkles', destino: '/admin/ofertas/propuestas', modulo: 'ofertas', accion: 'ver' },
