@@ -14,6 +14,9 @@ import { HERRAMIENTAS_CLIENTES } from './clientes'
 import { HERRAMIENTAS_OFERTAS } from './ofertas'
 import { HERRAMIENTAS_COMUNICACION } from './comunicacion'
 import { HERRAMIENTAS_PEDIDOS } from './pedidos'
+import { HERRAMIENTAS_PERSONAS } from './personas'
+import { HERRAMIENTAS_CENTRO_DATOS } from './centro_datos'
+import { HERRAMIENTAS_MISSION_CONTROL } from './mission_control'
 import { matchOpciones, type Herramienta, type NoraCtx, type Opcion, type Valores } from './tipos'
 
 export * from './tipos'
@@ -27,6 +30,9 @@ export const TODAS_HERRAMIENTAS: Herramienta[] = [
   ...HERRAMIENTAS_OFERTAS,
   ...HERRAMIENTAS_COMUNICACION,
   ...HERRAMIENTAS_PEDIDOS,
+  ...HERRAMIENTAS_PERSONAS,
+  ...HERRAMIENTAS_CENTRO_DATOS,
+  ...HERRAMIENTAS_MISSION_CONTROL,
 ]
 
 /**

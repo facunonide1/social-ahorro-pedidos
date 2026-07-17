@@ -348,8 +348,10 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Mi equipo', ruta: '/admin/mi-equipo' },
       { nombre: 'Ranking', ruta: '/admin/ranking' },
       { nombre: 'Objetivos', ruta: '/admin/objetivos' },
+      { nombre: 'NORA (asistente)', ruta: '/admin/rrhh/asistente' },
     ],
     quickActions: [
+      { id: 'nora-asistente-personas', nombre: 'Pedirle a NORA', icono: 'Sparkles', destino: '/admin/rrhh/asistente', modulo: 'rrhh', accion: 'ver', primary: true },
       { id: 'empleado-nuevo', nombre: 'Nuevo empleado', icono: 'UserCheck', destino: '/admin/rrhh/empleados/nuevo', modulo: 'rrhh', accion: 'crear', primary: true },
       { id: 'mi-equipo', nombre: 'Mi equipo', icono: 'UsersRound', destino: '/admin/mi-equipo', modulo: 'rrhh', accion: 'ver', primary: true },
       { id: 'ranking', nombre: 'Ranking', icono: 'Trophy', destino: '/admin/ranking', modulo: 'rrhh', accion: 'ver', primary: true },
@@ -374,6 +376,7 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Perfiles', ruta: '/admin/centro-datos/perfiles' },
       { nombre: 'Historial', ruta: '/admin/centro-datos/historial' },
       { nombre: 'Sin matchear', ruta: '/admin/centro-datos/sin-matchear' },
+      { nombre: 'NORA (asistente)', ruta: '/admin/centro-datos/asistente' },
     ],
     badge: async (sb, _u, rol) => {
       if (!['super_admin', 'gerente', 'auditor', 'administrativo'].includes(rol)) return null
@@ -381,6 +384,7 @@ export const SUBAPPS: SubAppManifest[] = [
       return n > 0 ? { count: n, severidad: 'info' } : null
     },
     quickActions: [
+      { id: 'nora-asistente-centro-datos', nombre: 'Pedirle a NORA', icono: 'Sparkles', destino: '/admin/centro-datos/asistente', modulo: 'centro_datos', accion: 'ver', primary: true },
       { id: 'importar', nombre: 'Importar archivo', icono: 'Upload', destino: '/admin/centro-datos/importar', modulo: 'centro_datos', accion: 'crear', primary: true, children: [
         { id: 'import-stock', nombre: 'Matutino: stock / precios', icono: 'PackagePlus', destino: '/admin/centro-datos/importar?tipo=productos', modulo: 'centro_datos', accion: 'crear' },
         { id: 'import-ventas', nombre: 'Nocturno: ventas', icono: 'ShoppingBag', destino: '/admin/centro-datos/importar?tipo=ventas', modulo: 'centro_datos', accion: 'crear' },
@@ -482,6 +486,7 @@ export const SUBAPPS: SubAppManifest[] = [
 
 // ───────────────────────── Acciones globales (siempre en "+" nivel 1) ─────────────────────────
 export const ACCIONES_GLOBALES: QuickAction[] = [
+  { id: 'g-nora-asistente', nombre: 'Pedirle a NORA', icono: 'Sparkles', destino: '/admin/asistente', primary: true },
   { id: 'g-tarea', nombre: 'Crear tarea', icono: 'ListTodo', destino: '/admin/tareas', modulo: 'tareas', accion: 'crear', primary: true },
   { id: 'g-mensaje', nombre: 'Mandar mensaje', icono: 'MessageSquare', destino: '/admin/comunicacion', modulo: 'comunicacion', accion: 'crear', primary: true },
   { id: 'g-demanda', nombre: 'Me pidieron y no había', icono: 'PackageX', destino: '#', primary: true, proximamente: true },
