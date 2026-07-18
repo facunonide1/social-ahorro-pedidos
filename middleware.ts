@@ -43,6 +43,8 @@ export async function middleware(request: NextRequest) {
   const isApiSync = pathname.startsWith('/api/sync')
   const isWooWebhook = pathname.startsWith('/api/woo-webhook')
   const isBootstrap  = pathname === '/bootstrap' || pathname.startsWith('/api/admin/bootstrap')
+  // Brief público al community manager (OS-6b · O-07): se abre por token, sin login.
+  const isBriefPublico = pathname.startsWith('/brief/') || pathname === '/api/ofertas/brief'
   const isLogin = pathname === '/login'
 
   // Copia las cookies ya seteadas por supabase al redirect
@@ -55,7 +57,7 @@ export async function middleware(request: NextRequest) {
     return res
   }
 
-  if (isApiSync || isWooWebhook || isBootstrap) return supabaseResponse
+  if (isApiSync || isWooWebhook || isBootstrap || isBriefPublico) return supabaseResponse
   if (isLogin) {
     // Si hay user pero la URL trae ?error=..., permito mostrar login
     // (ej: el server redirigió acá por "sin_permiso" y el form se va a
