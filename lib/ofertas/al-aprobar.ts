@@ -6,6 +6,7 @@
  * lectura del equipo, y pasa la oferta a activa/aprobada. Nada se dispara antes
  * de la aprobación. Idempotente por estado (no re-dispara si ya está activa).
  */
+import { sucursalesDeOferta } from './comun'
 
 type Adm = any
 
@@ -23,8 +24,10 @@ export async function aprobarOferta(adm: Adm, ofertaId: string, aprobadorId: str
 
   const hoy = new Date().toISOString().slice(0, 10)
   const canales: string[] = oferta.canales ?? []
+  // Solo las sucursales participantes (O-03); si no declara, todas las activas.
+  const sucIds = await sucursalesDeOferta(adm, oferta)
   const [{ data: sucs }, { data: empleados }] = await Promise.all([
-    adm.from('sucursales').select('id, nombre').eq('activa', true),
+    adm.from('sucursales').select('id, nombre').in('id', sucIds.length ? sucIds : ['00000000-0000-0000-0000-000000000000']),
     adm.from('users_admin').select('id').eq('activo', true),
   ])
 
@@ -92,12 +95,22 @@ export async function aprobarOferta(adm: Adm, ofertaId: string, aprobadorId: str
     })))
   }
 
-  // 4) snapshot v1 + estado
+  // 4) snapshot v1 + snapshot de precio base al aprobar (candado 2) + estado
   await adm.from('ofertas_versiones').insert({ oferta_id: oferta.id, version: oferta.version ?? 1, snapshot: oferta, cambiado_por: aprobadorId })
+  let preciosBase: Record<string, number> = {}
+  try {
+    const { data: its } = await adm.from('oferta_items').select('producto_id').eq('oferta_id', oferta.id)
+    const pids = ((its ?? []) as any[]).map((i) => i.producto_id).filter(Boolean)
+    if (pids.length) {
+      const { data: prods } = await adm.from('productos_catalogo').select('id, precio_sugerido').in('id', pids)
+      for (const p of (prods ?? []) as any[]) if (p.precio_sugerido != null) preciosBase[p.id] = Number(p.precio_sugerido)
+    }
+  } catch { preciosBase = {} }
   const futura = oferta.vigencia_tipo === 'con_fecha' && oferta.fecha_inicio && oferta.fecha_inicio > hoy
   await adm.from('ofertas').update({
     estado: futura ? 'aprobada' : 'activa', aprobada_por: aprobadorId, aprobada_at: new Date().toISOString(),
-    publicada_cuponera: !!cuponeraRef && !cuponeraRef.pendiente, cuponera_ref: cuponeraRef, updated_at: new Date().toISOString(),
+    publicada_cuponera: !!cuponeraRef && !cuponeraRef.pendiente, cuponera_ref: cuponeraRef,
+    precios_base_aprob: preciosBase, updated_at: new Date().toISOString(),
   }).eq('id', oferta.id)
 
   return { ok: true, tareas: tareasCreadas, confirmaciones: empleados?.length ?? 0, cuponera: cuponeraRef }

@@ -8,22 +8,28 @@ import { AccionesSubApp } from '@/components/os/acciones-subapp'
 import { AccesoCentroDatos } from '@/components/centro-datos/acceso-centro-datos'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { NoraCard } from '@/components/nora/nora-card'
-import { OfertasClient, type OfertaRow, type ProdLite, type CampLite } from './ofertas-client'
+import { createAdminClient } from '@/lib/supabase/server'
+import { finalizarVencidas } from '@/lib/ofertas/al-finalizar'
+import { OfertasClient, type OfertaRow, type ProdLite, type CampLite, type SucLite, type Prefill } from './ofertas-client'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Ofertas' }
 
 const ACTIVAS = ['aprobada', 'activa']
 
-export default async function OfertasPage() {
+export default async function OfertasPage({ searchParams }: { searchParams: { sku?: string; desc?: string } }) {
   const profile = await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'auditor'] })
   const sb = createClient()
 
-  const [{ data: ofertas }, { data: confs }, { data: prods }, { data: camps }] = await Promise.all([
+  // Lazy-check Hobby-safe: finaliza ofertas cuya fecha_fin ya pasó (dispara el cierre).
+  try { await finalizarVencidas(createAdminClient(), profile.id) } catch { /* no bloquea la carga */ }
+
+  const [{ data: ofertas }, { data: confs }, { data: prods }, { data: camps }, { data: sucs }] = await Promise.all([
     sb.from('ofertas').select('id, codigo, nombre, tipo, valor, productos_ids, rubro, canales, vigencia_tipo, fecha_inicio, fecha_fin, origen, estado, propuesta_por, publicada_cuponera, version, metricas, created_at').order('created_at', { ascending: false }).limit(1000),
     sb.from('ofertas_confirmaciones').select('oferta_id, version_confirmada'),
-    sb.from('productos_catalogo').select('id, sku, nombre, precio_sugerido, precio_costo_promedio').eq('activo', true).order('nombre').limit(5000),
+    sb.from('productos_catalogo').select('id, sku, nombre, codigo_barras, precio_sugerido, precio_costo_promedio').eq('activo', true).order('nombre').limit(5000),
     sb.from('campanias').select('id, nombre, estado').order('created_at', { ascending: false }).limit(200),
+    sb.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
   ])
 
   const rows = (ofertas ?? []) as any[]
@@ -42,6 +48,17 @@ export default async function OfertasPage() {
     vigenciaTipo: o.vigencia_tipo, fechaInicio: o.fecha_inicio, fechaFin: o.fecha_fin, origen: o.origen,
     estado: o.estado, propuestaPor: o.propuesta_por, publicadaCuponera: o.publicada_cuponera,
   }))
+
+  const prodLite: ProdLite[] = ((prods ?? []) as any[]).map((p) => ({ id: p.id, sku: p.sku, nombre: p.nombre, precio: Number(p.precio_sugerido ?? 0), costo: Number(p.precio_costo_promedio ?? 0), codigo_barras: p.codigo_barras }))
+  const sucLite: SucLite[] = ((sucs ?? []) as any[]).map((s) => ({ id: s.id, nombre: s.nombre }))
+
+  // Prefill desde el atajo de Vencimientos: ?sku=&desc= → abre CrearOferta prellenada (O-01/§5).
+  let prefill: Prefill = null
+  const skuQ = (searchParams?.sku ?? '').trim().toLowerCase()
+  if (skuQ) {
+    const p = prodLite.find((x) => (x.sku ?? '').toLowerCase() === skuQ)
+    if (p) prefill = { producto: p, desc: searchParams?.desc ? Number(searchParams.desc) : null }
+  }
 
   return (
     <>
@@ -82,8 +99,9 @@ export default async function OfertasPage() {
 
         <OfertasClient
           ofertas={ofertaRows} rol={profile.rol}
-          productos={((prods ?? []) as any[]).map((p) => ({ id: p.id, sku: p.sku, nombre: p.nombre, precio: Number(p.precio_sugerido ?? 0), costo: Number(p.precio_costo_promedio ?? 0) })) as ProdLite[]}
+          productos={prodLite}
           campanias={((camps ?? []) as any[]).map((c) => ({ id: c.id, nombre: c.nombre, estado: c.estado })) as CampLite[]}
+          sucursales={sucLite} prefill={prefill}
         />
       </div>
     </>

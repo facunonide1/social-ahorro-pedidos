@@ -88,6 +88,13 @@ async function run(userId: string | null) {
     const { data, error } = await adm.from('ofertas').insert(nuevas.map((n) => ({ ...n, created_by: userId }))).select('id')
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
     creadas = data?.length ?? 0
+    // Items por producto (O-02): PostgREST devuelve las filas en orden de inserción.
+    const itemRows: any[] = []
+    ;((data ?? []) as any[]).forEach((row, i) => {
+      const n = nuevas[i]; if (!n) return
+      for (const pid of (n.productos_ids ?? [])) itemRows.push({ oferta_id: row.id, producto_id: pid, precio_oferta: n.tipo === 'precio_fijo' && n.valor != null ? n.valor : null })
+    })
+    if (itemRows.length) await adm.from('oferta_items').insert(itemRows)
   }
   return NextResponse.json({ ok: true, propuestas: creadas })
 }

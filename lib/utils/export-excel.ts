@@ -24,6 +24,19 @@ export function exportExcel(
   XLSX.writeFile(wb, file)
 }
 
+/** Exporta filas a un .csv real (browser, dispara descarga). */
+export function exportCsv(nombre: string, filas: Record<string, unknown>[]) {
+  const ws = XLSX.utils.json_to_sheet(filas)
+  const csv = XLSX.utils.sheet_to_csv(ws)
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = nombre.endsWith('.csv') ? nombre : `${nombre}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 /** Parsea un File (xlsx/csv) a matriz de filas (array de arrays). Browser. */
 export async function parseSpreadsheet(file: File): Promise<{ headers: string[]; rows: string[][] }> {
   const buf = await file.arrayBuffer()
