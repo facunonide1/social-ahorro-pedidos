@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Tag, Clock, CheckSquare, TrendingUp, ArrowRight, CalendarDays, Sparkles, BarChart3, Users } from 'lucide-react'
+import { Tag, Clock, CheckSquare, TrendingUp, ArrowRight, CalendarDays, Sparkles, BarChart3, Users, Megaphone } from 'lucide-react'
 
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
@@ -46,7 +46,7 @@ export default async function OfertasPage({ searchParams }: { searchParams: { sk
     id: o.id, codigo: o.codigo, nombre: o.nombre, tipo: o.tipo, valor: o.valor != null ? Number(o.valor) : null,
     nProductos: (o.productos_ids ?? []).length, rubro: o.rubro, canales: o.canales ?? [],
     vigenciaTipo: o.vigencia_tipo, fechaInicio: o.fecha_inicio, fechaFin: o.fecha_fin, origen: o.origen,
-    estado: o.estado, propuestaPor: o.propuesta_por, publicadaCuponera: o.publicada_cuponera,
+    estado: o.estado, propuestaPor: o.propuesta_por, publicadaCuponera: o.publicada_cuponera, etiqueta: o.metricas?.etiqueta ?? null,
   }))
 
   const prodLite: ProdLite[] = ((prods ?? []) as any[]).map((p) => ({ id: p.id, sku: p.sku, nombre: p.nombre, precio: Number(p.precio_sugerido ?? 0), costo: Number(p.precio_costo_promedio ?? 0), codigo_barras: p.codigo_barras }))
@@ -88,6 +88,7 @@ export default async function OfertasPage({ searchParams }: { searchParams: { sk
               { l: 'Propuestas de NORA', h: '/admin/ofertas/propuestas', i: Sparkles },
               { l: 'Rendimiento', h: '/admin/ofertas/rendimiento', i: BarChart3 },
               { l: 'Panel del equipo', h: '/admin/ofertas/panel', i: Users },
+              { l: 'Briefs (CM)', h: '/admin/ofertas/briefs', i: Megaphone },
             ].map((a) => (
               <Link key={a.h} href={a.h} className="group flex flex-col gap-2 rounded-xl border border-border bg-card p-4 transition-all hover:scale-[1.02] hover:border-primary/50 hover:shadow-md">
                 <div className="flex items-center justify-between"><a.i className="size-5 text-primary" /><ArrowRight className="size-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" /></div>

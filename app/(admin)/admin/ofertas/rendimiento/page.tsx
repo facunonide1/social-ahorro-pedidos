@@ -1,5 +1,6 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { medirFinalizadasSinMetricas, ETIQUETA_LABEL } from '@/lib/ofertas/medir'
 import { PageHeader } from '@/components/shared/page-header'
 import { NoraCard } from '@/components/nora/nora-card'
 import { Badge } from '@/components/ui/badge'
@@ -10,9 +11,14 @@ import { cn } from '@/lib/utils'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Rendimiento de ofertas' }
 
+const ETIQUETA_VARIANT: Record<string, any> = { vendio: 'success', regalo_margen: 'destructive', neutra: 'outline' }
+
 export default async function RendimientoPage() {
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'administrativo', 'auditor'] })
   const sb = createClient()
+
+  // Lazy backfill: mide las finalizadas cuyos nocturnos llegaron después.
+  try { await medirFinalizadasSinMetricas(createAdminClient()) } catch { /* no bloquea */ }
 
   const [{ data: ofertas }, { data: aprend }] = await Promise.all([
     sb.from('ofertas').select('id, codigo, nombre, tipo, estado, metricas').eq('estado', 'finalizada').limit(500),
@@ -22,7 +28,8 @@ export default async function RendimientoPage() {
   const rows: RendRow[] = ((ofertas ?? []) as any[]).map((o) => ({
     id: o.id, codigo: o.codigo, nombre: o.nombre, tipo: o.tipo,
     uplift: Number(o.metricas?.uplift_pct ?? 0), unidades: Number(o.metricas?.unidades ?? 0),
-    rentabilidad: Number(o.metricas?.rentabilidad ?? 0), mejorSucursal: o.metricas?.mejor_sucursal ?? '—',
+    rentabilidad: Number(o.metricas?.margen_entregado_estimado ?? o.metricas?.rentabilidad ?? 0), mejorSucursal: o.metricas?.mejor_sucursal ?? '—',
+    etiqueta: o.metricas?.etiqueta ?? 'neutra',
   })).sort((a, b) => b.uplift - a.uplift)
 
   const aprendizaje = (aprend ?? []) as any[]
@@ -46,16 +53,17 @@ export default async function RendimientoPage() {
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full text-sm">
-                <thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">Oferta</th><th className="px-3 py-2">Tipo</th><th className="px-3 py-2 text-right">Uplift</th><th className="px-3 py-2 text-right">Unidades</th><th className="px-3 py-2 text-right">Rentab. est.</th><th className="px-3 py-2">Mejor sucursal</th></tr></thead>
+                <thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">Oferta</th><th className="px-3 py-2">Tipo</th><th className="px-3 py-2 text-right">Uplift</th><th className="px-3 py-2 text-right">Unidades</th><th className="px-3 py-2 text-right">Margen entreg.</th><th className="px-3 py-2">Mejor sucursal</th><th className="px-3 py-2">Etiqueta</th></tr></thead>
                 <tbody>
                   {rows.map((r) => (
                     <tr key={r.id} className="border-t border-border">
                       <td className="px-3 py-1.5 font-medium">{r.nombre}</td>
                       <td className="px-3 py-1.5 text-xs">{TIPO_LABEL[r.tipo] ?? r.tipo}</td>
-                      <td className={cn('px-3 py-1.5 text-right tabular-nums font-medium', r.uplift > 0 ? 'text-emerald-600 dark:text-emerald-400' : '')}>+{r.uplift}%</td>
+                      <td className={cn('px-3 py-1.5 text-right tabular-nums font-medium', r.uplift > 0 ? 'text-emerald-600 dark:text-emerald-400' : r.uplift < 0 ? 'text-rose-600 dark:text-rose-400' : '')}>{r.uplift > 0 ? '+' : ''}{r.uplift}%</td>
                       <td className="px-3 py-1.5 text-right tabular-nums">{r.unidades}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums">$ {r.rentabilidad.toLocaleString('es-AR')}</td>
                       <td className="px-3 py-1.5 text-xs text-muted-foreground">{r.mejorSucursal}</td>
+                      <td className="px-3 py-1.5"><Badge variant={ETIQUETA_VARIANT[r.etiqueta] ?? 'outline'} className="font-normal">{ETIQUETA_LABEL[r.etiqueta] ?? r.etiqueta}</Badge></td>
                     </tr>
                   ))}
                 </tbody>

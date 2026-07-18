@@ -21,9 +21,11 @@ export type SucLite = { id: string; nombre: string }
 export type OfertaRow = {
   id: string; codigo: string | null; nombre: string; tipo: string; valor: number | null; nProductos: number
   rubro: string | null; canales: string[]; vigenciaTipo: string; fechaInicio: string | null; fechaFin: string | null
-  origen: string; estado: string; propuestaPor: string; publicadaCuponera: boolean
+  origen: string; estado: string; propuestaPor: string; publicadaCuponera: boolean; etiqueta?: string | null
 }
 export type Prefill = { producto: ProdLite; desc: number | null } | null
+const ETIQUETA_LABEL: Record<string, string> = { vendio: 'Vendió', regalo_margen: 'Regaló margen', neutra: 'Neutra' }
+const ETIQUETA_VARIANT: Record<string, any> = { vendio: 'success', regalo_margen: 'destructive', neutra: 'outline' }
 
 export const TIPO_LABEL: Record<string, string> = {
   porcentaje_descuento: '% descuento', precio_fijo: 'Precio fijo', '2x1': '2x1', nxm: 'NxM', combo: 'Combo',
@@ -119,6 +121,7 @@ export function OfertasClient({ ofertas, rol, productos, campanias, sucursales, 
                 <Badge variant="outline" className="font-normal">{ORIGEN_LABEL[o.origen] ?? o.origen}</Badge>
                 {o.propuestaPor === 'nora' && <Badge variant="info" className="font-normal">NORA</Badge>}
                 {o.publicadaCuponera && <Badge variant="success" className="font-normal">cuponera</Badge>}
+                {o.estado === 'finalizada' && o.etiqueta && <Badge variant={ETIQUETA_VARIANT[o.etiqueta] ?? 'outline'} className="font-normal">{ETIQUETA_LABEL[o.etiqueta] ?? o.etiqueta}</Badge>}
               </div>
               <div className="text-xs text-muted-foreground">{o.nProductos} producto(s) · {o.canales.join(', ') || 'sin canal'} · {o.vigenciaTipo === 'con_fecha' ? `${o.fechaInicio ?? '?'}→${o.fechaFin ?? '?'}` : o.vigenciaTipo}</div>
               <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
@@ -144,7 +147,7 @@ export function OfertasClient({ ofertas, rol, productos, campanias, sucursales, 
 
 function CrearOferta({ productos, campanias, sucursales, prefill, onClose }: { productos: ProdLite[]; campanias: CampLite[]; sucursales: SucLite[]; prefill: Prefill; onClose: () => void }) {
   const router = useRouter()
-  const [f, setF] = useState({ nombre: prefill ? `Liquidación ${prefill.producto.nombre}` : '', tipo: 'porcentaje_descuento', valor: prefill?.desc != null ? String(prefill.desc) : '', nx: '', ny: '', rubro: 'farmacia', vigencia_tipo: 'con_fecha', fecha_inicio: '', fecha_fin: '', campania_id: '', limite_por_cliente: '', b2b: false })
+  const [f, setF] = useState({ nombre: prefill ? `Liquidación ${prefill.producto.nombre}` : '', tipo: 'porcentaje_descuento', valor: prefill?.desc != null ? String(prefill.desc) : '', nx: '', ny: '', rubro: 'farmacia', vigencia_tipo: 'con_fecha', fecha_inicio: '', fecha_fin: '', campania_id: '', limite_por_cliente: '', b2b: false, destacar_mostrador: false })
   const [canales, setCanales] = useState<string[]>(['cartel', 'cuponera'])
   const [sel, setSel] = useState<ProdLite[]>(prefill ? [prefill.producto] : [])
   const [sucSel, setSucSel] = useState<string[]>(sucursales.map((s) => s.id))
@@ -204,7 +207,7 @@ function CrearOferta({ productos, campanias, sucursales, prefill, onClose }: { p
           fecha_inicio: f.vigencia_tipo === 'con_fecha' ? (f.fecha_inicio || null) : null, fecha_fin: f.vigencia_tipo === 'con_fecha' ? (f.fecha_fin || null) : null,
           campania_id: f.campania_id || null, origen: 'liquidacion_propia', propuesta_por: 'usuario',
           origen_ref: prefill ? { motivo: 'por_vencer', desde: 'vencimientos' } : null,
-          limite_por_cliente: f.limite_por_cliente ? Number(f.limite_por_cliente) : null, b2b: f.b2b,
+          limite_por_cliente: f.limite_por_cliente ? Number(f.limite_por_cliente) : null, b2b: f.b2b, destacar_mostrador: f.destacar_mostrador,
         }),
       })
       const j = await r.json(); if (!r.ok) throw new Error(j?.error)
@@ -296,6 +299,7 @@ function CrearOferta({ productos, campanias, sucursales, prefill, onClose }: { p
             <Field label="Límite por cliente"><Input type="number" value={f.limite_por_cliente} onChange={(e) => set('limite_por_cliente', e.target.value)} placeholder="opcional" /></Field>
           </div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.b2b} onChange={(e) => set('b2b', e.target.checked)} className="size-4 accent-[hsl(var(--primary))]" /> Variante B2B (mayorista)</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.destacar_mostrador} onChange={(e) => set('destacar_mostrador', e.target.checked)} className="size-4 accent-[hsl(var(--primary))]" /> ⭐ Destacar en el mostrador matinal</label>
 
           <Button size="lg" disabled={busy} onClick={submit} className="mt-1">{busy ? 'Creando…' : 'Crear borrador'}</Button>
           <p className="text-[11px] text-muted-foreground">Se crea como borrador. Al aprobarse se disparan tareas en las sucursales participantes, se publica a los canales y se avisa al equipo.</p>

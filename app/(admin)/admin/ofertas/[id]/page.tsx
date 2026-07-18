@@ -24,6 +24,7 @@ export default async function OfertaDetallePage({ params }: { params: { id: stri
     adm.from('oferta_items').select('producto_id, precio_oferta').eq('oferta_id', params.id),
     listAdminUsersLite(adm, { soloActivos: true }),
   ])
+  const { data: brief } = await adm.from('ofertas_briefs').select('token, estado').eq('oferta_id', params.id).limit(1).maybeSingle<any>()
   const itemRows = (items ?? []) as any[]
   const pids = itemRows.map((i) => i.producto_id).filter(Boolean)
   const { data: prods } = pids.length
@@ -98,15 +99,24 @@ export default async function OfertaDetallePage({ params }: { params: { id: stri
             <Row k="Canales" v={(of.canales ?? []).join(', ') || '—'} />
             <Row k="Vigencia" v={of.vigencia_tipo === 'con_fecha' ? `${of.fecha_inicio ?? '?'} → ${of.fecha_fin ?? '?'}` : of.vigencia_tipo} />
             <Row k="Productos" v={((prods ?? []) as any[]).map((p) => p.nombre).join(', ') || '—'} />
-            <Row k="Cuponera" v={of.publicada_cuponera ? 'publicada' : 'no publicada'} />
+            <Row k="Cuponera" v={of.publicada_cuponera ? 'publicada ✓' : of.cuponera_ref?.pendiente ? `pendiente (${of.cuponera_ref.motivo ?? 'error'})` : 'no publicada'} />
+            <Row k="Push al Club" v={of.push_ref?.enviados != null ? `enviado a ${of.push_ref.enviados} cliente(s)` : of.push_ref?.pendiente ? `pendiente (${of.push_ref.motivo ?? 'config'})` : '—'} />
+            {of.metricas?.etiqueta && <Row k="Resultado" v={`${of.metricas.etiqueta === 'vendio' ? 'Vendió' : of.metricas.etiqueta === 'regalo_margen' ? 'Regaló margen' : 'Neutra'} · uplift ${of.metricas.uplift_pct ?? 0}%`} />}
             {of.limite_por_cliente && <Row k="Límite por cliente" v={String(of.limite_por_cliente)} />}
             {of.justificacion && <Row k="Justificación" v={of.justificacion} />}
           </div>
+          {brief?.token && (
+            <div className="mt-3 flex items-center gap-2 rounded-md bg-primary/5 px-3 py-2 text-xs">
+              <span className="text-muted-foreground">Brief CM ({brief.estado}):</span>
+              <a href={`/brief/${brief.token}`} target="_blank" rel="noreferrer" className="text-primary underline">abrir link público →</a>
+            </div>
+          )}
         </section>
 
         <OfertaGestion
           ofertaId={of.id} estado={of.estado} version={of.version ?? 1}
           rol={profile.rol}
+          cuponeraPendiente={!!of.cuponera_ref?.pendiente}
           tareas={tareaRows} cartel={{ ok: cartelOk, total: cartelTotal }}
           confirmacion={{ ok: confirmadas, total: confList.length, faltan }}
         />

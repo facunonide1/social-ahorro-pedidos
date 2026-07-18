@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils'
 export type TareaLite = { id: string; titulo: string; estado: string; tipo: string }
 export type ConfRow = { ok: number; total: number; faltan: string[] }
 
-export function OfertaGestion({ ofertaId, estado, version, rol, tareas, cartel, confirmacion }: { ofertaId: string; estado: string; version: number; rol: string; tareas: TareaLite[]; cartel: { ok: number; total: number }; confirmacion: ConfRow }) {
+export function OfertaGestion({ ofertaId, estado, version, rol, cuponeraPendiente, tareas, cartel, confirmacion }: { ofertaId: string; estado: string; version: number; rol: string; cuponeraPendiente?: boolean; tareas: TareaLite[]; cartel: { ok: number; total: number }; confirmacion: ConfRow }) {
   const router = useRouter()
   const gestor = ['super_admin', 'gerente', 'administrativo'].includes(rol)
   const [busy, setBusy] = useState(false)
@@ -38,6 +38,7 @@ export function OfertaGestion({ ofertaId, estado, version, rol, tareas, cartel, 
           {estado === 'pausada' && <Button size="sm" variant="outline" disabled={busy} onClick={() => accion({ accion: 'estado', id: ofertaId, estado: 'activa' }, 'Oferta reactivada.')}><Play className="size-4" /> Reactivar</Button>}
           {['activa', 'pausada', 'aprobada'].includes(estado) && <Button size="sm" variant="ghost" disabled={busy} onClick={() => { if (confirm('¿Finalizar la oferta? Dispara descartelado, despublicación y reversión SIFACO.')) accion({ accion: 'finalizar', id: ofertaId }, 'Finalizada — ciclo de cierre disparado.') }}><Square className="size-4" /> Finalizar</Button>}
           {['activa', 'pausada', 'aprobada'].includes(estado) && <Button size="sm" variant="ghost" className="text-rose-600" disabled={busy} onClick={() => { const m = prompt('Motivo de la cancelación (obligatorio):'); if (m && m.trim().length >= 3) accion({ accion: 'cancelar', id: ofertaId, motivo: m.trim() }, 'Oferta cancelada.'); else if (m != null) toast.error('El motivo es obligatorio.') }}><X className="size-4" /> Cancelar</Button>}
+          {cuponeraPendiente && <Button size="sm" variant="outline" disabled={busy} onClick={() => accion({ accion: 'reintentar_cuponera', id: ofertaId }, 'Cupón republicado.')}><Play className="size-4" /> Reintentar cuponera</Button>}
         </div>
       )}
 

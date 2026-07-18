@@ -6,18 +6,12 @@
  * métricas (stub — la medición real es OS-6b). Idempotente por estado.
  */
 import { sucursalesDeOferta, filasSifaco } from './comun'
+import { cerrarMetricasOferta } from './medir'
 
 type Adm = any
 
 function tareaCodigo(prefix: string) {
   return `${prefix}-${Date.now().toString(36).slice(-5).toUpperCase()}`
-}
-
-/** Hook de cierre de métricas — punto de extensión para OS-6b (hoy no mide). */
-async function cerrarMetricasOferta(_adm: Adm, _oferta: any) {
-  // OS-6b: cruzar ventas del SKU antes/durante/después con nocturnos y escribir
-  // ofertas.metricas + ofertas_aprendizaje. Acá solo dejamos el punto listo.
-  return
 }
 
 export async function finalizarOferta(adm: Adm, ofertaId: string, opts: { userId: string | null; motivo?: string | null }) {

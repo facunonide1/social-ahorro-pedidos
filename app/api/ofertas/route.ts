@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { AdminRole } from '@/lib/types/admin'
 import { puede, type PermisosCustom } from '@/lib/types/permisos'
-import { aprobarOferta } from '@/lib/ofertas/al-aprobar'
+import { aprobarOferta, mapeoCuponera } from '@/lib/ofertas/al-aprobar'
 import { finalizarOferta } from '@/lib/ofertas/al-finalizar'
 import { conflictosOferta, sucursalesActivasIds, filasSifaco } from '@/lib/ofertas/comun'
 
@@ -28,7 +28,7 @@ async function gate() {
   return { ok: true as const, userId: user.id, rol: me.rol, permisosCustom: me.permisos_custom ?? {} }
 }
 
-const CAMPOS = ['campania_id', 'nombre', 'tipo', 'valor', 'nx', 'ny', 'combo_detalle', 'tramos', 'productos_ids', 'sucursales_ids', 'rubro', 'canales', 'vigencia_tipo', 'fecha_inicio', 'fecha_fin', 'origen', 'origen_ref', 'limite_unidades_total', 'limite_por_cliente', 'tope_inversion', 'b2b', 'propuesta_por', 'justificacion'] as const
+const CAMPOS = ['campania_id', 'nombre', 'tipo', 'valor', 'nx', 'ny', 'combo_detalle', 'tramos', 'productos_ids', 'sucursales_ids', 'rubro', 'canales', 'vigencia_tipo', 'fecha_inicio', 'fecha_fin', 'origen', 'origen_ref', 'limite_unidades_total', 'limite_por_cliente', 'tope_inversion', 'b2b', 'propuesta_por', 'justificacion', 'destacar_mostrador'] as const
 
 export async function POST(req: NextRequest) {
   const g = await gate()
@@ -165,6 +165,28 @@ export async function POST(req: NextRequest) {
     await adm.from('ofertas_versiones').insert({ oferta_id: of.id, version: nuevaVersion, snapshot: { ...of, ...patch }, cambiado_por: g.userId })
     await adm.from('ofertas').update(patch).eq('id', of.id)
     return NextResponse.json({ ok: true, version: nuevaVersion })
+  }
+
+  // ---- reintentar publicación en cuponera (E) ----
+  if (accion === 'reintentar_cuponera') {
+    const { data: of } = await adm.from('ofertas').select('*').eq('id', b.id).maybeSingle()
+    if (!of) return NextResponse.json({ error: 'oferta inexistente' }, { status: 404 })
+    try {
+      const m = mapeoCuponera(of)
+      const { data: off, error } = await adm.from('offers').insert({
+        name: of.nombre, description: m.description, discount_type: m.discount_type, discount_value: m.discount_value,
+        starts_at: of.fecha_inicio ? `${of.fecha_inicio}T00:00:00-03:00` : new Date().toISOString(),
+        expires_at: of.fecha_fin ? `${of.fecha_fin}T23:59:59-03:00` : null, status: 'active', promotion_type: m.promotion_type, created_by: g.userId,
+      }).select('id').single()
+      if (error) throw new Error(error.message)
+      const ref = { offers_id: off.id, publicado_at: new Date().toISOString() }
+      await adm.from('ofertas').update({ publicada_cuponera: true, cuponera_ref: ref }).eq('id', of.id)
+      return NextResponse.json({ ok: true, cuponera_ref: ref })
+    } catch (e: any) {
+      const ref = { pendiente: true, motivo: e?.message ?? 'No se pudo publicar' }
+      await adm.from('ofertas').update({ cuponera_ref: ref }).eq('id', of.id)
+      return NextResponse.json({ error: ref.motivo }, { status: 400 })
+    }
   }
 
   // ---- export SIFACO de aplicación (una oferta) ----

@@ -7,8 +7,24 @@
  * de la aprobación. Idempotente por estado (no re-dispara si ya está activa).
  */
 import { sucursalesDeOferta } from './comun'
+import { enviarPushOferta } from './push'
+import { crearBriefOferta } from './brief'
 
 type Adm = any
+
+/** Mapeo digno de tipos de oferta al esquema externo `offers` (cuponera). */
+export function mapeoCuponera(oferta: any): { discount_type: string; discount_value: number | null; promotion_type: string; description: string } {
+  const t = oferta.tipo
+  const desc = (s: string) => oferta.justificacion ?? s
+  if (t === 'porcentaje_descuento') return { discount_type: 'percentage', discount_value: oferta.valor ?? null, promotion_type: t, description: desc(`${oferta.valor ?? 0}% de descuento`) }
+  if (t === 'precio_fijo') return { discount_type: 'fixed', discount_value: oferta.valor ?? null, promotion_type: t, description: desc(`Precio especial`) }
+  if (t === '2x1') return { discount_type: 'bogo', discount_value: null, promotion_type: t, description: desc('Llevá 2, pagá 1') }
+  if (t === 'nxm') return { discount_type: 'bulk', discount_value: null, promotion_type: t, description: desc(`${oferta.nx ?? 0}x${oferta.ny ?? 0}`) }
+  if (t === 'segunda_unidad_pct') return { discount_type: 'second_unit', discount_value: oferta.valor ?? null, promotion_type: t, description: desc(`2ª unidad al ${oferta.valor ?? 0}%`) }
+  if (t === 'combo' || t === 'combo_dinamico') return { discount_type: 'combo', discount_value: oferta.valor ?? null, promotion_type: t, description: desc('Combo promocional') }
+  if (t === 'descuento_por_cantidad') return { discount_type: 'bulk', discount_value: oferta.valor ?? null, promotion_type: t, description: desc('Descuento por cantidad') }
+  return { discount_type: 'promo', discount_value: oferta.valor ?? null, promotion_type: t, description: desc('Oferta especial') }
+}
 
 function tareaCodigo(prefix: string) {
   // sin colisión: OFE + timestamp base36 + random-ish por índice
@@ -64,25 +80,32 @@ export async function aprobarOferta(adm: Adm, ofertaId: string, aprobadorId: str
     if (!error) tareasCreadas = tareas.length
   }
 
-  // 2) Publicar a cuponera (best-effort, no rompe el flujo)
+  // 2) Publicar a cuponera (best-effort, mapeo digno por tipo, estado visible)
   let cuponeraRef: any = null
+  let pushRef: any = null
   if (canales.includes('cuponera')) {
     try {
-      const discountType = oferta.tipo === 'porcentaje_descuento' ? 'percentage' : oferta.tipo === 'precio_fijo' ? 'fixed' : 'promo'
-      const { data: off } = await adm.from('offers').insert({
+      const m = mapeoCuponera(oferta)
+      const { data: off, error } = await adm.from('offers').insert({
         name: oferta.nombre,
-        description: oferta.justificacion ?? null,
-        discount_type: discountType,
-        discount_value: oferta.valor ?? null,
+        description: m.description,
+        discount_type: m.discount_type,
+        discount_value: m.discount_value,
         starts_at: oferta.fecha_inicio ? `${oferta.fecha_inicio}T00:00:00-03:00` : new Date().toISOString(),
         expires_at: oferta.fecha_fin ? `${oferta.fecha_fin}T23:59:59-03:00` : null,
         status: 'active',
-        promotion_type: oferta.tipo,
+        promotion_type: m.promotion_type,
         created_by: aprobadorId,
       }).select('id').single()
+      if (error) throw new Error(error.message)
       if (off) cuponeraRef = { offers_id: off.id, publicado_at: new Date().toISOString() }
-    } catch { cuponeraRef = { pendiente: true, motivo: 'No se pudo insertar en cuponera (formato/estado).' } }
+    } catch (e: any) { cuponeraRef = { pendiente: true, motivo: e?.message ?? 'No se pudo insertar en cuponera.' } }
+    // Push al Club (O-06): degradación visible si no se pudo.
+    pushRef = await enviarPushOferta(adm, { ...oferta, cuponera_ref: cuponeraRef })
   }
+
+  // 2b) Brief al community manager si va a redes (O-07).
+  if (canales.includes('web')) { try { await crearBriefOferta(adm, oferta, aprobadorId) } catch { /* best-effort */ } }
 
   // 3) Confirmaciones de lectura pendientes (una por empleado, versión actual)
   if (empleados?.length) {
@@ -109,7 +132,7 @@ export async function aprobarOferta(adm: Adm, ofertaId: string, aprobadorId: str
   const futura = oferta.vigencia_tipo === 'con_fecha' && oferta.fecha_inicio && oferta.fecha_inicio > hoy
   await adm.from('ofertas').update({
     estado: futura ? 'aprobada' : 'activa', aprobada_por: aprobadorId, aprobada_at: new Date().toISOString(),
-    publicada_cuponera: !!cuponeraRef && !cuponeraRef.pendiente, cuponera_ref: cuponeraRef,
+    publicada_cuponera: !!cuponeraRef && !cuponeraRef.pendiente, cuponera_ref: cuponeraRef, push_ref: pushRef,
     precios_base_aprob: preciosBase, updated_at: new Date().toISOString(),
   }).eq('id', oferta.id)
 

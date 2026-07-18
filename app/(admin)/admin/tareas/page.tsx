@@ -1,9 +1,10 @@
 import Link from 'next/link'
-import { Sparkles, ArrowRight } from 'lucide-react'
+import { Sparkles, ArrowRight, Tag } from 'lucide-react'
 
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { getSucursalActiva } from '@/lib/sucursal/server'
+import { contarOfertasHoy, entregarMostrador } from '@/lib/ofertas/mostrador'
 import { listAdminUsers } from '@/lib/admin-hub/users'
 import type { TipoTarea } from '@/lib/types/tareas'
 
@@ -74,6 +75,10 @@ export default async function TareasBandejaPage({
   // aplica el filtro de la sucursal activa del header (todas = sin filtro).
   const { sucursalId: sucActiva, esTodas: sucTodas } = getSucursalActiva()
   if (!sucTodas && sucActiva && (tab === 'todas' || tab === 'pool')) q = q.eq('sucursal_id', sucActiva)
+
+  // Mostrador matinal (OS-6b · O-08): entrega lazy + conteo para el chip.
+  let ofertasHoyN = 0
+  try { const adm = createAdminClient(); await entregarMostrador(adm); ofertasHoyN = await contarOfertasHoy(adm, sucActiva, sucTodas) } catch { /* no bloquea */ }
 
   const { data: rows, error } = tab === 'tablero' ? { data: [] as any[], error: null } : await q
 
@@ -151,6 +156,11 @@ export default async function TareasBandejaPage({
       />
 
       <div className="space-y-4 p-4 md:p-6">
+        {ofertasHoyN > 0 && (
+          <Link href="/admin/ofertas/panel" className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-400">
+            <Tag className="size-4" /> <span className="flex-1">Ofertas de hoy ({ofertasHoyN}) — sugerilas en el mostrador</span> <ArrowRight className="size-4" />
+          </Link>
+        )}
         <Link href="/admin/tareas/agenda" className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-primary hover:bg-primary/10">
           <Sparkles className="size-4" /> <span className="flex-1">NORA te arma la agenda del día (vencimientos, faltantes, descuadres)</span> <ArrowRight className="size-4" />
         </Link>
