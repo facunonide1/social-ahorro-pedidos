@@ -2,6 +2,7 @@ import { FileText, Ticket, Users, AlertTriangle, TrendingUp, Wallet, Scale, Land
 
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { getSucursalActiva } from '@/lib/sucursal/server'
+import { demandaAlertas } from '@/lib/compras/demanda-alertas'
 import { ROLES_TRANSVERSALES, ADMIN_ROLE_LABELS, type AdminRole } from '@/lib/types/admin'
 import { saludoHora } from '@/lib/utils/saludo'
 import { createAdminClient } from '@/lib/supabase/server'
@@ -158,6 +159,14 @@ async function getLoUrgente(rol: AdminRole, custom: PermisosCustom | null): Prom
     } catch { /* */ }
   }
   push(ve('ia'), na.count ?? 0, { icono: 'Sparkles', acento: '#A855F7', origen: 'NORA', texto: `${na.count} avisos de NORA sin revisar`, ruta: '/admin/nora/feed', severidad: 'info' })
+
+  // Radar de demanda: mismo pedido ≥3 veces en 30d (RADAR v0.50).
+  if (ve('compras')) {
+    try {
+      const dem = await demandaAlertas(adm, 30, 3, 1)
+      if (dem.length) push(true, 1, { icono: 'PackageX', acento: '#F59E0B', origen: 'Compras', texto: `Piden "${dem[0].texto}" y no lo tenemos — ${dem[0].veces} veces este mes`, ruta: '/admin/compras/demanda', severidad: 'warn' })
+    } catch { /* */ }
+  }
   return items
 }
 

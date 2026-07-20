@@ -1,8 +1,9 @@
 import Link from 'next/link'
-import { ShoppingCart, AlertTriangle, DollarSign, TrendingDown, Truck, FileText, PackageCheck, Undo2, Scale, Megaphone, ArrowRight } from 'lucide-react'
+import { ShoppingCart, AlertTriangle, DollarSign, TrendingDown, Truck, FileText, PackageCheck, Undo2, Scale, Megaphone, ArrowRight, PackageX } from 'lucide-react'
 
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { demandaAlertas } from '@/lib/compras/demanda-alertas'
 import { formatARS } from '@/lib/utils/format'
 import { PageHeader } from '@/components/shared/page-header'
 import { AccionesSubApp } from '@/components/os/acciones-subapp'
@@ -22,6 +23,7 @@ const ABIERTAS = ['borrador', 'enviada', 'confirmada', 'recibida_parcial']
 export default async function ComprasTablero({ searchParams }: { searchParams: { rubro?: string } }) {
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'auditor'] })
   const sb = createClient()
+  const demanda = await demandaAlertas(createAdminClient(), 30, 3)
   const rubro = parseRubro(searchParams.rubro)
   const { sucursalId, esTodas } = getSucursalActiva()
   const inicioMes = new Date().toISOString().slice(0, 7) + '-01'
@@ -62,6 +64,15 @@ export default async function ComprasTablero({ searchParams }: { searchParams: {
             ? <p>Hay <b>{faltantes}</b> faltantes reportados por las sucursales{rubro !== 'todos' ? ` en ${rubro}` : ''}. Cruzalos con el análisis de reposición de Operaciones y armá las órdenes. <Link href="/admin/compras/faltantes" className="text-primary hover:underline">Ver faltantes →</Link></p>
             : <p>Sin faltantes pendientes. Revisá la sugerencia de reposición de Operaciones para adelantarte a los quiebres.</p>}
         </NoraCard>
+
+        {demanda.length > 0 && (
+          <Link href="/admin/compras/demanda" className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/5 px-3 py-2 text-sm hover:border-rose-500/60">
+            <PackageX className="mt-0.5 size-4 shrink-0 text-rose-500" />
+            <span className="flex-1">
+              <b>Radar de demanda:</b> piden <b>{demanda[0].texto}</b> y no lo tenemos — {demanda[0].veces} veces este mes{demanda.length > 1 ? ` (+${demanda.length - 1} más)` : ''}. Convertilo en compra →
+            </span>
+          </Link>
+        )}
 
         <RecomendacionesComprasCard sucursalId={sucursalId} esTodas={esTodas} />
 

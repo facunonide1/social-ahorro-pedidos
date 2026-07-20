@@ -69,6 +69,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   }
   function ejecutar(a: QuickAction) {
     if (a.proximamente) { toast.message(a.nombre, { description: 'Próximamente.' }); return }
+    if (a.evento) { onOpenChange(false); window.dispatchEvent(new CustomEvent(a.evento)); return }
     go(a.destino)
   }
   function preguntarNora() {

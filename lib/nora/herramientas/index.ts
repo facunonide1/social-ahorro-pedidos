@@ -17,6 +17,7 @@ import { HERRAMIENTAS_PEDIDOS } from './pedidos'
 import { HERRAMIENTAS_PERSONAS } from './personas'
 import { HERRAMIENTAS_CENTRO_DATOS } from './centro_datos'
 import { HERRAMIENTAS_MISSION_CONTROL } from './mission_control'
+import { HERRAMIENTAS_DEMANDA } from './demanda'
 import { matchOpciones, type Herramienta, type NoraCtx, type Opcion, type Valores } from './tipos'
 
 export * from './tipos'
@@ -33,6 +34,7 @@ export const TODAS_HERRAMIENTAS: Herramienta[] = [
   ...HERRAMIENTAS_PERSONAS,
   ...HERRAMIENTAS_CENTRO_DATOS,
   ...HERRAMIENTAS_MISSION_CONTROL,
+  ...HERRAMIENTAS_DEMANDA,
 ]
 
 /**
@@ -44,6 +46,7 @@ export function herramientasParaUsuario(rol: AdminRole, custom: PermisosCustom |
   return TODAS_HERRAMIENTAS.filter((h) => {
     if (h.permiso && rol !== 'super_admin' && !puede(rol, custom, h.permiso.modulo, h.permiso.accion)) return false
     if (h.roles && rol !== 'super_admin' && !h.roles.includes(rol)) return false
+    if (h.global) return true
     if (!subapp) return true
     return h.subapp === subapp || (!!h.soloLectura && !!h.lecturaGlobal)
   })

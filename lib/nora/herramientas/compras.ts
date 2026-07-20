@@ -32,7 +32,7 @@ async function sucursalSlot(adm: any, ctx: NoraCtx): Promise<Opcion[]> {
 }
 
 /** Comparador: mejor precio final por proveedor para un producto (top 3). */
-async function comparador(adm: any, productoId: string): Promise<{ proveedor_id: string; razon_social: string; precioFinal: number }[]> {
+export async function comparador(adm: any, productoId: string): Promise<{ proveedor_id: string; razon_social: string; precioFinal: number }[]> {
   const { data: listas } = await adm.from('listas_precios').select('id, proveedor_id').eq('vigente', true)
   const lst = (listas ?? []) as any[]
   if (!lst.length) return []

@@ -48,6 +48,7 @@ export function QuickActionsMenu({ open, onOpenChange }: { open: boolean; onOpen
   function run(a: QuickAction) {
     if (a.proximamente) { toast.message(a.nombre, { description: 'Próximamente.' }); return }
     onOpenChange(false)
+    if (a.evento) { window.dispatchEvent(new CustomEvent(a.evento)); return }
     if (a.destino && a.destino !== '#') router.push(a.destino)
   }
 

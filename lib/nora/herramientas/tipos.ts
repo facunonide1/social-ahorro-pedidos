@@ -50,6 +50,8 @@ export type Herramienta = {
   soloLectura?: boolean
   /** Lectura que puede cruzar de sub-app (ej: consultar stock desde Compras). */
   lecturaGlobal?: boolean
+  /** Acción transversal: aparece en TODAS las sub-apps (ej: registrar demanda). */
+  global?: boolean
   slots: Slot[]
   armarConfirmacion?: (adm: any, v: Valores, ctx: NoraCtx) => Promise<Confirmacion>
   ejecutar?: (adm: any, v: Valores, ctx: NoraCtx) => Promise<Resultado>

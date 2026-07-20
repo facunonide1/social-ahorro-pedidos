@@ -36,6 +36,8 @@ export type QuickAction = {
   primary?: boolean
   /** Aún no construida: se muestra deshabilitada con tooltip. */
   proximamente?: boolean
+  /** En vez de navegar, dispara un CustomEvent global (ej. abrir un modal). */
+  evento?: string
   children?: QuickAction[]
 }
 
@@ -185,6 +187,7 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Recepciones', ruta: '/admin/compras/recepciones' },
       { nombre: 'Devoluciones', ruta: '/admin/compras/devoluciones' },
       { nombre: 'Listas de precios', ruta: '/admin/compras/listas-precios' },
+      { nombre: 'Radar de demanda', ruta: '/admin/compras/demanda' },
       { nombre: 'Proveedores', ruta: '/admin/proveedores' },
       { nombre: 'NORA (asistente)', ruta: '/admin/compras/asistente' },
     ],
@@ -203,6 +206,7 @@ export const SUBAPPS: SubAppManifest[] = [
       { id: 'devolucion', nombre: 'Nueva devolución / reclamo', icono: 'Undo2', destino: '/admin/compras/devoluciones/nueva', modulo: 'compras', accion: 'crear', primary: true },
       { id: 'proveedor-nuevo', nombre: 'Nuevo proveedor', icono: 'Store', destino: '/admin/proveedores/nuevo', modulo: 'compras', accion: 'crear', primary: true },
       { id: 'comparador', nombre: 'Comparar precios', icono: 'Scale', destino: '/admin/compras/comparador', modulo: 'compras', accion: 'ver', primary: true },
+      { id: 'radar-demanda', nombre: 'Radar de demanda', icono: 'PackageX', destino: '/admin/compras/demanda', modulo: 'compras', accion: 'ver' },
       { id: 'faltante', nombre: 'Cargar un faltante', icono: 'AlertTriangle', destino: '/admin/compras/faltantes', modulo: 'compras', accion: 'crear' },
       { id: 'listas', nombre: 'Importar lista de precios', icono: 'Upload', destino: '/admin/compras/listas-precios', modulo: 'compras', accion: 'crear' },
     ],
@@ -489,7 +493,7 @@ export const ACCIONES_GLOBALES: QuickAction[] = [
   { id: 'g-nora-asistente', nombre: 'Pedirle a NORA', icono: 'Sparkles', destino: '/admin/asistente', primary: true },
   { id: 'g-tarea', nombre: 'Crear tarea', icono: 'ListTodo', destino: '/admin/tareas', modulo: 'tareas', accion: 'crear', primary: true },
   { id: 'g-mensaje', nombre: 'Mandar mensaje', icono: 'MessageSquare', destino: '/admin/comunicacion', modulo: 'comunicacion', accion: 'crear', primary: true },
-  { id: 'g-demanda', nombre: 'Me pidieron y no había', icono: 'PackageX', destino: '#', primary: true, proximamente: true },
+  { id: 'g-demanda', nombre: 'Me pidieron y no había', icono: 'PackageX', destino: '#', evento: 'nora:demanda', primary: true },
 ]
 
 // ───────────────────────── Helpers de permisos / filtrado ─────────────────────────
