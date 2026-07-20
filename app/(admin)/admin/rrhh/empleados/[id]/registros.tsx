@@ -71,6 +71,7 @@ export function TurnosPanel({
     fecha: today,
     hora_entrada: '',
     hora_salida: '',
+    rol_cobertura: '',
     observaciones: '',
   })
 
@@ -88,6 +89,7 @@ export function TurnosPanel({
         fecha: form.fecha,
         hora_entrada: form.hora_entrada || null,
         hora_salida: form.hora_salida || null,
+        rol_cobertura: form.rol_cobertura || null,
         horas_trabajadas: horasEntre(form.hora_entrada, form.hora_salida),
         observaciones: form.observaciones.trim() || null,
       })
@@ -99,7 +101,7 @@ export function TurnosPanel({
       return
     }
     setTurnos((arr) => [data, ...arr])
-    setForm({ fecha: today, hora_entrada: '', hora_salida: '', observaciones: '' })
+    setForm({ fecha: today, hora_entrada: '', hora_salida: '', rol_cobertura: '', observaciones: '' })
     toast.success('Turno registrado.')
   }
 
@@ -114,7 +116,7 @@ export function TurnosPanel({
         <CardContent>
           <form
             onSubmit={agregar}
-            className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_1fr_auto] sm:items-end"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_1fr_1fr_auto] sm:items-end"
           >
             <div className="space-y-1.5">
               <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -151,6 +153,18 @@ export function TurnosPanel({
                   setForm((f) => ({ ...f, hora_salida: e.target.value }))
                 }
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Rol que cubre
+              </Label>
+              <Select value={form.rol_cobertura || 'none'} onValueChange={(v) => setForm((f) => ({ ...f, rol_cobertura: v === 'none' ? '' : v }))}>
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">—</SelectItem>
+                  {['farmaceutico', 'cajero', 'repositor', 'encargado', 'otro'].map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <Button type="submit" disabled={busy}>
               {busy ? (

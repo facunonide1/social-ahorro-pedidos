@@ -349,6 +349,8 @@ export const SUBAPPS: SubAppManifest[] = [
     modulos: [
       { nombre: 'Resumen', ruta: '/admin/rrhh' },
       { nombre: 'Empleados', ruta: '/admin/rrhh/empleados' },
+      { nombre: 'Grilla y cobertura', ruta: '/admin/rrhh/grilla' },
+      { nombre: 'Ausencias', ruta: '/admin/rrhh/ausencias' },
       { nombre: 'Mi equipo', ruta: '/admin/mi-equipo' },
       { nombre: 'Ranking', ruta: '/admin/ranking' },
       { nombre: 'Objetivos', ruta: '/admin/objetivos' },
@@ -356,6 +358,8 @@ export const SUBAPPS: SubAppManifest[] = [
     ],
     quickActions: [
       { id: 'nora-asistente-personas', nombre: 'Pedirle a NORA', icono: 'Sparkles', destino: '/admin/rrhh/asistente', modulo: 'rrhh', accion: 'ver', primary: true },
+      { id: 'ver-grilla', nombre: 'Grilla y cobertura', icono: 'CalendarClock', destino: '/admin/rrhh/grilla', modulo: 'rrhh', accion: 'ver', primary: true },
+      { id: 'registrar-ausencia', nombre: 'Registrar ausencia', icono: 'CalendarX', destino: '/admin/rrhh/ausencias', modulo: 'rrhh', accion: 'ver', primary: true },
       { id: 'empleado-nuevo', nombre: 'Nuevo empleado', icono: 'UserCheck', destino: '/admin/rrhh/empleados/nuevo', modulo: 'rrhh', accion: 'crear', primary: true },
       { id: 'mi-equipo', nombre: 'Mi equipo', icono: 'UsersRound', destino: '/admin/mi-equipo', modulo: 'rrhh', accion: 'ver', primary: true },
       { id: 'ranking', nombre: 'Ranking', icono: 'Trophy', destino: '/admin/ranking', modulo: 'rrhh', accion: 'ver', primary: true },

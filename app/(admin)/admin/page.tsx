@@ -3,6 +3,7 @@ import { FileText, Ticket, Users, AlertTriangle, TrendingUp, Wallet, Scale, Land
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { demandaAlertas } from '@/lib/compras/demanda-alertas'
+import { sucursalesEnRiesgo, lunesDe } from '@/lib/personas/cobertura'
 import { ROLES_TRANSVERSALES, ADMIN_ROLE_LABELS, type AdminRole } from '@/lib/types/admin'
 import { saludoHora } from '@/lib/utils/saludo'
 import { createAdminClient } from '@/lib/supabase/server'
@@ -165,6 +166,14 @@ async function getLoUrgente(rol: AdminRole, custom: PermisosCustom | null): Prom
     try {
       const dem = await demandaAlertas(adm, 30, 3, 1)
       if (dem.length) push(true, 1, { icono: 'PackageX', acento: '#F59E0B', origen: 'Compras', texto: `Piden "${dem[0].texto}" y no lo tenemos — ${dem[0].veces} veces este mes`, ruta: '/admin/compras/demanda', severidad: 'warn' })
+    } catch { /* */ }
+  }
+
+  // Cobertura farmacéutica: sucursales sobre el umbral de horas sin farmacéutico (OS-5a).
+  if (ve('rrhh')) {
+    try {
+      const riesgo = await sucursalesEnRiesgo(adm, lunesDe(hoy))
+      if (riesgo.length) push(true, 1, { icono: 'UserCheck', acento: '#8B5CF6', origen: 'Personas', texto: `${riesgo[0].nombre}: ${riesgo[0].horas}h sin farmacéutico esta semana (umbral ${riesgo[0].umbral}h)${riesgo.length > 1 ? ` +${riesgo.length - 1}` : ''}`, ruta: `/admin/rrhh/grilla?suc=${riesgo[0].sucursal_id}`, severidad: 'danger' })
     } catch { /* */ }
   }
   return items
