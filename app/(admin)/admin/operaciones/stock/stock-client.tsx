@@ -23,6 +23,7 @@ export type ProductoRow = {
   laboratorio: string | null; categoria: string | null; costo: number
   total: number; totalGondola: number; totalDeposito: number; ventaDia: number; cobertura: number | null
   critico: boolean; sinRotacion: boolean; porVencer: boolean; abc: string | null
+  controlado?: boolean; listaControlado?: string | null; recall?: boolean
   stockPorSuc: Record<string, { cantidad: number; gondola: number; deposito: number; min: number; max: number | null }>
 }
 type Kpis = { productos: number; valorStock: number; criticos: number; porVencer: number }
@@ -135,7 +136,7 @@ function Productos({ productos, sucursales, kpis, canEdit }: { productos: Produc
               {rows.slice(0, 500).map((p) => (
                 <tr key={p.id} className="cursor-pointer border-t border-border hover:bg-accent/30" onClick={() => setSel(p)}>
                   <td className="px-3 py-1.5 font-mono text-xs">{p.sku ?? '—'}</td>
-                  <td className="px-3 py-1.5"><div className="font-medium">{p.nombre}</div><div className="text-[10px] text-muted-foreground">{p.laboratorio ?? ''}</div></td>
+                  <td className="px-3 py-1.5"><div className="flex items-center gap-1.5 font-medium">{p.recall && <span className="rounded bg-rose-600 px-1 text-[9px] font-bold text-white">RECALL</span>}{p.controlado && <span title={`Controlado lista ${p.listaControlado ?? ''}`} className="text-primary">⚕</span>}{p.nombre}</div><div className="text-[10px] text-muted-foreground">{p.laboratorio ?? ''}</div></td>
                   {sucursales.map((s) => { const v = sem(p.stockPorSuc[s.id]); return <td key={s.id} className={cn('px-2 py-1.5 text-center tabular-nums', v.c)}>{v.t}</td> })}
                   <td className="px-2 py-1.5 text-right tabular-nums">{p.ventaDia > 0 ? p.ventaDia.toFixed(1) : '—'}</td>
                   <td className="px-2 py-1.5 text-right tabular-nums">{p.cobertura != null ? `${p.cobertura}d` : '—'}</td>

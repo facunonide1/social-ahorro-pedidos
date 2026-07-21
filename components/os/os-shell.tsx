@@ -19,6 +19,7 @@ import { MobileBottomBar } from '@/components/os/mobile-bottom-bar'
 import { CommandPalette } from '@/components/os/command-palette'
 import { QuickActionsMenu } from '@/components/os/quick-actions-menu'
 import { DemandaModal } from '@/components/os/demanda-modal'
+import { DespachoModal } from '@/components/os/despacho-modal'
 import { PanicButton } from '@/components/os/panic-button'
 import { subAppDeRuta } from '@/lib/os/subapps'
 import type { HubProfile } from '@/lib/admin-hub/auth'
@@ -140,6 +141,7 @@ export function OsShell({ profile, children }: { profile: HubProfile; children: 
         <CommandPalette open={cmdkOpen} onOpenChange={setCmdkOpen} />
         <QuickActionsMenu open={plusOpen} onOpenChange={setPlusOpen} />
         <DemandaModal />
+        <DespachoModal />
         <AiChatDock />
       </div>
     </TooltipProvider>

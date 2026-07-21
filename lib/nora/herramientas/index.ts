@@ -18,6 +18,7 @@ import { HERRAMIENTAS_PERSONAS } from './personas'
 import { HERRAMIENTAS_CENTRO_DATOS } from './centro_datos'
 import { HERRAMIENTAS_MISSION_CONTROL } from './mission_control'
 import { HERRAMIENTAS_DEMANDA } from './demanda'
+import { HERRAMIENTAS_COMPLIANCE } from './compliance'
 import { matchOpciones, type Herramienta, type NoraCtx, type Opcion, type Valores } from './tipos'
 
 export * from './tipos'
@@ -35,6 +36,7 @@ export const TODAS_HERRAMIENTAS: Herramienta[] = [
   ...HERRAMIENTAS_CENTRO_DATOS,
   ...HERRAMIENTAS_MISSION_CONTROL,
   ...HERRAMIENTAS_DEMANDA,
+  ...HERRAMIENTAS_COMPLIANCE,
 ]
 
 /**

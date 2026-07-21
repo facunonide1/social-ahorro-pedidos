@@ -23,7 +23,7 @@ export default async function StockPage() {
 
   const [{ data: prods }, { data: stock }, { data: rot }, { data: sucs }, { data: lotesVenc }] =
     await Promise.all([
-      sb.from('productos_catalogo').select('id, sku, codigo_barras, nombre, laboratorio, categoria, precio_costo_promedio, precio_sugerido').eq('activo', true).order('nombre').limit(5000),
+      sb.from('productos_catalogo').select('id, sku, codigo_barras, nombre, laboratorio, categoria, precio_costo_promedio, precio_sugerido, es_controlado, lista_controlado, bloqueado_recall').eq('activo', true).order('nombre').limit(5000),
       stockQ,
       rotQ,
       sb.from('sucursales').select('id, nombre, codigo, usa_deposito').eq('activa', true).order('nombre'),
@@ -61,6 +61,7 @@ export default async function StockPage() {
       id: p.id, sku: p.sku, ean: p.codigo_barras, nombre: p.nombre, laboratorio: p.laboratorio,
       categoria: p.categoria, costo, total, totalGondola, totalDeposito, ventaDia, cobertura, critico,
       sinRotacion: ventaDia === 0, porVencer: porVencer.has(p.id), abc: abcByProd.get(p.id) ?? null,
+      controlado: !!p.es_controlado, listaControlado: p.lista_controlado ?? null, recall: !!p.bloqueado_recall,
       stockPorSuc: porSuc,
     }
   })

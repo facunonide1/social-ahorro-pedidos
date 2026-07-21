@@ -4,6 +4,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { demandaAlertas } from '@/lib/compras/demanda-alertas'
 import { sucursalesEnRiesgo, lunesDe } from '@/lib/personas/cobertura'
+import { recallsActivos, papelesEnAlerta, diasSinTrazabilidad } from '@/lib/compliance/helpers'
 import { ROLES_TRANSVERSALES, ADMIN_ROLE_LABELS, type AdminRole } from '@/lib/types/admin'
 import { saludoHora } from '@/lib/utils/saludo'
 import { createAdminClient } from '@/lib/supabase/server'
@@ -166,6 +167,18 @@ async function getLoUrgente(rol: AdminRole, custom: PermisosCustom | null): Prom
     try {
       const dem = await demandaAlertas(adm, 30, 3, 1)
       if (dem.length) push(true, 1, { icono: 'PackageX', acento: '#F59E0B', origen: 'Compras', texto: `Piden "${dem[0].texto}" y no lo tenemos — ${dem[0].veces} veces este mes`, ruta: '/admin/compras/demanda', severidad: 'warn' })
+    } catch { /* */ }
+  }
+
+  // Compliance (OS-5b): recalls activos, papeles vencidos, trazabilidad atrasada.
+  if (ve('operaciones')) {
+    try {
+      const [rec, pap, traz] = await Promise.all([recallsActivos(adm), papelesEnAlerta(adm, 30), diasSinTrazabilidad(adm)])
+      if (rec > 0) push(true, rec, { icono: 'ShieldAlert', acento: '#DC2626', origen: 'Compliance', texto: `${rec} recall(s) activo(s) — verificá el retiro`, ruta: '/admin/compliance/recalls', severidad: 'danger' })
+      const vencidos = pap.filter((p) => p.dias < 0).length
+      if (vencidos > 0) push(true, vencidos, { icono: 'FileBadge', acento: '#DC2626', origen: 'Compliance', texto: `${vencidos} papel(es) de sucursal VENCIDO(s)`, ruta: '/admin/compliance/papeles', severidad: 'danger' })
+      const trazMal = traz.filter((t) => t.dias >= 3).length
+      if (trazMal > 0) push(true, trazMal, { icono: 'ClipboardCheck', acento: '#DC2626', origen: 'Compliance', texto: `Trazabilidad ANMAT atrasada en ${trazMal} sucursal(es)`, ruta: '/admin/compliance/despachos', severidad: 'warn' })
     } catch { /* */ }
   }
 

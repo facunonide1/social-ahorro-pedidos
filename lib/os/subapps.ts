@@ -368,6 +368,39 @@ export const SUBAPPS: SubAppManifest[] = [
     ],
   },
   {
+    id: 'compliance',
+    nombre: 'Compliance',
+    icono: 'ShieldCheck',
+    acento: '#DC2626',
+    descripcion: 'Controlados, trazabilidad, papeles, recalls y SOPs',
+    rutaHome: '/admin/compliance',
+    navInterna: 'tabs',
+    permisosRequeridos: ['operaciones'],
+    modulos: [
+      { nombre: 'Panel', ruta: '/admin/compliance' },
+      { nombre: 'Despachos', ruta: '/admin/compliance/despachos' },
+      { nombre: 'Controlados', ruta: '/admin/compliance/controlados' },
+      { nombre: 'Papeles', ruta: '/admin/compliance/papeles' },
+      { nombre: 'Recalls', ruta: '/admin/compliance/recalls' },
+      { nombre: 'SOPs', ruta: '/admin/compliance/sops' },
+    ],
+    badge: async (sb) => {
+      const [rec, pap] = await Promise.all([
+        cuenta(sb.from('compliance_recalls').select('id', { count: 'exact', head: true }).eq('estado', 'activo')),
+        cuenta(sb.from('compliance_documentos').select('id', { count: 'exact', head: true }).not('vence_at', 'is', null).lte('vence_at', enDiasISO(30))),
+      ])
+      const n = rec + pap
+      return n > 0 ? { count: n, severidad: rec > 0 ? 'danger' : 'warn' } : null
+    },
+    quickActions: [
+      { id: 'despacho-controlado', nombre: 'Registrar despacho controlado', icono: 'ShieldCheck', destino: '#', evento: 'nora:despacho', modulo: 'operaciones', accion: 'ver', primary: true },
+      { id: 'compliance-papeles', nombre: 'Papeles de sucursal', icono: 'FileBadge', destino: '/admin/compliance/papeles', modulo: 'operaciones', accion: 'ver', primary: true },
+      { id: 'compliance-recall', nombre: 'Iniciar recall', icono: 'ShieldAlert', destino: '/admin/compliance/recalls', modulo: 'operaciones', accion: 'ver', primary: true, roles: ['super_admin', 'gerente'] },
+      { id: 'compliance-controlados', nombre: 'Marcar controlados', icono: 'ShieldCheck', destino: '/admin/compliance/controlados', modulo: 'operaciones', accion: 'crear' },
+      { id: 'compliance-sop', nombre: 'Procedimientos (SOP)', icono: 'FileText', destino: '/admin/compliance/sops', modulo: 'operaciones', accion: 'ver' },
+    ],
+  },
+  {
     id: 'centro-datos',
     nombre: 'Centro de Datos',
     icono: 'Database',
