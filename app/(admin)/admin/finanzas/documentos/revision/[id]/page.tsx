@@ -10,19 +10,28 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Revisar documento' }
 
 export default async function RevisionPage({ params }: { params: { id: string } }) {
+  // E.6 · Solo roles con acceso a Finanzas o Compras.
   const g = await gateDocumentos('crear')
   if ('error' in g) redirect('/admin/finanzas/documentos')
 
   const adm = createAdminClient()
   const { data: ext } = await adm
     .from('doc_extracciones')
-    .select('id, documento_id, archivo_path, mime_type, estado, error, confianza_global, campos_dudosos, respuesta_cruda, modelo, prompt_version, procesado_at')
+    .select('id, documento_id, archivo_path, mime_type, estado, error')
     .eq('id', params.id)
     .maybeSingle()
 
   if (!ext) notFound()
 
-  const imagenUrl = await urlFirmada(adm, ext.archivo_path)
+  // Ya confirmado: no se revisa dos veces.
+  if (ext.documento_id) redirect('/admin/finanzas/documentos')
+
+  const [imagenUrl, { data: provs }, { data: sucs }, { data: prods }] = await Promise.all([
+    urlFirmada(adm, ext.archivo_path),
+    adm.from('proveedores').select('id, razon_social, cuit').eq('activo', true).order('razon_social').limit(2000),
+    adm.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
+    adm.from('productos_catalogo').select('id, sku, nombre').eq('activo', true).order('nombre').limit(5000),
+  ])
 
   return (
     <>
@@ -34,11 +43,13 @@ export default async function RevisionPage({ params }: { params: { id: string } 
       <div className="p-4 md:p-6">
         <RevisionClient
           extraccionId={ext.id}
-          estado={ext.estado}
-          error={ext.error}
-          datos={ext.estado === 'ok' ? (ext.respuesta_cruda as any) : null}
+          estadoInicial={ext.estado}
+          errorInicial={ext.error}
           imagenUrl={imagenUrl}
           esPdf={ext.mime_type === 'application/pdf'}
+          proveedores={(provs ?? []) as any[]}
+          sucursales={(sucs ?? []) as any[]}
+          productos={(prods ?? []) as any[]}
         />
       </div>
     </>
