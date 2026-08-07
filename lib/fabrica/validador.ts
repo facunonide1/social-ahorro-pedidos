@@ -14,7 +14,7 @@ import type { Manifiesto } from './tipos'
  * ejecutar antes de commitear sin credenciales de nada.
  */
 
-export const FORMATO_ACTUAL = '1.0.0'
+export const FORMATO_ACTUAL = '1.1.0'
 
 export interface Problema {
   campo: string
@@ -27,7 +27,7 @@ const MOLDES_VALIDOS = new Set([
   'chat', 'formulario', 'feed', 'calendario', 'otro',
 ])
 const ACCIONES_PERMISO = new Set(['ver', 'crear', 'editar', 'aprobar', 'eliminar'])
-const PARTICIPACIONES = new Set(['sugiere', 'prepara', 'hace_y_avisa', 'nunca'])
+const PARTICIPACIONES = new Set(['sugiere', 'prepara', 'informa', 'hace_y_avisa', 'nunca'])
 const CAPACIDADES = new Set([
   'cargar', 'recomendar', 'detectar', 'ejecutar', 'responder', 'explicar', 'priorizar',
 ])
@@ -129,20 +129,34 @@ export function validarManifiesto(m: Manifiesto): Problema[] {
           'hace_y_avisa sin motivo: hay que poder leer por qué se le dejó actuar solo',
         )
       }
-      // La regla dice que hace_y_avisa es sólo para lo reversible y sin efecto
-      // sobre plata. En modo espejo aparecen automatizaciones que ya la violan.
-      // Se avisa, no se rechaza: el manifiesto describe lo que hay, y ocultarlo
-      // sería declarar un sistema que no existe.
+      // `hace_y_avisa` exige reversibilidad y no tocar plata. `informa` no
+      // exige reversibilidad —un aviso leído no se des-lee— pero sí exige no
+      // comprometer a nadie de afuera: ahí está toda la diferencia entre los
+      // dos niveles.
       if (acc.participacion === 'hace_y_avisa' && acc.reversible === false) {
         avi(
           `agentes.${ag.clave}.${acc.clave}`,
-          'actúa solo y NO es reversible. Debería bajar a prepara',
+          'actúa solo y NO es reversible. O es un aviso interno (informa) o baja a prepara',
         )
       }
       if (acc.participacion === 'hace_y_avisa' && acc.toca_dinero) {
+        avi(`agentes.${ag.clave}.${acc.clave}`, 'actúa solo y toca dinero. Debería bajar a prepara')
+      }
+      if (acc.participacion === 'informa' && acc.compromete_tercero) {
+        err(
+          `agentes.${ag.clave}.${acc.clave}`,
+          'informa es sólo hacia adentro del equipo. Si le llega a un tercero, es prepara',
+        )
+      }
+      if (acc.participacion === 'informa' && acc.toca_dinero) {
+        err(`agentes.${ag.clave}.${acc.clave}`, 'un aviso no mueve plata')
+      }
+      // La brecha es un hallazgo sobre el sistema, no un defecto de la
+      // declaración: por eso avisa y no falla.
+      if (acc.brecha) {
         avi(
           `agentes.${ag.clave}.${acc.clave}`,
-          'actúa solo y toca dinero. Debería bajar a prepara',
+          `declarada ${acc.participacion} y el código todavía no lo cumple: ${acc.brecha}`,
         )
       }
     }

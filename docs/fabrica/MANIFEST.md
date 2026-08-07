@@ -1,4 +1,4 @@
-# El manifiesto — formato 1.0.0
+# El manifiesto — formato 1.1.0
 
 Un **pool** es una pieza de software declarada como dato. El manifiesto es esa
 declaración: lo que la fábrica sabe de una pieza sin abrir su código.
@@ -29,6 +29,7 @@ Cada uno rompió algo.
 | **Clientes** | `campos_sensibles` + su verificación contra el esquema |
 | **Stock** | `alcance` global/por punto, `excluir` en el comparador |
 | **Los cuatro** | `agentes`, `participacion`, `reversible` |
+| **Los avisos** (v0.60) | `informa`, `compromete_tercero`, `brecha` |
 
 ---
 
@@ -132,18 +133,50 @@ pools; por fuera, empleados.
 | --- | --- |
 | `sugiere` | Propone; la persona decide |
 | `prepara` | Deja todo hecho; falta confirmar |
+| `informa` | Avisa **hacia adentro del equipo**. Actúa solo y no es reversible, y está bien |
 | `hace_y_avisa` | Actúa solo. **Sólo si es reversible y no toca plata** |
 | `nunca` | Lo que protege la constitución, por más permisos que tenga |
 
 `hace_y_avisa` exige `motivo`: hay que poder leer por qué se le dejó actuar
-solo. Y admite `reversible` / `toca_dinero`, que el validador contrasta contra
-la regla.
+solo. Admite `reversible`, `toca_dinero` y `compromete_tercero`, que el
+validador contrasta contra la regla.
 
-**Esa verificación ya encontró algo.** El agente de Clientes dispara la
-comunicación configurada sin confirmación, y un mensaje enviado no se deshace.
-Está declarado como está —en espejo el manifiesto describe el sistema real— y el
-validador lo marca como aviso. Bajarlo a `prepara` para que el validador dé
-verde sería declarar un sistema que no existe.
+#### `informa` vs `prepara` — dónde está el corte
+
+`informa` nació de un choque: los avisos internos no son reversibles —un aviso
+leído no se des-lee— así que meterlos en `hace_y_avisa` obligaba a mentir sobre
+la reversibilidad o a bloquear automatizaciones que no tienen nada de riesgoso.
+
+**La pregunta que separa los dos niveles no es "¿se deshace?" sino "¿compromete
+algo con alguien de afuera?".**
+
+| Sale del equipo | Ejemplo | Nivel |
+| --- | --- | --- |
+| No | Escalar una tarea trabada al supervisor | `informa` |
+| No | Avisarle al encargado que un item está por faltar | `informa` |
+| No | Avisar lo que se vence | `informa` |
+| No | Notificar al mostrador que hay una oferta nueva | `informa` |
+| **Sí** | Push de una oferta a los clientes del Club | `prepara` |
+| **Sí** | Campaña de CRM por mail o push a un cliente | `prepara` |
+| **Sí** | Mensaje de WhatsApp a quien hizo un pedido | `prepara` |
+
+El validador rechaza (error, no aviso) un `informa` con
+`compromete_tercero: true`, y también un `informa` que toque plata.
+
+### Cuando el código no cumple el nivel declarado: `brecha`
+
+El nivel se decide **por criterio** —qué debe hacer la acción— y el manifiesto
+describe **el sistema real**. Cuando difieren, las dos salidas fáciles son
+malas: poner el nivel correcto y borrar la diferencia declara un sistema que no
+existe; poner el nivel que el código tiene bendice lo que hay.
+
+Se declara el nivel correcto y se escribe la `brecha` al lado. El validador la
+levanta como aviso y la ficha del pool la muestra en la fila.
+
+**Hay una brecha abierta hoy:** el agente de Clientes está declarado `prepara`
+para disparar comunicación, porque le llega a un cliente y no se des-envía. El
+cron corre y manda sin confirmación. Falta el paso de confirmación entre armar
+la campaña y soltarla.
 
 ---
 

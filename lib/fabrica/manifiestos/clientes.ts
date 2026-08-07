@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * "obra social" acá adentro.
  */
 export const MANIFIESTO_CLIENTES: Manifiesto = {
-  formato: '1.0.0',
+  formato: '1.1.0',
   pool: 'clientes',
   nombre: 'Clientes',
   categoria: 'generico',
@@ -117,11 +117,15 @@ export const MANIFIESTO_CLIENTES: Manifiesto = {
         {
           clave: 'correr_automatizaciones',
           titulo: 'Disparar la comunicación configurada',
-          participacion: 'hace_y_avisa',
-          // HALLAZGO. Se declara como está, no como debería estar: en espejo el
-          // manifiesto describe el sistema real. El validador lo marca.
+          // Le llega a un CLIENTE. Un mail o un push a alguien de afuera
+          // compromete al negocio y no se puede des-enviar: por criterio esto
+          // es `prepara`, no `informa` ni `hace_y_avisa`.
+          participacion: 'prepara',
           reversible: false,
-          motivo: 'Hoy manda solo, según reglas que una persona escribió. Pero un mensaje enviado no se puede deshacer, así que este nivel contradice la regla de hace_y_avisa. Queda declarado como está y anotado para revisión.',
+          compromete_tercero: true,
+          motivo: 'Sale del equipo: le llega a un cliente por push o por mail. Nada que salga hacia afuera se manda sin que una persona lo suelte.',
+          brecha:
+            'El cron corre y manda sin confirmación. La regla la escribió una persona una vez, pero nadie mira antes de cada envío. Falta el paso de confirmación entre armar la campaña y soltarla.',
         },
         {
           clave: 'eliminar_cliente',

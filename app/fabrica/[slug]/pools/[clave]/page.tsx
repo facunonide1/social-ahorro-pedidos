@@ -12,13 +12,18 @@ export const dynamic = 'force-dynamic'
 const ETIQUETA_PARTICIPACION: Record<Participacion, string> = {
   sugiere: 'sugiere',
   prepara: 'prepara y espera',
+  informa: 'avisa al equipo',
   hace_y_avisa: 'lo hace y avisa',
   nunca: 'nunca',
 }
 
-const VARIANTE_PARTICIPACION: Record<Participacion, 'outline' | 'info' | 'warning' | 'destructive'> = {
+const VARIANTE_PARTICIPACION: Record<
+  Participacion,
+  'outline' | 'info' | 'secondary' | 'warning' | 'destructive'
+> = {
   sugiere: 'outline',
   prepara: 'info',
+  informa: 'secondary',
   hace_y_avisa: 'warning',
   nunca: 'destructive',
 }
@@ -319,8 +324,21 @@ export default async function VerificacionPoolPage({
                                 actúa solo y no se puede deshacer
                               </div>
                             )}
+                            {acc.compromete_tercero && (
+                              <div className="mt-1 text-[10px] text-muted-foreground">
+                                sale del equipo
+                              </div>
+                            )}
                           </td>
-                          <td className="px-4 py-2 text-muted-foreground">{acc.motivo ?? '—'}</td>
+                          <td className="px-4 py-2 text-muted-foreground">
+                            {acc.motivo ?? '—'}
+                            {acc.brecha && (
+                              <div className="mt-1.5 rounded border border-warning/40 bg-warning/10 px-2 py-1 text-[11px] text-foreground">
+                                <span className="font-medium">El código todavía no lo cumple:</span>{' '}
+                                {acc.brecha}
+                              </div>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

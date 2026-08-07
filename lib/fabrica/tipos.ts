@@ -273,6 +273,18 @@ export type Participacion =
   | 'sugiere'
   /** Deja todo hecho; falta confirmar. */
   | 'prepara'
+  /**
+   * Avisa hacia adentro del equipo. Se ejecuta solo y NO es reversible —
+   * un aviso leído no se puede des-leer — y eso está bien, porque no
+   * compromete nada con nadie de afuera.
+   *
+   * Existe porque `hace_y_avisa` exige reversibilidad, y meter los avisos
+   * internos ahí obligaba a mentir sobre la reversibilidad o a bloquear
+   * automatizaciones que no tienen nada de riesgoso. La pregunta que separa
+   * los dos niveles no es "¿se deshace?" sino "¿compromete algo con un
+   * tercero?".
+   */
+  | 'informa'
   /** Lo hace y avisa. Solo si es reversible y no toca plata. */
   | 'hace_y_avisa'
   /** Nunca, por más permisos que tenga. Lo que protege la constitución. */
@@ -308,6 +320,21 @@ export interface AccionDeAgente {
   reversible?: boolean
   /** Toca plata: cobra, paga, o cambia un precio de venta. */
   toca_dinero?: boolean
+  /** Sale del equipo: le llega a un cliente, a un proveedor, a alguien de afuera. */
+  compromete_tercero?: boolean
+  /**
+   * El código de hoy TODAVÍA NO cumple el nivel declarado.
+   *
+   * Existe por un choque real entre dos reglas que las dos están bien: el
+   * nivel se decide por criterio (qué DEBE hacer la acción) y el manifiesto
+   * describe el sistema (qué HACE hoy). Cuando difieren, poner el nivel que
+   * corresponde y borrar la diferencia sería declarar un sistema que no
+   * existe; poner el nivel que el código tiene sería bendecir lo que hay.
+   *
+   * Se declara el nivel correcto y se escribe la brecha al lado. El validador
+   * la levanta y la pantalla la muestra.
+   */
+  brecha?: string
 }
 
 /**

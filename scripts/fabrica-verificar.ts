@@ -11,7 +11,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { MANIFIESTOS } from '../lib/fabrica/manifiestos'
 import { verificarEspejo } from '../lib/fabrica/comparador'
-import { validarManifiesto, validarCatalogo } from '../lib/fabrica/validador'
+import { validarManifiesto, validarCatalogo, FORMATO_ACTUAL } from '../lib/fabrica/validador'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -42,7 +42,7 @@ async function main() {
     const errores = r.filter((p) => p.gravedad === 'error')
     if (errores.length > 0) fallo = true
     if (r.length === 0) {
-      console.log(`  ✓ ${clave.padEnd(10)} válido contra el esquema 1.0.0`)
+      console.log(`  ✓ ${clave.padEnd(10)} válido contra el esquema ${FORMATO_ACTUAL}`)
     } else {
       console.log(
         `  ${errores.length > 0 ? '✗' : '~'} ${clave.padEnd(10)} ` +

@@ -16,7 +16,7 @@ import type { Manifiesto } from '../tipos'
  * existe igual en una ferretería.
  */
 export const MANIFIESTO_OFERTAS: Manifiesto = {
-  formato: '1.0.0',
+  formato: '1.1.0',
   pool: 'ofertas',
   nombre: 'Ofertas',
   categoria: 'generico',
@@ -109,6 +109,17 @@ export const MANIFIESTO_OFERTAS: Manifiesto = {
         { clave: 'proponer_ofertas', titulo: 'Proponer qué ofrecer', participacion: 'prepara', motivo: 'Deja la oferta armada en borrador con la justificación escrita. La aprueba una persona.' },
         { clave: 'preparar_brief', titulo: 'Preparar el encargo al tercero', participacion: 'prepara', motivo: 'Genera el link; mandarlo es de una persona.' },
         { clave: 'medir_resultado', titulo: 'Medir cómo salió', participacion: 'hace_y_avisa', reversible: true, motivo: 'Sólo escribe aprendizaje. No cambia la oferta ni el precio.' },
+        {
+          clave: 'publicar_al_club',
+          titulo: 'Avisarle la oferta a los clientes',
+          // Sale hacia el CLIENTE. Acá el `prepara` sí se cumple: el push se
+          // dispara recién cuando una persona aprueba la oferta.
+          participacion: 'prepara',
+          reversible: false,
+          compromete_tercero: true,
+          motivo: 'Es un push a los clientes del Club. Sale cuando una persona aprueba la oferta, no antes.',
+        },
+        { clave: 'avisar_al_equipo', titulo: 'Avisarle al equipo que hay oferta nueva', participacion: 'informa', reversible: false, compromete_tercero: false, motivo: 'Notificación interna para que el mostrador sepa qué está vigente.' },
         {
           clave: 'fijar_precio_venta',
           titulo: 'Cambiar el precio de venta',
