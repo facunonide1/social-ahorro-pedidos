@@ -91,7 +91,7 @@ export const MANIFIESTO_OFERTAS: Manifiesto = {
 
   permisos: [{ modulo: 'ofertas', acciones: ['ver', 'crear', 'editar', 'aprobar'] }],
 
-  depende_de: ['configuracion', 'tareas'],
+  depende_de: ['configuracion', 'tareas', 'documentos'],
 
   agentes: [
     {

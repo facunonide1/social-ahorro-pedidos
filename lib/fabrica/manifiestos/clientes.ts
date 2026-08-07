@@ -98,7 +98,7 @@ export const MANIFIESTO_CLIENTES: Manifiesto = {
    */
   permisos: [{ modulo: 'clientes', acciones: ['ver', 'crear', 'editar', 'eliminar'] }],
 
-  depende_de: ['configuracion'],
+  depende_de: ['configuracion', 'centro-datos'],
 
   agentes: [
     {

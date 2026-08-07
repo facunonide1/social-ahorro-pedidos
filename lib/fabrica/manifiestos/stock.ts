@@ -30,8 +30,8 @@ export const MANIFIESTO_STOCK: Manifiesto = {
     'Qué hay, dónde está y cuánto queda. Movimientos, transferencias entre puntos, inventarios físicos, vencimientos y las irregularidades que aparecen cuando la cuenta no da.',
 
   entidades: [
-    { tabla: 'stock_items', rol: 'El item que se maneja en depósito, con su mínimo y su punto de pedido', acceso: 'propia', alcance: 'global' },
-    { tabla: 'stock_sucursal', rol: 'Cuánto hay de cada item en cada punto', acceso: 'propia', alcance: 'por_sucursal' },
+    { tabla: 'stock_items', rol: 'El item que se maneja en depósito, con su mínimo y su punto de pedido', acceso: 'propia', escriben_otros: true, alcance: 'global' },
+    { tabla: 'stock_sucursal', rol: 'Cuánto hay de cada item en cada punto', acceso: 'propia', escriben_otros: true, alcance: 'por_sucursal' },
     { tabla: 'movimientos_stock', rol: 'Cada entrada y salida, con su motivo', acceso: 'propia', escriben_otros: true, alcance: 'por_sucursal' },
     { tabla: 'stock_snapshots', rol: 'La foto periódica, para poder decir cómo estaba el martes', acceso: 'propia', alcance: 'por_sucursal' },
     { tabla: 'transferencias_sucursal', rol: 'Mercadería que se mueve de un punto a otro', acceso: 'propia', alcance: 'por_sucursal' },
@@ -94,7 +94,7 @@ export const MANIFIESTO_STOCK: Manifiesto = {
 
   permisos: [{ modulo: 'operaciones', acciones: ['ver', 'crear', 'editar', 'aprobar'] }],
 
-  depende_de: ['configuracion', 'tareas'],
+  depende_de: ['configuracion', 'tareas', 'centro-datos'],
 
   agentes: [
     {

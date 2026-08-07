@@ -67,11 +67,16 @@ export function validarManifiesto(m: Manifiesto): Problema[] {
     if (vistas.has(e.tabla)) err(`entidades.${e.tabla}`, 'declarada dos veces')
     vistas.add(e.tabla)
     if (!e.rol) err(`entidades.${e.tabla}`, 'falta el rol en una línea')
-    if (e.acceso === 'leida' && e.escriben_otros) {
+    if (e.acceso !== 'propia' && e.escriben_otros) {
       err(`entidades.${e.tabla}`, 'escriben_otros sólo tiene sentido sobre una entidad propia')
     }
     if (e.acceso === 'propia' && e.dueno) {
       err(`entidades.${e.tabla}`, 'una entidad propia no declara dueño ajeno')
+    }
+    // Escribir en una tabla ajena sin decir de quién es deja la escritura sin
+    // responsable: nadie sabe a quién avisarle si cambia la forma.
+    if (e.acceso === 'escrita' && !e.dueno) {
+      err(`entidades.${e.tabla}`, 'escribe en una tabla ajena y no declara de quién es')
     }
     if (e.acceso === 'leida' && !e.dueno) {
       avi(`entidades.${e.tabla}`, 'entidad leída sin dueño declarado: no se sabe a qué pool pedirle cambios')
@@ -207,6 +212,9 @@ export function validarCatalogo(manifiestos: Manifiesto[]): Problema[] {
       }
     }
 
+    // Un pool base no necesita que nadie lo liste: la dependencia es de todos.
+    if (m.usado_por_todos) continue
+
     // usado_por ↔ depende_de, en los dos sentidos, sólo entre declarados.
     for (const usuario of m.usado_por ?? []) {
       const otro = porClave.get(usuario)
@@ -264,6 +272,37 @@ export function validarCatalogo(manifiestos: Manifiesto[]): Problema[] {
         p.push({
           campo: `${m.pool}.entidades.${e.tabla}`,
           mensaje: `la da por dueña de "${e.dueno}" y la declara propia "${real}"`,
+          gravedad: 'error',
+        })
+      }
+    }
+  }
+
+  // Escritura cruzada: si un pool declara `escrita`, el dueño tiene que
+  // reconocerlo con `escriben_otros`. Si no, el dueño cree que la tabla es
+  // suya y de nadie más, y va a cambiarle la forma sin avisar.
+  for (const m of manifiestos) {
+    for (const e of m.entidades.filter((x) => x.acceso === 'escrita')) {
+      const otro = manifiestos.find((x) => x.pool === e.dueno)
+      if (!otro) {
+        p.push({
+          campo: `${m.pool}.entidades.${e.tabla}`,
+          mensaje: `escribe en tabla de "${e.dueno}", que todavía no está declarado`,
+          gravedad: 'aviso',
+        })
+        continue
+      }
+      const suya = otro.entidades.find((x) => x.tabla === e.tabla && x.acceso === 'propia')
+      if (!suya) {
+        p.push({
+          campo: `${m.pool}.entidades.${e.tabla}`,
+          mensaje: `dice que es de "${e.dueno}" y "${e.dueno}" no la declara propia`,
+          gravedad: 'error',
+        })
+      } else if (!suya.escriben_otros) {
+        p.push({
+          campo: `${e.dueno}.entidades.${e.tabla}`,
+          mensaje: `"${m.pool}" escribe acá y el dueño no lo declara con escriben_otros`,
           gravedad: 'error',
         })
       }

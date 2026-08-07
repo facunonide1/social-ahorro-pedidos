@@ -149,6 +149,24 @@ export interface Manifiesto {
    * demás manifiestos y falla si no coinciden. Declarada Y verificada.
    */
   usado_por?: string[]
+  /**
+   * Todos los pools dependen de éste, sin necesidad de declararlo.
+   *
+   * Es la forma de expresar "de todos" sin enumerar. Un pool base tiene que
+   * poder decirlo una vez; la alternativa —listar a los diecisiete y volver a
+   * editarlo con cada pool nuevo— es la dependencia invertida que un núcleo no
+   * puede tener. Cuando está en true, el validador no exige reciprocidad.
+   */
+  usado_por_todos?: boolean
+  /**
+   * Id de la sub-app del registry contra la que se verifica la navegación.
+   *
+   * Por defecto se asume igual a `pool`. `null` significa que el pool NO es una
+   * sub-app navegable: sus pantallas viven dentro de otras. Distinguirlo de
+   * "hay un error en la clave" importa, porque si no el comparador reporta una
+   * diferencia eterna sobre un pool que está perfectamente declarado.
+   */
+  subapp?: string | null
   /** Lo que cambia entre proyectos sin cambiar la pieza. */
   configurable?: ParametroConfigurable[]
   /** Los agentes que este pool aporta. Vacío es una respuesta válida. */
@@ -174,8 +192,18 @@ export interface EntidadDeclarada {
   tabla: string
   /** Qué es, en una línea, para una persona. */
   rol: string
-  /** propia = este pool es el DUEÑO. leida = la consulta y no la escribe. */
-  acceso: 'propia' | 'leida'
+  /**
+   * propia  = este pool es el DUEÑO: la escribe y define su forma.
+   * escrita = la escribe SIN ser el dueño. Legítimo y explícito.
+   * leida   = sólo la consulta.
+   *
+   * `escrita` apareció con el importador: un pool cuya función es cargar datos
+   * ajenos escribe en tablas de medio sistema por diseño. Sin este valor había
+   * que elegir entre mentir (declararlas propias y romper la regla de un dueño
+   * por tabla) o esconder la escritura (declararlas leídas). Se declara la
+   * escritura y se nombra al dueño.
+   */
+  acceso: 'propia' | 'escrita' | 'leida'
   /**
    * Sobre una entidad propia: otros pools también escriben acá.
    *

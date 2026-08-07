@@ -39,7 +39,7 @@ Cada uno rompió algo.
 
 | Campo | Tipo | Qué es |
 | --- | --- | --- |
-| `formato` | `"1.0.0"` | Versión del **formato**, no del pool |
+| `formato` | `"1.1.0"` | Versión del **formato**, no del pool |
 | `pool` | slug | Clave única en el catálogo |
 | `nombre` | texto | Cómo se llama para una persona |
 | `descripcion` | texto | Qué hace, en dos líneas |

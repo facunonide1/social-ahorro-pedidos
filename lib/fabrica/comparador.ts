@@ -73,8 +73,10 @@ export async function verificarEspejo(
   try {
     /* ── Entidades ───────────────────────────────────────────────────── */
     const declaradas = manifiesto.entidades.map((e) => e.tabla)
+    // Para "¿existe algo del sector que no se declara?" cuentan las propias y
+    // las escritas: si el pool la toca, la conoce.
     const propias = manifiesto.entidades
-      .filter((e) => e.acceso === 'propia')
+      .filter((e) => e.acceso === 'propia' || e.acceso === 'escrita')
       .map((e) => e.tabla)
 
     const [{ data: existen }, { data: porPrefijo }] = await Promise.all([
@@ -174,16 +176,20 @@ export async function verificarEspejo(
     }
 
     /* ── Pantallas (verificación parcial: navegación) ────────────────── */
-    const subApp = SUBAPPS.find((s) => s.id === manifiesto.pool)
-    if (!subApp) {
+    // `subapp: null` declara explícitamente que el pool no es navegable: sus
+    // pantallas viven dentro de otras sub-apps. Sin esa distinción, un pool
+    // bien declarado arrastraría una diferencia eterna.
+    const idSubApp = manifiesto.subapp === undefined ? manifiesto.pool : manifiesto.subapp
+    const subApp = idSubApp === null ? null : SUBAPPS.find((s) => s.id === idSubApp)
+    if (idSubApp !== null && !subApp) {
       diferencias.push({
         tipo: 'pantalla',
-        elemento: manifiesto.pool,
+        elemento: String(idSubApp),
         en_declaracion: true,
         en_codigo: false,
-        nota: 'No hay sub-app registrada con esa clave: no se puede verificar la navegación.',
+        nota: 'El manifiesto apunta a una sub-app que no existe en el registry.',
       })
-    } else {
+    } else if (subApp) {
       const navegables = new Set(subApp.modulos.map((m) => m.ruta))
       const declaradasPant = new Set(manifiesto.pantallas.map((p) => p.ruta))
 
@@ -239,17 +245,12 @@ export async function verificarEspejo(
           })
         }
       }
-      for (const p of manifiesto.permisos) {
-        if (!(subApp.permisosRequeridos as string[]).includes(p.modulo)) {
-          diferencias.push({
-            tipo: 'permiso',
-            elemento: p.modulo,
-            en_declaracion: true,
-            en_codigo: false,
-            nota: 'Declarado, pero la sub-app no lo exige.',
-          })
-        }
-      }
+      // NO se reporta el caso inverso —el pool declara más de lo que la
+      // sub-app exige— porque las dos listas responden preguntas distintas:
+      // `permisosRequeridos` dice qué hace falta para VER la sub-app en el
+      // menú, no todo lo que el pool toca. Configuración necesita el permiso
+      // de puntos de venta para sus pantallas de sucursales, que no están en
+      // su menú. Reportarlo entrenaba a ignorar el comparador.
     }
   } catch {
     // No se muestra el error técnico: no le sirve a nadie que lo vaya a leer.
