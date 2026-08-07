@@ -8,7 +8,11 @@ import {
   sectoresSinDeclarar,
   traerProyecto,
 } from '@/lib/fabrica/datos'
+import { verificarEspejo } from '@/lib/fabrica/comparador'
+import { MANIFIESTOS } from '@/lib/fabrica/manifiestos'
+import { createClient } from '@/lib/supabase/server'
 import {
+  ETIQUETA_CATEGORIA,
   ETIQUETA_CLASIFICACION,
   type ClasificacionSector,
 } from '@/lib/fabrica/tipos'
@@ -36,6 +40,21 @@ export default async function PoolsDelProyectoPage({
     sectoresSinDeclarar(proyecto.id),
   ])
 
+  // El estado del espejo se calcula acá, no se guarda: una declaración
+  // verificada hace tres semanas no dice nada sobre el código de hoy.
+  const sb = createClient()
+  const estados = new Map<string, string>(
+    await Promise.all(
+      instalaciones.map(async (i) => {
+        const clave = i.pool?.clave ?? ''
+        const entrada = MANIFIESTOS[clave]
+        if (!entrada) return [clave, 'sin manifiesto'] as [string, string]
+        const v = await verificarEspejo(entrada.manifiesto, entrada.prefijos, sb, entrada.excluir)
+        return [clave, v.resultado] as [string, string]
+      }),
+    ),
+  )
+
   return (
     <div className="space-y-8 p-4 md:p-6">
       {/* ── Lo declarado ──────────────────────────────────────────────── */}
@@ -58,43 +77,65 @@ export default async function PoolsDelProyectoPage({
               <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
                 <tr>
                   <th className="px-3 py-2">Pool</th>
+                  <th className="px-3 py-2">Tipo</th>
                   <th className="px-3 py-2">Versión</th>
-                  <th className="px-3 py-2">Modo</th>
-                  <th className="px-3 py-2">Estado</th>
+                  <th className="px-3 py-2">Espejo</th>
+                  <th className="px-3 py-2 text-right">Entidades</th>
+                  <th className="px-3 py-2 text-right">Pantallas</th>
+                  <th className="px-3 py-2 text-right">Acciones</th>
+                  <th className="px-3 py-2 text-right">Agentes</th>
                   <th className="px-3 py-2" />
                 </tr>
               </thead>
               <tbody>
-                {instalaciones.map((i) => (
-                  <tr key={i.id} className="border-t border-border">
-                    <td className="px-3 py-2 font-medium">
-                      {i.pool?.nombre ?? '—'}
-                      <span className="ml-2 font-mono text-[10px] text-muted-foreground">
-                        {i.pool?.clave}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 tabular-nums">{i.version?.version ?? '—'}</td>
-                    <td className="px-3 py-2">
-                      <Badge
-                        variant={i.version?.modo === 'espejo' ? 'info' : 'success'}
-                        className="font-normal"
-                      >
-                        {i.version?.modo ?? '—'}
-                      </Badge>
-                    </td>
-                    <td className="px-3 py-2 text-muted-foreground">{i.estado}</td>
-                    <td className="px-3 py-2 text-right">
-                      {i.pool?.clave && (
-                        <Link
-                          href={`/fabrica/${proyecto.slug}/pools/${i.pool.clave}`}
-                          className="text-primary hover:underline"
+                {instalaciones.map((i) => {
+                  const clave = i.pool?.clave ?? ''
+                  const est = estados.get(clave)
+                  const m = MANIFIESTOS[clave]?.manifiesto
+                  return (
+                    <tr key={i.id} className="border-t border-border">
+                      <td className="px-3 py-2 font-medium">
+                        {i.pool?.nombre ?? '—'}
+                        <span className="ml-2 font-mono text-[10px] text-muted-foreground">
+                          {clave}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <Badge
+                          variant={i.pool?.categoria === 'nucleo' ? 'info' : 'outline'}
+                          className="font-normal"
                         >
-                          verificar
-                        </Link>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                          {i.pool ? ETIQUETA_CATEGORIA[i.pool.categoria] : '—'}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2 tabular-nums">{i.version?.version ?? '—'}</td>
+                      <td className="px-3 py-2">
+                        <Badge
+                          variant={
+                            est === 'coincide' ? 'success' : est === 'difiere' ? 'warning' : 'outline'
+                          }
+                          className="font-normal"
+                        >
+                          {est ?? 'sin verificar'}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">{m?.entidades.length ?? '—'}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{m?.pantallas.length ?? '—'}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{m?.acciones.length ?? '—'}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{m?.agentes?.length ?? 0}</td>
+                      <td className="px-3 py-2 text-right">
+                        {clave && (
+                          <Link
+                            href={`/fabrica/${proyecto.slug}/pools/${clave}`}
+                            className="text-primary hover:underline"
+                          >
+                            ver
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>

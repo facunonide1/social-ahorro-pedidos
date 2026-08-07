@@ -26,6 +26,8 @@ export function HeaderProyecto({
 
   const tabs = [
     { label: 'Pools', href: base },
+    { label: 'Cobertura', href: `${base}/cobertura` },
+    { label: 'Moldes', href: `${base}/moldes` },
     { label: 'Usuarios', href: `${base}/usuarios` },
     { label: 'Actividad', href: `${base}/actividad` },
     { label: 'Configuración', href: `${base}/configuracion` },

@@ -5,9 +5,23 @@ import { createClient } from '@/lib/supabase/server'
 import { traerProyecto } from '@/lib/fabrica/datos'
 import { verificarEspejo } from '@/lib/fabrica/comparador'
 import { MANIFIESTOS } from '@/lib/fabrica/manifiestos'
-import { ETIQUETA_MOLDE, type TipoDiferencia } from '@/lib/fabrica/tipos'
+import { ETIQUETA_MOLDE, type Participacion, type TipoDiferencia } from '@/lib/fabrica/tipos'
 
 export const dynamic = 'force-dynamic'
+
+const ETIQUETA_PARTICIPACION: Record<Participacion, string> = {
+  sugiere: 'sugiere',
+  prepara: 'prepara y espera',
+  hace_y_avisa: 'lo hace y avisa',
+  nunca: 'nunca',
+}
+
+const VARIANTE_PARTICIPACION: Record<Participacion, 'outline' | 'info' | 'warning' | 'destructive'> = {
+  sugiere: 'outline',
+  prepara: 'info',
+  hace_y_avisa: 'warning',
+  nunca: 'destructive',
+}
 
 const ETIQUETA_TIPO: Record<TipoDiferencia, string> = {
   entidad: 'Entidad',
@@ -212,6 +226,116 @@ export default async function VerificacionPoolPage({
             </div>
           ))}
         </dl>
+      </section>
+
+      {/* ── Agentes ───────────────────────────────────────────────────── */}
+      <section>
+        <h3 className="text-sm font-semibold tracking-tight">
+          Agentes
+          <span className="ml-2 font-normal text-muted-foreground">
+            {(manifiesto.agentes ?? []).length}
+          </span>
+        </h3>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          La unidad que ve el cliente. El agente posee decisiones y
+          automatizaciones, no pantallas ni entidades: ésas son compartidas.
+        </p>
+
+        {(manifiesto.agentes ?? []).length === 0 ? (
+          <p className="mt-3 rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+            Este pool no aporta ningún agente. Es una respuesta válida: significa
+            que el sector no automatiza ni decide nada por su cuenta todavía.
+          </p>
+        ) : (
+          <div className="mt-3 space-y-4">
+            {(manifiesto.agentes ?? []).map((ag) => (
+              <div key={ag.clave} className="rounded-lg border border-border">
+                <div className="border-b border-border p-4">
+                  <h4 className="font-medium tracking-tight">
+                    {ag.nombre}
+                    <span className="ml-2 font-mono text-[10px] font-normal text-muted-foreground">
+                      {ag.clave}
+                    </span>
+                  </h4>
+                  <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{ag.trabajo}</p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {ag.capacidades.map((c) => (
+                      <Badge key={c} variant="outline" className="font-normal">{c}</Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-b border-border p-4">
+                  <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Qué necesita para funcionar
+                  </h5>
+                  <ul className="mt-2 space-y-1.5 text-sm">
+                    {ag.necesita.map((r) => (
+                      <li key={r.dato} className="flex flex-wrap items-baseline gap-x-2">
+                        <span className="font-medium">{r.dato}</span>
+                        {r.donde && (
+                          <span className="text-xs text-muted-foreground">· {r.donde}</span>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          — sin esto: {r.sin_esto}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  {ag.se_activa_con && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Se enciende con: {ag.se_activa_con}
+                    </p>
+                  )}
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
+                      <tr>
+                        <th className="px-4 py-2">Acción</th>
+                        <th className="px-4 py-2">Cuánto hace solo</th>
+                        <th className="px-4 py-2">Por qué</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ag.acciones.map((acc) => (
+                        <tr key={acc.clave} className="border-t border-border align-top">
+                          <td className="px-4 py-2">
+                            {acc.titulo}
+                            <div className="font-mono text-[10px] text-muted-foreground">
+                              {acc.clave}
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-2">
+                            <Badge
+                              variant={VARIANTE_PARTICIPACION[acc.participacion]}
+                              className="font-normal"
+                            >
+                              {ETIQUETA_PARTICIPACION[acc.participacion]}
+                            </Badge>
+                            {acc.participacion === 'hace_y_avisa' && acc.reversible === false && (
+                              <div className="mt-1 text-[10px] font-medium text-warning">
+                                actúa solo y no se puede deshacer
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-muted-foreground">{acc.motivo ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="border-t border-border px-4 py-3 text-xs text-muted-foreground">
+                  Techo de permisos:{' '}
+                  {ag.permisos.map((p) => `${p.modulo} (${p.acciones.join(', ')})`).join(' · ')}
+                  {' — '}nunca más que quien lo creó.
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {manifiesto.configurable && manifiesto.configurable.length > 0 && (
