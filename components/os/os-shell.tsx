@@ -101,6 +101,15 @@ export function OsShell({ profile, children }: { profile: HubProfile; children: 
                 <Button size="sm" onClick={() => setPlusOpen(true)} className="hidden h-9 gap-1.5 sm:inline-flex" aria-label="Acciones rápidas">
                   <Plus className="size-4" /> <span className="hidden md:inline">Acción</span>
                 </Button>
+                {/* Única entrada a la Fábrica desde NORA OS. La Fábrica NO es
+                    una sub-app: no está en el registry, no tiene dock ni ⌘K, y
+                    su propia puerta decide quién entra. Esto es sólo el link. */}
+                <Link
+                  href="/fabrica"
+                  className="hidden text-xs text-muted-foreground transition-colors hover:text-foreground lg:inline"
+                >
+                  Fábrica
+                </Link>
                 <NotificationsTrigger />
               </div>
             </div>
