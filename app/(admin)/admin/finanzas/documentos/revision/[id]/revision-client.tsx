@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, Check, Loader2, RefreshCw, Search, X } from 'lucide-react'
+import { AlertTriangle, Check, Loader2, Plus, RefreshCw, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { VisorDocumento } from '@/components/documentos/visor-documento'
+import { desglosarDiferencia, ivaDiscriminado, type TotalesDoc } from '@/lib/documentos/precios'
 import { formatARS } from '@/lib/utils/format'
 import { cn } from '@/lib/utils'
 
@@ -87,6 +88,10 @@ export function RevisionClient({
   const [lineas, setLineas] = useState<Linea[]>([])
   const [dudosos, setDudosos] = useState<Record<string, number>>({})
   const [terceroSinMatch, setTerceroSinMatch] = useState(false)
+  /** El cuadro de totales del pie, tal como lo leyó el modelo. */
+  const [totales, setTotales] = useState<TotalesDoc>({})
+  /** Local: crece si se da de alta un proveedor sin salir de la pantalla. */
+  const [provs, setProvs] = useState<Prov[]>(proveedores)
 
   const leer = useCallback(async () => {
     setFase('leyendo')
@@ -98,6 +103,7 @@ export function RevisionClient({
 
       const d = j.datos
       const t = d.totales ?? {}
+      setTotales(t)
       setDudosos(j.camposDudosos ?? {})
       setTerceroSinMatch(j.tercero?.estado !== 'encontrado')
       setCab({
@@ -153,9 +159,13 @@ export function RevisionClient({
   const sumaLineas = lineas
     .filter((l) => l.matchEstado !== 'ignorado')
     .reduce((a, l) => a + (l.totalLinea ?? 0), 0)
-  const totalCab = Number(cab?.total ?? 0)
-  const diferencia = totalCab ? +(totalCab - sumaLineas).toFixed(2) : 0
-  const cuadra = !totalCab || Math.abs(diferencia) < Math.max(1, totalCab * 0.02)
+
+  // El total editable de la cabecera manda: si alguien lo corrigió mirando el
+  // papel, el desglose tiene que usar ese, no el que leyó el modelo.
+  const desglose = useMemo(
+    () => desglosarDiferencia(sumaLineas, { ...totales, total: Number(cab?.total ?? 0) || null }),
+    [sumaLineas, totales, cab?.total],
+  )
 
   const faltantes = useMemo(() => {
     if (!cab) return []
@@ -177,7 +187,10 @@ export function RevisionClient({
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          cabecera: cab,
+          cabecera: { ...cab, iva_discriminado: ivaDiscriminado(cab.letra) },
+          // El cuadro del pie va entero: el servidor lo necesita para resolver
+          // la alícuota de los renglones que no la traen y derivar los dos precios.
+          totales: { ...totales, total: Number(cab.total) || null },
           lineas: lineas.map((l) => ({
             nro_linea: l.nroLinea,
             codigo_tercero: l.codigoTercero,
@@ -245,21 +258,24 @@ export function RevisionClient({
             <div className="space-y-3 rounded-lg border border-border p-4">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Encabezado</div>
 
-              {terceroSinMatch && (
-                <div className="flex items-start gap-2 rounded-md bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-700 dark:text-amber-400">
-                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                  <span>
-                    No reconocí el CUIT {cab.tercero_ident_fiscal || '(no se leyó)'} — leí “{cab.tercero_nombre_leido || 'sin nombre'}”.
-                    Elegí el proveedor de la lista. Si es nuevo, cargalo primero en Proveedores.
-                  </span>
-                </div>
+              {terceroSinMatch && !cab.tercero_id && (
+                <AltaProveedor
+                  extraccionId={extraccionId}
+                  cuitLeido={cab.tercero_ident_fiscal}
+                  nombreLeido={cab.tercero_nombre_leido}
+                  onListo={(p) => {
+                    setProvs((ps) => (ps.some((x) => x.id === p.id) ? ps : [...ps, p]))
+                    setCab((c) => (c ? { ...c, tercero_id: p.id } : c))
+                    setTerceroSinMatch(false)
+                  }}
+                />
               )}
 
               <Campo label="Proveedor *" alerta={!cab.tercero_id}>
                 <Select value={cab.tercero_id} onValueChange={(v) => setCab({ ...cab, tercero_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Elegí el proveedor" /></SelectTrigger>
                   <SelectContent>
-                    {proveedores.map((p) => <SelectItem key={p.id} value={p.id}>{p.razon_social} · {p.cuit}</SelectItem>)}
+                    {provs.map((p) => <SelectItem key={p.id} value={p.id}>{p.razon_social} · {p.cuit}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </Campo>
@@ -282,7 +298,14 @@ export function RevisionClient({
                     </SelectContent>
                   </Select>
                 </Campo>
-                <Campo label="Letra"><Input value={cab.letra} onChange={(e) => setCab({ ...cab, letra: e.target.value.toUpperCase() })} maxLength={1} /></Campo>
+                <Campo
+                  label="Letra"
+                  ayuda={ivaDiscriminado(cab.letra)
+                    ? 'A/M: los precios de los renglones son sin IVA.'
+                    : 'B/C: los precios de los renglones ya traen el IVA adentro.'}
+                >
+                  <Input value={cab.letra} onChange={(e) => setCab({ ...cab, letra: e.target.value.toUpperCase() })} maxLength={1} />
+                </Campo>
                 <Campo label="Punto de venta" conf={nivelConfianza(dudosos['punto_venta'])}><Input value={cab.punto_venta} onChange={(e) => setCab({ ...cab, punto_venta: e.target.value })} /></Campo>
                 <Campo label="Número *" alerta={!cab.numero} conf={nivelConfianza(dudosos['numero'])}><Input value={cab.numero} onChange={(e) => setCab({ ...cab, numero: e.target.value })} /></Campo>
                 <Campo label="Emisión *" alerta={!cab.fecha_emision} conf={nivelConfianza(dudosos['fecha_emision'])}><Input type="date" value={cab.fecha_emision} onChange={(e) => setCab({ ...cab, fecha_emision: e.target.value })} /></Campo>
@@ -310,15 +333,7 @@ export function RevisionClient({
               </div>
             </div>
 
-            {!!totalCab && !cuadra && (
-              <div className="flex items-start gap-2 rounded-md bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                <span>
-                  Los renglones suman {formatARS(sumaLineas)} y el total dice {formatARS(totalCab)} — hay {formatARS(Math.abs(diferencia))} de diferencia.
-                  Podés confirmar igual: a veces el papel trae bonificaciones que no están renglón por renglón.
-                </span>
-              </div>
-            )}
+            {!!desglose.total && <Cuadre desglose={desglose} />}
 
             {(!!faltantes.length || pendientes > 0) && (
               <div className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
@@ -336,6 +351,160 @@ export function RevisionClient({
           </>
         )}
       </div>
+    </div>
+  )
+}
+
+/**
+ * Alta de proveedor sin salir de la revisión, precargada con lo que se leyó.
+ *
+ * Antes, si el CUIT no matcheaba, la pantalla quedaba trabada: no dejaba
+ * confirmar y no ofrecía salida. Mandar a la persona a Compras a dar de alta el
+ * proveedor y volver es perder la carga a mitad de camino.
+ *
+ * Requiere confirmación explícita — nunca se crea solo. Y el servidor vuelve a
+ * chequear el CUIT: si ya existe con otro nombre, lo vincula en vez de duplicar.
+ */
+function AltaProveedor({
+  extraccionId,
+  cuitLeido,
+  nombreLeido,
+  onListo,
+}: {
+  extraccionId: string
+  cuitLeido: string
+  nombreLeido: string
+  onListo: (p: Prov) => void
+}) {
+  const [abierto, setAbierto] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [f, setF] = useState({
+    razon_social: nombreLeido ?? '',
+    cuit: cuitLeido ?? '',
+    condicion_iva: 'responsable_inscripto',
+    domicilio_fiscal: '',
+  })
+
+  async function crear() {
+    setBusy(true)
+    try {
+      const r = await fetch('/api/documentos/proveedor', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...f, extraccion_id: extraccionId }),
+      })
+      const j = await r.json().catch(() => null)
+      if (!r.ok) { toast.error(j?.error ?? 'No pude crear el proveedor.'); return }
+      // Si el CUIT ya existía con otro nombre, el servidor vincula en vez de duplicar.
+      toast[j.estado === 'vinculado' ? 'info' : 'success'](j.mensaje)
+      onListo(j.proveedor)
+      setAbierto(false)
+    } catch {
+      toast.error('Se cortó la conexión al crear el proveedor.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!abierto) {
+    return (
+      <div className="rounded-md bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-800 dark:text-amber-300">
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          <span>
+            No reconocí el CUIT {cuitLeido || '(no se leyó)'} — en el papel dice “{nombreLeido || 'sin nombre'}”.
+            Elegilo de la lista si ya está cargado con otro nombre.
+          </span>
+        </div>
+        <Button size="sm" variant="outline" className="mt-2 h-7 text-[11px]" onClick={() => setAbierto(true)}>
+          <Plus className="size-3.5" /> Crear proveedor nuevo
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2 rounded-md border border-border p-3">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Nuevo proveedor</div>
+      <p className="text-[11px] text-muted-foreground">
+        Precargado con lo que dice la factura. Verificá el CUIT antes de crear.
+      </p>
+      <Campo label="Razón social *"><Input value={f.razon_social} onChange={(e) => setF({ ...f, razon_social: e.target.value })} /></Campo>
+      <Campo label="CUIT *"><Input value={f.cuit} onChange={(e) => setF({ ...f, cuit: e.target.value })} placeholder="30-12345678-9" /></Campo>
+      <Campo label="Condición frente al IVA">
+        <Select value={f.condicion_iva} onValueChange={(v) => setF({ ...f, condicion_iva: v })}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {['responsable_inscripto', 'monotributo', 'exento', 'consumidor_final'].map((c) => (
+              <SelectItem key={c} value={c}>{c.replace(/_/g, ' ')}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Campo>
+      <Campo label="Domicilio fiscal"><Input value={f.domicilio_fiscal} onChange={(e) => setF({ ...f, domicilio_fiscal: e.target.value })} /></Campo>
+      <p className="text-[10px] text-muted-foreground">
+        Se crea con lo mínimo. El resto (contactos, banco, plazos) se completa en Compras.
+      </p>
+      <div className="flex gap-2">
+        <Button size="sm" disabled={busy || !f.razon_social.trim() || !f.cuit.trim()} onClick={crear}>
+          {busy ? <><Loader2 className="size-3.5 animate-spin" /> Creando…</> : <><Check className="size-3.5" /> Crear y usar</>}
+        </Button>
+        <Button size="sm" variant="ghost" disabled={busy} onClick={() => setAbierto(false)}>Cancelar</Button>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Por qué los renglones no suman el total.
+ *
+ * Decir "hay $261.232 de diferencia" asusta y no ayuda. Decir "el IVA explica
+ * $228.578, la percepción IIBB $32.654, no queda nada sin explicar" convierte
+ * el susto en la confirmación de que la lectura estuvo bien.
+ */
+function Cuadre({ desglose }: { desglose: ReturnType<typeof desglosarDiferencia> }) {
+  const ok = desglose.cuadra
+  return (
+    <div className={cn(
+      'rounded-md px-3 py-2.5 text-xs',
+      ok ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300' : 'bg-amber-500/10 text-amber-800 dark:text-amber-300',
+    )}>
+      <div className="flex items-center gap-1.5 font-medium">
+        {ok ? <Check className="size-3.5 shrink-0" /> : <AlertTriangle className="size-3.5 shrink-0" />}
+        {ok ? 'Los números cierran' : 'Hay una diferencia sin explicar'}
+      </div>
+
+      <dl className="mt-2 space-y-0.5 tabular-nums">
+        <Fila label="Renglones" monto={desglose.sumaLineas} />
+        {desglose.partes.map((p, i) => <Fila key={i} label={p.concepto} monto={p.monto} signo />)}
+        <div className="!mt-1.5 flex justify-between border-t border-current/20 pt-1.5 font-medium">
+          <dt>Total de la factura</dt>
+          <dd>{formatARS(desglose.total)}</dd>
+        </div>
+        {!ok && (
+          <div className="flex justify-between font-medium">
+            <dt>Sin explicar</dt>
+            <dd>{formatARS(desglose.sinExplicar)}</dd>
+          </div>
+        )}
+      </dl>
+
+      {!ok && (
+        <p className="mt-2 border-t border-current/20 pt-2">
+          Puede ser una bonificación al pie, un renglón que no se leyó o un IVA que
+          quedó afuera. Revisá contra el papel — podés confirmar igual si el total
+          es el correcto.
+        </p>
+      )}
+    </div>
+  )
+}
+
+function Fila({ label, monto, signo = false }: { label: string; monto: number; signo?: boolean }) {
+  return (
+    <div className="flex justify-between gap-4">
+      <dt className="truncate opacity-80">{label}</dt>
+      <dd className="shrink-0">{signo && monto > 0 ? '+ ' : ''}{formatARS(monto)}</dd>
     </div>
   )
 }

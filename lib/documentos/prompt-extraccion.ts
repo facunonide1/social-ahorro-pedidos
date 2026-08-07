@@ -25,7 +25,7 @@
  */
 
 /** Versión semántica del prompt. Subir SIEMPRE que cambie `PROMPT_EXTRACCION`. */
-export const PROMPT_EXTRACCION_VERSION = '1.1.0'
+export const PROMPT_EXTRACCION_VERSION = '1.2.0'
 
 /**
  * Historial de versiones. Se agrega una entrada por cada cambio, arriba de todo.
@@ -36,6 +36,16 @@ export const PROMPT_EXTRACCION_HISTORIAL: ReadonlyArray<{
   fecha: string
   cambio: string
 }> = [
+  {
+    version: '1.2.0',
+    fecha: '2026-08-07',
+    cambio:
+      'Lee el CUADRO DE TOTALES DEL PIE, que es donde las droguerías ponen el IVA: ' +
+      'neto gravado, no gravado, exento, IVA por alícuota (21 y 10,5 conviven), ' +
+      'percepciones por tipo y bonificaciones al pie. Antes solo preguntaba la ' +
+      'alícuota por renglón, que en estas facturas casi nunca está, así que volvía ' +
+      'null y los renglones no cerraban contra el total. Suma iva_discriminado.',
+  },
   {
     version: '1.1.0',
     fecha: '2026-08-07',
@@ -81,8 +91,37 @@ REGLAS
    una "Factura A" es tipo "factura" con letra "A".
 9. Las alícuotas de IVA argentinas son 0, 2.5, 5, 10.5, 21 o 27. Si leés algo
    que no es ninguna de esas, revisá; si sigue sin cerrar, poné null.
-10. Las percepciones (IIBB, IVA percepción) van en "percepciones", separadas
-    del IVA.
+10. Las percepciones (IIBB, IVA percepción, Ganancias) van SEPARADAS del IVA,
+    cada una con su tipo.
+
+EL CUADRO DE TOTALES DEL PIE — LEELO SIEMPRE
+En las facturas de droguería el IVA casi nunca está renglón por renglón: está
+en el recuadro del pie, abajo a la derecha. Ahí suele figurar, con estos
+nombres o parecidos:
+
+  Neto Gravado / Importe Neto Gravado ....... base sobre la que se calcula IVA
+  Neto No Gravado ........................... conceptos sin IVA
+  Exento .................................... conceptos exentos
+  IVA 21% / I.V.A. 21,00% ................... importe de esa alícuota
+  IVA 10,5% ................................. otra alícuota, puede convivir
+  Percep. IIBB / Perc. IB / Ret. ............ percepciones, cada una aparte
+  Bonificación / Descuento global ........... resta al pie
+  TOTAL ..................................... lo que se paga
+
+Extraé ese cuadro completo en "totales". Es lo que permite verificar que los
+renglones cierran contra el total, y sin él la factura no cuadra nunca.
+
+Es normal que 21% y 10,5% aparezcan JUNTAS en la misma factura (medicamentos
+al 10,5, perfumería y limpieza al 21). Listá cada una por separado con su base
+y su importe. No las sumes en un solo número.
+
+LETRA DEL COMPROBANTE — CAMBIA EL SIGNIFICADO DE CADA PRECIO
+- Factura A o M: el IVA va discriminado. El precio de cada renglón es NETO,
+  sin IVA. Poné "iva_discriminado": true.
+- Factura B o C: el IVA ya está incluido en el precio de cada renglón. Poné
+  "iva_discriminado": false.
+Esto cambia todo el cálculo posterior, así que si la letra no se lee con
+seguridad, poné null en "letra" y en "iva_discriminado" y bajá la confianza.
 
 LO MÁS IMPORTANTE
 Un número inventado en un precio no se nota y queda para siempre en el
@@ -104,12 +143,23 @@ SALIDA — devolvé exactamente esta forma, sin texto alrededor:
   "fecha_emision": "AAAA-MM-DD | null",
   "fecha_vencimiento": "AAAA-MM-DD | null",
   "condicion_venta": "string | null",
+  "iva_discriminado": "true si es A o M (renglón sin IVA) | false si es B o C | null si no se lee la letra",
   "moneda": "string | null",
   "totales": {
+    "neto_gravado": "number | null",
+    "neto_no_gravado": "number | null",
+    "exento": "number | null",
+    "iva_por_alicuota": [
+      { "alicuota": "number (21, 10.5, ...)", "base": "number | null", "importe": "number | null" }
+    ],
+    "percepciones_detalle": [
+      { "tipo": "IIBB | IVA | Ganancias | otro texto que figure", "importe": "number | null" }
+    ],
+    "bonificaciones": "number | null",
     "subtotal": "number | null",
     "descuentos": "number | null",
-    "impuestos": "number | null",
-    "percepciones": "number | null",
+    "impuestos": "number | null (suma de todo el IVA, para compatibilidad)",
+    "percepciones": "number | null (suma de todas las percepciones)",
     "total": "number | null"
   },
   "lineas": [
@@ -130,6 +180,12 @@ SALIDA — devolvé exactamente esta forma, sin texto alrededor:
   "advertencias": ["string"]
 }
 
+Sobre "alicuota_iva" de cada renglón: ponela SOLO si figura en el renglón. Si el
+IVA está únicamente en el cuadro del pie, dejá la del renglón en null y cargá
+bien el cuadro — el sistema resuelve desde ahí. No repartas vos la alícuota
+entre los renglones ni la deduzcas dividiendo: si te equivocás, el costo de cada
+producto queda mal para siempre y nadie se entera.
+
 En "campos_dudosos" listá solo los campos que transcribiste pero de los que no estás seguro, con tu confianza en cada uno. Un campo que pusiste en null no va acá: va en "advertencias" si hace falta explicar por qué.`
 
 /** Forma que se le pide al modelo. Espejo del JSON del prompt. */
@@ -142,8 +198,17 @@ export type ExtraccionCruda = {
   fecha_emision: string | null
   fecha_vencimiento: string | null
   condicion_venta: string | null
+  /** true en A/M (renglón sin IVA), false en B/C (IVA adentro), null si no se leyó. */
+  iva_discriminado: boolean | null
   moneda: string | null
   totales: {
+    neto_gravado: number | null
+    neto_no_gravado: number | null
+    exento: number | null
+    /** 21 y 10,5 conviven seguido: medicamentos al 10,5, perfumería al 21. */
+    iva_por_alicuota: Array<{ alicuota: number; base: number | null; importe: number | null }> | null
+    percepciones_detalle: Array<{ tipo: string | null; importe: number | null }> | null
+    bonificaciones: number | null
     subtotal: number | null
     descuentos: number | null
     impuestos: number | null

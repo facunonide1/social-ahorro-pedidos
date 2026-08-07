@@ -4,6 +4,12 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { gateDocumentos } from '@/lib/documentos/permisos'
 import { aprenderAliasTercero } from '@/lib/documentos/identificar'
 import { aprenderAliasItem } from '@/lib/documentos/matchear'
+import {
+  calcularPreciosLinea,
+  ivaDiscriminado,
+  resolverAlicuota,
+  type TotalesDoc,
+} from '@/lib/documentos/precios'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -16,13 +22,13 @@ type LineaBody = {
   unidad?: string | null
   precio_unitario?: string | number | null
   descuento_pct?: string | number | null
-  precio_neto?: string | number | null
   alicuota_iva?: string | number | null
-  precio_con_iva?: string | number | null
   total_linea?: string | number | null
   item_id?: string | null
   match_estado?: string
   match_confianza?: string | number | null
+  // precio_neto y precio_con_iva NO se aceptan del cliente: se derivan en el
+  // servidor a partir de la letra del comprobante y del cuadro de totales.
 }
 
 /**
@@ -59,10 +65,46 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const adm = createAdminClient()
 
+  // Los dos precios se derivan ACÁ, no en el cliente: son lo que alimenta el
+  // histórico de compras y de ahí sale toda comparación entre proveedores.
+  //
+  // La letra manda: en A/M el renglón es neto y hay que sumarle el IVA; en B/C
+  // ya lo trae adentro y hay que sacárselo. Guardar el mismo número en las dos
+  // columnas haría que el comparador mienta al cruzar proveedores que facturan
+  // con letras distintas.
+  //
+  // Las percepciones NO se prorratean: no son costo del producto, son un pago a
+  // cuenta de un impuesto del comprador. Meterlas en el renglón inflaría el
+  // costo y rompería todos los márgenes.
+  const totales: TotalesDoc = (b?.totales ?? {}) as TotalesDoc
+  const discrimina =
+    typeof cabecera.iva_discriminado === 'boolean'
+      ? cabecera.iva_discriminado
+      : ivaDiscriminado(cabecera.letra)
+
+  const lineasConPrecios = lineas.map((l) => {
+    const ali = resolverAlicuota(
+      l.alicuota_iva != null ? Number(l.alicuota_iva) : null,
+      totales,
+    )
+    const p = calcularPreciosLinea({
+      precioUnitario: l.precio_unitario != null ? Number(l.precio_unitario) : null,
+      descuentoPct: l.descuento_pct != null ? Number(l.descuento_pct) : null,
+      alicuota: ali.alicuota,
+      ivaDiscriminado: discrimina,
+    })
+    return {
+      ...l,
+      alicuota_iva: ali.alicuota,
+      precio_neto: p.precioNeto,
+      precio_con_iva: p.precioConIva,
+    }
+  })
+
   const { data, error } = await adm.rpc('doc_confirmar_documento', {
     p_extraccion_id: params.id,
     p_cabecera: cabecera,
-    p_lineas: lineas,
+    p_lineas: lineasConPrecios,
     p_usuario: g.userId,
   })
 
