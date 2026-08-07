@@ -157,6 +157,21 @@ export interface PantallaDeclarada {
   molde: Molde
   /** Permiso que la habilita. Vacío = cualquiera del proyecto. */
   permiso?: string
+  /**
+   * propia   = el pool es dueño de la pantalla y se la lleva al instalarse.
+   * prestada = el menú del pool la navega, pero pertenece a otro pool.
+   *
+   * La distinción existe porque sin ella un pool absorbe pantallas ajenas cada
+   * vez que el menú apunta afuera, y al instalarlo en otro proyecto se arrastra
+   * software que no le corresponde.
+   */
+  pertenencia?: 'propia' | 'prestada'
+  /**
+   * ¿Se llega desde el menú del sector? Las fichas de detalle no (se llega
+   * desde una lista) y eso es normal. Una pantalla de primer nivel con
+   * `navegable: false` es un hallazgo: existe y no hay cómo llegar.
+   */
+  navegable?: boolean
 }
 
 export interface AccionDeclarada {
