@@ -339,3 +339,83 @@ el mismo proveedor, punto de venta y número, se vincula sin duplicar.
 
 Con una factura de 4 renglones: 25,8 s, 2.607 tokens de entrada y 1.569 de
 salida ≈ **US$0,05 por documento** (~US$52 cada mil facturas).
+
+---
+
+## Costos y comparador (v0.56)
+
+### Carga en lote
+
+Sin esto el histórico no arranca: la serie necesita facturas viejas y de a una
+nadie las carga.
+
+Se arrastran varios archivos, se procesan de a `DOC_CONCURRENCIA_LOTE` (2) y la
+cola muestra el estado de cada uno. Un archivo que falla no frena a los demás.
+Al confirmar, salta sola a la siguiente pendiente del lote, con el progreso a la
+vista.
+
+**La fecha del evento de precio es la de EMISIÓN, no la de carga** — verificado
+cargando desordenado (agosto → junio → julio) y comprobando que la serie queda
+ordenada por emisión.
+
+### Los dos comparadores
+
+| Pantalla | Qué compara | Para qué |
+| --- | --- | --- |
+| `/admin/compras/comparador` | listas de precios vigentes | decidir a quién comprarle; arma órdenes con smart split |
+| `/admin/compras/costos` | facturas cargadas | saber qué pagaste de verdad y si coincide con lo pactado |
+
+Se extendió el módulo en vez de reemplazarlo: tirar el de listas habría matado
+el smart split y el alta de órdenes, que funcionan y no tienen reemplazo. Los
+dos quedan enlazados entre sí.
+
+### Todo por precio NETO
+
+El IVA es crédito fiscal, no costo. Además, en facturas de IVA mixto el precio
+con IVA por renglón es aproximado (alícuota efectiva promedio), así que
+compararlo sería comparar estimaciones.
+
+### Dato fresco
+
+Un precio de más de `DOC_DIAS_DATO_FRESCO` (60) días se marca con su antigüedad
+y **no se usa para elegir el "mejor"**: no es una alternativa real, es un
+recuerdo. Si un proveedor nunca vendió un SKU, la celda va vacía — cero sería
+mentira.
+
+### Ahorro potencial
+
+`(último pagado − mejor disponible fresco) × unidades compradas en 90 días`,
+ordenado de mayor a menor. Es la lista de dónde se está dejando plata. No
+contempla plazos de pago ni mínimos de compra, y se dice en pantalla.
+
+### Alertas
+
+Corren al confirmar y usan el feed que ya existe (`nora_avisos`, tipos propios
+desde 0089).
+
+La de aumento tiene **dos** condiciones, no una: la suba supera el mínimo (15%)
+**y** se despega al menos 8 puntos del promedio de lo que ese proveedor movió en
+el período. Con inflación, un umbral fijo solo se dispara en todo y se aprende a
+ignorar; lo que importa es lo que sube *más que el resto*.
+
+Todas hablan con hechos y montos, nunca con adjetivos.
+
+### Umbrales
+
+Todos en `lib/documentos/config.ts`, por variable de entorno:
+
+| Variable | Default | Qué controla |
+| --- | --- | --- |
+| `DOC_CONCURRENCIA_LOTE` | 2 | documentos leídos a la vez |
+| `DOC_MAX_ARCHIVOS_LOTE` | 40 | tope por tanda |
+| `DOC_DIAS_DATO_FRESCO` | 60 | cuándo un costo deja de ser comparable |
+| `DOC_DIAS_VOLUMEN` | 90 | ventana para medir cuánto se compró |
+| `DOC_ALERTA_SUBA_PCT` | 15 | suba mínima para mirar |
+| `DOC_ALERTA_EXCESO_PCT` | 8 | cuánto tiene que despegarse del promedio |
+| `DOC_ALERTA_MONTO_MINIMO` | 10000 | plata mínima para molestar a alguien |
+
+### Límite con SIFACO
+
+El módulo informa costos y nada más. No sugiere ni escribe precio de venta. En
+la ficha de producto se muestra el margen que resulta del costo real **solo si
+el precio ya está cargado**, y aclarando que el precio se define en SIFACO.
