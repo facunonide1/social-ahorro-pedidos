@@ -13,7 +13,7 @@ export default async function DocumentosPage() {
   const sb = createClient()
   const { sucursalId, esTodas } = getSucursalActiva()
 
-  let docsQ = sb.from('facturas_proveedor').select('id, tipo_documento, numero_factura, total, fecha_emision, fecha_vencimiento, estado, sucursal_id, proveedores(razon_social)').order('fecha_emision', { ascending: false }).limit(1000)
+  let docsQ = sb.from('facturas_proveedor').select('id, tipo_documento, numero_factura, total, fecha_emision, fecha_vencimiento, estado, sucursal_id, origen_captura, doc_documento_id, proveedores(razon_social)').order('fecha_emision', { ascending: false }).limit(1000)
   if (!esTodas && sucursalId) docsQ = docsQ.eq('sucursal_id', sucursalId)
 
   const [{ data: docs }, { data: provs }, { data: sucs }] = await Promise.all([
@@ -26,6 +26,7 @@ export default async function DocumentosPage() {
     id: d.id, tipo: d.tipo_documento, numero: d.numero_factura, total: Number(d.total),
     emision: d.fecha_emision, vencimiento: d.fecha_vencimiento, estado: d.estado,
     sucursal_id: d.sucursal_id, proveedor: d.proveedores?.razon_social ?? '—',
+    origen: d.origen_captura ?? 'manual', docId: d.doc_documento_id ?? null,
   })) as DocRow[]
 
   return (

@@ -20,7 +20,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { cn } from '@/lib/utils'
 import { EmptyConAccion } from '@/components/os/empty-con-accion'
 
-export type DocRow = { id: string; tipo: string; numero: string; total: number; emision: string; vencimiento: string; estado: string; sucursal_id: string | null; proveedor: string }
+export type DocRow = {
+  id: string; tipo: string; numero: string; total: number; emision: string
+  vencimiento: string; estado: string; sucursal_id: string | null; proveedor: string
+  /** 'foto' = salió de una captura leída por el motor; 'manual' = la escribió alguien. */
+  origen: 'manual' | 'foto' | string
+  /** doc_documentos del que salió, para llegar a la imagen original. */
+  docId: string | null
+}
 type Prov = { id: string; nombre: string; cuit: string; plazo: number; forma: string | null }
 type Suc = { id: string; nombre: string }
 const ALL = '__all__'
@@ -86,7 +93,7 @@ export function DocumentosClient({ docs, proveedores, sucursales }: { docs: DocR
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">Tipo</th><th className="px-3 py-2">Proveedor</th><th className="px-3 py-2">Número</th><th className="px-3 py-2">Vence</th><th className="px-3 py-2 text-right">Total</th><th className="px-3 py-2">Estado</th></tr></thead>
+            <thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">Tipo</th><th className="px-3 py-2">Proveedor</th><th className="px-3 py-2">Número</th><th className="px-3 py-2">Origen</th><th className="px-3 py-2">Vence</th><th className="px-3 py-2 text-right">Total</th><th className="px-3 py-2">Estado</th></tr></thead>
             <tbody>
               {rows.map((d) => {
                 const vencido = d.estado !== 'pagada' && d.vencimiento < hoy
@@ -95,6 +102,22 @@ export function DocumentosClient({ docs, proveedores, sucursales }: { docs: DocR
                     <td className="px-3 py-1.5 text-xs">{TIPO_LABEL[d.tipo] ?? d.tipo}</td>
                     <td className="px-3 py-1.5 font-medium">{d.proveedor}</td>
                     <td className="px-3 py-1.5 font-mono text-xs">{d.numero}</td>
+                    <td className="px-3 py-1.5">
+                      {d.origen === 'foto' ? (
+                        // La imagen original es la prueba ante el proveedor.
+                        <a
+                          href={d.docId ? `/admin/finanzas/documentos/${d.docId}` : undefined}
+                          className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/20"
+                          title="Cargada por foto — ver el documento original"
+                        >
+                          <Camera className="size-3" /> foto
+                        </a>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Keyboard className="size-3" /> a mano
+                        </span>
+                      )}
+                    </td>
                     <td className={cn('px-3 py-1.5', vencido && 'font-medium text-rose-600 dark:text-rose-400')}>{d.vencimiento}</td>
                     <td className={cn('px-3 py-1.5 text-right font-mono tabular-nums', d.tipo === 'nota_credito' && 'text-emerald-600 dark:text-emerald-400')}>{d.tipo === 'nota_credito' ? '−' : ''}{formatARS(d.total)}</td>
                     <td className="px-3 py-1.5"><Badge variant={ESTADO_VARIANT[d.estado] ?? 'outline'} className="font-normal">{d.estado}</Badge></td>
