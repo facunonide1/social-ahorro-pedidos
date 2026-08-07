@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { exportExcel } from '@/lib/utils/export-excel'
 import { formatARS } from '@/lib/utils/format'
 import { cn } from '@/lib/utils'
+import { AccionesConciliacion } from '@/components/documentos/acciones-conciliacion'
 import type { FilaConciliacion, ResultadoConciliacion } from '@/lib/documentos/conciliar'
 
 type OrdenLite = { id: string; codigo: string | null; total: number; fecha: string }
@@ -111,6 +112,10 @@ export function FichaConciliacion({
           ))}
         </Papeles>
       </div>
+
+      {(estado === 'con_diferencias' || estado === 'cerrada_manual') && (
+        <AccionesConciliacion conciliacionId={conciliacionId} estado={estado} totales={totales} />
+      )}
 
       {!!reclamos.length && (
         <div className="rounded-lg border border-border px-4 py-3">

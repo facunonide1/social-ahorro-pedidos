@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { gateDocumentos } from '@/lib/documentos/permisos'
 import { ordenesCandidatas, vincular } from '@/lib/documentos/vincular'
 import { conciliar } from '@/lib/documentos/conciliar'
+import { avisarDiferencia } from '@/lib/documentos/acciones-conciliacion'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     // Se recalcula al vincular: cada papel nuevo puede cambiar el resultado.
     const resultado = await conciliar(adm, conciliacionId, g.userId)
+    await avisarDiferencia(adm, conciliacionId, g.userId)
     return NextResponse.json({ ok: true, conciliacion_id: conciliacionId, ...resultado })
   } catch (e: any) {
     console.error('[conciliacion] falló la vinculación', e)
