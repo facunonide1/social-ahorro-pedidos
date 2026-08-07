@@ -62,9 +62,18 @@ export default async function ComparadorPage({ searchParams }: { searchParams: {
 
   return (
     <>
-      <PageHeader title="Comparador de precios" description="Mejor precio por producto dentro del rubro + smart split entre proveedores."
-        breadcrumbs={[{ label: 'Compras' }, { label: 'Comparador' }]} />
+      <PageHeader
+        title="Comparador de listas"
+        description="Lo que los proveedores DICEN que cuesta, según sus listas vigentes. Para lo que realmente pagaste, mirá Costos."
+        breadcrumbs={[{ label: 'Compras' }, { label: 'Comparador de listas' }]}
+      />
       <div className="space-y-4 p-4 md:p-6">
+        <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
+          <span>Esta pantalla compara <b>listas de precios</b>.</span>
+          <a href="/admin/compras/costos" className="text-primary hover:underline">
+            Ver el comparador de costos reales (lo facturado) →
+          </a>
+        </div>
         <RubroFilter />
         <ComparadorClient productos={productos} proveedores={provList} rubro={rubro} />
       </div>
