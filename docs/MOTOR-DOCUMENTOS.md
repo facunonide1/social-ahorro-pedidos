@@ -419,3 +419,78 @@ Todos en `lib/documentos/config.ts`, por variable de entorno:
 El módulo informa costos y nada más. No sugiere ni escribe precio de venta. En
 la ficha de producto se muestra el margen que resulta del costo real **solo si
 el precio ya está cargado**, y aclarando que el precio se define en SIFACO.
+
+---
+
+## Conciliación de tres puntas (v0.57)
+
+Tres documentos describen la misma compra y casi nunca coinciden:
+
+```
+ORDEN   → lo que se pidió y a qué precio se pactó
+REMITO  → lo que efectivamente entregaron
+FACTURA → lo que pretenden cobrar
+```
+
+### El modelo: muchos a muchos
+
+`doc_conciliaciones` nació con `orden_id`, `remito_id` y `factura_id` — una
+columna por documento, o sea uno a uno. La realidad no es esa: una orden se
+entrega en varios remitos, una factura cubre varios remitos, y hay factura sin
+remito. Como la tabla estaba vacía, se corrigió (migración 0090):
+
+| Antes | Ahora |
+| --- | --- |
+| `orden_id` | tabla `doc_conciliacion_ordenes` |
+| `remito_id`, `factura_id` | tabla `doc_conciliacion_documentos` (con `rol`) |
+
+### Vinculación
+
+Sugiere órdenes candidatas con su **porcentaje de coincidencia** (SKU
+compartidos, penalizado por distancia de fecha), pero **nunca vincula sola**.
+Se puede elegir más de una orden, y *"fue una compra directa"* siempre está
+disponible — en perfumería y supermercado se le compra al viajante sin orden.
+
+### Unidades
+
+`doc_factores_unidad` guarda cuántas unidades trae una caja **de este producto
+en este proveedor**. Se carga a mano. Si falta el factor y la unidad del papel
+es desconocida, la línea se marca **no comparable** en vez de asumir: comparar
+cajas contra unidades hace que todo dé diferencia y el módulo se vuelva ruido.
+
+### Las tres diferencias
+
+| Diferencia | Cálculo | Valorizada a |
+| --- | --- | --- |
+| cantidad faltante | pedido − recibido | precio pactado |
+| facturado de más | facturado − recibido | precio facturado |
+| precio distinto | neto facturado − neto pactado en la **orden** | × unidades facturadas |
+
+La comparación contra *lista vigente* ya existía (v0.56); ésta es contra la
+**orden**, que es lo pactado para esa compra puntual.
+
+### Acciones — reusan el módulo de reclamos existente
+
+| Diferencia | Acción |
+| --- | --- |
+| faltante | reclamo en `devoluciones_proveedor` con su detalle |
+| facturado de más | reclamo `enviada` + recordatorio cada 7 días hasta la NC |
+| precio distinto | **decisión humana** con motivo obligatorio: reclamar o aceptar |
+| cualquiera | cierre manual con motivo obligatorio |
+
+Aceptar un aumento sin dejar escrito por qué es cómo se pierde el rastro del
+costo: seis meses después nadie recuerda si fue negociado o se dejó pasar.
+
+### Umbrales
+
+| Variable | Default | Qué controla |
+| --- | --- | --- |
+| `DOC_CONC_VENTANA_DIAS` | 60 | cuántos días atrás se buscan órdenes |
+| `DOC_CONC_TOL_CANTIDAD` | 0 | las unidades son enteras |
+| `DOC_CONC_TOL_PRECIO_PCT` | 1 | redondeos, no diferencias |
+| `DOC_CONC_TOL_PRECIO_ARS` | 5 | se aplica la mayor de las dos |
+| `DOC_CONC_MONTO_MINIMO` | 2000 | debajo de esto cierra sola |
+| `DOC_CONC_DIAS_TAREA` | 7 | días antes de la tarea de control |
+
+Perseguir $80 cuesta más que los $80, y una bandeja llena de casos de $80 hace
+que no se miren los de $80.000.
