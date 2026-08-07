@@ -163,20 +163,79 @@ no la del dueño. Sin eso el linter la marcaría como `security_definer_view`
 
 ---
 
-## Solapamiento con tablas existentes — pendiente de decisión
+## Solapamiento con tablas existentes — RESUELTO (v0.54)
 
-El sistema **ya tiene** tablas que cubren parte de este territorio, hoy todas
-vacías (0 filas):
+Tres estructuras preexistentes cubrían territorio del motor con formas más
+pobres. Estaban todas vacías, así que sacarlas salió gratis. Migración `0083`:
 
-- `precios_historico` — item + proveedor + precio + fecha, sin distinguir neto
-  de con IVA, sin origen ni documento de respaldo.
-- `matcheos_aprendidos_compras` — `texto_origen → producto_id`, sin tercero.
-- `facturas_proveedor` / `factura_items` — carga manual de facturas.
+| Tabla | Estado | Por qué |
+| ----- | ------ | ------- |
+| `precios_historico` | → `zz_deprecated_precios_historico` | No distinguía neto de con IVA ni registraba el documento de origen |
+| `matcheos_aprendidos_compras` | → `zz_deprecated_matcheos_aprendidos_compras` | Alias sin tercero: cada droguería escribe distinto, así que aprendía mal |
+| `factura_items` | → `zz_deprecated_factura_items` | 0 filas, 0 referencias en código |
+| `facturas_proveedor` | **intacta** | 35+ referencias vivas en Finanzas, BI, NORA y crons |
 
-**No se tocaron** (fuera de alcance). Quedan como decisión abierta: migrar sus
-datos al motor y deprecarlas, o dejarlas para la carga manual y que el motor
-sirva sólo el flujo por foto. Conviene resolverlo antes de que alguna acumule
-datos reales, porque después la migración cuesta.
+Se renombraron en vez de borrarse: el `DROP` queda escrito y comentado en la
+migración para el **2026-11-05** (90 días). Un rename se deshace en un minuto;
+un DROP no.
+
+`facturas_proveedor` no se toca ni se reapunta: es el registro de cuentas por
+pagar de Finanzas, no la captura por foto. Son cosas distintas y conviven.
+
+Código reapuntado en el mismo commit, sin cambio visible para el usuario:
+el importador de listas de precios escribe en `doc_precios_historial` y lee sus
+alias de `doc_items_alias` acotados al proveedor; el comparador lee el histórico
+del motor.
+
+---
+
+## Normalización — una sola implementación (v0.54)
+
+`doc_items_alias.descripcion_norm` existe para buscar por similitud con el
+índice trigram. Si la normalización viviera en dos lugares y difirieran en un
+detalle —un acento, un guión, un espacio— el índice dejaría de matchear y **el
+fallo sería silencioso**: no hay error, simplemente no encuentra nada.
+
+Por eso hay una sola implementación y vive en Postgres (migración `0084`):
+
+| Función | Qué hace |
+| ------- | -------- |
+| `doc_normalizar_texto(text)` | `IMMUTABLE`. Minúsculas → `unaccent` → no-alfanumérico a espacio → colapsar espacios → trim |
+| `doc_items_alias_normalizar()` | Trigger que llena `descripcion_norm` **siempre**, pisando lo que mande el cliente |
+| `doc_buscar_alias(...)` | Búsqueda por similitud: pasa el término por la **misma** función |
+| `doc_normalizar_lote(text[])` | N textos en un round-trip — para que no exista la excusa de performance para reimplementarla |
+
+`lib/documentos/normalizar.ts` son wrappers de RPC y nada más.
+
+**Verificado:**
+
+| Entrada | Normalizado |
+| ------- | ----------- |
+| `MUZZ. LA SERENÍSIMA 1KG` | `muzz la serenisima 1kg` |
+| `Muzz La Serenísima, 1Kg.` | `muzz la serenisima 1kg` |
+| `MUZZARELLA  LA SERENISIMA   1KG` | `muzzarella la serenisima 1kg` |
+| `muzzarella la serenisima 1 kg` | `muzzarella la serenisima 1 kg` |
+
+Buscar `"muzzarella la serenisima 1 kg"` encuentra `MUZZ. LA SERENÍSIMA 1KG`
+con 0.625 de similitud — que es exactamente el caso real de dos droguerías
+escribiendo el mismo producto distinto.
+
+---
+
+## Versionado del prompt (v0.54)
+
+`lib/documentos/prompt-extraccion.ts` es la fuente única: versión semántica
+(arranca en `1.0.0`), historial de cambios, el texto del prompt y el tipo de su
+salida. Todavía **no** se llama a ningún modelo.
+
+**La regla:** todo cambio en el texto sube la versión. Si se edita sin subirla,
+dos documentos quedan marcados como leídos igual habiéndose leído distinto, y el
+reproceso deja de ser confiable — sin forma de detectarlo después.
+
+`reprocesarExtraccion(extraccionId, nuevaPromptVersion)` queda con firma y
+contrato documentados, sin implementar: inserta fila nueva en `doc_extracciones`
+(nunca pisa la anterior) y no toca `doc_documentos`, porque aplicar el resultado
+es decisión humana.
 
 ---
 
