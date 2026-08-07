@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { gateDocumentos } from '@/lib/documentos/permisos'
+import { evaluarAlertasCosto } from '@/lib/documentos/alertas-costo'
 import { aprenderAliasTercero } from '@/lib/documentos/identificar'
 import { aprenderAliasItem } from '@/lib/documentos/matchear'
 import {
@@ -137,6 +138,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   } catch (e) {
     console.error('[documentos] el documento se guardó pero falló el aprendizaje de alias', e)
   }
+
+  // Reglas de costo sobre lo recién confirmado. Van al feed de avisos que ya
+  // existe y nunca voltean la confirmación: el documento ya está guardado.
+  const docId = (data as any)?.documento_id
+  if (docId) await evaluarAlertasCosto(adm, docId)
 
   return NextResponse.json({ ok: true, ...(data as any) })
 }
