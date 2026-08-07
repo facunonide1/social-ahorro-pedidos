@@ -23,7 +23,7 @@ export default async function ComparadorPage({ searchParams }: { searchParams: {
   const [{ data: provs }, { data: items }, { data: hist }] = await Promise.all([
     sb.from('proveedores').select('id, razon_social, plazo_pago_dias, forma_pago_default, descuento_pronto_pago_pct').eq('activo', true),
     listaIds.length ? sb.from('listas_precios_items').select('lista_id, producto_id, precio, desc_volumen, productos_catalogo(nombre, sku)').in('lista_id', listaIds).not('producto_id', 'is', null).limit(20000) : Promise.resolve({ data: [] as any[] }),
-    sb.from('precios_historico').select('producto_id, proveedor_id, precio, fecha').order('fecha', { ascending: false }).limit(20000),
+    sb.from('doc_precios_historial').select('item_id, tercero_id, precio_unitario, fecha').order('fecha', { ascending: false }).limit(20000),
   ])
 
   const provMap = new Map(((provs ?? []) as any[]).map((p) => [p.id, p]))
@@ -33,8 +33,8 @@ export default async function ComparadorPage({ searchParams }: { searchParams: {
   const prevPrecio = new Map<string, number>()
   const seen = new Set<string>()
   for (const h of (hist ?? []) as any[]) {
-    const k = `${h.producto_id}|${h.proveedor_id}`
-    if (seen.has(k)) { if (!prevPrecio.has(k)) prevPrecio.set(k, Number(h.precio)) }
+    const k = `${h.item_id}|${h.tercero_id}`
+    if (seen.has(k)) { if (!prevPrecio.has(k)) prevPrecio.set(k, Number(h.precio_unitario)) }
     else seen.add(k)
   }
 

@@ -20,10 +20,13 @@ const norm = (s: string) => (s ?? '').trim().toLowerCase()
 type Fila = { sku?: string | null; codigo?: string | null; descripcion?: string | null; precio?: number; desc_volumen?: any }
 type Matcher = { porSku: Map<string, string>; porEan: Map<string, string>; porNombre: Map<string, string>; aprendidos: Map<string, string> }
 
-async function buildMatcher(adm: ReturnType<typeof createAdminClient>): Promise<Matcher> {
+async function buildMatcher(adm: ReturnType<typeof createAdminClient>, proveedorId: string): Promise<Matcher> {
+  // Los alias se leen del motor de documentos (doc_items_alias), acotados AL
+  // PROVEEDOR de la lista: cada droguería escribe el mismo producto distinto,
+  // así que un alias global aprende mal y contamina el match de los demás.
   const [{ data: cat }, { data: apr }] = await Promise.all([
     adm.from('productos_catalogo').select('id, sku, codigo_barras, nombre').eq('activo', true).limit(20000),
-    adm.from('matcheos_aprendidos_compras').select('texto_origen, producto_id'),
+    adm.from('doc_items_alias').select('descripcion_norm, item_id').eq('tercero_id', proveedorId).eq('activo', true).limit(20000),
   ])
   const porSku = new Map<string, string>(); const porEan = new Map<string, string>(); const porNombre = new Map<string, string>()
   for (const c of (cat ?? []) as any[]) {
@@ -31,7 +34,7 @@ async function buildMatcher(adm: ReturnType<typeof createAdminClient>): Promise<
     if (c.codigo_barras) porEan.set(String(c.codigo_barras).trim(), c.id)
     porNombre.set(norm(c.nombre), c.id)
   }
-  const aprendidos = new Map<string, string>(((apr ?? []) as any[]).map((a) => [norm(a.texto_origen), a.producto_id]))
+  const aprendidos = new Map<string, string>(((apr ?? []) as any[]).map((a) => [a.descripcion_norm, a.item_id]))
   return { porSku, porEan, porNombre, aprendidos }
 }
 
@@ -75,7 +78,7 @@ export async function POST(req: NextRequest) {
   const filas: Fila[] = Array.isArray(b?.filas) ? b.filas : []
   if (!b?.proveedor_id || !filas.length) return NextResponse.json({ error: 'proveedor y filas requeridos' }, { status: 400 })
   const rubro = b?.rubro ?? 'farmacia'
-  const matcher = await buildMatcher(adm)
+  const matcher = await buildMatcher(adm, b.proveedor_id)
 
   if (accion === 'analizar') {
     let matched = 0
@@ -103,8 +106,13 @@ export async function POST(req: NextRequest) {
     return { lista_id: lista.id, sku: f.sku ?? null, codigo: f.codigo ?? null, descripcion_origen: f.descripcion ?? null, producto_id, precio: Number(f.precio) || 0, desc_volumen: f.desc_volumen ?? null, fecha: hoy }
   })
   await adm.from('listas_precios_items').insert(items)
-  const hist = items.filter((i) => i.producto_id && i.precio > 0).map((i) => ({ producto_id: i.producto_id, proveedor_id: b.proveedor_id, rubro, precio: i.precio, fecha: hoy }))
-  if (hist.length) await adm.from('precios_historico').insert(hist)
+  // El histórico va al motor: serie de eventos con origen explícito. `rubro` no
+  // viaja — el motor es neutro y el rubro ya vive en listas_precios.
+  const hist = items.filter((i) => i.producto_id && i.precio > 0).map((i) => ({
+    item_id: i.producto_id, tercero_id: b.proveedor_id, precio_unitario: i.precio,
+    fecha: hoy, origen: 'lista_precios' as const,
+  }))
+  if (hist.length) await adm.from('doc_precios_historial').insert(hist)
 
   return NextResponse.json({ ok: true, lista_id: lista.id, total: items.length, matcheados: matched, sin_match: items.length - matched })
 }
