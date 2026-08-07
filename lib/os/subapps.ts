@@ -249,7 +249,9 @@ export const SUBAPPS: SubAppManifest[] = [
       ] },
       { id: 'nora-asistente', nombre: 'Pedirle a NORA', icono: 'Sparkles', destino: '/admin/finanzas/asistente', modulo: 'finanzas', accion: 'ver', primary: true },
       { id: 'pago', nombre: 'Registrar pago', icono: 'CreditCard', destino: '/admin/finanzas/pagos', modulo: 'finanzas', accion: 'aprobar', primary: true },
-      { id: 'documento', nombre: 'Nuevo documento a pagar', icono: 'FileText', destino: '/admin/finanzas/documentos', modulo: 'finanzas', accion: 'crear', primary: true },
+      // `?nuevo=1` abre el alta. Sin el query, el destino era la propia lista y
+      // el botón del empty state (y el del launcher) no hacían nada visible.
+      { id: 'documento', nombre: 'Nuevo documento a pagar', icono: 'FileText', destino: '/admin/finanzas/documentos?nuevo=1', modulo: 'finanzas', accion: 'crear', primary: true },
       { id: 'gasto', nombre: 'Registrar gasto', icono: 'Receipt', destino: '/admin/finanzas/gastos-fijos', modulo: 'caja', accion: 'crear', primary: true },
       { id: 'caja-chica', nombre: 'Gasto de caja chica', icono: 'Coins', destino: '/admin/finanzas/caja', modulo: 'caja', accion: 'crear' },
       { id: 'cheque', nombre: 'Nuevo cheque', icono: 'FileBadge', destino: '/admin/finanzas/cheques/nueva', modulo: 'finanzas', accion: 'crear', primary: true },

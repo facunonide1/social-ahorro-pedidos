@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Download, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -40,6 +40,17 @@ export function DocumentosClient({ docs, proveedores, sucursales }: { docs: DocR
   const [estado, setEstado] = useState(ALL)
   const [nueva, setNueva] = useState(false)
   const hoy = new Date().toISOString().slice(0, 10)
+  const router = useRouter()
+  const search = useSearchParams()
+
+  // `?nuevo=1` abre el alta: es lo que dispara el botón del empty state y el
+  // del launcher, que antes navegaban a esta misma lista sin abrir nada.
+  useEffect(() => {
+    if (search.get('nuevo') === '1') {
+      setNueva(true)
+      router.replace('/admin/finanzas/documentos', { scroll: false })
+    }
+  }, [search, router])
 
   const rows = useMemo(() => docs.filter((d) => {
     if (tipo !== ALL && d.tipo !== tipo) return false
