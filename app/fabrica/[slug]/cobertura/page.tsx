@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { Badge } from '@/components/ui/badge'
+import { createClient } from '@/lib/supabase/server'
+import { tablasSinDueno } from '@/lib/fabrica/grafo'
 import { listarCenso, listarInstalaciones, traerProyecto } from '@/lib/fabrica/datos'
 import {
   ETIQUETA_CLASIFICACION,
@@ -17,9 +19,10 @@ export default async function CoberturaPage({ params }: { params: { slug: string
   const proyecto = await traerProyecto(params.slug)
   if (!proyecto) notFound()
 
-  const [censo, instalaciones] = await Promise.all([
+  const [censo, instalaciones, tablas] = await Promise.all([
     listarCenso(proyecto.id),
     listarInstalaciones(proyecto.id),
+    tablasSinDueno(createClient()),
   ])
   const declarados = new Set(
     instalaciones.map((i) => i.pool?.clave).filter(Boolean) as string[],
@@ -76,10 +79,22 @@ export default async function CoberturaPage({ params }: { params: { slug: string
             <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
           </div>
 
-          <p className="mt-3 text-xs text-muted-foreground">
-            {pantallasCubiertas} de {pantallasTotal} pantallas están dentro de un
-            pool declarado.
-          </p>
+          <dl className="mt-4 grid gap-4 border-t border-border pt-3 sm:grid-cols-2">
+            <div>
+              <dt className="text-xs text-muted-foreground">Pantallas dentro de un pool</dt>
+              <dd className="mt-0.5 text-lg font-semibold tabular-nums">
+                {pantallasCubiertas}
+                <span className="text-sm font-normal text-muted-foreground"> / {pantallasTotal}</span>
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-muted-foreground">Tablas con pool dueño</dt>
+              <dd className="mt-0.5 text-lg font-semibold tabular-nums">
+                {tablas.conDueno}
+                <span className="text-sm font-normal text-muted-foreground"> / {tablas.total}</span>
+              </dd>
+            </div>
+          </dl>
         </div>
       </section>
 

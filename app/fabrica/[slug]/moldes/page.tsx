@@ -1,6 +1,8 @@
 import { notFound } from 'next/navigation'
 
 import { Badge } from '@/components/ui/badge'
+import { MANIFIESTOS } from '@/lib/fabrica/manifiestos'
+import { ETIQUETA_MOLDE, type Molde } from '@/lib/fabrica/tipos'
 import { listarCenso, traerProyecto } from '@/lib/fabrica/datos'
 
 export const dynamic = 'force-dynamic'
@@ -46,6 +48,20 @@ export default async function MoldesPage({ params }: { params: { slug: string } 
   const sinMolde = cuenta.get('otro') ?? 0
 
   const max = Math.max(1, ...cuenta.values())
+
+  // Lo que dicen los manifiestos, que es más preciso que el censo: el censo
+  // contó por sector a ojo, el manifiesto declara molde por pantalla.
+  const declarado = new Map<Molde, number>()
+  let pantallasDeclaradas = 0
+  for (const e of Object.values(MANIFIESTOS)) {
+    for (const pant of e.manifiesto.pantallas) {
+      if (pant.pertenencia === 'prestada') continue
+      declarado.set(pant.molde, (declarado.get(pant.molde) ?? 0) + 1)
+      pantallasDeclaradas++
+    }
+  }
+  const declaradoOrdenado = [...declarado.entries()].sort((a, b) => b[1] - a[1])
+  const sinMoldeDeclarado = declarado.get('otro') ?? 0
 
   function Fila({ clave, nombre, que }: { clave: string; nombre: string; que: string }) {
     const n = cuenta.get(clave) ?? 0
@@ -119,7 +135,45 @@ export default async function MoldesPage({ params }: { params: { slug: string } 
       </section>
 
       <section>
-        <h3 className="text-sm font-semibold tracking-tight">Sin molde</h3>
+        <h3 className="text-sm font-semibold tracking-tight">
+          Lo que declaran los ocho pools
+          <span className="ml-2 font-normal text-muted-foreground">
+            {pantallasDeclaradas} pantallas
+          </span>
+        </h3>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          Más preciso que el censo: el censo contó por sector a ojo, el
+          manifiesto declara el molde pantalla por pantalla.
+        </p>
+        <div className="mt-2 divide-y divide-border rounded-lg border border-border">
+          {declaradoOrdenado.map(([m, n]) => (
+            <div key={m} className="flex items-center gap-4 px-4 py-2">
+              <div className="min-w-0 flex-1 text-sm">{ETIQUETA_MOLDE[m]}</div>
+              <div className="w-12 text-right text-sm font-semibold tabular-nums">{n}</div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {sinMoldeDeclarado === 0
+            ? 'Ninguna de las pantallas declaradas quedó sin molde: los nueve alcanzaron.'
+            : `${sinMoldeDeclarado} quedaron sin molde.`}
+        </p>
+      </section>
+
+      <section>
+        <h3 className="text-sm font-semibold tracking-tight">¿Aparece un décimo molde?</h3>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          En v0.59 se sospechaba uno —portada de sector— entre las pantallas sin
+          clasificar. Con ocho pools declarados, la respuesta por ahora es que
+          NO: las portadas de Stock, Centro de Datos e Inteligencia entraron
+          todas en <span className="font-medium">tablero</span> sin forzarlas.
+          Se registra el resultado, no la corazonada. Vuelve a mirarse cuando se
+          declaren los sectores a medida, que son los más raros.
+        </p>
+      </section>
+
+      <section>
+        <h3 className="text-sm font-semibold tracking-tight">Sin molde, según el censo</h3>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
           {sinMolde} pantallas no encajan en ninguno de los nueve. Buena parte son
           portadas de sector que mezclan tablero con accesos rápidos: probablemente
