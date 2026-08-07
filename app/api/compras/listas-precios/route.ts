@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
+import { normalizarLote } from '@/lib/documentos/normalizar'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { AdminRole } from '@/lib/types/admin'
 
@@ -15,7 +16,12 @@ async function gate() {
   return { ok: true as const, userId: user.id }
 }
 
-const norm = (s: string) => (s ?? '').trim().toLowerCase()
+/**
+ * Comparación exacta contra el catálogo propio (SKU y nombre). NO es la
+ * normalización de matching de alias: para eso está `doc_normalizar_texto` en la
+ * base, que es la única válida y llega acá vía `normalizarLote`.
+ */
+const normSimple = (s: string) => (s ?? '').trim().toLowerCase()
 
 type Fila = { sku?: string | null; codigo?: string | null; descripcion?: string | null; precio?: number; desc_volumen?: any }
 type Matcher = { porSku: Map<string, string>; porEan: Map<string, string>; porNombre: Map<string, string>; aprendidos: Map<string, string> }
@@ -30,21 +36,26 @@ async function buildMatcher(adm: ReturnType<typeof createAdminClient>, proveedor
   ])
   const porSku = new Map<string, string>(); const porEan = new Map<string, string>(); const porNombre = new Map<string, string>()
   for (const c of (cat ?? []) as any[]) {
-    if (c.sku) porSku.set(norm(c.sku), c.id)
+    if (c.sku) porSku.set(normSimple(c.sku), c.id)
     if (c.codigo_barras) porEan.set(String(c.codigo_barras).trim(), c.id)
-    porNombre.set(norm(c.nombre), c.id)
+    porNombre.set(normSimple(c.nombre), c.id)
   }
   const aprendidos = new Map<string, string>(((apr ?? []) as any[]).map((a) => [a.descripcion_norm, a.item_id]))
   return { porSku, porEan, porNombre, aprendidos }
 }
 
-function matchFila(f: Fila, m: Matcher): { producto_id: string | null; via: string | null } {
-  const sku = f.sku ? norm(f.sku) : ''
+/**
+ * `descNorm` viene de `doc_normalizar_texto` (la base), que es la MISMA función
+ * que llenó `doc_items_alias.descripcion_norm`. Si acá se normalizara por
+ * separado, el lookup de aprendidos no matchearía nunca y fallaría en silencio.
+ */
+function matchFila(f: Fila, m: Matcher, descNorm: string | null): { producto_id: string | null; via: string | null } {
+  const sku = f.sku ? normSimple(f.sku) : ''
   const ean = f.codigo ? String(f.codigo).trim() : ''
-  const desc = f.descripcion ? norm(f.descripcion) : ''
+  const desc = f.descripcion ? normSimple(f.descripcion) : ''
   if (sku && m.porSku.has(sku)) return { producto_id: m.porSku.get(sku)!, via: 'sku' }
   if (ean && m.porEan.has(ean)) return { producto_id: m.porEan.get(ean)!, via: 'ean' }
-  if (desc && m.aprendidos.has(desc)) return { producto_id: m.aprendidos.get(desc)!, via: 'aprendido' }
+  if (descNorm && m.aprendidos.has(descNorm)) return { producto_id: m.aprendidos.get(descNorm)!, via: 'aprendido' }
   if (desc && m.porNombre.has(desc)) return { producto_id: m.porNombre.get(desc)!, via: 'nombre' }
   return { producto_id: null, via: null }
 }
@@ -79,11 +90,14 @@ export async function POST(req: NextRequest) {
   if (!b?.proveedor_id || !filas.length) return NextResponse.json({ error: 'proveedor y filas requeridos' }, { status: 400 })
   const rubro = b?.rubro ?? 'farmacia'
   const matcher = await buildMatcher(adm, b.proveedor_id)
+  // Una sola llamada para las N descripciones: normalizar en el cliente sería
+  // el bug que 0084 previene, y la RPC en lote quita la excusa de performance.
+  const descsNorm = await normalizarLote(adm, filas.map((f) => f.descripcion ?? ''))
 
   if (accion === 'analizar') {
     let matched = 0
-    const preview = filas.map((f) => {
-      const { producto_id, via } = matchFila(f, matcher)
+    const preview = filas.map((f, idx) => {
+      const { producto_id, via } = matchFila(f, matcher, descsNorm[idx] ?? null)
       if (producto_id) matched++
       return { sku: f.sku ?? null, codigo: f.codigo ?? null, descripcion: f.descripcion ?? null, precio: Number(f.precio) || 0, producto_id, via }
     })
@@ -100,8 +114,8 @@ export async function POST(req: NextRequest) {
 
   const hoy = new Date().toISOString().slice(0, 10)
   let matched = 0
-  const items = filas.map((f) => {
-    const { producto_id } = matchFila(f, matcher)
+  const items = filas.map((f, idx) => {
+    const { producto_id } = matchFila(f, matcher, descsNorm[idx] ?? null)
     if (producto_id) matched++
     return { lista_id: lista.id, sku: f.sku ?? null, codigo: f.codigo ?? null, descripcion_origen: f.descripcion ?? null, producto_id, precio: Number(f.precio) || 0, desc_volumen: f.desc_volumen ?? null, fecha: hoy }
   })
