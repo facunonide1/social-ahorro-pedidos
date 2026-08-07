@@ -13,7 +13,12 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
-export type OrdenRow = { id: string; codigo: string | null; rubro: string; estado: string; origen: string; total: number; condicion: string | null; fecha: string; proveedor: string; sucursal: string }
+export type OrdenRow = {
+  id: string; codigo: string | null; rubro: string; estado: string; origen: string
+  total: number; condicion: string | null; fecha: string; proveedor: string; sucursal: string
+  /** Qué pasó con los papeles de esta orden. Null = todavía no llegó ninguno. */
+  conciliacion: { id: string; estado: string; monto: number; falta: string[] } | null
+}
 const ALL = '__all__'
 const ESTADO_VARIANT: Record<string, any> = { borrador: 'outline', enviada: 'info', confirmada: 'info', recibida_parcial: 'warning', recibida: 'success', cancelada: 'outline' }
 
@@ -47,7 +52,7 @@ export function OrdenesClient({ ordenes }: { ordenes: OrdenRow[] }) {
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">Código</th><th className="px-3 py-2">Proveedor</th><th className="px-3 py-2">Rubro</th><th className="px-3 py-2">Compra a nombre de</th><th className="px-3 py-2">Origen</th><th className="px-3 py-2 text-right">Total est.</th><th className="px-3 py-2">Estado</th><th className="px-3 py-2" /></tr></thead>
+            <thead className="bg-muted/40 text-left text-xs text-muted-foreground"><tr><th className="px-3 py-2">Código</th><th className="px-3 py-2">Proveedor</th><th className="px-3 py-2">Rubro</th><th className="px-3 py-2">Compra a nombre de</th><th className="px-3 py-2">Origen</th><th className="px-3 py-2 text-right">Total est.</th><th className="px-3 py-2">Estado</th><th className="px-3 py-2">Papeles</th><th className="px-3 py-2" /></tr></thead>
             <tbody>
               {rows.map((o) => (
                 <tr key={o.id} className="border-t border-border">
@@ -58,6 +63,23 @@ export function OrdenesClient({ ordenes }: { ordenes: OrdenRow[] }) {
                   <td className="px-3 py-1.5 text-xs">{o.origen === 'sifaco' ? <Badge variant="info" className="font-normal">SIFACO</Badge> : o.origen.replace(/_/g, ' ')}</td>
                   <td className="px-3 py-1.5 text-right font-mono tabular-nums">{formatARS(o.total)}</td>
                   <td className="px-3 py-1.5"><Badge variant={ESTADO_VARIANT[o.estado] ?? 'outline'} className="font-normal">{o.estado.replace(/_/g, ' ')}</Badge></td>
+                  <td className="px-3 py-1.5 text-xs">
+                    {!o.conciliacion ? (
+                      <span className="text-muted-foreground">sin documentos</span>
+                    ) : o.conciliacion.estado === 'con_diferencias' ? (
+                      <Link href={`/admin/compras/conciliaciones/${o.conciliacion.id}`} className="text-amber-600 hover:underline dark:text-amber-400">
+                        {formatARS(o.conciliacion.monto)} de diferencia
+                      </Link>
+                    ) : o.conciliacion.falta.length ? (
+                      <Link href={`/admin/compras/conciliaciones/${o.conciliacion.id}`} className="text-muted-foreground hover:underline">
+                        falta {o.conciliacion.falta.join(' y ')}
+                      </Link>
+                    ) : (
+                      <Link href={`/admin/compras/conciliaciones/${o.conciliacion.id}`} className="text-emerald-600 hover:underline dark:text-emerald-400">
+                        conciliada
+                      </Link>
+                    )}
+                  </td>
                   <td className="px-3 py-1.5 text-right">
                     {['enviada', 'confirmada', 'recibida_parcial'].includes(o.estado) && (
                       <Button asChild size="sm" variant="outline" className="h-7 px-2 text-[11px]"><Link href="/admin/compras/recepciones"><Plus className="size-3.5" /> Recibir</Link></Button>

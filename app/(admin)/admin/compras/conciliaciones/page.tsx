@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { PageHeader } from '@/components/shared/page-header'
 import { createAdminClient } from '@/lib/supabase/server'
 import { gateDocumentos } from '@/lib/documentos/permisos'
+import { generarTareasDeControl } from '@/lib/documentos/dossier-proveedor'
 import { BandejaClient, type FilaBandeja } from './bandeja-client'
 
 export const dynamic = 'force-dynamic'
@@ -13,6 +14,11 @@ export default async function ConciliacionesPage() {
   if ('error' in g) redirect('/admin/compras')
 
   const adm = createAdminClient()
+
+  // Lazy: Vercel Hobby no tiene crons finos, así que las tareas de control se
+  // generan al abrir la bandeja. Mismo patrón que el motor de reclamos.
+  await generarTareasDeControl(adm)
+
   const { data } = await adm
     .from('doc_conciliaciones')
     .select(`

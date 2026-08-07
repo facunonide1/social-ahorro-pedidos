@@ -44,6 +44,12 @@ export default async function ComprasTablero({ searchParams }: { searchParams: {
   const faltantes = (avisos ?? []).length
   const proveedores = ((provs ?? []) as any[]).filter((p) => rubro === 'todos' || (p.rubros ?? []).includes(rubro))
 
+  // Plata que el proveedor debe y que nadie está persiguiendo.
+  let concQ = sb.from('doc_conciliaciones').select('monto_diferencia').eq('estado', 'con_diferencias').limit(2000)
+  if (!esTodas && sucursalId) concQ = concQ.eq('sucursal_id', sucursalId)
+  const { data: concs } = await concQ
+  const diferenciasAbiertas = ((concs ?? []) as any[]).reduce((a, c) => a + Math.abs(Number(c.monto_diferencia ?? 0)), 0)
+
   return (
     <>
       <PageHeader title="Compras" description="Sistema de compras multisucursal conectado a stock, ventas y finanzas."
@@ -56,7 +62,17 @@ export default async function ComprasTablero({ searchParams }: { searchParams: {
           <KpiCard label="Órdenes abiertas" value={abiertas} icon={ShoppingCart} href="/admin/compras/ordenes" />
           <KpiCard label="Faltantes sin resolver" value={faltantes} icon={AlertTriangle} variant={faltantes > 0 ? 'warning' : 'default'} href="/admin/compras/faltantes" />
           <KpiCard label="Comprado este mes" value={compradoMes} format="currency" icon={DollarSign} />
-          <KpiCard label="Ahorro detectado" value={0} format="currency" icon={TrendingDown} footer="Comparador" href="/admin/compras/comparador" />
+          {/* Un solo número: la plata que el proveedor te debe y nadie está
+              persiguiendo. Lleva a la bandeja ordenada por monto. */}
+          <KpiCard
+            label="Diferencias sin resolver"
+            value={diferenciasAbiertas}
+            format="currency"
+            icon={TrendingDown}
+            variant={diferenciasAbiertas > 0 ? 'warning' : 'default'}
+            footer="Conciliaciones"
+            href="/admin/compras/conciliaciones"
+          />
         </section>
 
         <NoraCard contexto="compras">

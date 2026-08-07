@@ -19,6 +19,7 @@ import CuentasSection from './cuentas'
 import DocumentosSection from './documentos'
 import { ProveedorCtaCte, type MovCtaCte } from './cta-cte-client'
 import { DevolucionesSection, type RubroRow } from './devoluciones'
+import { DossierConciliaciones } from '@/components/documentos/dossier-conciliaciones'
 
 export const dynamic = 'force-dynamic'
 
@@ -164,6 +165,9 @@ export default async function ProveedorDetailPage({
           rubrosInicial={(rubrosRes.data ?? []) as RubroRow[]}
           readOnly={!canEdit}
         />
+
+        {/* El dossier para negociar: números, no impresiones. */}
+        <DossierConciliaciones proveedorId={p.id} />
 
         <section className="space-y-2">
           <div className="flex items-baseline justify-between gap-2">
