@@ -263,3 +263,79 @@ es decisión humana.
    revisión humana.
 4. Resolver el solapamiento con `precios_historico` y `matcheos_aprendidos_compras`.
 5. Pantalla de revisión humana: nada se confirma sin que una persona lo mire.
+
+---
+
+## Motor de lectura (v0.55)
+
+El motor pasó de esquema a funcionar. El recorrido completo:
+
+```
+foto/PDF ─▶ subida (hash, anti-duplicado) ─▶ modelo de visión ─▶
+identificación por CUIT ─▶ matching de renglones ─▶ REVISIÓN HUMANA ─▶
+confirmación transaccional ─▶ cuenta por pagar + histórico de precios
+```
+
+### Puertas de entrada
+
+Las tres llaman al mismo servicio (`lib/documentos/subida.ts`):
+
+| Puerta | Estado |
+| ------ | ------ |
+| Finanzas → "Nuevo documento" → *Sacarle una foto* | funcionando |
+| Asistente → clip de adjuntar | funcionando |
+| Compras → recepción de remito | preparada, no construida |
+
+### Anti-duplicado
+
+El SHA-256 se calcula **antes** de subir. Si ese archivo ya se cargó, no se
+vuelve a guardar ni a leer: se abre el documento que salió de esa foto. Ahorra
+plata de modelo y evita que la misma factura entre dos veces.
+
+### Extracción
+
+Modelo configurable (`DOC_MODELO`, default `claude-opus-5`). No es el más chico
+a propósito: el papel real es térmico, matriz de punto y fotos torcidas.
+
+**Regla crítica:** si un campo no se lee con certeza, el modelo devuelve `null` y
+baja la confianza. Nunca estima. Un número inventado en un precio no se nota y
+queda para siempre torciendo las comparaciones.
+
+La respuesta cruda se guarda entera, salga bien o mal — es lo que permite
+reprocesar cuando el prompt mejore sin volver a pedir las fotos.
+
+### Matching — cinco niveles
+
+| # | Criterio | Resultado |
+| - | -------- | --------- |
+| 1 | código exacto del proveedor | automático (1.0) |
+| 2 | descripción normalizada exacta | automático si el alias tiene 3+ usos |
+| 3 | similitud trigram sobre alias del proveedor | automático solo si ≥0.90 **y** 3+ usos |
+| 4 | similitud contra el catálogo | siempre sugerido |
+| 5 | sin candidatos | sin match |
+
+La normalización **siempre** sale de `doc_normalizar_texto` por RPC.
+
+**Umbral conservador a propósito** (`DOC_UMBRAL_AUTO` 0.90, `DOC_USOS_MIN_AUTO` 3):
+un alias mal aprendido no se equivoca una vez, se propaga a todas las facturas
+siguientes de ese proveedor.
+
+### Confirmación
+
+En una sola transacción (`doc_confirmar_documento`, migración 0086): documento +
+líneas + eventos de precio + cuenta por pagar. Los alias aprendidos se escriben
+aparte: si fallaran, el motor aprende un poco menos pero la deuda queda bien.
+
+No se puede confirmar con renglones pendientes: cada uno tiene que estar
+matcheado o explícitamente ignorado.
+
+### Relación con cuentas por pagar
+
+`doc_documentos` es **la captura**; `facturas_proveedor` es **la deuda**. La
+captura genera la factura, nunca al revés. Si ya existía una cargada a mano con
+el mismo proveedor, punto de venta y número, se vincula sin duplicar.
+
+### Costo real medido
+
+Con una factura de 4 renglones: 25,8 s, 2.607 tokens de entrada y 1.569 de
+salida ≈ **US$0,05 por documento** (~US$52 cada mil facturas).
