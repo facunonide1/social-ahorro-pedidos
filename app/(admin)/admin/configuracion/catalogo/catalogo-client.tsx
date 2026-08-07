@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { CostoReposicion } from '@/components/documentos/costo-reposicion'
 import {
   Select,
   SelectContent,
@@ -413,6 +414,10 @@ function ProductoSheet({
             <Check label="Refrigerado" checked={form.es_refrigerado} onChange={(v) => patch('es_refrigerado', v)} />
             {editing && <Check label="Activo" checked={form.activo} onChange={(v) => patch('activo', v)} />}
           </div>
+
+          {/* Lo que costó de verdad, según las facturas cargadas. Solo informa:
+              el precio de venta se define en SIFACO. */}
+          {editing && producto && <CostoReposicion itemId={producto.id} />}
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Precio sugerido">
