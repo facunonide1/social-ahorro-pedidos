@@ -1,8 +1,24 @@
-import { createClient } from '@/lib/supabase/server'
 import { SUBAPPS } from '@/lib/os/subapps'
 import { TOOL_META } from '@/lib/ai/tool-meta'
 
 import type { Diferencia, Manifiesto, ResultadoVerificacion } from './tipos'
+
+/**
+ * Lo mínimo que el comparador necesita de un cliente Supabase.
+ *
+ * Se recibe por parámetro en vez de construirlo adentro para que el MISMO
+ * código corra desde una página (cliente de sesión, RLS puesta) y desde la
+ * consola (service_role). Un comparador que sólo se puede ejecutar dentro de
+ * Next es un comparador que nadie corre antes de commitear.
+ */
+export interface ClienteLector {
+  // `any` acotado a este punto: los genéricos de supabase-js describen el
+  // esquema tipado del proyecto, y el comparador es justamente la pieza que no
+  // puede conocerlo — tiene que poder verificar un esquema que todavía no
+  // existe. Los resultados se acotan de vuelta al leerlos, unas líneas abajo.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rpc: (fn: string, args?: any) => PromiseLike<{ data: any; error: any }>
+}
 
 /**
  * Comparador DECLARACIÓN ↔ CÓDIGO.
@@ -41,12 +57,20 @@ function declaraNavegable(p: { navegable?: boolean }): boolean {
 export async function verificarEspejo(
   manifiesto: Manifiesto,
   prefijosTabla: string[],
+  sb: ClienteLector,
+  /**
+   * Tablas que el prefijo alcanza pero pertenecen a otro pool.
+   *
+   * Existe porque la alternativa —angostar el prefijo hasta que no las toque—
+   * hace lo mismo sin dejar constancia de por qué. Acá el motivo queda escrito
+   * al lado de la exclusión: `zonas` como prefijo trae `zonas_reparto`, que es
+   * de Pedidos.
+   */
+  excluir: string[] = [],
 ): Promise<ResultadoVerificacion> {
   const diferencias: Diferencia[] = []
 
   try {
-    const sb = createClient()
-
     /* ── Entidades ───────────────────────────────────────────────────── */
     const declaradas = manifiesto.entidades.map((e) => e.tabla)
     const propias = manifiesto.entidades
@@ -59,7 +83,10 @@ export async function verificarEspejo(
     ])
 
     const enEsquema = new Set(((existen ?? []) as { tabla: string }[]).map((r) => r.tabla))
-    const delSector = ((porPrefijo ?? []) as { tabla: string }[]).map((r) => r.tabla)
+    const exentas = new Set(excluir)
+    const delSector = ((porPrefijo ?? []) as { tabla: string }[])
+      .map((r) => r.tabla)
+      .filter((t) => !exentas.has(t))
 
     for (const t of declaradas) {
       if (!enEsquema.has(t)) {
@@ -70,6 +97,38 @@ export async function verificarEspejo(
           en_codigo: false,
           nota: 'Declarada, pero no existe ninguna tabla con ese nombre.',
         })
+      }
+    }
+
+    /* ── Columnas sensibles ──────────────────────────────────────────── */
+    // Una lista de columnas sensibles que nombra una columna inexistente es
+    // peor que no tener lista: da la confianza de haber cubierto el campo sin
+    // cubrirlo. Se verifica contra el esquema, una por una.
+    const conSensibles = manifiesto.entidades.filter(
+      (e) => e.campos_sensibles && e.campos_sensibles.length > 0,
+    )
+    if (conSensibles.length > 0) {
+      const { data: cols } = await sb.rpc('fab_columnas', {
+        p_tablas: conSensibles.map((e) => e.tabla),
+      })
+      const porTabla = new Map<string, Set<string>>()
+      for (const r of (cols ?? []) as { tabla: string; columna: string }[]) {
+        if (!porTabla.has(r.tabla)) porTabla.set(r.tabla, new Set())
+        porTabla.get(r.tabla)!.add(r.columna)
+      }
+      for (const e of conSensibles) {
+        const existentes = porTabla.get(e.tabla)
+        for (const c of e.campos_sensibles!) {
+          if (!existentes?.has(c)) {
+            diferencias.push({
+              tipo: 'entidad',
+              elemento: `${e.tabla}.${c}`,
+              en_declaracion: true,
+              en_codigo: false,
+              nota: 'Declarada como columna sensible, pero no existe. La protección apunta a la nada.',
+            })
+          }
+        }
       }
     }
 

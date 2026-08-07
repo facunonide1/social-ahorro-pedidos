@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 
 import { Badge } from '@/components/ui/badge'
+import { createClient } from '@/lib/supabase/server'
 import { traerProyecto } from '@/lib/fabrica/datos'
 import { verificarEspejo } from '@/lib/fabrica/comparador'
 import { MANIFIESTOS } from '@/lib/fabrica/manifiestos'
@@ -31,7 +32,7 @@ export default async function VerificacionPoolPage({
   if (!entrada) notFound()
 
   const { manifiesto, prefijos } = entrada
-  const verificacion = await verificarEspejo(manifiesto, prefijos)
+  const verificacion = await verificarEspejo(manifiesto, prefijos, createClient(), entrada.excluir)
 
   const propias = manifiesto.entidades.filter((e) => e.acceso === 'propia')
   const leidas = manifiesto.entidades.filter((e) => e.acceso === 'leida')
@@ -65,7 +66,7 @@ export default async function VerificacionPoolPage({
         <p className="mt-2 max-w-3xl text-xs text-muted-foreground">
           Modo espejo: esta declaración describe código que ya existe y funciona.
           La fábrica no lo generó. Si algo no cuadra, se corrige la declaración —
-          nunca el código de Ofertas.
+          nunca el código del sector.
         </p>
       </section>
 

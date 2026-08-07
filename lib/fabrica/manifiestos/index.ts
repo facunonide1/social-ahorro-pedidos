@@ -1,5 +1,7 @@
 import type { Manifiesto } from '../tipos'
+import { MANIFIESTO_CLIENTES, PREFIJOS_CLIENTES } from './clientes'
 import { MANIFIESTO_OFERTAS, PREFIJOS_OFERTAS } from './ofertas'
+import { MANIFIESTO_STOCK, PREFIJOS_STOCK, EXCLUIR_STOCK } from './stock'
 import { MANIFIESTO_TAREAS, PREFIJOS_TAREAS } from './tareas'
 
 /**
@@ -14,10 +16,14 @@ export interface PoolDeclarado {
   manifiesto: Manifiesto
   /** Prefijos con los que se buscan tablas del sector en el esquema real. */
   prefijos: string[]
+  /** Tablas que el prefijo alcanza y son de otro pool. Con motivo al lado. */
+  excluir?: string[]
 }
 
 export const MANIFIESTOS: Record<string, PoolDeclarado> = {
   tareas: { manifiesto: MANIFIESTO_TAREAS, prefijos: PREFIJOS_TAREAS },
+  clientes: { manifiesto: MANIFIESTO_CLIENTES, prefijos: PREFIJOS_CLIENTES },
+  stock: { manifiesto: MANIFIESTO_STOCK, prefijos: PREFIJOS_STOCK, excluir: EXCLUIR_STOCK },
   ofertas: { manifiesto: MANIFIESTO_OFERTAS, prefijos: PREFIJOS_OFERTAS },
 }
 
