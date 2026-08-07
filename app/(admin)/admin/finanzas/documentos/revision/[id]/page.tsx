@@ -9,7 +9,13 @@ import { RevisionClient } from './revision-client'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Revisar documento' }
 
-export default async function RevisionPage({ params }: { params: { id: string } }) {
+export default async function RevisionPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string }
+  searchParams: { lote?: string }
+}) {
   // E.6 · Solo roles con acceso a Finanzas o Compras.
   const g = await gateDocumentos('crear')
   if ('error' in g) redirect('/admin/finanzas/documentos')
@@ -17,14 +23,36 @@ export default async function RevisionPage({ params }: { params: { id: string } 
   const adm = createAdminClient()
   const { data: ext } = await adm
     .from('doc_extracciones')
-    .select('id, documento_id, archivo_path, mime_type, estado, error')
+    .select('id, documento_id, archivo_path, mime_type, estado, error, lote_id, archivo_nombre')
     .eq('id', params.id)
     .maybeSingle()
 
   if (!ext) notFound()
 
-  // Ya confirmado: no se revisa dos veces.
-  if (ext.documento_id) redirect('/admin/finanzas/documentos')
+  const loteId = searchParams.lote ?? ext.lote_id ?? null
+
+  // Ya confirmado: no se revisa dos veces. Si venía encadenado, salta al que sigue.
+  if (ext.documento_id) {
+    const sig = loteId ? await siguientePendiente(adm, loteId, params.id) : null
+    redirect(sig ? `/admin/finanzas/documentos/revision/${sig}?lote=${loteId}` : '/admin/finanzas/documentos')
+  }
+
+  // Progreso del lote, para saber cuántas faltan sin volver al listado.
+  let progreso: { hechas: number; total: number } | null = null
+  let siguiente: string | null = null
+  if (loteId) {
+    const { data: delLote } = await adm
+      .from('doc_extracciones')
+      .select('id, documento_id, estado')
+      .eq('lote_id', loteId)
+      .order('created_at')
+
+    const filas = (delLote ?? []) as any[]
+    // Solo cuentan las que se leyeron bien: las que fallaron no se pueden revisar.
+    const revisables = filas.filter((f) => f.estado === 'ok' || f.documento_id)
+    progreso = { hechas: revisables.filter((f) => f.documento_id).length, total: revisables.length }
+    siguiente = revisables.find((f) => !f.documento_id && f.id !== params.id)?.id ?? null
+  }
 
   const [imagenUrl, { data: provs }, { data: sucs }, { data: prods }] = await Promise.all([
     urlFirmada(adm, ext.archivo_path),
@@ -37,7 +65,11 @@ export default async function RevisionPage({ params }: { params: { id: string } 
     <>
       <PageHeader
         title="Revisar documento"
-        description="Confirmá lo que se leyó del papel. Nada se guarda hasta que lo revises."
+        description={
+          progreso && progreso.total > 1
+            ? `${progreso.hechas} de ${progreso.total} confirmadas · ${ext.archivo_nombre ?? 'documento'}`
+            : 'Confirmá lo que se leyó del papel. Nada se guarda hasta que lo revises.'
+        }
         breadcrumbs={[{ label: 'Finanzas' }, { label: 'Documentos', href: '/admin/finanzas/documentos' }, { label: 'Revisión' }]}
       />
       <div className="p-4 md:p-6">
@@ -50,8 +82,26 @@ export default async function RevisionPage({ params }: { params: { id: string } 
           proveedores={(provs ?? []) as any[]}
           sucursales={(sucs ?? []) as any[]}
           productos={(prods ?? []) as any[]}
+          loteId={loteId}
+          siguienteId={siguiente}
+          progreso={progreso}
         />
       </div>
     </>
   )
+}
+
+/** El próximo documento del lote que todavía nadie confirmó. */
+async function siguientePendiente(adm: any, loteId: string, actual: string): Promise<string | null> {
+  const { data } = await adm
+    .from('doc_extracciones')
+    .select('id')
+    .eq('lote_id', loteId)
+    .eq('estado', 'ok')
+    .is('documento_id', null)
+    .neq('id', actual)
+    .order('created_at')
+    .limit(1)
+    .maybeSingle()
+  return data?.id ?? null
 }

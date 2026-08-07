@@ -89,3 +89,47 @@ export const DOC_ACCEPT_ATTR = 'image/jpeg,image/png,image/webp,image/heic,image
 export const DOC_MIMES_LEGIBLES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] as const
 
 export const TENANT_ACTUAL = '00000000-0000-0000-0000-000000000001'
+
+// ── Carga en lote ────────────────────────────────────────────────────────────
+
+/**
+ * Cuántos documentos se leen a la vez en una carga en lote.
+ *
+ * Bajo a propósito: una factura de 40 renglones es una llamada larga y cara, y
+ * disparar veinte en paralelo agota los límites de la API y deja media tanda en
+ * error. De a dos o tres tarda más pero termina.
+ */
+export const DOC_CONCURRENCIA_LOTE = Number(process.env.DOC_CONCURRENCIA_LOTE ?? 2)
+
+/** Tope de archivos por tanda, para que nadie suelte 500 fotos sin querer. */
+export const DOC_MAX_ARCHIVOS_LOTE = Number(process.env.DOC_MAX_ARCHIVOS_LOTE ?? 40)
+
+// ── Comparador de costos ─────────────────────────────────────────────────────
+
+/**
+ * A partir de cuántos días un costo deja de ser comparable.
+ *
+ * Un precio de hace seis meses contra uno de ayer no es una comparación: es una
+ * conclusión equivocada con apariencia de dato. Se marca, no se oculta.
+ */
+export const DOC_DIAS_DATO_FRESCO = Number(process.env.DOC_DIAS_DATO_FRESCO ?? 60)
+
+/** Ventana para medir cuánto se compró, y con eso ponderar el ahorro. */
+export const DOC_DIAS_VOLUMEN = Number(process.env.DOC_DIAS_VOLUMEN ?? 90)
+
+// ── Alertas de costo ─────────────────────────────────────────────────────────
+
+/** Suba mínima para mirar un producto. Con inflación, sola no alcanza. */
+export const DOC_ALERTA_SUBA_PCT = Number(process.env.DOC_ALERTA_SUBA_PCT ?? 15)
+
+/**
+ * Cuánto tiene que despegarse un producto del promedio de su proveedor para
+ * que la suba sea noticia.
+ *
+ * Es lo que separa "aumentó" de "aumentó más que el resto". Con inflación alta
+ * todo sube; lo que importa es lo que sube de más.
+ */
+export const DOC_ALERTA_EXCESO_PCT = Number(process.env.DOC_ALERTA_EXCESO_PCT ?? 8)
+
+/** Plata mínima en juego para molestar a alguien con una sugerencia. */
+export const DOC_ALERTA_MONTO_MINIMO = Number(process.env.DOC_ALERTA_MONTO_MINIMO ?? 10000)

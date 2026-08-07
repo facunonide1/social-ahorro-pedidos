@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Plus, Download, Search, Camera, Keyboard, Loader2 } from 'lucide-react'
+import { Plus, Download, Search, Camera, Keyboard, Layers, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { DOC_ACCEPT_ATTR } from '@/lib/documentos/config'
@@ -190,6 +190,19 @@ function ElegirVia({ onManual, onClose }: { onManual: () => void; onClose: () =>
               </span>
             </span>
           </button>
+
+          <a
+            href="/admin/finanzas/documentos/lote"
+            className="flex items-start gap-3 rounded-lg border border-border p-4 text-left transition-colors hover:border-primary hover:bg-accent"
+          >
+            <Layers className="mt-0.5 size-5 shrink-0 text-primary" />
+            <span>
+              <span className="block font-medium">Cargar varias de una vez</span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                Para poner al día facturas viejas. Las subís todas juntas y las revisás una tras otra.
+              </span>
+            </span>
+          </a>
 
           <button
             type="button"

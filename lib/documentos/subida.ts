@@ -59,6 +59,7 @@ export async function subirDocumento(
   adm: Adm,
   archivo: { buffer: Buffer; nombre: string; mime: string },
   userId: string | null,
+  loteId?: string | null,
 ): Promise<ResultadoSubida> {
   const mime = (archivo.mime || '').toLowerCase()
   if (!DOC_MIMES_ACEPTADOS.includes(mime as any)) {
@@ -108,8 +109,10 @@ export async function subirDocumento(
     .insert({
       archivo_path: path,
       archivo_hash: hash,
+      archivo_nombre: archivo.nombre || null,
       mime_type: mime,
       estado: 'pendiente',
+      lote_id: loteId ?? null,
       created_by: userId,
     })
     .select('id')

@@ -34,10 +34,12 @@ export async function POST(req: NextRequest) {
   const buffer = Buffer.from(await archivo.arrayBuffer())
   const adm = createAdminClient()
 
+  const lote = form.get('lote_id')
   const r = await subirDocumento(
     adm,
     { buffer, nombre: archivo.name || 'documento', mime: archivo.type || '' },
     g.userId,
+    typeof lote === 'string' && lote ? lote : null,
   )
 
   if (r.estado === 'error') return NextResponse.json({ error: r.mensaje }, { status: 400 })

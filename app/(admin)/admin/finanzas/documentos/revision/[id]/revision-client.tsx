@@ -69,6 +69,9 @@ export function RevisionClient({
   proveedores,
   sucursales,
   productos,
+  loteId = null,
+  siguienteId = null,
+  progreso = null,
 }: {
   extraccionId: string
   estadoInicial: string
@@ -78,6 +81,9 @@ export function RevisionClient({
   proveedores: Prov[]
   sucursales: Suc[]
   productos: Prod[]
+  loteId?: string | null
+  siguienteId?: string | null
+  progreso?: { hechas: number; total: number } | null
 }) {
   const router = useRouter()
   const [fase, setFase] = useState<'leyendo' | 'error' | 'revisando' | 'guardando'>(
@@ -210,6 +216,18 @@ export function RevisionClient({
       const j = await r.json().catch(() => null)
       if (!r.ok) { toast.error(j?.error ?? 'No pude guardar el documento.'); setFase('revisando'); return }
       toast.success(j?.vinculada_existente ? 'Documento vinculado a la factura que ya existía.' : 'Documento confirmado y cargado a pagar.')
+
+      // En un lote se encadena: revisar 18 facturas volviendo al listado entre
+      // cada una es lo que hace que nadie las cargue.
+      if (siguienteId) {
+        router.push(`/admin/finanzas/documentos/revision/${siguienteId}?lote=${loteId}`)
+        return
+      }
+      if (loteId) {
+        toast.success('Terminaste el lote.')
+        router.push('/admin/finanzas/documentos')
+        return
+      }
       router.push('/admin/finanzas/documentos')
     } catch {
       toast.error('Se cortó la conexión al guardar.')
@@ -346,8 +364,17 @@ export function RevisionClient({
 
             {/* `puedeConfirmar` ya exige fase 'revisando', así que cubre el guardando. */}
             <Button size="lg" className="w-full" disabled={!puedeConfirmar} onClick={confirmar}>
-              {fase === 'guardando' ? <><Loader2 className="size-4 animate-spin" /> Guardando…</> : <><Check className="size-4" /> Confirmar y cargar a pagar</>}
+              {fase === 'guardando'
+                ? <><Loader2 className="size-4 animate-spin" /> Guardando…</>
+                : <><Check className="size-4" /> {siguienteId ? 'Confirmar y pasar a la siguiente' : 'Confirmar y cargar a pagar'}</>}
             </Button>
+
+            {progreso && progreso.total > 1 && (
+              <p className="text-center text-[11px] text-muted-foreground">
+                {progreso.hechas} de {progreso.total} confirmadas
+                {siguienteId ? ' · al confirmar seguís con la próxima' : ' · esta es la última'}
+              </p>
+            )}
           </>
         )}
       </div>

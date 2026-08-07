@@ -13,11 +13,12 @@ export type SubidaCliente =
  * asistente, y más adelante recepción de remitos) para no repetir el fetch,
  * el manejo de error ni la compresión en cada pantalla.
  */
-export async function subirDocumentoCliente(file: File): Promise<SubidaCliente> {
+export async function subirDocumentoCliente(file: File, loteId?: string): Promise<SubidaCliente> {
   try {
     const listo = await comprimirSiHaceFalta(file)
     const fd = new FormData()
     fd.append('archivo', listo)
+    if (loteId) fd.append('lote_id', loteId)
 
     const r = await fetch('/api/documentos/subir', { method: 'POST', body: fd })
     const j = await r.json().catch(() => null)
