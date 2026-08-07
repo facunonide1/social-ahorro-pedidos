@@ -16,9 +16,12 @@ import type { Manifiesto } from '../tipos'
  * existe igual en una ferretería.
  */
 export const MANIFIESTO_OFERTAS: Manifiesto = {
-  formato: '1.0',
+  formato: '1.0.0',
   pool: 'ofertas',
   nombre: 'Ofertas',
+  categoria: 'generico',
+  desinstalable: true,
+  alcance: 'mixto',
   descripcion:
     'Acciones comerciales sobre items: se proponen, se aprueban, salen a la calle y se miden. Cierra el loop entre lo que se decidió ofrecer y lo que efectivamente se vendió.',
 
@@ -34,10 +37,10 @@ export const MANIFIESTO_OFERTAS: Manifiesto = {
     { tabla: 'mostrador_destacados', rol: 'Qué conviene ofrecer hoy en el punto de venta', acceso: 'propia' },
     { tabla: 'campanias', rol: 'Agrupación de ofertas bajo una misma idea', acceso: 'propia' },
 
-    { tabla: 'productos_catalogo', rol: 'Los items sobre los que se hace la oferta', acceso: 'leida' },
-    { tabla: 'sucursales', rol: 'Dónde aplica la oferta', acceso: 'leida' },
-    { tabla: 'clientes', rol: 'A quién se le puede ofrecer', acceso: 'leida' },
-    { tabla: 'doc_precios_historial', rol: 'Costo real del item, para no ofertar a pérdida', acceso: 'leida' },
+    { tabla: 'productos_catalogo', rol: 'Los items sobre los que se hace la oferta', acceso: 'leida', dueno: 'configuracion' },
+    { tabla: 'sucursales', rol: 'Dónde aplica la oferta', acceso: 'leida', dueno: 'configuracion' },
+    { tabla: 'clientes', rol: 'A quién se le puede ofrecer', acceso: 'leida', dueno: 'clientes' },
+    { tabla: 'doc_precios_historial', rol: 'Costo real del item, para no ofertar a pérdida', acceso: 'leida', dueno: 'documentos' },
   ],
 
   pantallas: [
@@ -86,9 +89,9 @@ export const MANIFIESTO_OFERTAS: Manifiesto = {
     },
   ],
 
-  permisos: ['ofertas'],
+  permisos: [{ modulo: 'ofertas', acciones: ['ver', 'crear', 'editar', 'aprobar'] }],
 
-  depende_de: ['configuracion'],
+  depende_de: ['configuracion', 'tareas'],
 
   configurable: [
     { clave: 'exporta_a_sistema_externo', etiqueta: 'Exporta el precio a un sistema externo', tipo: 'booleano', default: true },

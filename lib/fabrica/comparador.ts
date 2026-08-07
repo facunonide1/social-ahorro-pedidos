@@ -163,7 +163,12 @@ export async function verificarEspejo(
       }
 
       /* ── Permisos ──────────────────────────────────────────────────── */
-      const declaradosPerm = new Set(manifiesto.permisos)
+      // Se compara el MÓDULO, que es lo que el registry declara. Las acciones
+      // finas (ver/crear/editar/aprobar/eliminar) no tienen contra qué
+      // verificarse: el registry no las guarda. Se declaran igual porque un
+      // sector con datos de personas las necesita, y se dice que no se
+      // verifican en vez de fingir que sí.
+      const declaradosPerm = new Set(manifiesto.permisos.map((p) => p.modulo))
       for (const perm of subApp.permisosRequeridos) {
         if (!declaradosPerm.has(perm)) {
           diferencias.push({
@@ -175,11 +180,11 @@ export async function verificarEspejo(
           })
         }
       }
-      for (const perm of manifiesto.permisos) {
-        if (!(subApp.permisosRequeridos as string[]).includes(perm)) {
+      for (const p of manifiesto.permisos) {
+        if (!(subApp.permisosRequeridos as string[]).includes(p.modulo)) {
           diferencias.push({
             tipo: 'permiso',
-            elemento: perm,
+            elemento: p.modulo,
             en_declaracion: true,
             en_codigo: false,
             nota: 'Declarado, pero la sub-app no lo exige.',

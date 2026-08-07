@@ -3,26 +3,10 @@ import { notFound } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { traerProyecto } from '@/lib/fabrica/datos'
 import { verificarEspejo } from '@/lib/fabrica/comparador'
-import { MANIFIESTO_OFERTAS, PREFIJOS_OFERTAS } from '@/lib/fabrica/manifiestos/ofertas'
-import {
-  ETIQUETA_MOLDE,
-  type Manifiesto,
-  type TipoDiferencia,
-} from '@/lib/fabrica/tipos'
+import { MANIFIESTOS } from '@/lib/fabrica/manifiestos'
+import { ETIQUETA_MOLDE, type TipoDiferencia } from '@/lib/fabrica/tipos'
 
 export const dynamic = 'force-dynamic'
-
-/**
- * Los manifiestos escritos a mano.
- *
- * Están en código y no en la base a propósito: en modo espejo el manifiesto ES
- * el código leído por una persona, y quiero que un cambio de manifiesto pase
- * por un diff. Cuando exista el escritor, los manifiestos van a nacer en
- * `fab_pool_versiones` y este registro desaparece.
- */
-const MANIFIESTOS: Record<string, { manifiesto: Manifiesto; prefijos: string[] }> = {
-  ofertas: { manifiesto: MANIFIESTO_OFERTAS, prefijos: PREFIJOS_OFERTAS },
-}
 
 const ETIQUETA_TIPO: Record<TipoDiferencia, string> = {
   entidad: 'Entidad',
