@@ -129,6 +129,22 @@ export function validarManifiesto(m: Manifiesto): Problema[] {
           'hace_y_avisa sin motivo: hay que poder leer por qué se le dejó actuar solo',
         )
       }
+      // La regla dice que hace_y_avisa es sólo para lo reversible y sin efecto
+      // sobre plata. En modo espejo aparecen automatizaciones que ya la violan.
+      // Se avisa, no se rechaza: el manifiesto describe lo que hay, y ocultarlo
+      // sería declarar un sistema que no existe.
+      if (acc.participacion === 'hace_y_avisa' && acc.reversible === false) {
+        avi(
+          `agentes.${ag.clave}.${acc.clave}`,
+          'actúa solo y NO es reversible. Debería bajar a prepara',
+        )
+      }
+      if (acc.participacion === 'hace_y_avisa' && acc.toca_dinero) {
+        avi(
+          `agentes.${ag.clave}.${acc.clave}`,
+          'actúa solo y toca dinero. Debería bajar a prepara',
+        )
+      }
     }
     for (const c of ag.capacidades) {
       if (!CAPACIDADES.has(c)) err(`agentes.${ag.clave}`, `capacidad desconocida: ${c}`)

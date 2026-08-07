@@ -96,6 +96,36 @@ export const MANIFIESTO_STOCK: Manifiesto = {
 
   depende_de: ['configuracion', 'tareas'],
 
+  agentes: [
+    {
+      clave: 'vigia_de_deposito',
+      nombre: 'Vigía de depósito',
+      trabajo:
+        'Avisa lo que está por faltar y lo que está por vencerse, propone qué reponer, y señala las diferencias que nadie explicó.',
+      necesita: [
+        { dato: 'Stock inicial cargado', donde: 'Centro de Datos', sin_esto: 'No tiene contra qué comparar: sin punto de partida no hay faltante' },
+        { dato: 'Mínimo por item', donde: 'Stock', sin_esto: 'No puede decir qué está por faltar' },
+        { dato: 'Ventas diarias', donde: 'Centro de Datos', sin_esto: 'Calcula el faltante pero no la rotación, y propone reponer lo que no se vende' },
+      ],
+      se_activa_con: 'Importar el stock inicial y definir mínimos.',
+      acciones: [
+        { clave: 'recalcular_alertas', titulo: 'Recalcular qué está por faltar', participacion: 'hace_y_avisa', reversible: true, motivo: 'Reescribe una lista derivada del stock. Se recalcula sola en la corrida siguiente.' },
+        { clave: 'avisar_vencimientos', titulo: 'Avisar lo que se vence', participacion: 'hace_y_avisa', reversible: true, motivo: 'Sólo avisa. Sacar la mercadería del salón lo hace una persona.' },
+        { clave: 'recalcular_rotacion', titulo: 'Recalcular la rotación', participacion: 'hace_y_avisa', reversible: true, motivo: 'Es un cálculo sobre ventas. No cambia stock ni precios.' },
+        { clave: 'proponer_reposicion', titulo: 'Proponer qué reponer', participacion: 'sugiere', motivo: 'De acá sale una orden de compra. La decide una persona.' },
+        { clave: 'detectar_irregularidades', titulo: 'Señalar lo que no cierra', participacion: 'sugiere', motivo: 'Marca la diferencia; explicarla es de quien estuvo ahí.' },
+        {
+          clave: 'ajustar_stock',
+          titulo: 'Corregir la cantidad en sistema',
+          participacion: 'nunca',
+          motivo: 'Un ajuste sin conteo humano no corrige el stock: borra la evidencia de que faltaba algo.',
+        },
+      ],
+      capacidades: ['detectar', 'recomendar', 'priorizar', 'explicar'],
+      permisos: [{ modulo: 'operaciones', acciones: ['ver', 'crear', 'editar'] }],
+    },
+  ],
+
   configurable: [
     { clave: 'controla_vencimientos', etiqueta: 'Sigue fechas de vencimiento', tipo: 'booleano', default: true },
     { clave: 'controla_lotes', etiqueta: 'Sigue partidas o lotes', tipo: 'booleano', default: true },

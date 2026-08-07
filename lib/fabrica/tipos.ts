@@ -295,6 +295,19 @@ export interface AccionDeAgente {
   participacion: Participacion
   /** Por qué ese nivel y no otro. Se lee antes de encender el agente. */
   motivo?: string
+  /**
+   * ¿Se puede deshacer lo que hizo?
+   *
+   * Existe porque `hace_y_avisa` está definido como "sólo reversible y sin
+   * efecto sobre plata", y en modo espejo aparecieron automatizaciones que
+   * actúan solas haciendo cosas que NO se deshacen (mandar un mail). El
+   * manifiesto describe lo que hay; el validador avisa cuando lo que hay
+   * contradice la regla. Tapar la contradicción sería declarar un sistema
+   * que no existe.
+   */
+  reversible?: boolean
+  /** Toca plata: cobra, paga, o cambia un precio de venta. */
+  toca_dinero?: boolean
 }
 
 /**

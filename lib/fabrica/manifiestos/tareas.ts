@@ -97,6 +97,34 @@ export const MANIFIESTO_TAREAS: Manifiesto = {
   // declararon quedan anotados como no verificables, no como verdad.
   usado_por: ['ofertas', 'stock', 'compras', 'documentos', 'comunicacion', 'compliance'],
 
+  agentes: [
+    {
+      clave: 'organizador_del_dia',
+      nombre: 'Organizador del día',
+      trabajo:
+        'Arma el día del equipo: genera el trabajo que se repite, marca lo que se venció, escala lo que quedó trabado y revisa la evidencia antes de que la mire una persona.',
+      necesita: [
+        { dato: 'Tipos de trabajo cargados', donde: 'Tipos de tarea', sin_esto: 'No sabe qué generar ni con qué plazo' },
+        { dato: 'Al menos una recurrencia activa', donde: 'Recurrencias', sin_esto: 'No arma la agenda del día' },
+        { dato: 'Un verificador por punto', donde: 'Supervisores', sin_esto: 'No puede escalar lo trabado a nadie' },
+      ],
+      se_activa_con: 'Cargar tipos de trabajo y marcar cuáles se repiten.',
+      acciones: [
+        { clave: 'generar_agenda_dia', titulo: 'Armar la agenda del día', participacion: 'hace_y_avisa', reversible: true, motivo: 'Crea trabajo a partir de reglas que una persona configuró. Una tarea de más se descarta en un clic.' },
+        { clave: 'generar_recurrencias', titulo: 'Generar el trabajo que se repite', participacion: 'hace_y_avisa', reversible: true, motivo: 'Ejecuta una regla explícita, no una decisión propia.' },
+        { clave: 'marcar_vencidas', titulo: 'Marcar lo que se pasó de fecha', participacion: 'hace_y_avisa', reversible: true, motivo: 'Cambia un estado calculable a partir de la hora. No decide nada.' },
+        { clave: 'escalar_trabadas', titulo: 'Escalar lo que quedó parado', participacion: 'hace_y_avisa', reversible: true, motivo: 'Avisa a quien corresponde. El escalamiento no cierra ni reasigna nada solo.' },
+        { clave: 'evaluar_triggers', titulo: 'Crear trabajo cuando pasa algo', participacion: 'hace_y_avisa', reversible: true, motivo: 'Las condiciones las escribió una persona; el agente sólo las evalúa.' },
+        { clave: 'pre_verificar_evidencia', titulo: 'Revisar la evidencia antes que una persona', participacion: 'sugiere', motivo: 'Deja una opinión. La verificación que vale sigue siendo humana.' },
+        { clave: 'crear_tarea', titulo: 'Crear una tarea puntual', participacion: 'prepara' },
+        { clave: 'verificar_trabajo_propio', titulo: 'Dar por bueno un trabajo', participacion: 'nunca', motivo: 'Nadie verifica lo que él mismo generó. Si el agente crea y aprueba, la verificación deja de existir.' },
+      ],
+      capacidades: ['detectar', 'priorizar', 'ejecutar', 'explicar'],
+      // Sin `aprobar`: es exactamente el permiso que no puede tener.
+      permisos: [{ modulo: 'tareas', acciones: ['ver', 'crear', 'editar'] }],
+    },
+  ],
+
   configurable: [
     { clave: 'verificacion_obligatoria', etiqueta: 'Todo trabajo terminado pasa por un verificador', tipo: 'booleano', default: true },
     { clave: 'exige_evidencia', etiqueta: 'Pide foto o archivo al cerrar', tipo: 'booleano', default: true },

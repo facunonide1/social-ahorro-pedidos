@@ -35,11 +35,19 @@ async function main() {
       continue
     }
     const r = validarManifiesto(entrada.manifiesto)
+    // Un aviso NO hace fallar la corrida. En modo espejo, algunos avisos son
+    // hallazgos sobre el sistema real que hay que dejar a la vista, no
+    // defectos de la declaración: taparlos para que el validador dé verde
+    // sería declarar un sistema que no existe.
+    const errores = r.filter((p) => p.gravedad === 'error')
+    if (errores.length > 0) fallo = true
     if (r.length === 0) {
       console.log(`  ✓ ${clave.padEnd(10)} válido contra el esquema 1.0.0`)
     } else {
-      fallo = true
-      console.log(`  ✗ ${clave.padEnd(10)} ${r.length} problema(s):`)
+      console.log(
+        `  ${errores.length > 0 ? '✗' : '~'} ${clave.padEnd(10)} ` +
+          `${errores.length} error(es), ${r.length - errores.length} aviso(s):`,
+      )
       for (const p of r) console.log(`      ${p.gravedad === 'error' ? '·' : '~'} ${p.campo}: ${p.mensaje}`)
     }
   }

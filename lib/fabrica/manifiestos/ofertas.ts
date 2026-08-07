@@ -93,6 +93,35 @@ export const MANIFIESTO_OFERTAS: Manifiesto = {
 
   depende_de: ['configuracion', 'tareas'],
 
+  agentes: [
+    {
+      clave: 'analista_comercial',
+      nombre: 'Analista comercial',
+      trabajo:
+        'Mira lo que se vence y lo que no rota, y propone qué ofrecer y a qué precio. Después mide si funcionó, para proponer mejor la próxima vez.',
+      necesita: [
+        { dato: 'Costo real de los items', donde: 'Motor de documentos', sin_esto: 'No puede proponer un descuento sin saber si deja pérdida' },
+        { dato: 'Ventas diarias cargadas', donde: 'Centro de Datos', sin_esto: 'No distingue lo que no rota de lo que nunca se cargó' },
+        { dato: 'Stock por punto', donde: 'Stock', sin_esto: 'No sabe cuánto hay para liquidar' },
+      ],
+      se_activa_con: 'Cargar una factura de compra y un mes de ventas.',
+      acciones: [
+        { clave: 'proponer_ofertas', titulo: 'Proponer qué ofrecer', participacion: 'prepara', motivo: 'Deja la oferta armada en borrador con la justificación escrita. La aprueba una persona.' },
+        { clave: 'preparar_brief', titulo: 'Preparar el encargo al tercero', participacion: 'prepara', motivo: 'Genera el link; mandarlo es de una persona.' },
+        { clave: 'medir_resultado', titulo: 'Medir cómo salió', participacion: 'hace_y_avisa', reversible: true, motivo: 'Sólo escribe aprendizaje. No cambia la oferta ni el precio.' },
+        {
+          clave: 'fijar_precio_venta',
+          titulo: 'Cambiar el precio de venta',
+          participacion: 'nunca',
+          toca_dinero: true,
+          motivo: 'La autoridad sobre el precio de venta es del sistema de facturación. El agente propone; el precio lo escribe otro.',
+        },
+      ],
+      capacidades: ['recomendar', 'detectar', 'explicar'],
+      permisos: [{ modulo: 'ofertas', acciones: ['ver', 'crear', 'editar'] }],
+    },
+  ],
+
   configurable: [
     { clave: 'exporta_a_sistema_externo', etiqueta: 'Exporta el precio a un sistema externo', tipo: 'booleano', default: true },
     { clave: 'requiere_confirmacion_en_punto', etiqueta: 'Pide confirmar la llegada al punto de venta', tipo: 'booleano', default: true },

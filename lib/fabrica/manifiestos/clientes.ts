@@ -100,6 +100,42 @@ export const MANIFIESTO_CLIENTES: Manifiesto = {
 
   depende_de: ['configuracion'],
 
+  agentes: [
+    {
+      clave: 'cuidador_de_clientes',
+      nombre: 'Cuidador de clientes',
+      trabajo:
+        'Avisa quién dejó de comprar antes de que sea tarde, junta los que son la misma persona cargada dos veces, y dispara la comunicación que alguien dejó configurada.',
+      necesita: [
+        { dato: 'Historial de compras por cliente', donde: 'Centro de Datos', sin_esto: 'No puede saber la frecuencia de nadie, y sin frecuencia no hay riesgo de fuga' },
+        { dato: 'Un canal de contacto', donde: 'Comunicación a clientes', sin_esto: 'Detecta pero no puede avisar' },
+      ],
+      se_activa_con: 'Importar el histórico de compras y configurar un canal.',
+      acciones: [
+        { clave: 'detectar_riesgo_fuga', titulo: 'Avisar quién se está yendo', participacion: 'sugiere', motivo: 'Marca una lista. Qué hacer con ella lo decide una persona.' },
+        { clave: 'proponer_fusion_duplicados', titulo: 'Proponer fusiones', participacion: 'sugiere', motivo: 'Fusionar dos clientes reescribe compras y puntos. Se propone y espera.' },
+        {
+          clave: 'correr_automatizaciones',
+          titulo: 'Disparar la comunicación configurada',
+          participacion: 'hace_y_avisa',
+          // HALLAZGO. Se declara como está, no como debería estar: en espejo el
+          // manifiesto describe el sistema real. El validador lo marca.
+          reversible: false,
+          motivo: 'Hoy manda solo, según reglas que una persona escribió. Pero un mensaje enviado no se puede deshacer, así que este nivel contradice la regla de hace_y_avisa. Queda declarado como está y anotado para revisión.',
+        },
+        {
+          clave: 'eliminar_cliente',
+          titulo: 'Borrar un cliente',
+          participacion: 'nunca',
+          motivo: 'Es dato de una persona. Borrar no es editar un poco más, y no hay vuelta atrás.',
+        },
+      ],
+      capacidades: ['detectar', 'recomendar', 'ejecutar', 'responder'],
+      // Sin `eliminar`: el permiso más peligroso del pool no se delega.
+      permisos: [{ modulo: 'clientes', acciones: ['ver', 'crear', 'editar'] }],
+    },
+  ],
+
   configurable: [
     { clave: 'puntos_activos', etiqueta: 'Acumula puntos por compra', tipo: 'booleano', default: true },
     { clave: 'dias_riesgo_fuga', etiqueta: 'Días sin comprar para marcarlo en riesgo', tipo: 'numero', default: 90 },
