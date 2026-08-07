@@ -36,6 +36,7 @@ export default async function RevisionPage({ params }: { params: { id: string } 
           extraccionId={ext.id}
           estado={ext.estado}
           error={ext.error}
+          datos={ext.estado === 'ok' ? (ext.respuesta_cruda as any) : null}
           imagenUrl={imagenUrl}
           esPdf={ext.mime_type === 'application/pdf'}
         />
