@@ -91,7 +91,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const historial = (Array.isArray(b?.historial) ? b.historial : []).filter((m: any) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim()).slice(-12)
-    let sys = systemPrompt(nombre, me.rol, herrs, b?.subapp ?? null, hoy)
+    // El clip de esta pantalla sube documentos al motor de lectura, así que
+    // NORA puede decir que sí — con la aclaración de que después hay revisión.
+    let sys = systemPrompt(nombre, me.rol, herrs, b?.subapp ?? null, hoy, { puedeLeerDocumentos: true })
     if (b?.herramienta_id) sys += `\n\nCONTEXTO: estás completando "${b.herramienta_id}" con estos datos ya cargados: ${JSON.stringify(b.valores ?? {})}. Extraé lo nuevo del mensaje y llamá esa herramienta con los datos actualizados.`
 
     const anthropic = getAnthropic()

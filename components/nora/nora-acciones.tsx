@@ -2,10 +2,13 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Send, Sparkles, Paperclip, Check, Pencil, Loader2, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { createClient } from '@/lib/supabase/client'
+import { DOC_ACCEPT_ATTR } from '@/lib/documentos/config'
+import { subirDocumentoCliente } from '@/lib/documentos/subir-cliente'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -34,6 +37,7 @@ type Msg = {
  */
 export function NoraAcciones({ subapp = 'finanzas' }: { subapp?: string }) {
   const sb = createClient()
+  const router = useRouter()
   const [msgs, setMsgs] = useState<Msg[]>([{ de: 'nora', texto: '¡Hola! Soy NORA. Decime qué necesitás — por ejemplo *"quiero hacer pago Denver"* o *"¿cuánto le debemos a Denver?"*.' }])
   const [texto, setTexto] = useState('')
   const [busy, setBusy] = useState(false)
@@ -104,6 +108,33 @@ export function NoraAcciones({ subapp = 'finanzas' }: { subapp?: string }) {
     } catch (e: any) { toast.error(e?.message ?? 'No se pudo subir la foto.'); setBusy(false) }
   }
 
+  /**
+   * Clip fuera de un slot de evidencia: el archivo es un documento comercial
+   * (factura, remito, nota de crédito) y va al motor de lectura. Antes el clip
+   * estaba deshabilitado salvo que NORA pidiera una foto, así que tocarlo no
+   * hacía nada.
+   */
+  async function subirDocumentoComercial(file: File) {
+    setBusy(true)
+    setMsgs((m) => [...m, { de: 'user', texto: `📎 ${file.name}` }])
+    try {
+      const r = await subirDocumentoCliente(file)
+      if (r.estado === 'error') {
+        setMsgs((m) => [...m, { de: 'nora', texto: r.mensaje }])
+        return
+      }
+      setMsgs((m) => [...m, {
+        de: 'nora',
+        texto: r.estado === 'duplicado'
+          ? `${r.mensaje} Abrila para ver qué se cargó.`
+          : 'Lo estoy leyendo. Te llevo a la revisión para que confirmes lo que saqué.',
+      }])
+      router.push(`/admin/finanzas/documentos/revision/${r.extraccionId}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   function confirmar(m: Msg) { if (busy) return; setMsgs((x) => [...x, { de: 'user', texto: 'Confirmar ✓' }]); llamar({ accion: 'confirmar', herramienta_id: m.herramienta_id, valores: m.valores }) }
   function corregir(m: Msg) { if (busy) return; setMsgs((x) => [...x, { de: 'user', texto: 'Corregir' }]); llamar({ accion: 'corregir', herramienta_id: m.herramienta_id, valores: m.valores }) }
 
@@ -168,8 +199,14 @@ export function NoraAcciones({ subapp = 'finanzas' }: { subapp?: string }) {
 
       <div className="border-t border-border p-2.5">
         <div className="flex items-center gap-2">
-          <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) subirFoto(f); e.currentTarget.value = '' }} />
-          <Button size="icon" variant="ghost" className="size-9 shrink-0" disabled={busy || !esperaFoto} onClick={() => fileRef.current?.click()} title={esperaFoto ? 'Adjuntar comprobante' : 'Adjuntá cuando NORA lo pida'}><Paperclip className="size-4" /></Button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept={esperaFoto ? 'image/*' : DOC_ACCEPT_ATTR}
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; e.currentTarget.value = ''; if (f) (esperaFoto ? subirFoto(f) : subirDocumentoComercial(f)) }}
+          />
+          <Button size="icon" variant="ghost" className="size-9 shrink-0" disabled={busy} onClick={() => fileRef.current?.click()} title={esperaFoto ? 'Adjuntar comprobante' : 'Adjuntar una factura o remito para que NORA lo lea'}><Paperclip className="size-4" /></Button>
           <Input value={texto} onChange={(e) => setTexto(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') enviarTexto() }} placeholder="Escribí a NORA…" className="h-10 flex-1 rounded-full" disabled={busy} />
           <Button size="icon" className="size-10 shrink-0 rounded-full" disabled={busy || !texto.trim()} onClick={enviarTexto}><Send className="size-4" /></Button>
         </div>

@@ -1,9 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Plus, Download, Search } from 'lucide-react'
+import { Plus, Download, Search, Camera, Keyboard, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+
+import { DOC_ACCEPT_ATTR } from '@/lib/documentos/config'
+import { subirDocumentoCliente } from '@/lib/documentos/subir-cliente'
 
 import { exportExcel } from '@/lib/utils/export-excel'
 import { formatARS } from '@/lib/utils/format'
@@ -108,7 +111,81 @@ export function DocumentosClient({ docs, proveedores, sucursales }: { docs: DocR
   )
 }
 
+/**
+ * Elección de cómo entra el documento. Antes el alta era solo manual; ahora la
+ * foto es la vía por defecto (el motor lee y una persona revisa) y la carga a
+ * mano queda como alternativa, sin cambiar en nada.
+ */
 function NuevaDoc({ proveedores, sucursales, onClose }: { proveedores: Prov[]; sucursales: Suc[]; onClose: () => void }) {
+  const [via, setVia] = useState<'elegir' | 'manual'>('elegir')
+  if (via === 'manual') return <NuevaDocManual proveedores={proveedores} sucursales={sucursales} onClose={onClose} />
+  return <ElegirVia onManual={() => setVia('manual')} onClose={onClose} />
+}
+
+function ElegirVia({ onManual, onClose }: { onManual: () => void; onClose: () => void }) {
+  const router = useRouter()
+  const [subiendo, setSubiendo] = useState(false)
+  const fileRef = useRef<HTMLInputElement | null>(null)
+
+  async function onArchivo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setSubiendo(true)
+    try {
+      const r = await subirDocumentoCliente(file)
+      if (r.estado === 'error') { toast.error(r.mensaje); return }
+      if (r.estado === 'duplicado') {
+        toast.info(r.mensaje)
+        router.push(`/admin/finanzas/documentos/revision/${r.extraccionId}`)
+        return
+      }
+      router.push(`/admin/finanzas/documentos/revision/${r.extraccionId}`)
+    } finally { setSubiendo(false) }
+  }
+
+  return (
+    <Sheet open onOpenChange={(o) => !o && onClose()}>
+      <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md">
+        <SheetHeader><SheetTitle>Nuevo documento</SheetTitle></SheetHeader>
+        <div className="flex flex-1 flex-col gap-3 pt-4">
+          <p className="text-sm text-muted-foreground">¿Cómo lo querés cargar?</p>
+
+          <input ref={fileRef} type="file" accept={DOC_ACCEPT_ATTR} className="hidden" onChange={onArchivo} />
+
+          <button
+            type="button"
+            disabled={subiendo}
+            onClick={() => fileRef.current?.click()}
+            className="flex items-start gap-3 rounded-lg border border-border p-4 text-left transition-colors hover:border-primary hover:bg-accent disabled:opacity-60"
+          >
+            {subiendo ? <Loader2 className="mt-0.5 size-5 shrink-0 animate-spin text-primary" /> : <Camera className="mt-0.5 size-5 shrink-0 text-primary" />}
+            <span>
+              <span className="block font-medium">{subiendo ? 'Subiendo…' : 'Sacarle una foto'}</span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                Foto o PDF de la factura. NORA lee los datos y vos revisás antes de guardar.
+              </span>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onManual}
+            className="flex items-start gap-3 rounded-lg border border-border p-4 text-left transition-colors hover:border-primary hover:bg-accent"
+          >
+            <Keyboard className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+            <span>
+              <span className="block font-medium">Cargarlo a mano</span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">Escribís proveedor, número y monto vos.</span>
+            </span>
+          </button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+function NuevaDocManual({ proveedores, sucursales, onClose }: { proveedores: Prov[]; sucursales: Suc[]; onClose: () => void }) {
   const router = useRouter()
   const hoy = new Date().toISOString().slice(0, 10)
   const [busy, setBusy] = useState(false)
