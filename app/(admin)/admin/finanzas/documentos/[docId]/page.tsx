@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { gateDocumentos } from '@/lib/documentos/permisos'
 import { urlFirmada } from '@/lib/documentos/subida'
 import { VisorDocumento } from '@/components/documentos/visor-documento'
+import { VincularOrden } from '@/components/documentos/vincular-orden'
 import { formatARS } from '@/lib/utils/format'
 
 export const dynamic = 'force-dynamic'
@@ -29,6 +30,13 @@ export default async function DocumentoCapturadoPage({ params }: { params: { doc
     .maybeSingle()
 
   if (!doc) notFound()
+
+  // ¿Ya está vinculado a una conciliación? Si no, se ofrece vincularlo.
+  const { data: yaVinc } = await adm
+    .from('doc_conciliacion_documentos')
+    .select('conciliacion_id, rol, doc_conciliaciones(estado, monto_diferencia)')
+    .eq('documento_id', params.docId)
+    .maybeSingle()
 
   const [{ data: lineas }, { data: ext }] = await Promise.all([
     adm.from('doc_lineas').select('nro_linea, descripcion_leida, codigo_tercero, cantidad, precio_unitario, total_linea, match_estado, productos_catalogo:item_id(sku, nombre)').eq('documento_id', doc.id).order('nro_linea'),
@@ -54,6 +62,18 @@ export default async function DocumentoCapturadoPage({ params }: { params: { doc
           <VisorDocumento url={imagenUrl} esPdf={ext?.mime_type === 'application/pdf'} />
 
           <div className="space-y-4">
+            {yaVinc ? (
+              <Link
+                href={`/admin/compras/conciliaciones/${yaVinc.conciliacion_id}`}
+                className="flex items-center gap-2 rounded-lg border border-border px-4 py-3 text-sm transition-colors hover:bg-accent"
+              >
+                <span className="text-muted-foreground">Vinculado como <b className="text-foreground">{yaVinc.rol}</b></span>
+                <span className="ml-auto text-primary">Ver conciliación →</span>
+              </Link>
+            ) : (
+              <VincularOrden documentoId={d.id} tipo={d.tipo} />
+            )}
+
             <div className="rounded-lg border border-border p-4">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Lo confirmado</div>
               <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">

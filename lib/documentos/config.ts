@@ -133,3 +133,33 @@ export const DOC_ALERTA_EXCESO_PCT = Number(process.env.DOC_ALERTA_EXCESO_PCT ??
 
 /** Plata mínima en juego para molestar a alguien con una sugerencia. */
 export const DOC_ALERTA_MONTO_MINIMO = Number(process.env.DOC_ALERTA_MONTO_MINIMO ?? 10000)
+
+// ── Conciliación de tres puntas ──────────────────────────────────────────────
+
+/** Cuántos días atrás se buscan órdenes candidatas para un documento. */
+export const DOC_CONC_VENTANA_DIAS = Number(process.env.DOC_CONC_VENTANA_DIAS ?? 60)
+
+/**
+ * Tolerancia de cantidad. Cero por defecto: las unidades son enteras y una
+ * unidad de menos es una unidad de menos.
+ */
+export const DOC_CONC_TOL_CANTIDAD = Number(process.env.DOC_CONC_TOL_CANTIDAD ?? 0)
+
+/** Tolerancia de precio en porcentaje. Redondeos del proveedor, no diferencias. */
+export const DOC_CONC_TOL_PRECIO_PCT = Number(process.env.DOC_CONC_TOL_PRECIO_PCT ?? 1)
+
+/** Tolerancia de precio en pesos por unidad. Se aplica la mayor de las dos. */
+export const DOC_CONC_TOL_PRECIO_ARS = Number(process.env.DOC_CONC_TOL_PRECIO_ARS ?? 5)
+
+/**
+ * Si el total de diferencias de un documento no llega a esto, la conciliación
+ * cierra sola como conforme.
+ *
+ * Perseguir $80 cuesta más que los $80: el tiempo de quien reclama, el mail, el
+ * seguimiento. Una bandeja llena de casos de $80 hace que no se miren los de
+ * $80.000.
+ */
+export const DOC_CONC_MONTO_MINIMO = Number(process.env.DOC_CONC_MONTO_MINIMO ?? 2000)
+
+/** Días sin resolver una diferencia antes de generar tarea al encargado. */
+export const DOC_CONC_DIAS_TAREA = Number(process.env.DOC_CONC_DIAS_TAREA ?? 7)
