@@ -61,7 +61,7 @@ export async function crearPago(adm: any, b: any, userId: string): Promise<any> 
 
   const ids = aplicaciones.map((a: any) => a.factura_id)
   const { data: facts } = await adm.from('facturas_proveedor').select('id, total, tipo_documento, estado').in('id', ids)
-  const factById = new Map((facts ?? []).map((f) => [f.id, f]))
+  const factById = new Map(((facts ?? []) as any[]).map((f) => [f.id, f]))
 
   let bruto = 0
   for (const a of aplicaciones) {
@@ -108,7 +108,7 @@ export async function crearPago(adm: any, b: any, userId: string): Promise<any> 
   for (const a of aplicaciones) await adm.from('pago_facturas').insert({ pago_id: pago.id, factura_id: a.factura_id, monto_aplicado: Number(a.monto) })
 
   if (pendiente) {
-    const { data: prov } = await adm.from('proveedores').select('razon_social').eq('id', proveedor_id).maybeSingle<any>()
+    const { data: prov } = await adm.from('proveedores').select('razon_social').eq('id', proveedor_id).maybeSingle()
     await adm.from('aprobaciones').insert({
       tipo: 'pago_alto', entidad_tipo: 'pago', entidad_id: pago.id, monto_afectado: montoEgreso,
       descripcion: `Pago ${numero_orden_pago} a ${prov?.razon_social ?? 'proveedor'} por $${Math.round(montoEgreso).toLocaleString('es-AR')}`,

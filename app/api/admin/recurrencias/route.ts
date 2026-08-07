@@ -1,25 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
-import { createClient, createAdminClient } from '@/lib/supabase/server'
-import type { AdminRole } from '@/lib/types/admin'
+import { createAdminClient } from '@/lib/supabase/server'
+import { gateGestion } from '@/lib/tareas/gate-recurrencias'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-
-export async function gateGestion() {
-  const sb = createClient()
-  const { data: { user } } = await sb.auth.getUser()
-  if (!user) return { error: 'no autenticado', status: 401 as const }
-  const { data: me } = await sb
-    .from('users_admin')
-    .select('rol, activo')
-    .eq('id', user.id)
-    .maybeSingle<{ rol: AdminRole; activo: boolean }>()
-  if (!me || !me.activo || !['super_admin', 'gerente'].includes(me.rol)) {
-    return { error: 'requiere super_admin o gerente', status: 403 as const, userId: '' }
-  }
-  return { ok: true as const, userId: user.id }
-}
 
 const CAMPOS = [
   'tipo_tarea_id', 'titulo_plantilla', 'descripcion_plantilla', 'patron',

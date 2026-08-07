@@ -56,6 +56,9 @@ const ESTADO_VARIANT: Record<
   enviada: 'info',
   nota_credito_recibida: 'info',
   cerrada: 'success',
+  // Faltaba: el lookup daba undefined y el Badge caía a su variant default.
+  // Se deja explícito para no cambiar cómo se ve hoy.
+  descartada: undefined,
 }
 
 export default async function DevolucionDetailPage({

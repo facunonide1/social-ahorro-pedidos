@@ -38,7 +38,7 @@ export async function responderNora(adm: Adm, contenido: string, canalId: string
       const dep = ((items ?? []) as any[]).reduce((a, s) => a + Number(s.cantidad_deposito ?? 0), 0)
       const donde = suc ? ` en ${suc.nombre}` : ' (todas las sucursales)'
       const problema = /\bfalta|faltan|faltante|vencid|roto|rota|corregir|correcci[oó]n|mal\b/i.test(texto)
-      const acciones = problema ? [{ label: 'Crear tarea', accion: 'crear_tarea', payload: { titulo: `Revisar ${match.nombre}${suc ? ` en ${suc.nombre}` : ''}`, sucursal_id: suc?.id ?? null } }] : null
+      const acciones = problema ? [{ label: 'Crear tarea', accion: 'crear_tarea', payload: { titulo: `Revisar ${match.nombre}${suc ? ` en ${suc.nombre}` : ''}`, sucursal_id: suc?.id ?? null } }] : undefined
       return {
         texto: `📦 Stock de ${match.nombre}${donde}: ${total} u. (góndola ${gond} · depósito ${dep}).${problema ? ' Detecté un posible problema — ¿creo una tarea?' : ''}`,
         entidad: { tipo: 'producto', id: match.id, nombre: match.nombre },

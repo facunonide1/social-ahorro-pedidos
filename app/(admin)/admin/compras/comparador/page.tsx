@@ -42,7 +42,8 @@ export default async function ComparadorPage({ searchParams }: { searchParams: {
   for (const it of (items ?? []) as any[]) {
     const provId = provByLista.get(it.lista_id); if (!provId) continue
     const prov = provMap.get(provId)
-    const g = map.get(it.producto_id) ?? { producto_id: it.producto_id, nombre: it.productos_catalogo?.nombre ?? '—', sku: it.productos_catalogo?.sku ?? null, ofertas: [] }
+    // Anotado: sin el tipo, el `[]` del literal se infiere como never[].
+    const g: ProductoComp = map.get(it.producto_id) ?? { producto_id: it.producto_id, nombre: it.productos_catalogo?.nombre ?? '—', sku: it.productos_catalogo?.sku ?? null, ofertas: [] }
     const precio = Number(it.precio)
     const descPP = Number(prov?.descuento_pronto_pago_pct ?? 0)
     const precioFinal = Math.round(precio * (1 - descPP / 100) * 100) / 100

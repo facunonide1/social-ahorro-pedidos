@@ -1,5 +1,8 @@
 {
   "compilerOptions": {
+    // Sin `target` explícito TS asumía ES5, y eso solo hacía fallar 74 iteraciones
+    // de Map/Set con TS2802. Next.js transpila a ES2017+ desde hace varias versiones.
+    "target": "es2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,

@@ -7,7 +7,7 @@ import type { AdminRole } from '@/lib/types/admin'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export type MsgHit = {
+type MsgHit = {
   id: string
   canal_id: string
   canal: string
@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
 }
 
 /** Canales que el usuario puede leer: donde es miembro + los públicos. */
-export async function canalesPermitidos(adm: any, userId: string): Promise<string[]> {
+async function canalesPermitidos(adm: any, userId: string): Promise<string[]> {
   const [{ data: miembro }, { data: publicos }] = await Promise.all([
     adm.from('canal_miembros').select('canal_id').eq('user_id', userId),
     adm.from('canales').select('id').eq('es_privado', false),

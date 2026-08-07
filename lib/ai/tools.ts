@@ -943,7 +943,7 @@ const getFaltantes: ToolDef = {
     for (const a of (data ?? []) as any[]) {
       const nombre = pickOne<any>(a.productos_catalogo)?.nombre ?? a.texto_libre ?? '—'
       const k = nombre.toLowerCase()
-      const g = map.get(k) ?? { producto: nombre, avisos: 0, total: 0, sucursales: [] }
+      const g = map.get(k) ?? { producto: nombre, avisos: 0, total: 0, sucursales: [] as string[] }
       g.avisos++; g.total += Number(a.cantidad_sugerida || 0)
       const suc = pickOne<any>(a.sucursales)?.nombre; if (suc && !g.sucursales.includes(suc)) g.sucursales.push(suc)
       map.set(k, g)

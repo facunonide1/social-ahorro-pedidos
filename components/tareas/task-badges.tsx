@@ -68,7 +68,8 @@ export function SlaIndicator({
   const dias = Math.round(diff / 864e5)
 
   let texto: string
-  let tone: 'success' | 'warning' | 'destructive' | 'muted'
+  // Sin 'success': ninguna rama de abajo lo asigna nunca.
+  let tone: 'warning' | 'destructive' | 'muted'
   if (diff < 0) {
     texto = `Vencida hace ${formatDistance(-diff)}`
     tone = 'destructive'
@@ -87,7 +88,6 @@ export function SlaIndicator({
     <span
       className={cn(
         'inline-flex items-center gap-1 text-[10px] font-medium',
-        tone === 'success' && 'text-success',
         tone === 'warning' && 'text-warning',
         tone === 'destructive' && 'text-destructive',
         tone === 'muted' && 'text-muted-foreground',

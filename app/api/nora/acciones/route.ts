@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
         await sb.from('nora_conversaciones').update(patch).eq('id', cid)
         return cid
       }
-      const { data } = await sb.from('nora_conversaciones').insert({ user_id: user.id, subapp: b?.subapp ?? 'finanzas', mensajes, entidades_creadas: entidad ? [entidad] : [] }).select('id').maybeSingle<{ id: string }>()
+      const { data } = await sb.from('nora_conversaciones').insert({ user_id: ctx.userId, subapp: b?.subapp ?? 'finanzas', mensajes, entidades_creadas: entidad ? [entidad] : [] }).select('id').maybeSingle<{ id: string }>()
       return data?.id ?? null
     } catch { return cid }
   }

@@ -49,7 +49,7 @@ export async function obtenerRegistros(adm: Adm, def: QueryDefinicion): Promise<
     if (f.solo_activos !== false) q = q.eq('activo', true)
     if (f.rubro) q = q.eq('rubro', f.rubro)
     const { data } = await q
-    let regs = ((data ?? []) as any[]).map((p) => ({
+    let regs: Registro[] = ((data ?? []) as any[]).map((p) => ({
       sku: p.sku, nombre: p.nombre, precio: p.precio_sugerido, rubro: p.rubro, laboratorio: p.laboratorio, estado: p.activo ? 'A' : 'B',
     }))
     if (f.sin_venta_dias) regs = await filtrarSinVenta(adm, regs, Number(f.sin_venta_dias))

@@ -1,3 +1,4 @@
+import type Anthropic from '@anthropic-ai/sdk'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { getAnthropic } from '@/lib/ai/client'
@@ -47,7 +48,7 @@ export async function generarResumenDiario(
   })
 
   const markdown = msg.content
-    .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
+    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
     .map((b) => b.text)
     .join('')
     .trim()

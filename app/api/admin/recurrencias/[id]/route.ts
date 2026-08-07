@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
 import { createAdminClient } from '@/lib/supabase/server'
-import { gateGestion } from '../route'
+import { gateGestion } from '@/lib/tareas/gate-recurrencias'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'

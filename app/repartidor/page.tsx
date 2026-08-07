@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ExternalLink, Map, MapPin, Phone, Route } from 'lucide-react'
+// `Map` se importa con alias: sin él tapa al Map nativo y `new Map()` de más
+// abajo intenta construir el componente de lucide (TypeError en runtime).
+import { ExternalLink, Map as MapIcon, MapPin, Phone, Route } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/server'
 import type { Order, UserPedidos } from '@/lib/types'
@@ -148,7 +150,7 @@ export default async function RepartidorPage() {
                 {routeLink && (
                   <Button asChild variant="ghost" size="sm">
                     <a href={routeLink} target="_blank" rel="noreferrer">
-                      <Map className="size-3.5" />
+                      <MapIcon className="size-3.5" />
                       Ruta
                     </a>
                   </Button>
@@ -212,7 +214,7 @@ function DeliveryCard({
           {maps && (
             <Button asChild className="h-12 flex-1">
               <a href={maps} target="_blank" rel="noreferrer">
-                <Map className="size-4" />
+                <MapIcon className="size-4" />
                 Google Maps
               </a>
             </Button>

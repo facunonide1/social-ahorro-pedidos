@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
   if (b?.accion === 'sumar') {
     if (!b?.cliente_id || !b?.evento) return NextResponse.json({ error: 'cliente y evento requeridos' }, { status: 400 })
     const r = await sumarPuntos(adm, b.cliente_id, b.evento, { monto: b.monto, puntos: b.puntos })
-    return NextResponse.json({ ok: true, ...r })
+    // `r` ya trae su propio `ok` — el spread lo pisaba de todas formas.
+    return NextResponse.json({ ...r })
   }
 
   return NextResponse.json({ error: 'acción inválida' }, { status: 400 })

@@ -1,3 +1,5 @@
+import type Anthropic from '@anthropic-ai/sdk'
+
 import { getAnthropic } from '@/lib/ai/client'
 import { ocrTicketSystemPrompt } from '@/lib/ai/prompts'
 import { OCR_MODEL, OCR_MAX_TOKENS } from '@/lib/ai/config'
@@ -53,7 +55,7 @@ export async function extraerDatosTicket(
   })
 
   const text = msg.content
-    .filter((b): b is { type: 'text'; text: string } => b.type === 'text')
+    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
     .map((b) => b.text)
     .join('')
     .trim()

@@ -3,9 +3,9 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  // v0.54: `tsc --noEmit` quedó en 0 errores, así que el build vuelve a fallar
+  // ante un error de tipos. Antes estaba en true y "deploy verde" no garantizaba
+  // que el proyecto compilara.
   // Unificación de shells (v0.18): /hub/* quedó mudado a /admin/*.
   // Redirige permanente para links/favoritos viejos. El orden importa:
   // las reglas específicas van antes del wildcard.

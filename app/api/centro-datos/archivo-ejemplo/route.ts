@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
     buf = XLSX.write(wb, { type: 'buffer', bookType: 'biff8' })
     mime = 'application/vnd.ms-excel'
   }
-  return new Response(buf, {
+  return new Response(new Uint8Array(buf), {
     headers: { 'content-type': mime, 'content-disposition': `attachment; filename="${nombre}"` },
   })
 }

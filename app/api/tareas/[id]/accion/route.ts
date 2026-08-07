@@ -269,10 +269,10 @@ async function procesarDevolucionAlCompletar(adm: any, tarea: any) {
       return
     }
     if (tarea?.entidad_relacionada !== 'devolucion_drogueria' || !tarea?.entidad_id) return
-    const { data: dev } = await adm.from('devoluciones_drogueria').select('*').eq('id', tarea.entidad_id).maybeSingle<any>()
+    const { data: dev } = await adm.from('devoluciones_drogueria').select('*').eq('id', tarea.entidad_id).maybeSingle()
     if (!dev || dev.stock_descontado) return
     if (dev.producto_id && dev.sucursal_id) {
-      const { data: si } = await adm.from('stock_items').select('cantidad_deposito').eq('producto_id', dev.producto_id).eq('sucursal_id', dev.sucursal_id).maybeSingle<any>()
+      const { data: si } = await adm.from('stock_items').select('cantidad_deposito').eq('producto_id', dev.producto_id).eq('sucursal_id', dev.sucursal_id).maybeSingle()
       const prev = Number(si?.cantidad_deposito ?? 0)
       await adm.from('stock_items').upsert({
         producto_id: dev.producto_id, sucursal_id: dev.sucursal_id,

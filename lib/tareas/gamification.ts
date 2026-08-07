@@ -25,7 +25,8 @@ export async function otorgarPuntos(
 ): Promise<string[]> {
   const puntosBase = tipo?.puntos_completar ?? 5
   const afectados: string[] = []
-  const updates: Promise<unknown>[] = []
+  // PromiseLike: los query builders de Supabase son thenables, no Promises.
+  const updates: PromiseLike<unknown>[] = []
 
   if (tarea.responsable_id) {
     updates.push(sumarScore(sb, tarea.responsable_id, puntosBase))

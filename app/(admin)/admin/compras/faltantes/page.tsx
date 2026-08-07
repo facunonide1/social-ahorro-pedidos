@@ -45,7 +45,8 @@ export default async function FaltantesPage({ searchParams }: { searchParams: { 
   for (const a of (avisos ?? []) as any[]) {
     const key = a.producto_id ? `p:${a.producto_id}` : `t:${(a.texto_libre ?? '').toLowerCase()}`
     const nombre = a.productos_catalogo?.nombre ?? a.texto_libre ?? '—'
-    const g = map.get(key) ?? {
+    // Anotado: sin el tipo, los `[]` del literal se infieren como never[].
+    const g: FaltanteGrupo = map.get(key) ?? {
       key, producto_id: a.producto_id, nombre, sku: a.productos_catalogo?.sku ?? null,
       rubro: a.rubro, total: 0, avisos: [], sucursales: [],
       stockEnOtras: a.producto_id ? (stockByProd.get(a.producto_id) ?? []).reduce((s, x) => s + x.cantidad, 0) : 0,

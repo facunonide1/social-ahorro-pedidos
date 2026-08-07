@@ -119,7 +119,7 @@ function NuevoPago({ proveedores, sucursales, cuentas, onClose }: { proveedores:
   let disponible: number | null = null
   if (origen === 'efectivo_sucursal') disponible = suc?.saldo ?? 0
   else if (origen === 'cuenta_bancaria') disponible = cta?.saldo ?? 0
-  const frenaEfectivo = origen === 'efectivo_sucursal' && sucId && (disponible ?? 0) < egreso
+  const frenaEfectivo = origen === 'efectivo_sucursal' && !!sucId && (disponible ?? 0) < egreso
   const restante = disponible != null ? disponible - egreso : null
 
   async function submit() {
