@@ -11,6 +11,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { MANIFIESTOS } from '../lib/fabrica/manifiestos'
 import { verificarEspejo } from '../lib/fabrica/comparador'
+import { diferenciaConSemilla, manifiestoVigente } from '../lib/fabrica/versiones'
 import { validarManifiesto, validarCatalogo, FORMATO_ACTUAL } from '../lib/fabrica/validador'
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -63,17 +64,39 @@ async function main() {
     }
   }
 
-  console.log('\n── ESPEJO (declaración ↔ código) ────────────────────────')
+  console.log('\n── ESPEJO (la declaración QUE GOBIERNA ↔ código) ────────')
+  // Se verifica el manifiesto de la BASE, no la semilla del repo: desde v0.63
+  // la base es la que manda, y verificar la semilla daría verde mientras la que
+  // gobierna está rota.
+  const separadas: string[] = []
   for (const clave of claves) {
     const entrada = MANIFIESTOS[clave]
     if (!entrada) continue
-    const v = await verificarEspejo(entrada.manifiesto, entrada.prefijos, sb, entrada.excluir)
+    const vigente = await manifiestoVigente(clave)
+    if (!vigente) {
+      console.log(`  ✗ ${clave.padEnd(10)} no hay versión actual ni semilla`)
+      fallo = true
+      continue
+    }
+    if (vigente.origen === 'base') {
+      const dif = diferenciaConSemilla(clave, vigente.manifiesto)
+      if (dif.length > 0) separadas.push(`${clave}: ${dif.join(' · ')}`)
+    }
+    const v = await verificarEspejo(vigente.manifiesto, entrada.prefijos, sb, entrada.excluir)
     const marca = v.resultado === 'coincide' ? '✓' : '✗'
     if (v.resultado !== 'coincide') fallo = true
     console.log(`  ${marca} ${clave.padEnd(10)} ${v.resumen}`)
     for (const d of v.diferencias) {
       console.log(`      · [${d.tipo}] ${d.elemento} — ${d.nota}`)
     }
+  }
+
+  if (separadas.length > 0) {
+    console.log('\n── LA BASE SE SEPARÓ DE LA SEMILLA ──────────────────────')
+    console.log('  No es un error: pasa cada vez que alguien corrige algo con el')
+    console.log('  escritor sin volver a tocar el código. Importa porque un')
+    console.log('  proyecto nuevo arrancaría desde la semilla vieja.')
+    for (const s of separadas) console.log(`  ~ ${s}`)
   }
 
   console.log('')

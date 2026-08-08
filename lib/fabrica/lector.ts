@@ -11,11 +11,13 @@ import type { Manifiesto } from './tipos'
  *
  * La pieza que hace que la declaración gobierne en vez de sólo describir.
  *
- * Lee el manifiesto de LA BASE (`fab_pool_versiones.manifiesto`), no del
- * código. Si leyera del código sería teatro: el código ya está en el código.
- * La base es lo que se puede cambiar sin un deploy, y por eso es lo que puede
- * gobernar de verdad — y también por eso hace falta todo lo demás de este
- * archivo.
+ * Lee el manifiesto de LA BASE, de la versión marcada `es_actual`. No del
+ * código: el código ya está en el código, y leerlo sería teatro. La base es lo
+ * que se puede cambiar sin un deploy, y por eso es lo único que puede gobernar
+ * de verdad — y también por eso hace falta todo lo demás de este archivo.
+ *
+ * Desde v0.63 la copia en `lib/fabrica/manifiestos/` es SEMILLA, no fuente: se
+ * usa para el arranque en frío de un proyecto nuevo. Quien manda es la fila.
  *
  * QUÉ LEE HOY: presentación y navegación. Títulos de pantalla, nada más.
  * QUÉ NO LEE: permisos, acciones ejecutables, automatizaciones. Si el lector
@@ -72,9 +74,12 @@ const resolver = porRequest(async (pool: string): Promise<Resuelto> => {
     const adm = createAdminClient()
     const { data, error } = await adm
       .from('fab_instalaciones')
-      .select('lector, estado, version:fab_pool_versiones(manifiesto, estado), pool:fab_pools!inner(clave)')
+      .select(
+        'lector, estado, pool:fab_pools!inner(clave, versiones:fab_pool_versiones(manifiesto, estado, numero, es_actual))',
+      )
       .eq('proyecto_id', PROYECTO_SOCIAL_AHORRO)
       .eq('fab_pools.clave', pool)
+      .eq('fab_pools.fab_pool_versiones.es_actual', true)
       .maybeSingle()
 
     if (error || !data) return vacio
@@ -82,26 +87,32 @@ const resolver = porRequest(async (pool: string): Promise<Resuelto> => {
     const fila = data as unknown as {
       lector: EstadoLector
       estado: string
-      version: { manifiesto: Manifiesto; estado: string } | null
+      pool: { clave: string; versiones: { manifiesto: Manifiesto; estado: string; numero: number }[] } | null
     }
 
     // 1 · ¿el flag está apagado? Entonces no hay nada que resolver.
     if (fila.lector === 'apagado') return vacio
 
-    // 2 · ¿hay manifiesto?
-    if (!fila.version?.manifiesto) {
-      return { estado: fila.lector, manifiesto: null, motivoFallback: 'El pool no tiene manifiesto publicado.' }
-    }
-    if (fila.version.estado !== 'publicada') {
+    // 2 · ¿hay una versión actual publicada?
+    const actual = fila.pool?.versiones?.[0]
+    if (!actual?.manifiesto) {
       return {
         estado: fila.lector,
         manifiesto: null,
-        motivoFallback: `La versión del manifiesto está en estado "${fila.version.estado}", no publicada.`,
+        motivoFallback: 'El pool no tiene una versión marcada como actual.',
+      }
+    }
+    if (actual.estado !== 'publicada') {
+      return {
+        estado: fila.lector,
+        manifiesto: null,
+        motivoFallback: `La versión actual está en estado "${actual.estado}", no publicada.`,
       }
     }
 
-    // 3 · ¿valida contra el esquema vigente?
-    const errores = validarManifiesto(fila.version.manifiesto).filter((p) => p.gravedad === 'error')
+    // 3 · ¿valida contra el esquema vigente? Un manifiesto inválido en la base
+    // no puede gobernar: valdría más el error que el código que funciona.
+    const errores = validarManifiesto(actual.manifiesto).filter((p) => p.gravedad === 'error')
     if (errores.length > 0) {
       return {
         estado: fila.lector,
@@ -111,7 +122,7 @@ const resolver = porRequest(async (pool: string): Promise<Resuelto> => {
     }
 
     // 4 · listo.
-    return { estado: fila.lector, manifiesto: fila.version.manifiesto, motivoFallback: null }
+    return { estado: fila.lector, manifiesto: actual.manifiesto, motivoFallback: null }
   } catch {
     // La fábrica caída no puede tirar abajo Social Ahorro. Ni siquiera se
     // registra el evento: registrar requiere la misma base que acaba de fallar.
