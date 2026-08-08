@@ -95,6 +95,7 @@ export const MANIFIESTO_STOCK: Manifiesto = {
   permisos: [{ modulo: 'operaciones', acciones: ['ver', 'crear', 'editar', 'aprobar'] }],
 
   depende_de: ['configuracion', 'tareas', 'centro-datos'],
+  usado_por: ['compras'],
 
   agentes: [
     {

@@ -1,6 +1,7 @@
 import type { Manifiesto } from '../tipos'
 import { MANIFIESTO_CENTRO_DATOS, PREFIJOS_CENTRO_DATOS, EXCLUIR_CENTRO_DATOS } from './centro-datos'
 import { MANIFIESTO_CLIENTES, PREFIJOS_CLIENTES } from './clientes'
+import { MANIFIESTO_COMPRAS, PREFIJOS_COMPRAS, EXCLUIR_COMPRAS } from './compras'
 import { MANIFIESTO_CONFIGURACION, PREFIJOS_CONFIGURACION, EXCLUIR_CONFIGURACION } from './configuracion'
 import { MANIFIESTO_DOCUMENTOS, PREFIJOS_DOCUMENTOS, EXCLUIR_DOCUMENTOS } from './documentos'
 import { MANIFIESTO_FINANZAS, PREFIJOS_FINANZAS, EXCLUIR_FINANZAS } from './finanzas'
@@ -35,6 +36,7 @@ export const MANIFIESTOS: Record<string, PoolDeclarado> = {
   clientes: { manifiesto: MANIFIESTO_CLIENTES, prefijos: PREFIJOS_CLIENTES },
   stock: { manifiesto: MANIFIESTO_STOCK, prefijos: PREFIJOS_STOCK, excluir: EXCLUIR_STOCK },
   finanzas: { manifiesto: MANIFIESTO_FINANZAS, prefijos: PREFIJOS_FINANZAS, excluir: EXCLUIR_FINANZAS },
+  compras: { manifiesto: MANIFIESTO_COMPRAS, prefijos: PREFIJOS_COMPRAS, excluir: EXCLUIR_COMPRAS },
   ofertas: { manifiesto: MANIFIESTO_OFERTAS, prefijos: PREFIJOS_OFERTAS },
 }
 
