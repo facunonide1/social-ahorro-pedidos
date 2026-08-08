@@ -4,6 +4,12 @@ import { Badge } from '@/components/ui/badge'
 import { BotonPanico, SelectorEstado } from '@/components/fabrica/controles-lector'
 import { createClient } from '@/lib/supabase/server'
 import { estadoDelLector } from '@/lib/fabrica/flag'
+import {
+  coberturaDe,
+  sombraCiega,
+  ETIQUETA_VEREDICTO,
+  VARIANTE_VEREDICTO,
+} from '@/lib/fabrica/cobertura-lector'
 import { ESTADOS_LECTOR, ETIQUETA_LECTOR, EXPLICACION_LECTOR } from '@/lib/fabrica/lector-estados'
 import { informePreparacion } from '@/lib/fabrica/preparacion'
 import { traerProyecto } from '@/lib/fabrica/datos'
@@ -19,6 +25,13 @@ export default async function LectorPage({ params }: { params: { slug: string } 
   const maxRiesgo = Math.max(...informe.map((p) => p.riesgo))
 
   const estados = await estadoDelLector(proyecto.id)
+  // El veredicto de tres estados. Un pool apagado NO está "sin diferencias":
+  // está sin verificar, y son cosas distintas.
+  const cobertura = new Map(
+    await Promise.all(
+      estados.map(async (e) => [e.clave, await coberturaDe(proyecto.id, e.clave, e.lector)] as const),
+    ),
+  )
   const activos = estados.filter((e) => e.lector !== 'apagado')
   const totalFallbacks = estados.reduce((a, e) => a + e.fallbacks, 0)
 
@@ -51,6 +64,12 @@ export default async function LectorPage({ params }: { params: { slug: string } 
           lee su definición del código: es exactamente lo de hoy. El estado se
           cambia acá y tiene efecto en la request siguiente, sin deploy.
         </p>
+        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+          <span className="font-medium">Sin verificar no es lo mismo que sin
+          diferencias.</span> Un pool que nunca comparó nada no dice "0": dice que
+          no miró. La verificación cuenta cuántas de sus pantallas consultaron al
+          lector de verdad, detectado en tiempo de ejecución.
+        </p>
 
         <dl className="mt-3 grid gap-2 sm:grid-cols-3">
           {ESTADOS_LECTOR.map((e) => (
@@ -67,7 +86,7 @@ export default async function LectorPage({ params }: { params: { slug: string } 
               <tr>
                 <th className="px-3 py-2">Pool</th>
                 <th className="px-3 py-2">Estado</th>
-                <th className="px-3 py-2 text-right">Diferencias</th>
+                <th className="px-3 py-2">Verificación</th>
                 <th className="px-3 py-2 text-right">Fallbacks</th>
                 <th className="px-3 py-2">Último cambio</th>
               </tr>
@@ -82,12 +101,25 @@ export default async function LectorPage({ params }: { params: { slug: string } 
                   <td className="px-3 py-2">
                     <SelectorEstado slug={proyecto.slug} clave={e.clave} actual={e.lector} />
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {e.diferencias > 0 ? (
-                      <span className="font-medium text-warning">{e.diferencias}</span>
-                    ) : (
-                      <span className="text-muted-foreground">0</span>
-                    )}
+                  <td className="px-3 py-2">
+                    {(() => {
+                      const c = cobertura.get(e.clave)!
+                      const alerta = sombraCiega(c, e.lector)
+                      return (
+                        <>
+                          <Badge variant={VARIANTE_VEREDICTO[c.veredicto]} className="font-normal">
+                            {ETIQUETA_VEREDICTO[c.veredicto]}
+                            {c.veredicto === 'verificado_con_diferencias' && ` · ${c.diferencias}`}
+                          </Badge>
+                          <div className="mt-0.5 text-[11px] text-muted-foreground">
+                            {c.verificadas}/{c.gobernables} pantallas verificadas
+                          </div>
+                          {alerta && (
+                            <div className="mt-0.5 text-[11px] font-medium text-warning">{alerta}</div>
+                          )}
+                        </>
+                      )
+                    })()}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">
                     {e.fallbacks > 0 ? (

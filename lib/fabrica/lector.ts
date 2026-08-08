@@ -136,6 +136,25 @@ const resolver = porRequest(async (pool: string): Promise<Resuelto> => {
   }
 })
 
+/**
+ * Deja constancia de que una pantalla consultó al lector.
+ *
+ * Nunca lanza y nunca bloquea: una pantalla no puede esperar a que la fábrica
+ * lleve la cuenta.
+ */
+async function registrarConsulta(pool: string, ruta: string): Promise<void> {
+  try {
+    const adm = createAdminClient()
+    await adm.rpc('fab_registrar_consulta', {
+      p_proyecto: PROYECTO_SOCIAL_AHORRO,
+      p_pool: pool,
+      p_ruta: ruta,
+    })
+  } catch {
+    // Silencio deliberado.
+  }
+}
+
 /** Deja constancia. Nunca lanza: un problema de registro no puede romper una pantalla. */
 async function registrar(
   pool: string,
@@ -238,6 +257,13 @@ export async function compararEnSombra(
   enCodigo: string,
 ): Promise<void> {
   const r = await resolver(pool)
+  if (r.estado === 'apagado') return
+
+  // Queda constancia de que esta pantalla PREGUNTÓ. Es lo único que permite
+  // distinguir después "no hubo diferencias" de "no se miró nada". Se registra
+  // en sombra y prendido: con el flag apagado no hay nada que cubrir.
+  await registrarConsulta(pool, ruta)
+
   if (r.estado !== 'sombra') return
 
   // Si en sombra el manifiesto no se puede usar, eso NO es "cero diferencias":
