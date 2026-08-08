@@ -1,4 +1,4 @@
-import { cache } from 'react'
+import * as React from 'react'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { validarManifiesto } from './validador'
@@ -47,12 +47,24 @@ interface Resuelto {
 }
 
 /**
- * Trae el estado y el manifiesto de un pool.
+ * Memo por REQUEST, no por proceso.
  *
- * Envuelto en `cache()` de React: una misma request puede pedir varios títulos
- * del mismo pool y no tiene sentido consultar la base una vez por título.
+ * `cache()` de React dura lo que dura una request: dos títulos del mismo pool
+ * en la misma pantalla hacen una sola consulta, y la request siguiente vuelve a
+ * preguntar. Eso último es lo que importa — un cache de proceso haría que
+ * apagar el flag tarde en verse, y el flag tiene que poder apagarse en
+ * caliente.
+ *
+ * Fuera de un render de React (los scripts de consola) `cache` no existe: ahí
+ * se degrada a llamar directo. Un lector que sólo funciona dentro de Next es un
+ * lector que no se puede probar antes de prenderlo.
  */
-const resolver = cache(async (pool: string): Promise<Resuelto> => {
+const porRequest: <T extends (...args: never[]) => unknown>(fn: T) => T =
+  typeof (React as { cache?: unknown }).cache === 'function'
+    ? (React as unknown as { cache: <T extends (...args: never[]) => unknown>(fn: T) => T }).cache
+    : (fn) => fn
+
+const resolver = porRequest(async (pool: string): Promise<Resuelto> => {
   const vacio: Resuelto = { estado: 'apagado', manifiesto: null, motivoFallback: null }
 
   try {
@@ -176,7 +188,13 @@ export async function obtenerDefinicion(
 
   const definicion: DefinicionPantallas = {
     aspecto: 'pantallas',
-    titulos: Object.fromEntries(r.manifiesto.pantallas.map((p) => [p.ruta, p.titulo])),
+    // Las de título dinámico quedan afuera: su cabecera sale de los datos de la
+    // fila, y una etiqueta fija le quitaría información a la pantalla.
+    titulos: Object.fromEntries(
+      r.manifiesto.pantallas
+        .filter((p) => !p.titulo_dinamico)
+        .map((p) => [p.ruta, p.titulo]),
+    ),
   }
 
   // En sombra NO se devuelve la declaración: se devuelve null para que el
@@ -204,7 +222,10 @@ export async function compararEnSombra(
   const r = await resolver(pool)
   if (r.estado !== 'sombra' || !r.manifiesto) return
 
-  const declarado = r.manifiesto.pantallas.find((p) => p.ruta === ruta)?.titulo
+  const pantalla = r.manifiesto.pantallas.find((p) => p.ruta === ruta)
+  if (pantalla?.titulo_dinamico) return
+
+  const declarado = pantalla?.titulo
   if (declarado === undefined) {
     await registrar(pool, 'diferencia', 'pantallas', 'La declaración no incluye esta pantalla.', {
       ruta,

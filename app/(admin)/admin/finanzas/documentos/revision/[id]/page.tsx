@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 
 import { PageHeader } from '@/components/shared/page-header'
+import { tituloDePantalla } from '@/lib/os/definicion'
 import { createAdminClient } from '@/lib/supabase/server'
 import { gateDocumentos } from '@/lib/documentos/permisos'
 import { urlFirmada } from '@/lib/documentos/subida'
@@ -16,6 +17,8 @@ export default async function RevisionPage({
   params: { id: string }
   searchParams: { lote?: string }
 }) {
+  // Igual que las otras: si el lector está apagado, devuelve este texto.
+  const titulo = await tituloDePantalla('documentos', '/admin/finanzas/documentos/revision/[id]', 'Revisar documento')
   // E.6 · Solo roles con acceso a Finanzas o Compras.
   const g = await gateDocumentos('crear')
   if ('error' in g) redirect('/admin/finanzas/documentos')
@@ -64,7 +67,7 @@ export default async function RevisionPage({
   return (
     <>
       <PageHeader
-        title="Revisar documento"
+        title={titulo}
         description={
           progreso && progreso.total > 1
             ? `${progreso.hechas} de ${progreso.total} confirmadas · ${ext.archivo_nombre ?? 'documento'}`

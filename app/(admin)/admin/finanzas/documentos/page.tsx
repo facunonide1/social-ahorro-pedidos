@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { tituloDePantalla } from '@/lib/os/definicion'
 
 import { DocumentosClient, type DocRow } from './documentos-client'
 
@@ -9,6 +10,10 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Documentos a pagar' }
 
 export default async function DocumentosPage() {
+  // El título puede venir de la declaración de la fábrica. Si el lector está
+  // apagado o algo falla, devuelve este mismo texto: la pantalla no cambia.
+  const titulo = await tituloDePantalla('documentos', '/admin/finanzas/documentos', 'Documentos a pagar')
+
   const profile = await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'tesoreria', 'administrativo', 'auditor'] })
   const sb = createClient()
   const { sucursalId, esTodas } = getSucursalActiva()
@@ -31,7 +36,7 @@ export default async function DocumentosPage() {
 
   return (
     <>
-      <PageHeader title="Documentos a pagar" description="Facturas, notas de crédito/débito, recibos y comprobantes."
+      <PageHeader title={titulo} description="Facturas, notas de crédito/débito, recibos y comprobantes."
         breadcrumbs={[{ label: 'Finanzas' }, { label: 'Documentos' }]} />
       <div className="p-4 md:p-6">
         <DocumentosClient

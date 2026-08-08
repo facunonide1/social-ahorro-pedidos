@@ -331,6 +331,15 @@ export interface PantallaDeclarada {
    * `navegable: false` es un hallazgo: existe y no hay cómo llegar.
    */
   navegable?: boolean
+  /**
+   * El título sale de los datos, no de una etiqueta fija.
+   *
+   * La ficha de un documento se titula con el tipo y el número de ESE
+   * documento. `titulo` sigue existiendo —el catálogo necesita cómo llamarla—
+   * pero el lector no la gobierna: reemplazar un título calculado por una
+   * etiqueta fija sería quitarle información a la pantalla, no configurarla.
+   */
+  titulo_dinamico?: boolean
 }
 
 export interface AccionDeclarada {

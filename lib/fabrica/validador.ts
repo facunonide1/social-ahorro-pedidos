@@ -105,6 +105,18 @@ export function validarManifiesto(m: Manifiesto): Problema[] {
     if (s.pertenencia === 'prestada' && s.permiso) {
       err(`pantallas.${s.ruta}`, 'una pantalla prestada no declara permiso propio')
     }
+    // Una ruta con parámetro casi siempre se titula con los datos de la fila.
+    // No es un error, pero declararla gobernable sin pensarlo sí lo sería.
+    //
+    // `titulo_dinamico: false` explícito significa "lo miré y es fijo": el
+    // aviso deja de aparecer. Un aviso que sigue apareciendo después de que
+    // alguien lo revisó no es un aviso, es ruido.
+    if (s.ruta.includes('[') && s.molde === 'ficha' && s.titulo_dinamico === undefined) {
+      avi(
+        `pantallas.${s.ruta}`,
+        'es una ficha con parámetro y no dice si su título sale de los datos: declarar titulo_dinamico',
+      )
+    }
   }
 
   /* ── Acciones ──────────────────────────────────────────────────────── */
