@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { BotonPanico } from '@/components/fabrica/controles-lector'
 import { BotonVerificar, DecidirPropuesta } from '@/components/fabrica/controles-taller'
+import { ChatTaller } from '@/components/fabrica/chat-taller'
+import { puedeArmar, requireFabricaAccess } from '@/lib/fabrica/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { traerProyecto } from '@/lib/fabrica/datos'
 import { estadoDelLector } from '@/lib/fabrica/flag'
@@ -41,6 +43,7 @@ export default async function TallerPage({
 }) {
   const proyecto = await traerProyecto(params.slug)
   if (!proyecto) notFound()
+  const acceso = await requireFabricaAccess()
 
   // Chequeo perezoso, igual que el resto del proyecto: no hay cron, y simular
   // que algo corre solo es peor que decir cuándo corre.
@@ -220,6 +223,10 @@ export default async function TallerPage({
           </div>
         )}
       </section>
+
+      {/* ── El chat ───────────────────────────────────────────────────── */}
+      {/* Antes de la cola, no después: se conversa y se ve caer la propuesta. */}
+      <ChatTaller slug={proyecto.slug} puedeProponer={puedeArmar(acceso, proyecto.id)} />
 
       {/* ── La cola ───────────────────────────────────────────────────── */}
       <section>

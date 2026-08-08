@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 
-import { puedeArmar, requireFabricaAccess } from '@/lib/fabrica/auth'
+import { puedeArmar, puedeVer, requireFabricaAccess } from '@/lib/fabrica/auth'
+import { conversar, type Turno } from '@/lib/fabrica/chat'
 import { traerProyecto } from '@/lib/fabrica/datos'
 import { aplicar, proponer, rechazar, revertirPropuesta } from '@/lib/fabrica/propuestas'
 import { verificarPool } from '@/lib/fabrica/verificador'
@@ -96,4 +97,33 @@ export async function accionVerificar(
         ? (r.motivo ?? 'No hay pantallas gobernables.')
         : `${r.resueltas}/${r.declaradas} resueltas · ${r.cableadas} cableadas · ${r.diferencias} problema(s).`,
   }
+}
+
+/**
+ * Hablar con NORA sobre esta declaración.
+ *
+ * Nota el permiso: para conversar alcanza con VER, para proponer hace falta
+ * ARMAR. Y el que sólo puede ver no recibe una versión del chat que se
+ * autolimite por texto: recibe una a la que ni siquiera se le ofrece la
+ * herramienta de proponer.
+ */
+export async function accionConversar(
+  slug: string,
+  historia: Turno[],
+  mensaje: string,
+): Promise<{ ok: boolean; texto?: string; carril?: string; error?: string }> {
+  const acceso = await requireFabricaAccess()
+  const proyecto = await traerProyecto(slug)
+  if (!proyecto) return { ok: false, error: 'No se encontró el proyecto.' }
+  if (!puedeVer(acceso, proyecto.id)) return { ok: false, error: 'No tenés acceso a este proyecto.' }
+
+  const r = await conversar({
+    proyectoId: proyecto.id,
+    usuarioId: acceso.usuarioId,
+    puedeProponer: puedeArmar(acceso, proyecto.id),
+    historia,
+    mensaje,
+  })
+  if (r.propuestaId) revalidatePath(`/fabrica/${slug}/taller`)
+  return { ok: true, texto: r.texto, carril: r.carril }
 }
