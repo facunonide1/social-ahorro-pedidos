@@ -39,11 +39,37 @@ const TIPOS_CONSTITUCIONALES = new Set([
   'entidad', 'campo', 'accion', 'automatizacion', 'parametro',
 ])
 
-/** Valida un manifiesto solo, sin mirar a los demás. */
+/**
+ * Valida un manifiesto solo, sin mirar a los demás.
+ *
+ * NUNCA LANZA, y eso NO es defensa por las dudas: es la diferencia entre que un
+ * manifiesto roto se reporte y que desaparezca.
+ *
+ * El lector llama a esto dentro de un try/catch. Si acá se lanzaba —y se
+ * lanzaba, con un manifiesto sin `entidades`— el catch devolvía el objeto
+ * "apagado", el pool se comportaba como si el flag estuviera bajo, y NO se
+ * registraba fallback: un manifiesto corrupto en la base se veía exactamente
+ * igual que un pool que nadie prendió. Lo encontró la prueba adversaria.
+ */
 export function validarManifiesto(m: Manifiesto): Problema[] {
   const p: Problema[] = []
   const err = (campo: string, mensaje: string) => p.push({ campo, mensaje, gravedad: 'error' })
   const avi = (campo: string, mensaje: string) => p.push({ campo, mensaje, gravedad: 'aviso' })
+
+  // Las colecciones obligatorias, antes de tocarlas. Que falte una es un error
+  // del manifiesto, no una excepción del validador.
+  if (!m || typeof m !== 'object') {
+    return [{ campo: 'manifiesto', mensaje: 'no es un objeto', gravedad: 'error' }]
+  }
+  for (const [campo, valor] of [
+    ['entidades', m.entidades],
+    ['pantallas', m.pantallas],
+  ] as const) {
+    if (!Array.isArray(valor)) {
+      err(campo, `falta o no es una lista: el manifiesto está incompleto o corrupto`)
+    }
+  }
+  if (p.some((x) => x.gravedad === 'error')) return p
 
   if (m.formato !== FORMATO_ACTUAL) {
     err('formato', `es "${m.formato}" y el esquema vigente es ${FORMATO_ACTUAL}`)

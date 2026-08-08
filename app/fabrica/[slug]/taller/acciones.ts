@@ -90,12 +90,17 @@ export async function accionVerificar(
     origen: 'provocada',
   })
   revalidatePath(`/fabrica/${slug}/taller`)
+  // EL MOTIVO MANDA SOBRE LOS NÚMEROS.
+  //
+  // Antes se mostraba el motivo sólo si no había pantallas declaradas. Un pool
+  // APAGADO declara ocho pantallas y no verifica ninguna: el resumen decía
+  // "0/8 resueltas · 0 cableadas · 0 problema(s)" y se comía el "el lector está
+  // apagado". Tres ceros tranquilizadores tapando la única frase que importaba.
   return {
     ok: true,
-    resumen:
-      r.declaradas === 0
-        ? (r.motivo ?? 'No hay pantallas gobernables.')
-        : `${r.resueltas}/${r.declaradas} resueltas · ${r.cableadas} cableadas · ${r.diferencias} problema(s).`,
+    resumen: r.motivo
+      ? r.motivo
+      : `${r.resueltas}/${r.declaradas} resueltas · ${r.cableadas} cableadas · ${r.diferencias} problema(s).`,
   }
 }
 

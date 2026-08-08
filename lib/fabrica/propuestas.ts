@@ -423,8 +423,11 @@ export interface SaludTaller {
   prohibidas: number
   /** Horas promedio hasta que alguien decide. */
   horasHastaDecision: number | null
-  /** Proporción de lo propuesto que nadie miró. */
-  tasaIgnoradas: number
+  /**
+   * Proporción de lo propuesto que nadie miró. `null` = todavía no hay nada
+   * que medir, que NO es lo mismo que 0% ignoradas.
+   */
+  tasaIgnoradas: number | null
   /** Si sube, el motor hace ruido. */
   alerta: string | null
 }
@@ -441,13 +444,15 @@ export function salud(propuestas: Propuesta[]): SaludTaller {
           0,
         ) / decididas.length
 
+  // Sin propuestas evaluables no hay tasa: devolver 0 pintaría de "0% ignoradas"
+  // —que se lee como salud perfecta— una cola donde nadie propuso nada todavía.
   const evaluables = propuestas.filter((x) => x.carril !== 'rojo').length
-  const tasa = evaluables === 0 ? 0 : p('expirada') / evaluables
+  const tasa = evaluables === 0 ? null : p('expirada') / evaluables
 
   // Si sube la tasa de ignoradas, el motor hace ruido. Eso tiene que verse:
   // una cola que nadie mira no es una cola, es un depósito.
   let alerta: string | null = null
-  if (evaluables >= 5 && tasa > 0.3) {
+  if (tasa !== null && evaluables >= 5 && tasa > 0.3) {
     alerta = `${Math.round(tasa * 100)}% de lo propuesto expiró sin que nadie lo mirara. O sobran propuestas o falta quien las mire.`
   } else if (horas !== null && horas > 24 * 7) {
     alerta = `Tardan ${Math.round(horas / 24)} días promedio en decidirse.`
