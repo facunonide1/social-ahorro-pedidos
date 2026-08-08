@@ -135,6 +135,22 @@ export async function coberturaDe(
   }
 }
 
+/**
+ * Desde cuándo cuenta lo que se registró.
+ *
+ * El último cambio de declaración —de la pieza o del proyecto— borra la
+ * pizarra: un evento anterior puede haber quedado resuelto por ese cambio.
+ * Todos los indicadores usan este mismo corte; si uno lo usara y otro no, el
+ * panel se contradiría a sí mismo.
+ */
+export async function corteDe(proyectoId: string, clave: string): Promise<string> {
+  const adm = createAdminClient()
+  const version = await versionActual(clave)
+  const instalacionId = await idDeInstalacion(adm, proyectoId, clave)
+  const propios = instalacionId ? await overridesActuales(instalacionId) : null
+  return [version?.creadaAt, propios?.creadaAt].filter(Boolean).sort().pop() ?? '1970-01-01T00:00:00Z'
+}
+
 /** El id de la instalación de un pool en un proyecto. */
 async function idDeInstalacion(
   sb: ReturnType<typeof createClient> | ReturnType<typeof createAdminClient>,

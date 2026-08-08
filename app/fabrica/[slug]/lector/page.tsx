@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { estadoDelLector } from '@/lib/fabrica/flag'
 import {
   coberturaDe,
+  corteDe,
   sombraCiega,
   ETIQUETA_VEREDICTO,
   VARIANTE_VEREDICTO,
@@ -33,7 +34,6 @@ export default async function LectorPage({ params }: { params: { slug: string } 
     ),
   )
   const activos = estados.filter((e) => e.lector !== 'apagado')
-  const totalFallbacks = estados.reduce((a, e) => a + e.fallbacks, 0)
 
   // Las diferencias de sombra, en detalle y legibles.
   const sb = createClient()
@@ -51,8 +51,18 @@ export default async function LectorPage({ params }: { params: { slug: string } 
     detalle: Record<string, unknown>
     ocurrido_at: string
   }[]
-  const diferencias = filas.filter((f) => f.tipo === 'diferencia')
-  const fallbacks = filas.filter((f) => f.tipo === 'fallback')
+  // Mismo corte que el veredicto. Un evento anterior al último cambio de
+  // declaración pudo quedar resuelto por ese cambio, y mostrarlo igual es la
+  // falsa alarma que es el espejo del falso cero: entrena a ignorar la tabla.
+  const cortes = new Map(
+    await Promise.all(estados.map(async (e) => [e.clave, await corteDe(proyecto.id, e.clave)] as const)),
+  )
+  const vigente = (f: { pool_clave: string; ocurrido_at: string }) =>
+    f.ocurrido_at >= (cortes.get(f.pool_clave) ?? '1970-01-01T00:00:00Z')
+
+  const diferencias = filas.filter((f) => f.tipo === 'diferencia' && vigente(f))
+  const fallbacks = filas.filter((f) => f.tipo === 'fallback' && vigente(f))
+  const resueltos = filas.length - diferencias.length - fallbacks.length
 
   return (
     <div className="space-y-8 p-4 md:p-6">
@@ -152,6 +162,12 @@ export default async function LectorPage({ params }: { params: { slug: string } 
           Qué habría devuelto la declaración contra qué devolvió el código. Un
           pool con diferencias no se prende: se corrige la declaración primero.
         </p>
+        {resueltos > 0 && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            {resueltos} evento(s) anteriores al último cambio de declaración no
+            se muestran: pudieron quedar resueltos por ese cambio.
+          </p>
+        )}
         {diferencias.length === 0 ? (
           <p className="mt-3 rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
             Ninguna. Los pools en sombra habrían devuelto lo mismo que el código.
@@ -196,7 +212,7 @@ export default async function LectorPage({ params }: { params: { slug: string } 
       <section>
         <h2 className="text-sm font-semibold tracking-tight">
           Caídas al código
-          <span className="ml-2 font-normal text-muted-foreground">{totalFallbacks}</span>
+          <span className="ml-2 font-normal text-muted-foreground">{fallbacks.length}</span>
         </h2>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
           Veces que el flag estaba prendido y el sector usó el código igual.{' '}
