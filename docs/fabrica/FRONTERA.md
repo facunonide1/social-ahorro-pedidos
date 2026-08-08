@@ -51,9 +51,23 @@ importa la fábrica: importan `lib/os/definicion.ts`.
 | `app/(admin)/admin/finanzas/documentos/page.tsx` | un literal pasó a ser una llamada, con el mismo literal de fallback |
 | `app/(admin)/admin/finanzas/documentos/lote/page.tsx` | ídem |
 | `app/(admin)/admin/finanzas/documentos/revision/[id]/page.tsx` | ídem |
+| 12 pantallas de `app/(admin)/admin/operaciones/` **(v0.63)** | ídem — Stock cableado |
 
 Más la excepción de navegación de v0.58 (`components/os/os-shell.tsx`), que sigue
 siendo un `<Link>`.
+
+**16 archivos en total, y ninguno importa la fábrica.** Todos le hablan a
+`lib/os/definicion.ts`. El patrón es siempre el mismo:
+
+```tsx
+const titulo = await tituloDePantalla('stock', '/admin/operaciones/alertas', 'Alertas de stock')
+//                                                                            ^ el literal de antes,
+//                                                                              que también es el fallback
+```
+
+**Verificado el 2026-08-08 con 24 pantallas cableadas:** sacando la fábrica y
+dejando `definicion.ts` en `return enCodigo`, Social Ahorro compila con 0
+errores de tipos y build verde.
 
 ### Cómo se saca la fábrica
 

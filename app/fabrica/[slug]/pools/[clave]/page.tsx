@@ -5,6 +5,9 @@ import { createClient } from '@/lib/supabase/server'
 import { traerProyecto } from '@/lib/fabrica/datos'
 import { verificarEspejo } from '@/lib/fabrica/comparador'
 import { MANIFIESTOS } from '@/lib/fabrica/manifiestos'
+import { BotonRevertir, EditorDeclaracion } from '@/components/fabrica/editor-declaracion'
+import { historial, manifiestoVigente } from '@/lib/fabrica/versiones'
+import { estadoDelLector } from '@/lib/fabrica/flag'
 import { ETIQUETA_MOLDE, type Participacion, type TipoDiferencia } from '@/lib/fabrica/tipos'
 
 export const dynamic = 'force-dynamic'
@@ -50,8 +53,16 @@ export default async function VerificacionPoolPage({
   const entrada = MANIFIESTOS[params.clave]
   if (!entrada) notFound()
 
-  const { manifiesto, prefijos } = entrada
+  // Se muestra y se verifica el manifiesto que GOBIERNA, no la semilla del
+  // repo: desde v0.63 quien manda es la fila de la base.
+  const vigente = await manifiestoVigente(params.clave)
+  const manifiesto = vigente?.manifiesto ?? entrada.manifiesto
+  const { prefijos } = entrada
   const verificacion = await verificarEspejo(manifiesto, prefijos, createClient(), entrada.excluir)
+
+  const versiones = await historial(params.clave)
+  const estados = await estadoDelLector(proyecto.id)
+  const gobernando = estados.find((e) => e.clave === params.clave)?.lector === 'prendido'
 
   const propias = manifiesto.entidades.filter((e) => e.acceso === 'propia')
   const leidas = manifiesto.entidades.filter((e) => e.acceso === 'leida')
@@ -231,6 +242,72 @@ export default async function VerificacionPoolPage({
             </div>
           ))}
         </dl>
+      </section>
+
+      {/* ── Editar la declaración ─────────────────────────────────────── */}
+      <section>
+        <h3 className="text-sm font-semibold tracking-tight">La declaración</h3>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          Cambiar un título acá crea una versión nueva. La anterior no se toca:
+          queda en el historial y se puede volver a ella de un toque.
+        </p>
+        <div className="mt-3">
+          <EditorDeclaracion
+            slug={proyecto.slug}
+            clave={params.clave}
+            gobernando={gobernando}
+            pantallas={manifiesto.pantallas.map((p) => ({
+              ruta: p.ruta,
+              titulo: p.titulo,
+              dinamico: p.titulo_dinamico === true,
+            }))}
+          />
+        </div>
+      </section>
+
+      {/* ── Historial ─────────────────────────────────────────────────── */}
+      <section>
+        <h3 className="text-sm font-semibold tracking-tight">
+          Historial
+          <span className="ml-2 font-normal text-muted-foreground">{versiones.length}</span>
+        </h3>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          Ninguna versión se edita ni se borra. Revertir crea una versión nueva
+          con el contenido de la vieja: si borrara la mala, se perdería el
+          registro de que existió y de qué rompió.
+        </p>
+        <div className="mt-3 divide-y divide-border rounded-lg border border-border">
+          {versiones.map((v) => {
+            const vuelveA = v.revierteA ? versiones.find((x) => x.id === v.revierteA)?.numero : null
+            return (
+              <div key={v.id} className="flex flex-wrap items-start gap-3 px-4 py-3">
+                <span className="w-14 shrink-0 text-sm font-semibold tabular-nums">v{v.numero}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {v.esActual && (
+                      <Badge variant="success" className="font-normal">gobierna hoy</Badge>
+                    )}
+                    {vuelveA != null && (
+                      <Badge variant="outline" className="font-normal">vuelve a la v{vuelveA}</Badge>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {String(v.creadaAt).slice(0, 16).replace('T', ' ')}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm">{v.motivo ?? 'sin motivo registrado'}</p>
+                </div>
+                {!v.esActual && (
+                  <BotonRevertir
+                    slug={proyecto.slug}
+                    clave={params.clave}
+                    versionId={v.id}
+                    numero={v.numero}
+                  />
+                )}
+              </div>
+            )
+          })}
+        </div>
       </section>
 
       {/* ── Agentes ───────────────────────────────────────────────────── */}
