@@ -115,7 +115,27 @@ export interface TablasSinDueno {
   total: number
   conDueno: number
   sinDueno: string[]
+  /** Las sin dueño agrupadas por el sector que las va a reclamar. */
+  porSectorPendiente: { sector: string; tablas: string[] }[]
 }
+
+/**
+ * A qué sector pendiente pertenece cada tabla sin dueño.
+ *
+ * Sale de los prefijos del sector, igual que el comparador. Es una conjetura
+ * sobre sectores que todavía no se declararon —por eso `sin_clasificar` existe
+ * y no se fuerza— pero convierte una lista de 58 nombres sueltos en una cola de
+ * trabajo con orden.
+ */
+const SECTORES_PENDIENTES: { sector: string; prefijos: RegExp }[] = [
+  { sector: 'personas', prefijos: /^(empleado|niveles_empleados|turnos_sucursal|cobertura_config|supervisores_metricas)/ },
+  { sector: 'comunicacion', prefijos: /^(canales|canal_|mensajes|mensaje_|encuesta|recordatorios_programados|clima_chats)/ },
+  { sector: 'compliance', prefijos: /^compliance_/ },
+  { sector: 'pedidos', prefijos: /^(orders|order_|users_pedidos|customers|whatsapp_messages|zonas_reparto)/ },
+  { sector: 'cuponera', prefijos: /^(coupons?|coupon_|offers|user_points|point_transactions|notifications|categories|users$|tickets_validacion)/ },
+  { sector: 'deprecadas · se borran', prefijos: /^zz_deprecated/ },
+  { sector: 'respaldos · se borran', prefijos: /^backup_/ },
+]
 
 /**
  * Qué tablas de la base no pertenecen a ningún pool declarado.
@@ -141,9 +161,21 @@ export async function tablasSinDueno(sb: ClienteLector): Promise<TablasSinDueno>
   // Las tablas de la propia fábrica no cuentan: son de otro producto.
   const relevantes = todas.filter((t) => !t.startsWith('fab_'))
 
+  const sinDueno = relevantes.filter((t) => !conDueno.has(t)).sort()
+
+  const grupos = new Map<string, string[]>()
+  for (const t of sinDueno) {
+    const s = SECTORES_PENDIENTES.find((x) => x.prefijos.test(t))
+    const clave = s?.sector ?? 'sin clasificar'
+    grupos.set(clave, [...(grupos.get(clave) ?? []), t])
+  }
+
   return {
     total: relevantes.length,
     conDueno: relevantes.filter((t) => conDueno.has(t)).length,
-    sinDueno: relevantes.filter((t) => !conDueno.has(t)).sort(),
+    sinDueno,
+    porSectorPendiente: [...grupos.entries()]
+      .map(([sector, tablas]) => ({ sector, tablas }))
+      .sort((a, b) => b.tablas.length - a.tablas.length),
   }
 }

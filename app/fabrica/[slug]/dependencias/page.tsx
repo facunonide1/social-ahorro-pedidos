@@ -147,22 +147,33 @@ export default async function DependenciasPage({ params }: { params: { slug: str
           </p>
         </div>
 
-        {tablas.sinDueno.length > 0 && (
-          <details className="mt-3 rounded-lg border border-border">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
-              Ver las {tablas.sinDueno.length} sin dueño
-            </summary>
-            <div className="flex flex-wrap gap-1.5 border-t border-border p-4">
-              {tablas.sinDueno.map((t) => (
-                <span
-                  key={t}
-                  className="rounded border border-border px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground"
-                >
-                  {t}
-                </span>
+        {tablas.porSectorPendiente.length > 0 && (
+          <>
+            <p className="mt-4 max-w-3xl text-sm text-muted-foreground">
+              Agrupadas por el sector que las va a reclamar. Es la cola de
+              declaración que queda.
+            </p>
+            <div className="mt-2 space-y-2">
+              {tablas.porSectorPendiente.map((g) => (
+                <details key={g.sector} className="rounded-lg border border-border">
+                  <summary className="cursor-pointer px-4 py-2.5 text-sm">
+                    <span className="font-medium">{g.sector}</span>
+                    <span className="ml-2 text-muted-foreground">{g.tablas.length}</span>
+                  </summary>
+                  <div className="flex flex-wrap gap-1.5 border-t border-border p-4">
+                    {g.tablas.map((t) => (
+                      <span
+                        key={t}
+                        className="rounded border border-border px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </details>
               ))}
             </div>
-          </details>
+          </>
         )}
       </section>
     </div>
