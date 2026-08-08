@@ -11,6 +11,7 @@ import {
   type MotivoNegativa,
   type Negativa,
 } from './negativas'
+import { anotarPedido, ETIQUETA_FALTA, type QueFalta } from './pedidos'
 import { listarPropuestas, proponer } from './propuestas'
 import { overridesActuales, resolver, type Overrides } from './overrides'
 import { versionActual } from './versiones'
@@ -56,6 +57,8 @@ export interface RespuestaChat {
   /** Si dejó una propuesta en la cola. */
   propuestaId?: string
   carril?: string
+  /** Si anotó un pedido de construcción. */
+  pedidoId?: string
 }
 
 /* ── El catálogo que ve el modelo ────────────────────────────────────────── */
@@ -166,8 +169,11 @@ cuenta:
   1. TOCA LA CONSTITUCIÓN — está en la lista de INTOCABLES del pool. No se hace
      por esta vía, nunca, ni con aprobación. Explicá qué protege ese límite.
   2. NECESITA ALGO QUE NO EXISTE — una pantalla, un parámetro o un
-     comportamiento que no está declarado. Ofrecé anotarlo como pedido de
-     construcción. No lo intentes, no lo simules, no prometas que después sí.
+     comportamiento que no está declarado. OFRECÉ anotarlo como pedido de
+     construcción y, si te dicen que sí, llamá a anotar_pedido. No lo intentes,
+     no lo simules, no prometas que después sí, y no digas que "va a estar":
+     anotarlo es dejar registro de que se pidió, no un compromiso de que se
+     construya. Decilo así.
   3. ESTÁ FUERA DE LO QUE EL LECTOR GOBIERNA — permisos, acciones del asistente
      y automatizaciones no se leen de la declaración.
   4. EL PROYECTO NO ESTÁ LISTO — el pool está apagado o en sombra, o tiene
@@ -191,6 +197,11 @@ una, y SIEMPRE la opción de no cambiar nada, con el argumento honesto a favor.
 Un asistente que siempre encuentra algo para cambiar es un asistente que agranda
 el sistema por deporte.
 
+LA COLA DE CONSTRUCCIÓN NO SE LLENA SOLA. anotar_pedido se llama DESPUÉS de que
+la persona dijo que sí, nunca antes. Si todavía no contestó, ofrecé y esperá: un
+pedido anotado porque creíste entender que hacía falta ensucia una cola que
+después nadie mira. Cuando lo anotes, guardá sus palabras, no tu resumen.
+
 CADA PROPUESTA DICE CINCO COSAS y las arma la cola sola: qué cambia, por qué, a
 quién afecta, en qué carril cae y qué cuesta volver atrás. Vos ocupate de que el
 "por qué" tenga la evidencia que dio la persona. Nunca inventes datos de uso: no
@@ -206,7 +217,55 @@ Castellano rioplatense, directo, sin adornos. Nada de emojis, nada de "¡Excelen
 pregunta!". Respuestas cortas: esto es una herramienta de trabajo.`
 }
 
-/* ── Las dos herramientas ────────────────────────────────────────────────── */
+/* ── Las tres herramientas ───────────────────────────────────────────────── */
+
+/**
+ * Anotar lo que no existe.
+ *
+ * En v0.66 NORA ofreció seis veces "lo anoto como pedido de construcción" y no
+ * había dónde. Ahora hay.
+ *
+ * NUNCA SE LLAMA SIN QUE LA PERSONA HAYA DICHO QUE SÍ. Un pedido registrado
+ * porque el asistente creyó entender que hacía falta ensucia la cola con
+ * comentarios al pasar, y una cola con ruido se deja de mirar. La descripción
+ * de la herramienta lo dice, y el prompt lo repite: es la única regla del chat
+ * que no se puede verificar en código, porque desde acá no se distingue un "sí"
+ * de un "bueno, dale".
+ */
+const HERRAMIENTA_PEDIDO: Anthropic.Tool = {
+  name: 'anotar_pedido',
+  description:
+    'Anota en la cola de construcción algo que no existe todavía. Llamala SÓLO después de haberlo ofrecido y de que la persona haya dicho explícitamente que sí. Si todavía no te contestó, no la llames: ofrecé y esperá.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      pedido: {
+        type: 'string',
+        description:
+          'Qué pidió, EN LAS PALABRAS DE LA PERSONA. No lo resumas ni lo traduzcas a jerga: lo que se pierde al resumir es el motivo, que es lo único que después permite saber si dos pedidos son el mismo.',
+      },
+      contexto: {
+        type: 'string',
+        description:
+          'Lo que se supo: para qué, quién lo usaría, contra qué dato. Sólo lo que la persona dijo. No inventes.',
+      },
+      falta: {
+        type: 'string',
+        enum: ['molde', 'entidad', 'comportamiento', 'integracion', 'capacidad_lector'],
+        description:
+          'molde: no hay patrón de pantalla o flujo que lo cubra. entidad: hace falta guardar algo que hoy no se guarda. comportamiento: hace falta que el sistema haga algo que no hace. integracion: depende de un sistema de afuera. capacidad_lector: ya está declarado y el lector todavía no lo lee.',
+      },
+      pool: { type: 'string', description: 'La clave del pool al que se le pidió, si tenía uno.' },
+      se_parece_a: {
+        type: 'string',
+        description: 'A qué cosa que ya existe se parece, si a alguna. Opcional.',
+      },
+    },
+    required: ['pedido', 'falta'],
+  },
+}
+
+/* ── Las otras dos ───────────────────────────────────────────────────────── */
 
 /**
  * Decir que no también es un resultado, y hay que poder contarlo.
@@ -300,7 +359,8 @@ async function registrar(args: {
   r: RespuestaChat
 }): Promise<RespuestaChat> {
   try {
-    await createAdminClient()
+    const adm = createAdminClient()
+    const { data } = await adm
       .from('fab_chat_turnos')
       .insert({
         proyecto_id: args.proyectoId,
@@ -312,6 +372,19 @@ async function registrar(args: {
         carril: args.r.carril ?? null,
         negativa: args.r.negativa?.motivo ?? null,
       })
+      .select('id')
+      .single()
+
+    // El pedido apunta a la conversación de la que salió. Se ata acá y no al
+    // crearlo porque el turno todavía no existía: el pedido nace en medio de la
+    // respuesta, el turno se cierra cuando la respuesta terminó.
+    const turnoId = (data as { id: string } | null)?.id
+    if (turnoId && args.r.pedidoId) {
+      await adm
+        .from('fab_pedidos_construccion')
+        .update({ turno_id: turnoId })
+        .eq('id', args.r.pedidoId)
+    }
   } catch {
     // A propósito en silencio. Ver arriba.
   }
@@ -413,7 +486,9 @@ async function responder(args: PedidoDeChat): Promise<RespuestaChat> {
       // Si no puede proponer, la herramienta de proponer NI SE OFRECE. No
       // alcanza con pedírselo por texto. La de decir que no va siempre: el que
       // sólo consulta también recibe negativas, y también hay que contarlas.
-      tools: args.puedeProponer ? [HERRAMIENTA, HERRAMIENTA_NO] : [HERRAMIENTA_NO],
+      tools: args.puedeProponer
+        ? [HERRAMIENTA, HERRAMIENTA_NO, HERRAMIENTA_PEDIDO]
+        : [HERRAMIENTA_NO],
       messages: mensajes,
     })
   } catch {
@@ -439,8 +514,49 @@ async function responder(args: PedidoDeChat): Promise<RespuestaChat> {
       }
     : undefined
 
+  /* ── ¿Anotó un pedido de construcción? ─────────────────────────────── */
+  const anota = usos.find((u) => u.name === 'anotar_pedido')
+  let cierrePedido: string | undefined
+  let pedidoId: string | undefined
+  if (anota) {
+    const e = anota.input as {
+      pedido: string
+      contexto?: string
+      falta: QueFalta
+      pool?: string
+      se_parece_a?: string
+    }
+    const r = await anotarPedido({
+      proyectoId: args.proyectoId,
+      poolClave: e.pool ?? null,
+      pedido: e.pedido,
+      contexto: e.contexto,
+      falta: e.falta,
+      seParece: e.se_parece_a,
+      turnoId: null,
+      autorId: args.usuarioId,
+    })
+    if (!r.ok) {
+      cierrePedido = `No pude anotarlo: ${r.error}`
+    } else {
+      const p = r.parecidos ?? []
+      cierrePedido =
+        `Anotado en la cola de construcción: ${ETIQUETA_FALTA[e.falta]}.` +
+        (p.length
+          ? ` Hay ${p.length} pedido(s) parecido(s) ya anotado(s); no los junté —eso lo decide una persona— pero van a aparecer al lado en la cola.`
+          : '')
+      pedidoId = r.pedido!.id
+    }
+  }
+
   const uso = usos.find((u) => u.name === 'proponer_cambio')
-  if (!uso) return { texto, negativa: negativaDeclarada }
+  if (!uso) {
+    return {
+      texto: [texto, cierrePedido].filter(Boolean).join('\n\n').trim(),
+      negativa: negativaDeclarada,
+      pedidoId,
+    }
+  }
 
   /* ── Quiso proponer: se decide acá, no en el modelo ───────────────── */
   const e = uso.input as {

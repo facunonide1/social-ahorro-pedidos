@@ -14,13 +14,14 @@ import { cn } from '@/lib/utils'
  * integrados, no como dos productos. Misma tipografía, mismos tokens de color,
  * misma densidad — otra barra de arriba.
  *
- * No hay dock, no hay ⌘K, no hay Mission Control: la fábrica tiene tres
- * lugares, y una barra con tres links los cubre.
+ * No hay dock, no hay ⌘K, no hay Mission Control: la fábrica tiene unos
+ * pocos lugares, y una barra con esos links los cubre.
  */
 
 const NAV = [
   { href: '/fabrica', label: 'Proyectos', exacto: true },
   { href: '/fabrica/catalogo', label: 'Catálogo de pools' },
+  { href: '/fabrica/construccion', label: 'Cola de construcción' },
 ]
 
 export function ShellFabrica({
