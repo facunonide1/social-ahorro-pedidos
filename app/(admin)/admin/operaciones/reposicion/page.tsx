@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { tituloDePantalla } from '@/lib/os/definicion'
 
 import { ReposicionClient, type RepoRow } from './reposicion-client'
 
@@ -9,6 +10,10 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Reposición' }
 
 export default async function ReposicionPage() {
+  // Puede venir de la declaración de la fábrica. Si el lector está apagado
+  // o algo falla, devuelve este mismo texto: la pantalla no cambia.
+  const tituloDeclarado = await tituloDePantalla('stock', '/admin/operaciones/reposicion', 'Reposición')
+
   const profile = await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'auditor'] })
   const sb = createClient()
   const { sucursalId, esTodas } = getSucursalActiva()
@@ -54,7 +59,7 @@ export default async function ReposicionPage() {
 
   return (
     <>
-      <PageHeader title="Reposición" description="NORA sugiere qué comprar por sucursal según rotación y cobertura objetivo."
+      <PageHeader title={tituloDeclarado} description="NORA sugiere qué comprar por sucursal según rotación y cobertura objetivo."
         breadcrumbs={[{ label: 'Operaciones' }, { label: 'Reposición' }]} />
       <div className="p-4 md:p-6">
         <ReposicionClient rows={rows} sucursales={((sucs ?? []) as any[]).map((s) => ({ id: s.id, nombre: s.nombre, codigo: s.codigo }))} />

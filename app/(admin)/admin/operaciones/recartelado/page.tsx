@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { tituloDePantalla } from '@/lib/os/definicion'
 
 import { RecarteladoClient, type ListaRecartelado } from './recartelado-client'
 
@@ -9,6 +10,10 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Recartelado' }
 
 export default async function RecarteladoPage() {
+  // Puede venir de la declaración de la fábrica. Si el lector está apagado
+  // o algo falla, devuelve este mismo texto: la pantalla no cambia.
+  const tituloDeclarado = await tituloDePantalla('stock', '/admin/operaciones/recartelado', 'Recartelado')
+
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'sucursal', 'encargado_sucursal', 'administrativo', 'auditor'] })
   const adm = createAdminClient()
   const { sucursalId, esTodas } = getSucursalActiva()
@@ -27,7 +32,7 @@ export default async function RecarteladoPage() {
 
   return (
     <>
-      <PageHeader title="Recartelado" description="Carteles de góndola a cambiar por precios nuevos del import. Solo lo que está en góndola."
+      <PageHeader title={tituloDeclarado} description="Carteles de góndola a cambiar por precios nuevos del import. Solo lo que está en góndola."
         breadcrumbs={[{ label: 'Operación', href: '/admin/operaciones' }, { label: 'Recartelado' }]} />
       <div className="p-4 md:p-6"><RecarteladoClient listas={listas} /></div>
     </>

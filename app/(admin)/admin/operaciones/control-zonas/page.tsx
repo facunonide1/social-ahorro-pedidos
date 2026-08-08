@@ -3,12 +3,17 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { listAdminUsersLite } from '@/lib/supabase/admin-users'
 import { PageHeader } from '@/components/shared/page-header'
+import { tituloDePantalla } from '@/lib/os/definicion'
 import { ControlZonasClient } from './control-zonas-client'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Control por zonas' }
 
 export default async function ControlZonasPage() {
+  // Puede venir de la declaración de la fábrica. Si el lector está apagado
+  // o algo falla, devuelve este mismo texto: la pantalla no cambia.
+  const tituloDeclarado = await tituloDePantalla('stock', '/admin/operaciones/control-zonas', 'Control de stock por zonas')
+
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'sucursal', 'encargado_sucursal', 'administrativo', 'auditor'] })
   const adm = createAdminClient()
   const { sucursalId, esTodas } = getSucursalActiva()
@@ -36,7 +41,7 @@ export default async function ControlZonasPage() {
 
   return (
     <>
-      <PageHeader title="Control de stock por zonas"
+      <PageHeader title={tituloDeclarado}
         description="Definí zonas físicas y controlá el stock por zona cada semana. Las diferencias alimentan el control de pérdidas."
         breadcrumbs={[{ label: 'Operación', href: '/admin/operaciones' }, { label: 'Control por zonas' }]} />
       <div className="p-4 md:p-6">

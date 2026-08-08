@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { tituloDePantalla } from '@/lib/os/definicion'
 import { AccesoCentroDatos } from '@/components/centro-datos/acceso-centro-datos'
 
 import { StockClient, type ProductoRow, type SucursalLite } from './stock-client'
@@ -10,6 +11,10 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Stock' }
 
 export default async function StockPage() {
+  // Puede venir de la declaración de la fábrica. Si el lector está apagado
+  // o algo falla, devuelve este mismo texto: la pantalla no cambia.
+  const tituloDeclarado = await tituloDePantalla('stock', '/admin/operaciones/stock', 'Stock')
+
   const profile = await requireAdminHubAccess()
   const sb = createClient()
   const { sucursalId, esTodas } = getSucursalActiva()
@@ -72,7 +77,7 @@ export default async function StockPage() {
   return (
     <>
       <PageHeader
-        title="Stock"
+        title={tituloDeclarado}
         description="Existencias por sucursal con semáforo, rotación y cobertura."
         breadcrumbs={[{ label: 'Operaciones' }, { label: 'Stock' }]}
         actions={

@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { tituloDePantalla } from '@/lib/os/definicion'
 
 import { AlertasClient, type AlertaRow } from './alertas-client'
 
@@ -9,6 +10,10 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Alertas' }
 
 export default async function AlertasPage() {
+  // Puede venir de la declaración de la fábrica. Si el lector está apagado
+  // o algo falla, devuelve este mismo texto: la pantalla no cambia.
+  const tituloDeclarado = await tituloDePantalla('stock', '/admin/operaciones/alertas', 'Alertas de stock')
+
   const profile = await requireAdminHubAccess()
   const sb = createClient()
   const { sucursalId, esTodas } = getSucursalActiva()
@@ -26,7 +31,7 @@ export default async function AlertasPage() {
 
   return (
     <>
-      <PageHeader title="Alertas de stock" description="Quiebres, sobrestock, sin rotación, stock fantasma y vencimientos."
+      <PageHeader title={tituloDeclarado} description="Quiebres, sobrestock, sin rotación, stock fantasma y vencimientos."
         breadcrumbs={[{ label: 'Operaciones' }, { label: 'Alertas' }]} />
       <div className="p-4 md:p-6">
         <AlertasClient alertas={rows} sucursales={((sucs ?? []) as any[]).map((s) => ({ id: s.id, nombre: s.nombre }))} puedeRegenerar={esSuper} />

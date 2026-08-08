@@ -35,7 +35,11 @@ async function main() {
       fallo = true
       continue
     }
-    const r = validarManifiesto(entrada.manifiesto)
+    // Se valida el manifiesto QUE GOBIERNA. Validar la semilla del repo fue
+    // exactamente el agujero por el que 8 pools quedaron con formato 1.1.0 en
+    // la base durante toda una sesión, con el verificador en verde.
+    const vig = await manifiestoVigente(clave)
+    const r = validarManifiesto(vig?.manifiesto ?? entrada.manifiesto)
     // Un aviso NO hace fallar la corrida. En modo espejo, algunos avisos son
     // hallazgos sobre el sistema real que hay que dejar a la vista, no
     // defectos de la declaración: taparlos para que el validador dé verde
@@ -43,7 +47,10 @@ async function main() {
     const errores = r.filter((p) => p.gravedad === 'error')
     if (errores.length > 0) fallo = true
     if (r.length === 0) {
-      console.log(`  ✓ ${clave.padEnd(10)} válido contra el esquema ${FORMATO_ACTUAL}`)
+      console.log(
+        `  ✓ ${clave.padEnd(10)} válido contra el esquema ${FORMATO_ACTUAL}` +
+          ` (${vig?.origen ?? 'semilla'})`,
+      )
     } else {
       console.log(
         `  ${errores.length > 0 ? '✗' : '~'} ${clave.padEnd(10)} ` +

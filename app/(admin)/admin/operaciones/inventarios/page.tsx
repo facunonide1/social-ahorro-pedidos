@@ -6,6 +6,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import type { InventarioFisico } from '@/lib/types/admin'
 
 import { PageHeader } from '@/components/shared/page-header'
+import { tituloDePantalla } from '@/lib/os/definicion'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -28,6 +29,10 @@ type Row = InventarioFisico & {
 }
 
 export default async function InventariosPage() {
+  // Puede venir de la declaración de la fábrica. Si el lector está apagado
+  // o algo falla, devuelve este mismo texto: la pantalla no cambia.
+  const tituloDeclarado = await tituloDePantalla('stock', '/admin/operaciones/inventarios', 'Inventarios físicos')
+
   const profile = await requireAdminHubAccess({
     allowedRoles: ['super_admin', 'gerente', 'administrativo', 'sucursal'],
   })
@@ -49,7 +54,7 @@ export default async function InventariosPage() {
   return (
     <>
       <PageHeader
-        title="Inventarios físicos"
+        title={tituloDeclarado}
         description={`${rows.length} inventario${rows.length === 1 ? '' : 's'} registrado${rows.length === 1 ? '' : 's'}`}
         actions={
           canManage ? <IniciarInventario sucursales={sucursales} /> : undefined

@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { tituloDePantalla } from '@/lib/os/definicion'
 import { getIrregularidades, getResumenIrregularidades, getPatrones, getPerdidasUnificadas, getRankings, getBajasVencido } from '@/lib/operaciones/irregularidades'
 import { IrregularidadesClient } from './irregularidades-client'
 
@@ -9,6 +10,10 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Irregularidades de stock' }
 
 export default async function IrregularidadesPage() {
+  // Puede venir de la declaración de la fábrica. Si el lector está apagado
+  // o algo falla, devuelve este mismo texto: la pantalla no cambia.
+  const tituloDeclarado = await tituloDePantalla('stock', '/admin/operaciones/irregularidades', 'Irregularidades de stock')
+
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'auditor', 'administrativo', 'tesoreria'] })
   const adm = createAdminClient()
   const { sucursalId, esTodas } = getSucursalActiva()
@@ -26,7 +31,7 @@ export default async function IrregularidadesPage() {
 
   return (
     <>
-      <PageHeader title="Irregularidades de stock"
+      <PageHeader title={tituloDeclarado}
         description="Cruce diario stock vs ventas por sucursal. Toda diferencia se registra; priorizá por plata."
         breadcrumbs={[{ label: 'Operación', href: '/admin/operaciones' }, { label: 'Irregularidades' }]} />
       <div className="p-4 md:p-6">

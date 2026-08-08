@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { tituloDePantalla } from '@/lib/os/definicion'
 import { VentasFinasCard } from '@/components/centro-datos/ventas-finas-card'
 
 import { AnalisisClient, type VendidoRow, type DormidoRow } from './analisis-client'
@@ -10,6 +11,10 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Análisis de ventas' }
 
 export default async function AnalisisPage() {
+  // Puede venir de la declaración de la fábrica. Si el lector está apagado
+  // o algo falla, devuelve este mismo texto: la pantalla no cambia.
+  const tituloDeclarado = await tituloDePantalla('stock', '/admin/operaciones/analisis', 'Análisis de ventas')
+
   const profile = await requireAdminHubAccess()
   const sb = createClient()
   const { sucursalId, esTodas } = getSucursalActiva()
@@ -72,7 +77,7 @@ export default async function AnalisisPage() {
 
   return (
     <>
-      <PageHeader title="Análisis de ventas" description="Más vendidos, rotación y dinero dormido por sucursal."
+      <PageHeader title={tituloDeclarado} description="Más vendidos, rotación y dinero dormido por sucursal."
         breadcrumbs={[{ label: 'Operaciones' }, { label: 'Análisis' }]} />
       <div className="space-y-4 p-4 md:p-6">
         <VentasFinasCard sucursalId={sucursalId} esTodas={esTodas} />

@@ -6,11 +6,16 @@ import { getSucursalActiva } from '@/lib/sucursal/server'
 import { formatARS } from '@/lib/utils/format'
 import { SectorDashboard, type SectorKpi, type SectorAcceso } from '@/components/dashboard/sector-dashboard'
 import { AccionesSubApp } from '@/components/os/acciones-subapp'
+import { tituloDePantalla } from '@/lib/os/definicion'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Operaciones' }
 
 export default async function OperacionesDashboard() {
+  // Puede venir de la declaración de la fábrica. Si el lector está apagado
+  // o algo falla, devuelve este mismo texto: la pantalla no cambia.
+  const tituloDeclarado = await tituloDePantalla('stock', '/admin/operaciones', 'Operaciones')
+
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'sucursal', 'auditor'] })
   const sb = createClient()
   const { sucursalId, esTodas } = getSucursalActiva()
@@ -61,7 +66,7 @@ export default async function OperacionesDashboard() {
 
   return (
     <SectorDashboard
-      title="Operaciones"
+      title={tituloDeclarado}
       descripcion="Stock, inventario y logística de las sucursales."
       breadcrumbs={[{ label: 'Operaciones' }]}
       kpis={kpis}

@@ -59,19 +59,24 @@ export const MANIFIESTO_STOCK: Manifiesto = {
     { tabla: 'stock_imports_items', rol: 'El detalle de cada carga masiva', acceso: 'leida', dueno: 'centro-datos' },
   ],
 
+  // Los títulos son EXACTAMENTE los que muestra cada pantalla. Al cablearlas y
+  // correr sombra aparecieron 8 diferencias: la declaración estaba escrita como
+  // etiqueta de catálogo ("Panel", "Alertas") y no como el texto que la persona
+  // ve ("Operaciones", "Alertas de stock"). Mismo hallazgo que en Documentos, a
+  // mayor escala. Se corrigió la declaración, nunca la pantalla.
   pantallas: [
-    { ruta: '/admin/operaciones', titulo: 'Panel', molde: 'tablero', permiso: 'operaciones' },
+    { ruta: '/admin/operaciones', titulo: 'Operaciones', molde: 'tablero', permiso: 'operaciones' },
     { ruta: '/admin/operaciones/stock', titulo: 'Stock', molde: 'lista_maestra', permiso: 'operaciones' },
-    { ruta: '/admin/operaciones/transferencias', titulo: 'Transferencias', molde: 'lista_maestra', permiso: 'operaciones' },
+    { ruta: '/admin/operaciones/transferencias', titulo: 'Transferencias entre sucursales', molde: 'lista_maestra', permiso: 'operaciones' },
     { ruta: '/admin/operaciones/vencimientos', titulo: 'Vencimientos', molde: 'lista_maestra', permiso: 'operaciones' },
     { ruta: '/admin/operaciones/recartelado', titulo: 'Recartelado', molde: 'lista_maestra', permiso: 'operaciones' },
-    { ruta: '/admin/operaciones/inventarios', titulo: 'Inventarios', molde: 'lista_maestra', permiso: 'operaciones' },
-    { ruta: '/admin/operaciones/control-zonas', titulo: 'Control por zonas', molde: 'lista_maestra', permiso: 'operaciones' },
-    { ruta: '/admin/operaciones/alertas', titulo: 'Alertas', molde: 'feed', permiso: 'operaciones' },
-    { ruta: '/admin/operaciones/analisis', titulo: 'Análisis', molde: 'tablero', permiso: 'operaciones' },
+    { ruta: '/admin/operaciones/inventarios', titulo: 'Inventarios físicos', molde: 'lista_maestra', permiso: 'operaciones' },
+    { ruta: '/admin/operaciones/control-zonas', titulo: 'Control de stock por zonas', molde: 'lista_maestra', permiso: 'operaciones' },
+    { ruta: '/admin/operaciones/alertas', titulo: 'Alertas de stock', molde: 'feed', permiso: 'operaciones' },
+    { ruta: '/admin/operaciones/analisis', titulo: 'Análisis de ventas', molde: 'tablero', permiso: 'operaciones' },
     { ruta: '/admin/operaciones/reposicion', titulo: 'Reposición', molde: 'tablero', permiso: 'operaciones' },
-    { ruta: '/admin/operaciones/irregularidades', titulo: 'Irregularidades', molde: 'bandeja', permiso: 'operaciones' },
-    { ruta: '/admin/operaciones/asistente', titulo: 'Asistente', molde: 'chat', permiso: 'operaciones' },
+    { ruta: '/admin/operaciones/irregularidades', titulo: 'Irregularidades de stock', molde: 'bandeja', permiso: 'operaciones' },
+    { ruta: '/admin/operaciones/asistente', titulo: 'NORA · Asistente', molde: 'chat', permiso: 'operaciones' },
 
     { ruta: '/admin/operaciones/stock/[id]', titulo: 'Ficha de item', molde: 'ficha', permiso: 'operaciones', navegable: false },
     { ruta: '/admin/operaciones/stock/nuevo', titulo: 'Alta de item', molde: 'wizard', permiso: 'operaciones', navegable: false },

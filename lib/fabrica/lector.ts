@@ -232,7 +232,16 @@ export async function compararEnSombra(
   enCodigo: string,
 ): Promise<void> {
   const r = await resolver(pool)
-  if (r.estado !== 'sombra' || !r.manifiesto) return
+  if (r.estado !== 'sombra') return
+
+  // Si en sombra el manifiesto no se puede usar, eso NO es "cero diferencias":
+  // es que no se comparó nada. Sin este registro, un manifiesto inválido en la
+  // base se ve exactamente igual que una declaración perfecta — y es el peor
+  // cero posible, porque parece que está todo bien.
+  if (!r.manifiesto) {
+    await registrar(pool, 'fallback', 'pantallas', r.motivoFallback, { estado: 'sombra' })
+    return
+  }
 
   const pantalla = r.manifiesto.pantallas.find((p) => p.ruta === ruta)
   if (pantalla?.titulo_dinamico) return

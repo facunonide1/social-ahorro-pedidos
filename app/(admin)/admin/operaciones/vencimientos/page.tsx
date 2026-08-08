@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { tituloDePantalla } from '@/lib/os/definicion'
 import { getVencimientos, resumenVencimientos } from '@/lib/operaciones/vencimientos'
 import { VencimientosClient } from './vencimientos-client'
 
@@ -9,6 +10,10 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Vencimientos' }
 
 export default async function VencimientosPage() {
+  // Puede venir de la declaración de la fábrica. Si el lector está apagado
+  // o algo falla, devuelve este mismo texto: la pantalla no cambia.
+  const tituloDeclarado = await tituloDePantalla('stock', '/admin/operaciones/vencimientos', 'Vencimientos')
+
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'sucursal', 'encargado_sucursal', 'administrativo', 'auditor'] })
   const adm = createAdminClient()
   const { sucursalId, esTodas } = getSucursalActiva()
@@ -22,7 +27,7 @@ export default async function VencimientosPage() {
 
   return (
     <>
-      <PageHeader title="Vencimientos"
+      <PageHeader title={tituloDeclarado}
         description="Control manual por producto. NORA decide qué hacer cruzando vencimiento + stock."
         breadcrumbs={[{ label: 'Operación', href: '/admin/operaciones' }, { label: 'Vencimientos' }]} />
       <div className="p-4 md:p-6">
