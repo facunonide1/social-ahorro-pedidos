@@ -10,11 +10,61 @@ prueba se pueda repetir en cada sesión sin volver a razonarla.
    altera, renombra ni agrega columnas a una tabla existente.
 2. **Namespace propio y exclusivo:** tablas `fab_*`, rutas bajo `/fabrica`,
    código en `lib/fabrica/`, `components/fabrica/` y `app/fabrica/`.
-3. **Dependencia en UN SOLO SENTIDO.** La fábrica puede importar del núcleo de
-   Social Ahorro. Nada de Social Ahorro importa de la fábrica.
+3. **Dependencia en un solo sentido, con UNA excepción declarada** (ver abajo).
 4. **Prueba de extracción:** en cualquier momento se tiene que poder llevar la
-   carpeta de la fábrica y las tablas `fab_*` a un repo propio sin tocar una
-   línea de Social Ahorro.
+   carpeta de la fábrica y las tablas `fab_*` a un repo propio sin romper
+   Social Ahorro.
+
+---
+
+## Lo que cambió en v0.62
+
+Hasta v0.61 nada de Social Ahorro importaba de la fábrica. Para que una
+declaración **gobierne**, algún punto tiene que consultarla — eso es inevitable.
+Lo que sí se puede elegir es que sea **uno solo**.
+
+### El punto de contacto
+
+```
+lib/os/definicion.ts     ← el ÚNICO archivo de Social Ahorro que importa la fábrica
+```
+
+Un import, dos usos, una función:
+
+```ts
+tituloDePantalla(pool, ruta, enCodigo) → string
+```
+
+`enCodigo` es a la vez el argumento y el fallback. La función **nunca lanza** y
+**nunca devuelve vacío**: si la fábrica no responde, si el flag está apagado, si
+el manifiesto no existe o no valida, devuelve el texto que ya estaba en el
+código. En el peor caso la pantalla se ve exactamente como antes.
+
+### Los consumidores
+
+Cuatro archivos de Social Ahorro modificados en total, y ninguno de ellos
+importa la fábrica: importan `lib/os/definicion.ts`.
+
+| Archivo | Qué cambió |
+| --- | --- |
+| `lib/os/definicion.ts` | **nuevo** — el punto de contacto |
+| `app/(admin)/admin/finanzas/documentos/page.tsx` | un literal pasó a ser una llamada, con el mismo literal de fallback |
+| `app/(admin)/admin/finanzas/documentos/lote/page.tsx` | ídem |
+| `app/(admin)/admin/finanzas/documentos/revision/[id]/page.tsx` | ídem |
+
+Más la excepción de navegación de v0.58 (`components/os/os-shell.tsx`), que sigue
+siendo un `<Link>`.
+
+### Cómo se saca la fábrica
+
+Se borra el import de `lib/os/definicion.ts` y su cuerpo pasa a
+`return enCodigo`. Las tres pantallas siguen compilando porque nunca importaron
+la fábrica: le hablan al punto de contacto.
+
+**Probado el 2026-08-08, no supuesto:** se movieron `lib/fabrica/`,
+`app/fabrica/`, `components/fabrica/` y `scripts/fabrica-*` fuera del repo, se
+reemplazó el cuerpo de `definicion.ts` por el fallback, y Social Ahorro compiló
+con **0 errores de tipos y build verde**. Ver el bloque de verificación abajo.
 
 ## Qué se lleva la fábrica si se muda
 
@@ -65,20 +115,24 @@ alcanza.
 ## Cómo se verifica
 
 ```bash
-# 1 · Qué archivos de Social Ahorro se tocaron
-git diff --diff-filter=MDR --name-status <base> HEAD
-#    Debe devolver como mucho components/os/os-shell.tsx
+# 1 · ¿Alguien afuera importa de la fábrica?
+grep -rn "@/lib/fabrica" app components lib --include="*.ts" --include="*.tsx" \
+  | grep -v "^lib/fabrica/\|^components/fabrica/\|^app/fabrica/"
+#    Debe devolver EXACTAMENTE una línea: lib/os/definicion.ts
+#    Dos o más = la frontera se rompió. Parar y reportar.
 
-# 2 · ¿Alguien afuera importa de la fábrica?
-grep -rn "fabrica" app components lib --include="*.ts" --include="*.tsx" \
-  | grep -v "^lib/fabrica/\|^components/fabrica/\|^app/fabrica/" \
-  | grep -iE "import|from '@/"
-#    Debe devolver vacío
-
-# 3 · ¿Alguna migración fab_* altera algo ajeno?
+# 2 · ¿Alguna migración fab_* altera algo ajeno?
 grep -inE "alter table|drop table|drop column|rename" supabase/migrations/00*_fabrica*.sql \
   | grep -viE "fab_"
 #    Debe devolver vacío
+
+# 3 · PRUEBA DE EXTRACCIÓN, de verdad
+mv lib/fabrica app/fabrica components/fabrica /tmp/       # sacar la fábrica
+# reemplazar el cuerpo de lib/os/definicion.ts por `return enCodigo`
+rm -rf .next && npx tsc --noEmit && npm run build          # tiene que dar verde
+mv /tmp/{lib,app,components}-fabrica ...                   # restaurar
 ```
 
-Si el punto 2 devuelve algo, la frontera se rompió: parar y reportar.
+El paso 3 hay que correrlo, no razonarlo. Los tipos generados en `.next/`
+guardan las rutas del build anterior: sin borrar `.next` da 26 errores falsos
+sobre rutas de la fábrica que ya no existen.
