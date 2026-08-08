@@ -12,7 +12,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { compararEnSombra, obtenerDefinicion } from '../lib/fabrica/lector'
 import { tituloDePantalla } from '../lib/os/definicion'
-import { PROYECTO_SOCIAL_AHORRO, type EstadoLector } from '../lib/fabrica/flag'
+import { PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
+import type { EstadoLector } from '../lib/fabrica/lector-estados'
 
 const POOL = process.argv[2] ?? 'documentos'
 

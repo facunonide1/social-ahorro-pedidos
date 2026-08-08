@@ -1,6 +1,10 @@
 import { notFound } from 'next/navigation'
 
 import { Badge } from '@/components/ui/badge'
+import { BotonPanico, SelectorEstado } from '@/components/fabrica/controles-lector'
+import { createClient } from '@/lib/supabase/server'
+import { estadoDelLector } from '@/lib/fabrica/flag'
+import { ESTADOS_LECTOR, ETIQUETA_LECTOR, EXPLICACION_LECTOR } from '@/lib/fabrica/lector-estados'
 import { informePreparacion } from '@/lib/fabrica/preparacion'
 import { traerProyecto } from '@/lib/fabrica/datos'
 
@@ -14,8 +18,183 @@ export default async function LectorPage({ params }: { params: { slug: string } 
   const informe = informePreparacion()
   const maxRiesgo = Math.max(...informe.map((p) => p.riesgo))
 
+  const estados = await estadoDelLector(proyecto.id)
+  const activos = estados.filter((e) => e.lector !== 'apagado')
+  const totalFallbacks = estados.reduce((a, e) => a + e.fallbacks, 0)
+
+  // Las diferencias de sombra, en detalle y legibles.
+  const sb = createClient()
+  const { data: eventos } = await sb
+    .from('fab_lector_eventos')
+    .select('pool_clave, tipo, aspecto, motivo, detalle, ocurrido_at')
+    .eq('proyecto_id', proyecto.id)
+    .order('ocurrido_at', { ascending: false })
+    .limit(50)
+  const filas = (eventos ?? []) as {
+    pool_clave: string
+    tipo: string
+    aspecto: string
+    motivo: string | null
+    detalle: Record<string, unknown>
+    ocurrido_at: string
+  }[]
+  const diferencias = filas.filter((f) => f.tipo === 'diferencia')
+  const fallbacks = filas.filter((f) => f.tipo === 'fallback')
+
   return (
     <div className="space-y-8 p-4 md:p-6">
+      {/* ── Estado operativo ──────────────────────────────────────────── */}
+      <section>
+        <h2 className="text-sm font-semibold tracking-tight">Estado del lector</h2>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          Con el lector <span className="font-medium">apagado</span>, cada sector
+          lee su definición del código: es exactamente lo de hoy. El estado se
+          cambia acá y tiene efecto en la request siguiente, sin deploy.
+        </p>
+
+        <dl className="mt-3 grid gap-2 sm:grid-cols-3">
+          {ESTADOS_LECTOR.map((e) => (
+            <div key={e} className="rounded-lg border border-border p-3">
+              <dt className="text-xs font-medium">{ETIQUETA_LECTOR[e]}</dt>
+              <dd className="mt-0.5 text-xs text-muted-foreground">{EXPLICACION_LECTOR[e]}</dd>
+            </div>
+          ))}
+        </dl>
+
+        <div className="mt-4 overflow-x-auto rounded-lg border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2">Pool</th>
+                <th className="px-3 py-2">Estado</th>
+                <th className="px-3 py-2 text-right">Diferencias</th>
+                <th className="px-3 py-2 text-right">Fallbacks</th>
+                <th className="px-3 py-2">Último cambio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {estados.map((e) => (
+                <tr key={e.clave} className="border-t border-border align-middle">
+                  <td className="px-3 py-2">
+                    <span className="font-medium">{e.nombre}</span>
+                    <span className="ml-2 font-mono text-[10px] text-muted-foreground">{e.clave}</span>
+                  </td>
+                  <td className="px-3 py-2">
+                    <SelectorEstado slug={proyecto.slug} clave={e.clave} actual={e.lector} />
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {e.diferencias > 0 ? (
+                      <span className="font-medium text-warning">{e.diferencias}</span>
+                    ) : (
+                      <span className="text-muted-foreground">0</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {e.fallbacks > 0 ? (
+                      <span className="font-medium text-destructive">{e.fallbacks}</span>
+                    ) : (
+                      <span className="text-muted-foreground">0</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">
+                    {e.ultimoCambio
+                      ? `${e.ultimoCambio.desde} → ${e.ultimoCambio.hasta} · ${String(e.ultimoCambio.cuando).slice(0, 16).replace('T', ' ')}` +
+                        (e.ultimoCambio.porEmail ? ` · ${e.ultimoCambio.porEmail}` : '') +
+                        (e.ultimoCambio.panico ? ' · pánico' : '')
+                      : 'nunca se cambió'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ── Diferencias de sombra ─────────────────────────────────────── */}
+      <section>
+        <h2 className="text-sm font-semibold tracking-tight">
+          Diferencias en sombra
+          <span className="ml-2 font-normal text-muted-foreground">{diferencias.length}</span>
+        </h2>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          Qué habría devuelto la declaración contra qué devolvió el código. Un
+          pool con diferencias no se prende: se corrige la declaración primero.
+        </p>
+        {diferencias.length === 0 ? (
+          <p className="mt-3 rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+            Ninguna. Los pools en sombra habrían devuelto lo mismo que el código.
+          </p>
+        ) : (
+          <div className="mt-3 overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2">Pool</th>
+                  <th className="px-3 py-2">Dónde</th>
+                  <th className="px-3 py-2">Dice el código</th>
+                  <th className="px-3 py-2">Diría la declaración</th>
+                  <th className="px-3 py-2">Cuándo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {diferencias.map((d, i) => (
+                  <tr key={i} className="border-t border-border align-top">
+                    <td className="px-3 py-2 font-medium">{d.pool_clave}</td>
+                    <td className="px-3 py-2 font-mono text-xs">{String(d.detalle.ruta ?? d.aspecto)}</td>
+                    <td className="px-3 py-2">{String(d.detalle.en_codigo ?? '—')}</td>
+                    <td className="px-3 py-2">
+                      {d.detalle.en_declaracion === null ? (
+                        <span className="text-muted-foreground">no la declara</span>
+                      ) : (
+                        String(d.detalle.en_declaracion ?? '—')
+                      )}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
+                      {String(d.ocurrido_at).slice(0, 16).replace('T', ' ')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* ── Fallbacks ─────────────────────────────────────────────────── */}
+      <section>
+        <h2 className="text-sm font-semibold tracking-tight">
+          Caídas al código
+          <span className="ml-2 font-normal text-muted-foreground">{totalFallbacks}</span>
+        </h2>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          Veces que el flag estaba prendido y el sector usó el código igual.{' '}
+          <strong>Si este número no es cero, hay algo mal.</strong> El sector no
+          se rompió —para eso está el fallback— pero la declaración no se está
+          aplicando y alguien tiene que enterarse.
+        </p>
+        {fallbacks.length === 0 ? (
+          <p className="mt-3 rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+            Ninguna.
+          </p>
+        ) : (
+          <div className="mt-3 divide-y divide-border rounded-lg border border-border">
+            {fallbacks.map((f, i) => (
+              <div key={i} className="px-4 py-2.5 text-sm">
+                <span className="font-medium">{f.pool_clave}</span>
+                <span className="ml-2 text-xs text-muted-foreground">
+                  {String(f.ocurrido_at).slice(0, 16).replace('T', ' ')}
+                </span>
+                <p className="mt-0.5 text-muted-foreground">{f.motivo ?? 'sin motivo registrado'}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── Pánico ────────────────────────────────────────────────────── */}
+      <BotonPanico slug={proyecto.slug} activos={activos.length} />
+
+      {/* ── El plan ───────────────────────────────────────────────────── */}
       <section>
         <h2 className="text-sm font-semibold tracking-tight">
           En qué orden prender el lector

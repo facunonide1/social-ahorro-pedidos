@@ -2,7 +2,8 @@ import * as React from 'react'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { validarManifiesto } from './validador'
-import { PROYECTO_SOCIAL_AHORRO, type EstadoLector } from './flag'
+import { PROYECTO_SOCIAL_AHORRO } from './flag'
+import type { EstadoLector } from './lector-estados'
 import type { Manifiesto } from './tipos'
 
 /**

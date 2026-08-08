@@ -1,4 +1,5 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server'
+import type { EstadoLector } from './lector-estados'
 
 /**
  * El interruptor del lector, por pool.
@@ -12,20 +13,10 @@ import { createAdminClient, createClient } from '@/lib/supabase/server'
 
 export const PROYECTO_SOCIAL_AHORRO = '00000000-0000-0000-0000-000000000001'
 
-export type EstadoLector = 'apagado' | 'sombra' | 'prendido'
-
-export const ETIQUETA_LECTOR: Record<EstadoLector, string> = {
-  apagado: 'apagado',
-  sombra: 'en sombra',
-  prendido: 'prendido',
-}
-
-export const EXPLICACION_LECTOR: Record<EstadoLector, string> = {
-  apagado: 'El sector lee su definición del código. Es exactamente lo de hoy.',
-  sombra:
-    'Lee del código, y la fábrica calcula en paralelo qué habría devuelto. Registra las diferencias sin afectar nada.',
-  prendido: 'El sector lee su definición de la declaración.',
-}
+// Las etiquetas y el tipo viven aparte para que los controles del portal
+// —componentes de cliente— puedan importarlos sin arrastrar `next/headers`.
+export type { EstadoLector } from './lector-estados'
+export { ESTADOS_LECTOR, ETIQUETA_LECTOR, EXPLICACION_LECTOR } from './lector-estados'
 
 export interface EstadoPool {
   instalacionId: string
