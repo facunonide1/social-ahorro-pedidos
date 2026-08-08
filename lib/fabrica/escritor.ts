@@ -292,3 +292,43 @@ export async function revertirA(args: {
     revierteA: v.id,
   })
 }
+
+/* ── Cuánta gente ve el cambio ───────────────────────────────────────────── */
+
+/**
+ * Cuántas personas del panel pueden ver las pantallas de un pool.
+ *
+ * Se calcula de verdad —contra los permisos reales de cada usuario— y no se
+ * estima. "Lo ven 4 personas" y "lo ven 40" son decisiones distintas, y quien
+ * aprueba tiene derecho a saber cuál de las dos está tomando.
+ *
+ * Importa del núcleo de Social Ahorro, que es la dirección permitida.
+ */
+export async function personasQueLoVen(manifiesto: Manifiesto): Promise<number> {
+  try {
+    const { puede } = await import('@/lib/types/permisos')
+    const adm = createAdminClient()
+    const { data } = await adm
+      .from('users_admin')
+      .select('rol, permisos_custom')
+      .eq('activo', true)
+
+    const usuarios = (data ?? []) as { rol: string; permisos_custom: unknown }[]
+    const modulos = manifiesto.permisos.map((p) => p.modulo)
+    if (modulos.length === 0) return usuarios.length
+
+    return usuarios.filter((u) =>
+      modulos.some((m) =>
+        puede(
+          u.rol as Parameters<typeof puede>[0],
+          u.permisos_custom as Parameters<typeof puede>[1],
+          m as Parameters<typeof puede>[2],
+          'ver',
+        ),
+      ),
+    ).length
+  } catch {
+    // Si no se puede contar, se dice que no se sabe en vez de inventar un número.
+    return 0
+  }
+}

@@ -74,9 +74,19 @@ export async function versionActual(clave: string): Promise<VersionDeclarada | n
   return data ? aVersion(data as unknown as FilaVersion, clave) : null
 }
 
-/** Todo el historial de un pool, de la más nueva a la más vieja. */
-export async function historial(clave: string): Promise<VersionDeclarada[]> {
-  const sb = createClient()
+/**
+ * Todo el historial de un pool, de la más nueva a la más vieja.
+ *
+ * Por defecto lee con la sesión, para que las políticas de RLS sigan siendo las
+ * que deciden en el portal. `conAdmin` existe para los scripts, que no tienen
+ * cookies: sin esa puerta, el historial sólo se puede mirar desde el navegador
+ * y la prueba del escritor no se puede correr antes de un deploy.
+ */
+export async function historial(
+  clave: string,
+  opciones: { conAdmin?: boolean } = {},
+): Promise<VersionDeclarada[]> {
+  const sb = opciones.conAdmin ? createAdminClient() : createClient()
   const { data } = await sb
     .from('fab_pool_versiones')
     .select('*, pool:fab_pools!inner(clave)')
