@@ -1,4 +1,4 @@
-# El manifiesto — formato 1.1.0
+# El manifiesto — formato 1.2.0
 
 Un **pool** es una pieza de software declarada como dato. El manifiesto es esa
 declaración: lo que la fábrica sabe de una pieza sin abrir su código.
@@ -30,6 +30,9 @@ Cada uno rompió algo.
 | **Stock** | `alcance` global/por punto, `excluir` en el comparador |
 | **Los cuatro** | `agentes`, `participacion`, `reversible` |
 | **Los avisos** (v0.60) | `informa`, `compromete_tercero`, `brecha` |
+| **Los núcleos** (v0.60) | `usado_por_todos`, `acceso: 'escrita'`, `subapp: null` |
+| **Finanzas** (v0.61) | `constitucional`, `restringido_a_rol`, `generada_por`, `deprecadas` |
+| **Compras** (v0.61) | `dimensiones` |
 
 ---
 
@@ -39,7 +42,7 @@ Cada uno rompió algo.
 
 | Campo | Tipo | Qué es |
 | --- | --- | --- |
-| `formato` | `"1.1.0"` | Versión del **formato**, no del pool |
+| `formato` | `"1.2.0"` | Versión del **formato**, no del pool |
 | `pool` | slug | Clave única en el catálogo |
 | `nombre` | texto | Cómo se llama para una persona |
 | `descripcion` | texto | Qué hace, en dos líneas |

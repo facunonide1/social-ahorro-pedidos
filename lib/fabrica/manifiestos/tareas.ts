@@ -127,6 +127,27 @@ export const MANIFIESTO_TAREAS: Manifiesto = {
     },
   ],
 
+  constitucional: [
+    {
+      limite: 'confirmacion_humana',
+      tipo: 'campo',
+      elemento: 'tareas.verificacion_humana',
+      motivo: 'Marca que el trabajo lo dio por bueno una persona, no el sistema. Si se pudiera apagar por configuración, la verificación deja de existir y las tareas siguen cerrándose igual.',
+    },
+    {
+      limite: 'confirmacion_humana',
+      tipo: 'accion',
+      elemento: 'verificar_trabajo_propio',
+      motivo: 'Nadie verifica lo que él mismo generó. Si el agente crea y aprueba, el circuito de control es decorativo.',
+    },
+    {
+      limite: 'auditoria',
+      tipo: 'entidad',
+      elemento: 'tareas_historial',
+      motivo: 'Quién cambió qué y cuándo. Es lo que permite reconstruir por qué una tarea terminó como terminó.',
+    },
+  ],
+
   configurable: [
     { clave: 'verificacion_obligatoria', etiqueta: 'Todo trabajo terminado pasa por un verificador', tipo: 'booleano', default: true },
     { clave: 'exige_evidencia', etiqueta: 'Pide foto o archivo al cerrar', tipo: 'booleano', default: true },

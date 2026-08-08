@@ -133,6 +133,27 @@ export const MANIFIESTO_OFERTAS: Manifiesto = {
     },
   ],
 
+  constitucional: [
+    {
+      limite: 'autoridad_precio',
+      tipo: 'accion',
+      elemento: 'fijar_precio_venta',
+      motivo: 'La autoridad sobre el precio de venta es del sistema de facturación. La fábrica propone; el precio lo escribe otro. No es configurable en ningún proyecto.',
+    },
+    {
+      limite: 'autoridad_precio',
+      tipo: 'entidad',
+      elemento: 'ofertas_exports_sifaco',
+      motivo: 'Es el envío hacia el sistema que manda sobre el precio. La dirección es una sola: se exporta, no se importa un precio de vuelta.',
+    },
+    {
+      limite: 'confirmacion_humana',
+      tipo: 'accion',
+      elemento: 'publicar_al_club',
+      motivo: 'Un push a los clientes sale del negocio hacia afuera y no se des-envía. Sale cuando una persona aprueba la oferta.',
+    },
+  ],
+
   configurable: [
     { clave: 'exporta_a_sistema_externo', etiqueta: 'Exporta el precio a un sistema externo', tipo: 'booleano', default: true },
     { clave: 'requiere_confirmacion_en_punto', etiqueta: 'Pide confirmar la llegada al punto de venta', tipo: 'booleano', default: true },

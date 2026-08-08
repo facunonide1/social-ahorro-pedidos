@@ -118,6 +118,38 @@ export const MANIFIESTO_INTELIGENCIA: Manifiesto = {
     },
   ],
 
+  constitucional: [
+    {
+      limite: 'auditoria',
+      tipo: 'entidad',
+      elemento: 'auditoria_logs',
+      motivo: 'No se desactiva, no se borra y no se edita. Es la única tabla del sistema que sólo crece, y un registro que se puede editar no sirve para nada.',
+    },
+    {
+      limite: 'auditoria',
+      tipo: 'accion',
+      elemento: 'acortar_retencion_auditoria',
+      // El validador levantó la contradicción: el plazo estaba declarado
+      // intocable arriba y ofrecido como parámetro abajo. Las dos cosas eran
+      // ciertas a medias. Alargar el plazo es configuración; acortarlo es
+      // borrar auditoría con otro nombre. Lo constitucional es la acción de
+      // acortarlo, no el parámetro.
+      motivo: 'El plazo de retención se puede alargar por configuración. Acortarlo, no: sería borrar registros de auditoría llamándolo de otra manera.',
+    },
+    {
+      limite: 'confirmacion_humana',
+      tipo: 'entidad',
+      elemento: 'aprobaciones',
+      motivo: 'La cola existe para que una persona decida. Un asistente que se auto-aprueba convierte el control en un trámite.',
+    },
+    {
+      limite: 'confirmacion_humana',
+      tipo: 'accion',
+      elemento: 'aprobar_en_nombre_de_alguien',
+      motivo: 'Nadie aprueba en nombre de otro. La aprobación vale por quién la firma.',
+    },
+  ],
+
   configurable: [
     { clave: 'resumen_diario_activo', etiqueta: 'Arma el resumen del día solo', tipo: 'booleano', default: true },
     { clave: 'requiere_aprobacion_acciones', etiqueta: 'Toda acción del asistente pasa por aprobación', tipo: 'booleano', default: true },

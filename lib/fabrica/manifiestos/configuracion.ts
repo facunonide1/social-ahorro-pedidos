@@ -82,6 +82,27 @@ export const MANIFIESTO_CONFIGURACION: Manifiesto = {
   // que tiene el sistema.
   agentes: [],
 
+  constitucional: [
+    {
+      limite: 'umbrales_y_permisos',
+      tipo: 'campo',
+      elemento: 'users_admin.rol',
+      motivo: 'Quién puede qué se cambia a mano, con nombre y apellido. Ninguna configuración de proyecto ni ningún chat reparte roles.',
+    },
+    {
+      limite: 'umbrales_y_permisos',
+      tipo: 'campo',
+      elemento: 'users_admin.permisos_custom',
+      motivo: 'Los permisos finos son el último control que queda cuando el rol es amplio. Se editan a mano o no son un control.',
+    },
+    {
+      limite: 'umbrales_y_permisos',
+      tipo: 'campo',
+      elemento: 'users_admin.pin_hash',
+      motivo: 'Es una credencial. No se lee, no se copia entre proyectos y no se muestra en ninguna pantalla ni exportación.',
+    },
+  ],
+
   configurable: [
     { clave: 'multi_punto', etiqueta: 'El negocio opera en más de un punto', tipo: 'booleano', default: true },
     { clave: 'codigo_item_externo', etiqueta: 'Los items tienen un código de un sistema externo', tipo: 'booleano', default: true },

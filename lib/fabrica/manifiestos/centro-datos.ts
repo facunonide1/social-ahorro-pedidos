@@ -105,6 +105,27 @@ export const MANIFIESTO_CENTRO_DATOS: Manifiesto = {
     },
   ],
 
+  constitucional: [
+    {
+      limite: 'confirmacion_humana',
+      tipo: 'accion',
+      elemento: 'crear_item_nuevo',
+      motivo: 'El catálogo es la maestra de la que dependen todos los pools. Un alta automática desde un archivo mal formateado lo contamina y después nadie sabe de dónde salió esa fila.',
+    },
+    {
+      limite: 'confirmacion_humana',
+      tipo: 'accion',
+      elemento: 'aplicar_perfil_conocido',
+      motivo: 'Una carga masiva toca tablas de medio sistema. Se deja armada con el resumen de qué entra y qué queda afuera, y la suelta una persona.',
+    },
+    {
+      limite: 'auditoria',
+      tipo: 'entidad',
+      elemento: 'snapshots_import',
+      motivo: 'Es cómo estaba todo antes de la carga. Si se pudiera borrar, una importación mal hecha sería irreversible.',
+    },
+  ],
+
   configurable: [
     { clave: 'guarda_snapshot', etiqueta: 'Guarda cómo estaba todo antes de cada carga', tipo: 'booleano', default: true },
     { clave: 'umbral_match_automatico', etiqueta: 'Confianza mínima para identificar solo', tipo: 'numero', default: 0.9 },

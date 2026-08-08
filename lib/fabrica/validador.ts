@@ -233,6 +233,24 @@ export function validarManifiesto(m: Manifiesto): Problema[] {
     for (const c of ag.capacidades) {
       if (!CAPACIDADES.has(c)) err(`agentes.${ag.clave}`, `capacidad desconocida: ${c}`)
     }
+    // La constitución manda sobre los agentes, no sólo sobre la configuración.
+    // Si el pool declaró que algo necesita confirmación humana, ningún agente
+    // suyo puede tener el permiso de aprobar: sería el mismo control firmado
+    // por el sistema que lo tenía que pedir.
+    const exigenConfirmacion = (m.constitucional ?? []).some(
+      (c) => c.limite === 'confirmacion_humana',
+    )
+    if (exigenConfirmacion) {
+      for (const perm of ag.permisos) {
+        if (perm.acciones.includes('aprobar')) {
+          err(
+            `agentes.${ag.clave}`,
+            `pide "${perm.modulo}.aprobar" y el pool declara elementos bajo confirmación humana: un agente no aprueba lo que él mismo tiene que pedir`,
+          )
+        }
+      }
+    }
+
     // El techo de permisos del agente no puede exceder el del pool que lo aporta.
     for (const perm of ag.permisos) {
       const delPool = m.permisos.find((x) => x.modulo === perm.modulo)

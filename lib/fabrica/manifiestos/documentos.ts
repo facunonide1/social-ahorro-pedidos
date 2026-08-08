@@ -91,6 +91,27 @@ export const MANIFIESTO_DOCUMENTOS: Manifiesto = {
     },
   ],
 
+  constitucional: [
+    {
+      limite: 'confirmacion_humana',
+      tipo: 'accion',
+      elemento: 'extraer_documento',
+      motivo: 'Lo que el modelo leyó no entra a las cuentas sin que una persona lo mire. Un importe mal leído que se contabiliza solo no se descubre hasta el cierre.',
+    },
+    {
+      limite: 'autoridad_precio',
+      tipo: 'entidad',
+      elemento: 'doc_precios_historial',
+      motivo: 'Guarda lo que se PAGÓ, no lo que se cobra. Ningún proceso deriva de acá un precio de venta: esa autoridad es del sistema de facturación.',
+    },
+    {
+      limite: 'auditoria',
+      tipo: 'entidad',
+      elemento: 'doc_extracciones',
+      motivo: 'Es lo que el modelo leyó y con cuánta confianza. Sin eso no se puede auditar por qué el sistema creyó lo que creyó.',
+    },
+  ],
+
   configurable: [
     { clave: 'umbral_confianza_auto', etiqueta: 'Confianza mínima para asociar solo', tipo: 'numero', default: 0.9 },
     { clave: 'usos_minimos_alias', etiqueta: 'Veces que hay que confirmar un alias antes de darlo por bueno', tipo: 'numero', default: 3 },

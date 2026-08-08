@@ -140,6 +140,27 @@ export const MANIFIESTO_CLIENTES: Manifiesto = {
     },
   ],
 
+  constitucional: [
+    {
+      limite: 'cumplimiento_regulado',
+      tipo: 'entidad',
+      elemento: 'clientes',
+      motivo: 'Son datos de personas. Las columnas sensibles declaradas no se exportan sin permiso explícito, y el pool no se instala en un proyecto que no vaya a manejarlas.',
+    },
+    {
+      limite: 'confirmacion_humana',
+      tipo: 'accion',
+      elemento: 'eliminar_cliente',
+      motivo: 'Borrar el dato de una persona no es editar un poco más, y no hay vuelta atrás.',
+    },
+    {
+      limite: 'confirmacion_humana',
+      tipo: 'accion',
+      elemento: 'proponer_fusion_duplicados',
+      motivo: 'Fusionar dos clientes reescribe compras y puntos de los dos. Se propone y espera.',
+    },
+  ],
+
   configurable: [
     { clave: 'puntos_activos', etiqueta: 'Acumula puntos por compra', tipo: 'booleano', default: true },
     { clave: 'dias_riesgo_fuga', etiqueta: 'Días sin comprar para marcarlo en riesgo', tipo: 'numero', default: 90 },

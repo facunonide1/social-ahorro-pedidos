@@ -129,6 +129,27 @@ export const MANIFIESTO_STOCK: Manifiesto = {
     },
   ],
 
+  constitucional: [
+    {
+      limite: 'confirmacion_humana',
+      tipo: 'accion',
+      elemento: 'ajustar_stock',
+      motivo: 'Un ajuste sin conteo humano no corrige el stock: borra la evidencia de que faltaba algo.',
+    },
+    {
+      limite: 'auditoria',
+      tipo: 'entidad',
+      elemento: 'movimientos_stock',
+      motivo: 'Cada entrada y salida con su motivo y su autor. No se edita: corregir un movimiento se hace con otro movimiento.',
+    },
+    {
+      limite: 'auditoria',
+      tipo: 'entidad',
+      elemento: 'irregularidades_stock',
+      motivo: 'Las diferencias sin explicación no se borran cuando incomodan. Se explican o siguen abiertas.',
+    },
+  ],
+
   configurable: [
     { clave: 'controla_vencimientos', etiqueta: 'Sigue fechas de vencimiento', tipo: 'booleano', default: true },
     { clave: 'controla_lotes', etiqueta: 'Sigue partidas o lotes', tipo: 'booleano', default: true },
