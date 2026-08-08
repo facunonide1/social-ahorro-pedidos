@@ -53,7 +53,13 @@ export const ETIQUETA_TIPO: Record<TipoCampo, string> = {
 }
 
 /** Los tipos que PUEDEN llegar a verde alguna vez. Los otros nunca. */
-export const HABILITABLES: TipoCampo[] = ['etiqueta', 'visibilidad']
+export const HABILITABLES: TipoCampo[] = ['etiqueta', 'visibilidad', 'umbral']
+
+/**
+ * `umbral` está en la lista pero sólo llega a verde si el parámetro concreto
+ * pesa `inocuo`. Un `sensible` NUNCA es candidato a verde, aunque el
+ * interruptor del tipo esté habilitado: el peso manda sobre el interruptor.
+ */
 
 /** De qué tipo es un campo del manifiesto. */
 export function tipoDe(campo: string): TipoCampo {
@@ -140,8 +146,34 @@ export function carrilDeCampo(args: {
     }
   }
 
+  /* ── El peso de un configurable ──────────────────────────────────── */
+  // Un umbral que mueve plata y uno que cambia cuántos días antes se avisa no
+  // son el mismo riesgo, aunque sean el mismo tipo de campo.
+  if (tipo === 'umbral') {
+    const clave = args.campo.slice('configurable.'.length)
+    const param = args.delPool.configurable?.find((c) => c.clave === clave)
+    if (param?.peso === 'sensible') {
+      return {
+        carril: 'amarillo',
+        tipo,
+        motivo: `⚠ ${param.etiqueta}: si se cambia mal se pierde plata, se afloja un control o se incumple algo. ${param.peso_motivo ?? ''}`.trim(),
+      }
+    }
+    if (param?.peso === 'operativo') {
+      return {
+        carril: 'amarillo',
+        tipo,
+        motivo: `${param.etiqueta}: si se cambia mal, alguien trabaja de más o de menos. Siempre pide firma.`,
+      }
+    }
+    // `inocuo` sigue hasta la regla del interruptor, como una etiqueta.
+    if (param?.peso !== 'inocuo') {
+      return { carril: 'amarillo', tipo, motivo: 'El parámetro no declara su peso: se trata como sensible.' }
+    }
+  }
+
   /* ── 🟡 / 🟢 ─────────────────────────────────────────────────────── */
-  if (!HABILITABLES.includes(tipo)) {
+  if (!HABILITABLES.includes(tipo) && tipo !== 'umbral') {
     return {
       carril: 'amarillo',
       tipo,

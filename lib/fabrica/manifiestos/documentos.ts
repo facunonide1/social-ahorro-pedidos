@@ -17,7 +17,7 @@ import type { Manifiesto } from '../tipos'
  * construyó y el manifiesto no lo rompe.
  */
 export const MANIFIESTO_DOCUMENTOS: Manifiesto = {
-  formato: '1.3.0',
+  formato: '1.4.0',
   pool: 'documentos',
   nombre: 'Motor de documentos',
   categoria: 'nucleo',
@@ -123,9 +123,9 @@ export const MANIFIESTO_DOCUMENTOS: Manifiesto = {
   ],
 
   configurable: [
-    { clave: 'umbral_confianza_auto', etiqueta: 'Confianza mínima para asociar solo', tipo: 'numero', default: 0.9 },
-    { clave: 'usos_minimos_alias', etiqueta: 'Veces que hay que confirmar un alias antes de darlo por bueno', tipo: 'numero', default: 3 },
-    { clave: 'punto_de_compra_obligatorio', etiqueta: 'Exige indicar en qué punto se compró', tipo: 'booleano', default: true },
+    { clave: 'umbral_confianza_auto', etiqueta: 'Confianza mínima para asociar solo', tipo: 'numero', default: 0.9, peso: 'sensible', peso_motivo: 'Bajarlo hace que el modelo asocie renglones sin que nadie mire, y de ahí sale un costo mal cargado.' },
+    { clave: 'usos_minimos_alias', etiqueta: 'Veces que hay que confirmar un alias antes de darlo por bueno', tipo: 'numero', default: 3, peso: 'sensible', peso_motivo: 'Bajarlo da por bueno un alias con poca evidencia y ensucia el historial de precios.' },
+    { clave: 'punto_de_compra_obligatorio', etiqueta: 'Exige indicar en qué punto se compró', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Es el punto que emite el comprobante: tiene impacto fiscal.' },
   ],
 }
 

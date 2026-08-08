@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * trabajo asignado con vencimiento y verificación. Existe igual en un taller.
  */
 export const MANIFIESTO_TAREAS: Manifiesto = {
-  formato: '1.3.0',
+  formato: '1.4.0',
   pool: 'tareas',
   nombre: 'Tareas',
   categoria: 'nucleo',
@@ -149,10 +149,10 @@ export const MANIFIESTO_TAREAS: Manifiesto = {
   ],
 
   configurable: [
-    { clave: 'verificacion_obligatoria', etiqueta: 'Todo trabajo terminado pasa por un verificador', tipo: 'booleano', default: true },
-    { clave: 'exige_evidencia', etiqueta: 'Pide foto o archivo al cerrar', tipo: 'booleano', default: true },
-    { clave: 'puntaje_activo', etiqueta: 'Suma puntos al que ejecuta', tipo: 'booleano', default: true },
-    { clave: 'sla_default_horas', etiqueta: 'Horas de plazo cuando el tipo no lo define', tipo: 'numero', default: 24 },
+    { clave: 'verificacion_obligatoria', etiqueta: 'Todo trabajo terminado pasa por un verificador', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Apagarlo hace que las tareas se cierren solas: la verificación deja de existir.' },
+    { clave: 'exige_evidencia', etiqueta: 'Pide foto o archivo al cerrar', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Cambia si hay que subir foto al cerrar. Mal puesto, alguien trabaja de más o queda sin respaldo.' },
+    { clave: 'puntaje_activo', etiqueta: 'Suma puntos al que ejecuta', tipo: 'booleano', default: true, peso: 'inocuo', peso_motivo: 'Suma o no suma puntos. Si está mal, alguien ve un número raro.' },
+    { clave: 'sla_default_horas', etiqueta: 'Horas de plazo cuando el tipo no lo define', tipo: 'numero', default: 24, peso: 'operativo', peso_motivo: 'Define el plazo cuando el tipo no lo dice. Mal puesto, las tareas vencen antes o después de lo razonable.' },
   ],
 }
 

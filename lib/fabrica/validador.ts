@@ -14,7 +14,7 @@ import type { Manifiesto } from './tipos'
  * ejecutar antes de commitear sin credenciales de nada.
  */
 
-export const FORMATO_ACTUAL = '1.3.0'
+export const FORMATO_ACTUAL = '1.4.0'
 
 export interface Problema {
   campo: string
@@ -135,6 +135,21 @@ export function validarManifiesto(m: Manifiesto): Problema[] {
     if (perm.acciones.length === 0) err(`permisos.${perm.modulo}`, 'sin acciones')
     for (const a of perm.acciones) {
       if (!ACCIONES_PERMISO.has(a)) err(`permisos.${perm.modulo}`, `acción desconocida: ${a}`)
+    }
+  }
+
+  /* ── Peso de los configurables ─────────────────────────────────────── */
+  // Sin peso no se puede decidir el carril, y un carril mal decidido es peor
+  // que no tener carriles: da la sensación de control sin el control.
+  const PESOS = new Set(['inocuo', 'operativo', 'sensible'])
+  for (const c of m.configurable ?? []) {
+    if (!c.peso) {
+      err(`configurable.${c.clave}`, 'sin peso declarado: no se puede derivar su carril')
+    } else if (!PESOS.has(c.peso)) {
+      err(`configurable.${c.clave}`, `peso desconocido: ${c.peso}`)
+    }
+    if (c.peso === 'sensible' && !c.peso_motivo) {
+      avi(`configurable.${c.clave}`, 'marcado sensible sin decir por qué')
     }
   }
 

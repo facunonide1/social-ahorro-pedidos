@@ -476,11 +476,37 @@ export interface RequisitoAgente {
   sin_esto: string
 }
 
+/**
+ * Cuánto duele que este parámetro esté mal.
+ *
+ * Hasta v0.65 todos los configurables pesaban igual y todos eran amarillos, así
+ * que el grueso no molestaba. El día que se habilite el carril verde, tratar
+ * `dias_aviso_vencimiento` y `umbral_aprobacion_pago` como la misma cosa se
+ * vuelve peligroso. Se resuelve ANTES de habilitar el primer verde.
+ */
+export type Peso =
+  /** Si se cambia mal, alguien ve algo raro. */
+  | 'inocuo'
+  /** Si se cambia mal, alguien trabaja de más o de menos. */
+  | 'operativo'
+  /** Si se cambia mal, se pierde plata, se afloja un control o se incumple algo. */
+  | 'sensible'
+
 export interface ParametroConfigurable {
   clave: string
   etiqueta: string
   tipo: 'texto' | 'numero' | 'booleano' | 'lista'
   default?: unknown
+  /**
+   * Obligatorio desde 1.4.0.
+   *
+   * Sin default a propósito: si no se puede decidir, se marca `sensible` y se
+   * reporta. La duda va del lado seguro, y un default silencioso convertiría
+   * "no lo pensé" en "es inocuo".
+   */
+  peso: Peso
+  /** Por qué ese peso. Se lee cuando alguien discute la clasificación. */
+  peso_motivo?: string
 }
 
 /* ── Constitución ────────────────────────────────────────────────────────── */

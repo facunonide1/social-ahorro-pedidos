@@ -16,7 +16,7 @@ import type { Manifiesto } from '../tipos'
  * es quien lo usa.
  */
 export const MANIFIESTO_CONFIGURACION: Manifiesto = {
-  formato: '1.3.0',
+  formato: '1.4.0',
   pool: 'configuracion',
   nombre: 'Configuración',
   categoria: 'nucleo',
@@ -104,9 +104,9 @@ export const MANIFIESTO_CONFIGURACION: Manifiesto = {
   ],
 
   configurable: [
-    { clave: 'multi_punto', etiqueta: 'El negocio opera en más de un punto', tipo: 'booleano', default: true },
-    { clave: 'codigo_item_externo', etiqueta: 'Los items tienen un código de un sistema externo', tipo: 'booleano', default: true },
-    { clave: 'permisos_finos', etiqueta: 'Permisos por módulo y acción, además del rol', tipo: 'booleano', default: true },
+    { clave: 'multi_punto', etiqueta: 'El negocio opera en más de un punto', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Cambia si el sistema razona por punto o global: mal puesto, la gente ve stock y caja del lugar equivocado.' },
+    { clave: 'codigo_item_externo', etiqueta: 'Los items tienen un código de un sistema externo', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Define si el item se identifica por un código de otro sistema. Mal puesto, deja de matchear.' },
+    { clave: 'permisos_finos', etiqueta: 'Permisos por módulo y acción, además del rol', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Apagarlo deja el permiso sólo en manos del rol y afloja un control. Cae bajo umbrales_y_permisos.' },
   ],
 }
 

@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * "obra social" acá adentro.
  */
 export const MANIFIESTO_CLIENTES: Manifiesto = {
-  formato: '1.3.0',
+  formato: '1.4.0',
   pool: 'clientes',
   nombre: 'Clientes',
   categoria: 'generico',
@@ -163,10 +163,10 @@ export const MANIFIESTO_CLIENTES: Manifiesto = {
   ],
 
   configurable: [
-    { clave: 'puntos_activos', etiqueta: 'Acumula puntos por compra', tipo: 'booleano', default: true },
-    { clave: 'dias_riesgo_fuga', etiqueta: 'Días sin comprar para marcarlo en riesgo', tipo: 'numero', default: 90 },
-    { clave: 'dedup_automatico', etiqueta: 'Propone fusiones de clientes duplicados', tipo: 'booleano', default: true },
-    { clave: 'canal_b2b', etiqueta: 'Maneja clientes empresa con cuenta corriente', tipo: 'booleano', default: true },
+    { clave: 'puntos_activos', etiqueta: 'Acumula puntos por compra', tipo: 'booleano', default: true, peso: 'inocuo', peso_motivo: 'Acumula o no acumula puntos.' },
+    { clave: 'dias_riesgo_fuga', etiqueta: 'Días sin comprar para marcarlo en riesgo', tipo: 'numero', default: 90, peso: 'operativo', peso_motivo: 'Cambia a quién se marca como en riesgo: mal puesto, se llama de más o de menos.' },
+    { clave: 'dedup_automatico', etiqueta: 'Propone fusiones de clientes duplicados', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Propone fusiones o no. Fusionar sigue siendo humano, así que el riesgo es de trabajo.' },
+    { clave: 'canal_b2b', etiqueta: 'Maneja clientes empresa con cuenta corriente', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Prende o apaga el circuito de cuenta corriente de clientes empresa.' },
   ],
 }
 

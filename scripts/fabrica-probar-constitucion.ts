@@ -46,6 +46,8 @@ const CASOS: Caso[] = [
         etiqueta: 'Monto desde el que un pago necesita segunda firma',
         tipo: 'numero',
         default: 100000,
+        peso: 'sensible',
+        peso_motivo: 'A partir de qué monto un pago necesita segunda firma.',
       })
       return m
     })(),
