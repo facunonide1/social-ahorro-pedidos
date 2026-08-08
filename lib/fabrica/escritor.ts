@@ -1,0 +1,294 @@
+import { createAdminClient } from '@/lib/supabase/server'
+import { MANIFIESTOS } from './manifiestos'
+import { validarManifiesto } from './validador'
+import { versionActual } from './versiones'
+import type { Manifiesto, PantallaDeclarada } from './tipos'
+
+/**
+ * EL ESCRITOR.
+ *
+ * Lo que faltaba para que la fábrica se pueda arreglar en caliente. Hasta v0.62
+ * gobernaba pero no se corregía: el flag apagaba y no arreglaba, que es la peor
+ * combinación posible.
+ *
+ * TRES REGLAS INNEGOCIABLES
+ *   1. Nunca se edita una versión en lugar. Cada escritura crea una nueva.
+ *   2. La anterior queda intacta y consultable.
+ *   3. Motivo obligatorio. Un cambio sin motivo escrito no se entiende seis
+ *      meses después, que es exactamente cuando hace falta entenderlo.
+ *
+ * ESCRIBIR ES MÁS DIFÍCIL QUE LEER. Leer sólo necesita un fallback; escribir
+ * necesita saber qué se rompe. Por eso hay cuatro validaciones antes de tocar
+ * nada y un diff que se lee en castellano antes de aplicar.
+ */
+
+/* ── Qué se puede cambiar hoy ────────────────────────────────────────────── */
+
+/**
+ * Sólo presentación y navegación, que es lo único que el lector gobierna.
+ *
+ * Permitir editar permisos o acciones cuando el lector todavía no los lee sería
+ * guardar cambios que no hacen nada — y el día que el lector empiece a leerlos
+ * se aplicarían todos juntos, sin que nadie los haya revisado con esa
+ * consecuencia en mente.
+ */
+export interface CambioPropuesto {
+  /** ruta → título nuevo. */
+  titulos?: Record<string, string>
+}
+
+export function aplicarCambio(base: Manifiesto, cambio: CambioPropuesto): Manifiesto {
+  const nuevo: Manifiesto = JSON.parse(JSON.stringify(base))
+  if (cambio.titulos) {
+    nuevo.pantallas = nuevo.pantallas.map((p) =>
+      cambio.titulos![p.ruta] !== undefined ? { ...p, titulo: cambio.titulos![p.ruta] } : p,
+    )
+  }
+  return nuevo
+}
+
+/* ── El diff, en castellano ──────────────────────────────────────────────── */
+
+export interface LineaDiff {
+  /** La frase que lee una persona. */
+  texto: string
+  /** Qué cuesta deshacerlo. */
+  costo: string
+  /** true = si sale mal, se arregla con un revert y no se pierde nada. */
+  reversibleSinPerdida: boolean
+}
+
+/**
+ * El diff entre dos manifiestos, en frases.
+ *
+ * No JSON crudo: quien aprueba un cambio tiene que poder leer qué va a pasar
+ * sin traducir mentalmente una estructura de datos. Y el costo de deshacerlo va
+ * al lado, porque aprobar rápido sólo es seguro si se sabe qué cuesta deshacer.
+ */
+export function diffLegible(
+  actual: Manifiesto,
+  propuesto: Manifiesto,
+  contexto: { gobernando: boolean; personasConAcceso: number },
+): LineaDiff[] {
+  const out: LineaDiff[] = []
+  const porRuta = new Map(actual.pantallas.map((p) => [p.ruta, p]))
+
+  for (const p of propuesto.pantallas) {
+    const antes = porRuta.get(p.ruta)
+    if (!antes) {
+      out.push({
+        texto: `Se agrega la pantalla ${p.ruta} con el título "${p.titulo}".`,
+        costo: 'Deshacerlo la saca de la declaración. La pantalla en sí no se toca.',
+        reversibleSinPerdida: true,
+      })
+      continue
+    }
+    if (antes.titulo !== p.titulo) {
+      out.push({
+        texto: describirTitulo(antes, p, contexto),
+        costo: contexto.gobernando
+          ? 'Deshacerlo la devuelve al título anterior en la request siguiente. No se pierde nada.'
+          : 'El pool no está gobernado: el cambio queda declarado y todavía no se ve en ningún lado.',
+        reversibleSinPerdida: true,
+      })
+    }
+  }
+
+  for (const [ruta, p] of porRuta) {
+    if (!propuesto.pantallas.some((x) => x.ruta === ruta)) {
+      out.push({
+        texto: `Se quita de la declaración la pantalla ${ruta} ("${p.titulo}").`,
+        costo: contexto.gobernando
+          ? 'Mientras no esté declarada, la pantalla vuelve a usar el título de su código. No se rompe.'
+          : 'El pool no está gobernado: no cambia nada visible.',
+        reversibleSinPerdida: true,
+      })
+    }
+  }
+
+  return out
+}
+
+function describirTitulo(
+  antes: PantallaDeclarada,
+  ahora: PantallaDeclarada,
+  contexto: { gobernando: boolean; personasConAcceso: number },
+): string {
+  const quien =
+    contexto.personasConAcceso === 1
+      ? 'Lo ve 1 persona con acceso'
+      : `Lo ven ${contexto.personasConAcceso} personas con acceso`
+  const cola = contexto.gobernando ? ` ${quien} al sector.` : ' Todavía no lo ve nadie: el pool no está gobernado.'
+  return `El título de ${antes.ruta} pasa de "${antes.titulo}" a "${ahora.titulo}".${cola}`
+}
+
+/* ── Las cuatro validaciones ─────────────────────────────────────────────── */
+
+export interface Rechazo {
+  paso: 1 | 2 | 3 | 4
+  motivo: string
+}
+
+/**
+ * Se corren en orden y si falla cualquiera NO se escribe.
+ *
+ * El orden no es casual: primero lo que hace al manifiesto inválido, después lo
+ * que rompe la constitución, después lo que rompe a otros pools, y al final lo
+ * que rompe la pantalla de alguien que está mirándola ahora.
+ */
+export async function validarAntesDeEscribir(
+  clave: string,
+  propuesto: Manifiesto,
+  gobernando: boolean,
+): Promise<Rechazo[]> {
+  const rechazos: Rechazo[] = []
+
+  // 1 · ¿valida contra el esquema vigente?
+  const errores = validarManifiesto(propuesto).filter((p) => p.gravedad === 'error')
+  for (const e of errores) {
+    rechazos.push({ paso: 1, motivo: `${e.campo}: ${e.mensaje}` })
+  }
+
+  // 2 · ¿marca como modificable algo constitucional?
+  // El validador ya lo cubre, pero se comprueba aparte para poder decirlo con
+  // sus palabras: "esto no se toca" no es lo mismo que "el campo está mal".
+  for (const c of propuesto.constitucional ?? []) {
+    if ((c as { modificable?: unknown }).modificable === true) {
+      rechazos.push({
+        paso: 2,
+        motivo: `"${c.elemento}" está protegido por el límite ${c.limite} y no se puede marcar modificable.`,
+      })
+    }
+  }
+
+  // 3 · ¿rompe dependencias declaradas de otros pools?
+  // Si otro pool dice que lee una entidad de éste, no se la puede sacar sin
+  // avisarle: el otro se quedaría leyendo algo que ya nadie declara.
+  const propias = new Set(
+    propuesto.entidades.filter((e) => e.acceso === 'propia').map((e) => e.tabla),
+  )
+  for (const [otraClave, otra] of Object.entries(MANIFIESTOS)) {
+    if (otraClave === clave) continue
+    for (const e of otra.manifiesto.entidades) {
+      if (e.dueno === clave && !propias.has(e.tabla)) {
+        rechazos.push({
+          paso: 3,
+          motivo: `"${otraClave}" declara que ${e.tabla} es de este pool, y la propuesta ya no la declara propia.`,
+        })
+      }
+    }
+    if (otra.manifiesto.depende_de.includes(clave) && propuesto.entidades.length === 0) {
+      rechazos.push({ paso: 3, motivo: `"${otraClave}" depende de este pool y la propuesta lo deja vacío.` })
+    }
+  }
+
+  // 4 · si está gobernando, ¿deja alguna pantalla sin título?
+  // Con el pool apagado un título vacío es un dato feo; con el pool prendido es
+  // una cabecera en blanco en la cara de alguien.
+  if (gobernando) {
+    for (const p of propuesto.pantallas) {
+      if (p.titulo_dinamico) continue
+      if (!p.titulo || !p.titulo.trim()) {
+        rechazos.push({ paso: 4, motivo: `La pantalla ${p.ruta} quedaría sin título y el pool está gobernando.` })
+      }
+    }
+    for (const a of propuesto.acciones) {
+      if (!a.descripcion?.trim()) {
+        rechazos.push({ paso: 4, motivo: `La acción ${a.clave} quedaría sin descripción.` })
+      }
+    }
+  }
+
+  return rechazos
+}
+
+/* ── Escribir ────────────────────────────────────────────────────────────── */
+
+export interface ResultadoEscritura {
+  ok: boolean
+  versionId?: string
+  numero?: number
+  rechazos?: Rechazo[]
+  error?: string
+}
+
+/**
+ * Crea una versión nueva y la deja como actual.
+ *
+ * La transacción vive en `fab_escribir_version` (migración 0098): bajar la
+ * anterior, insertar la nueva y apuntar la instalación tienen que pasar juntos
+ * o no pasar.
+ */
+export async function escribirVersion(args: {
+  clave: string
+  manifiesto: Manifiesto
+  motivo: string
+  autorId: string
+  gobernando: boolean
+  /** Si nace de un revert, a qué versión vuelve. */
+  revierteA?: string
+}): Promise<ResultadoEscritura> {
+  if (!args.motivo?.trim()) {
+    return { ok: false, error: 'Hace falta escribir por qué se hace este cambio.' }
+  }
+
+  const rechazos = await validarAntesDeEscribir(args.clave, args.manifiesto, args.gobernando)
+  if (rechazos.length > 0) return { ok: false, rechazos }
+
+  const adm = createAdminClient()
+  const { data: pool } = await adm
+    .from('fab_pools')
+    .select('id')
+    .eq('clave', args.clave)
+    .maybeSingle()
+  if (!pool) return { ok: false, error: 'No existe ese pool.' }
+
+  const { data, error } = await adm.rpc('fab_escribir_version', {
+    p_pool_id: (pool as { id: string }).id,
+    p_manifiesto: args.manifiesto as unknown as Record<string, unknown>,
+    p_motivo: args.motivo.trim(),
+    p_autor: args.autorId,
+    p_revierte_a: args.revierteA ?? null,
+  })
+
+  if (error || !data) {
+    return { ok: false, error: 'No se pudo guardar la versión. No se cambió nada.' }
+  }
+
+  const nueva = await versionActual(args.clave)
+  return { ok: true, versionId: String(data), numero: nueva?.numero }
+}
+
+/**
+ * Revertir a una versión anterior.
+ *
+ * CREA UNA VERSIÓN NUEVA con el contenido de la vieja. No borra ni reescribe
+ * historia: si revertir borrara la versión mala, se pierde el registro de que
+ * existió y de qué rompió — que es justo lo que hay que mirar después.
+ */
+export async function revertirA(args: {
+  clave: string
+  versionId: string
+  motivo: string
+  autorId: string
+  gobernando: boolean
+}): Promise<ResultadoEscritura> {
+  const adm = createAdminClient()
+  const { data: destino } = await adm
+    .from('fab_pool_versiones')
+    .select('id, numero, manifiesto')
+    .eq('id', args.versionId)
+    .maybeSingle()
+
+  const v = destino as unknown as { id: string; numero: number; manifiesto: Manifiesto } | null
+  if (!v) return { ok: false, error: 'No se encontró esa versión.' }
+
+  return escribirVersion({
+    clave: args.clave,
+    manifiesto: v.manifiesto,
+    motivo: args.motivo?.trim() || `Vuelve a la versión ${v.numero}.`,
+    autorId: args.autorId,
+    gobernando: args.gobernando,
+    revierteA: v.id,
+  })
+}
