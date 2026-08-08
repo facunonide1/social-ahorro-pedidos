@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * "obra social" acá adentro.
  */
 export const MANIFIESTO_CLIENTES: Manifiesto = {
-  formato: '1.2.0',
+  formato: '1.3.0',
   pool: 'clientes',
   nombre: 'Clientes',
   categoria: 'generico',

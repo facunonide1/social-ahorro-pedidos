@@ -7,6 +7,7 @@ import { verificarEspejo } from '@/lib/fabrica/comparador'
 import { MANIFIESTOS } from '@/lib/fabrica/manifiestos'
 import { BotonRevertir, EditorDeclaracion } from '@/components/fabrica/editor-declaracion'
 import { historial, manifiestoVigente } from '@/lib/fabrica/versiones'
+import { historialInstalacion, overridesActuales, resolver } from '@/lib/fabrica/overrides'
 import { estadoDelLector } from '@/lib/fabrica/flag'
 import { ETIQUETA_MOLDE, type Participacion, type TipoDiferencia } from '@/lib/fabrica/tipos'
 
@@ -38,6 +39,17 @@ const ETIQUETA_TIPO: Record<TipoDiferencia, string> = {
   permiso: 'Permiso',
 }
 
+/** El id de la instalación de este pool en este proyecto. */
+async function idInstalacion(proyectoId: string, clave: string): Promise<string | null> {
+  const { data } = await createClient()
+    .from('fab_instalaciones')
+    .select('id, pool:fab_pools!inner(clave)')
+    .eq('proyecto_id', proyectoId)
+    .eq('fab_pools.clave', clave)
+    .maybeSingle()
+  return (data as unknown as { id: string } | null)?.id ?? null
+}
+
 export async function generateMetadata({ params }: { params: { clave: string } }) {
   return { title: MANIFIESTOS[params.clave]?.manifiesto.nombre ?? 'Pool' }
 }
@@ -56,7 +68,14 @@ export default async function VerificacionPoolPage({
   // Se muestra y se verifica el manifiesto que GOBIERNA, no la semilla del
   // repo: desde v0.63 quien manda es la fila de la base.
   const vigente = await manifiestoVigente(params.clave)
-  const manifiesto = vigente?.manifiesto ?? entrada.manifiesto
+  const deLaPieza = vigente?.manifiesto ?? entrada.manifiesto
+
+  // Lo que se muestra es el manifiesto EFECTIVO: la pieza con lo de este
+  // proyecto encima, y de dónde salió cada valor.
+  const instalacionId = await idInstalacion(proyecto.id, params.clave)
+  const propios = instalacionId ? await overridesActuales(instalacionId) : null
+  const { manifiesto, origenes } = resolver(deLaPieza, propios?.overrides ?? null)
+  const versionesInstalacion = instalacionId ? await historialInstalacion(instalacionId) : []
   const { prefijos } = entrada
   const verificacion = await verificarEspejo(manifiesto, prefijos, createClient(), entrada.excluir)
 
@@ -191,6 +210,11 @@ export default async function VerificacionPoolPage({
                 <tr key={p.ruta} className="border-t border-border">
                   <td className="px-3 py-2 font-medium">
                     {p.titulo}
+                    {origenes[`pantallas.${p.ruta}.titulo`] === 'instalacion' && (
+                      <Badge variant="info" className="ml-2 font-normal">
+                        de este proyecto
+                      </Badge>
+                    )}
                     {p.pertenencia === 'prestada' && (
                       <Badge variant="warning" className="ml-2 font-normal">
                         prestada
@@ -260,17 +284,57 @@ export default async function VerificacionPoolPage({
               ruta: p.ruta,
               titulo: p.titulo,
               dinamico: p.titulo_dinamico === true,
+              enLaPieza: deLaPieza.pantallas.find((x) => x.ruta === p.ruta)?.titulo ?? p.titulo,
+              esOverride: origenes[`pantallas.${p.ruta}.titulo`] === 'instalacion',
             }))}
           />
         </div>
       </section>
 
-      {/* ── Historial ─────────────────────────────────────────────────── */}
+      {/* ── Historial de la instalación ───────────────────────────────── */}
       <section>
         <h3 className="text-sm font-semibold tracking-tight">
-          Historial
+          Historial de este proyecto
+          <span className="ml-2 font-normal text-muted-foreground">{versionesInstalacion.length}</span>
+        </h3>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          Lo que este negocio declaró distinto de la pieza. Cambiar algo acá no
+          toca a los otros proyectos que instalaron la misma pieza.
+        </p>
+        {versionesInstalacion.length === 0 ? (
+          <p className="mt-3 rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+            Este proyecto todavía no cambió nada: usa la pieza tal como viene.
+          </p>
+        ) : (
+          <div className="mt-3 divide-y divide-border rounded-lg border border-border">
+            {versionesInstalacion.map((v) => (
+              <div key={v.id} className="flex flex-wrap items-start gap-3 px-4 py-3">
+                <span className="w-14 shrink-0 text-sm font-semibold tabular-nums">v{v.numero}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {v.esActual && <Badge variant="success" className="font-normal">vigente</Badge>}
+                    <span className="text-xs text-muted-foreground">
+                      {String(v.creadaAt).slice(0, 16).replace('T', ' ')}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm">{v.motivo ?? 'sin motivo registrado'}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── Historial de la pieza ─────────────────────────────────────── */}
+      <section>
+        <h3 className="text-sm font-semibold tracking-tight">
+          Historial de la pieza
           <span className="ml-2 font-normal text-muted-foreground">{versiones.length}</span>
         </h3>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          Compartido con todos los proyectos que instalaron este pool. Un cambio
+          acá los alcanza a todos.
+        </p>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
           Ninguna versión se edita ni se borra. Revertir crea una versión nueva
           con el contenido de la vieja: si borrara la mala, se perdería el

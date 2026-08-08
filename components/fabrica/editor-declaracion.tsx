@@ -15,6 +15,10 @@ interface PantallaEditable {
   ruta: string
   titulo: string
   dinamico: boolean
+  /** El valor que trae la pieza compartida. */
+  enLaPieza: string
+  /** true = este proyecto lo tiene distinto. */
+  esOverride: boolean
 }
 
 interface LineaDiff {
@@ -67,26 +71,57 @@ export function EditorDeclaracion({
             ? 'Este pool está gobernado: lo que se guarde acá se ve en la pantalla en la request siguiente, sin deploy.'
             : 'Este pool no está gobernado todavía. El cambio queda declarado y no se ve en ningún lado hasta prender el lector.'}
         </p>
+        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+          Lo que se guarde es de <span className="font-medium">este proyecto</span>. La
+          pieza compartida no se toca, así que los otros proyectos que la
+          instalaron siguen viendo lo suyo.
+        </p>
       </div>
 
       <div className="divide-y divide-border">
-        {editables.map((p) => (
-          <div key={p.ruta} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
-            <span className="min-w-0 flex-1 font-mono text-xs text-muted-foreground">{p.ruta}</span>
-            <input
-              value={titulos[p.ruta] ?? ''}
-              onChange={(e) => {
-                setTitulos({ ...titulos, [p.ruta]: e.target.value })
-                setDiff(null)
-              }}
-              className="h-8 w-64 rounded-md border border-border bg-background px-2 text-sm"
-              aria-label={`Título de ${p.ruta}`}
-            />
-            {titulos[p.ruta] !== p.titulo && (
-              <Badge variant="warning" className="font-normal">cambiado</Badge>
-            )}
-          </div>
-        ))}
+        {editables.map((p) => {
+          const vueltoAlDefault = titulos[p.ruta] === p.enLaPieza
+          return (
+            <div key={p.ruta} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
+              <div className="min-w-0 flex-1">
+                <div className="font-mono text-xs text-muted-foreground">{p.ruta}</div>
+                {!vueltoAlDefault && (
+                  <div className="text-[11px] text-muted-foreground">
+                    la pieza dice &ldquo;{p.enLaPieza}&rdquo;
+                  </div>
+                )}
+              </div>
+              <input
+                value={titulos[p.ruta] ?? ''}
+                onChange={(e) => {
+                  setTitulos({ ...titulos, [p.ruta]: e.target.value })
+                  setDiff(null)
+                }}
+                className="h-8 w-64 rounded-md border border-border bg-background px-2 text-sm"
+                aria-label={`Título de ${p.ruta}`}
+              />
+              {p.esOverride && !vueltoAlDefault && (
+                <Badge variant="info" className="font-normal">de este proyecto</Badge>
+              )}
+              {titulos[p.ruta] !== p.titulo && (
+                <Badge variant="warning" className="font-normal">cambiado</Badge>
+              )}
+              {!vueltoAlDefault && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    setTitulos({ ...titulos, [p.ruta]: p.enLaPieza })
+                    setDiff(null)
+                  }}
+                >
+                  volver al default
+                </Button>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {pantallas.some((p) => p.dinamico) && (

@@ -22,7 +22,7 @@ import type { Manifiesto } from '../tipos'
  * cualquier negocio que mueva plata.
  */
 export const MANIFIESTO_FINANZAS: Manifiesto = {
-  formato: '1.2.0',
+  formato: '1.3.0',
   pool: 'finanzas',
   nombre: 'Finanzas',
   categoria: 'generico',
