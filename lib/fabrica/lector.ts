@@ -278,7 +278,15 @@ export async function compararEnSombra(
   const pantalla = r.manifiesto.pantallas.find((p) => p.ruta === ruta)
   if (pantalla?.titulo_dinamico) return
 
-  const declarado = pantalla?.titulo
+  // SE COMPARA CONTRA EL TÉRMINO DEL OFICIO, NO CONTRA EL TÍTULO EFECTIVO.
+  //
+  // Si este negocio declaró que a esta pantalla le dice distinto, eso es una
+  // DECISIÓN, no una diferencia. Compararlo contra el literal del código haría
+  // que cada entrada legítima de vocabulario deje una alarma que nunca se puede
+  // cerrar: alguien tendría que elegir entre registrar cómo habla su equipo y
+  // tener el tablero en cero. Una diferencia es que la PIEZA no coincida con el
+  // código, que sí es un defecto y sí hay que arreglar.
+  const declarado = pantalla?.titulo_de_oficio ?? pantalla?.titulo
   if (declarado === undefined) {
     await registrar(pool, 'diferencia', 'pantallas', 'La declaración no incluye esta pantalla.', {
       ruta,
@@ -292,6 +300,9 @@ export async function compararEnSombra(
       ruta,
       en_codigo: enCodigo,
       en_declaracion: declarado,
+      // Se deja asentado si además hay vocabulario, para que quien lea el evento
+      // no crea que la diferencia la causó el vocabulario.
+      nombre_en_el_negocio: pantalla?.nombre_en_el_negocio ?? null,
     })
   }
 }

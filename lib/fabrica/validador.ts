@@ -14,7 +14,7 @@ import type { Manifiesto } from './tipos'
  * ejecutar antes de commitear sin credenciales de nada.
  */
 
-export const FORMATO_ACTUAL = '1.4.0'
+export const FORMATO_ACTUAL = '1.5.0'
 
 export interface Problema {
   campo: string
@@ -100,6 +100,17 @@ export function validarManifiesto(m: Manifiesto): Problema[] {
     rutas.add(s.ruta)
     if (!MOLDES_VALIDOS.has(s.molde)) err(`pantallas.${s.ruta}`, `molde desconocido: ${s.molde}`)
     if (!s.titulo) err(`pantallas.${s.ruta}`, 'falta el título')
+    // `titulo_de_oficio` y `nombre_en_el_negocio` sólo existen en el manifiesto
+    // EFECTIVO, que `resolver()` arma en memoria. Declararlos en la pieza sería
+    // meterle a la pieza el vocabulario de un negocio, que es exactamente lo que
+    // 1.5.0 vino a evitar.
+    if (s.titulo_de_oficio !== undefined)
+      err(`pantallas.${s.ruta}`, 'titulo_de_oficio no se declara: el `titulo` de la pieza YA es el término del oficio')
+    if (s.nombre_en_el_negocio !== undefined)
+      err(
+        `pantallas.${s.ruta}`,
+        'nombre_en_el_negocio es de la instalación, no de la pieza: va como override `vocabulario`',
+      )
     // Una prestada con permiso propio es una contradicción: si el permiso lo
     // pone este pool, la pantalla no es de otro.
     if (s.pertenencia === 'prestada' && s.permiso) {

@@ -136,8 +136,20 @@ function unPool(p: PoolVisible): string {
 POOL ${p.clave} — "${m.nombre}"
   lector: ${p.estado.lector}${p.estado.lector === 'prendido' ? ' — GOBIERNA: lo que se apruebe se ve' : ' — NO gobierna: un cambio acá no se ve en ninguna pantalla'}
   ${p.estado.diferencias > 0 ? `diferencias sin resolver: ${p.estado.diferencias}` : 'sin diferencias abiertas'}${p.estado.fallbacks > 0 ? ` · cayó al código ${p.estado.fallbacks} vez/veces` : ''}
-  títulos gobernables:
-${gob.map((x) => `    ${x.ruta} = "${x.titulo}"`).join('\n') || '    ninguno'}
+  títulos gobernables (si dice "oficio", el equipo de ACÁ le dice distinto y
+  vos entendés las DOS formas: si te nombran cualquiera de las dos, es la misma
+  pantalla, y contestá con la que usó la persona):
+${
+    gob
+      .map(
+        (x) =>
+          `    ${x.ruta} = "${x.titulo}"` +
+          (x.nombre_en_el_negocio && x.titulo_de_oficio !== x.titulo
+            ? ` (oficio: "${x.titulo_de_oficio}")`
+            : ''),
+      )
+      .join('\n') || '    ninguno'
+  }
   pantallas que NO se pueden retitular: ${noGob.map((x) => x.ruta).join(', ') || 'ninguna'}
   parámetros declarados (todavía NO leídos): ${m.configurable?.map((c) => `${c.clave}[${c.peso}]=${JSON.stringify(c.default)}`).join(' · ') || 'ninguno'}
   INTOCABLES: ${m.constitucional?.map((c) => `${c.elemento} (${c.limite})`).join(' · ') || 'ninguno'}
@@ -155,6 +167,16 @@ sistema así podría hacer". Si algo no está declarado, no existe y lo decís.
 NUNCA prometas algo que el catálogo no muestre, ni digas "más adelante sí".
 
 ${puedeProponer ? '' : 'ESTE USUARIO SÓLO PUEDE CONSULTAR, NO PROPONER. Contestá lo que pregunte; si pide un cambio, decíselo y explicale a quién pedírselo.\n'}
+HAY DOS NOMBRES PARA CADA PANTALLA Y NO SON LO MISMO:
+  · el TÉRMINO DEL OFICIO vive en la pieza. Es el nombre de la cosa en el rubro.
+  · el NOMBRE DE ESTE NEGOCIO vive en la instalación. Es cómo le dice el equipo.
+Si alguien quiere cambiar un nombre, distinguí cuál de los dos casos es:
+  · "acá le decimos distinto" → es vocabulario. Va en el campo vocabulario y NO borra
+    el término del oficio. Es legítimo y permanente.
+  · "la pieza dice algo que está mal, para todos" → eso NO es vocabulario, es un
+    defecto de la pieza. Un override así tapa el defecto y el próximo negocio
+    que instale la pieza se lo come. Decilo y ofrecé anotarlo contra la pieza.
+
 LO ÚNICO QUE HOY GOBIERNA EL LECTOR: títulos de pantalla y qué se ve en el menú.
 Los parámetros y las acciones del asistente se DECLARAN, pero el sistema sigue
 usando su código: cambiarlos queda escrito y no se ve. Eso se dice ANTES, no
@@ -308,9 +330,16 @@ const HERRAMIENTA: Anthropic.Tool = {
     type: 'object',
     properties: {
       pool: { type: 'string', description: 'La clave del pool, tal cual figura en el catálogo.' },
+      vocabulario: {
+        type: 'object',
+        description:
+          'ruta de pantalla → cómo le dice ESTE negocio. Usá esto cuando el término del oficio está bien y el equipo lo nombra distinto. No borra el término del oficio.',
+        additionalProperties: { type: 'string' },
+      },
       titulos: {
         type: 'object',
-        description: 'ruta de pantalla → título nuevo. Sólo rutas gobernables del catálogo.',
+        description:
+          'ruta de pantalla → título nuevo, CORRIGIENDO la pieza. Usá esto SÓLO cuando la pieza dice algo que está mal para todos, y avisá que es deuda: tapa un defecto en vez de arreglarlo.',
         additionalProperties: { type: 'string' },
       },
       ocultas: {
@@ -561,6 +590,7 @@ async function responder(args: PedidoDeChat): Promise<RespuestaChat> {
   /* ── Quiso proponer: se decide acá, no en el modelo ───────────────── */
   const e = uso.input as {
     pool: string
+    vocabulario?: Record<string, string>
     titulos?: Record<string, string>
     ocultas?: string[]
     configurable?: Record<string, unknown>
@@ -568,6 +598,7 @@ async function responder(args: PedidoDeChat): Promise<RespuestaChat> {
   }
 
   const cambio: Overrides = {}
+  if (e.vocabulario && Object.keys(e.vocabulario).length) cambio.vocabulario = e.vocabulario
   if (e.titulos && Object.keys(e.titulos).length) cambio.titulos = e.titulos
   if (e.ocultas?.length) cambio.ocultas = e.ocultas
   if (e.configurable && Object.keys(e.configurable).length) cambio.configurable = e.configurable
@@ -583,7 +614,11 @@ async function responder(args: PedidoDeChat): Promise<RespuestaChat> {
     {
       clave: e.pool,
       campos: Object.keys(cambio),
-      rutas: Object.keys(e.titulos ?? {}).concat(e.ocultas ?? []),
+      rutas: [
+        ...Object.keys(e.vocabulario ?? {}),
+        ...Object.keys(e.titulos ?? {}),
+        ...(e.ocultas ?? []),
+      ],
       configurables: Object.keys(e.configurable ?? {}),
     },
     pool?.manifiesto ?? null,

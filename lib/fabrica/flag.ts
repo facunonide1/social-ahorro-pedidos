@@ -1,5 +1,6 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { corteDe } from './cobertura-lector'
+import { ESTADOS_LECTOR } from './lector-estados'
 import type { EstadoLector } from './lector-estados'
 
 /**
@@ -180,6 +181,15 @@ export async function cambiarEstadoLector(args: {
     .eq('proyecto_id', args.proyectoId)
     .eq('fab_pools.clave', args.clave)
     .maybeSingle()
+
+  // Un estado que no existe NO puede contestar que sí. Sin esta guarda,
+  // `hasta: undefined` hacía un update que supabase-js vacía, la fila quedaba
+  // igual, y la función devolvía { ok: true }: un interruptor que dice que lo
+  // moviste y no se movió. Es el peor tipo de indicador, porque el que lo lee
+  // deja de mirar.
+  if (!ESTADOS_LECTOR.includes(args.hasta)) {
+    return { ok: false, error: `"${args.hasta}" no es un estado del lector.` }
+  }
 
   const fila = inst as unknown as { id: string; lector: EstadoLector } | null
   if (!fila) return { ok: false, error: 'Ese pool no está instalado en este proyecto.' }

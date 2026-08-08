@@ -11,8 +11,27 @@ import type { Manifiesto, Participacion } from './tipos'
 export interface Overrides {
   nombre?: string
   descripcion?: string
-  /** ruta → título de esta instalación. */
+  /**
+   * ruta → título de esta instalación, CORRIGIENDO la pieza.
+   *
+   * Es para cuando la pieza dice algo que está mal —para todos, no sólo acá—.
+   * Un override así es deuda: tapa un defecto de la pieza mientras se arregla,
+   * y el próximo negocio que la instale se come el mismo problema. Debería ser
+   * temporal y casi siempre no lo es.
+   */
   titulos?: Record<string, string>
+  /**
+   * ruta → cómo le dice ESTE negocio.
+   *
+   * Es la otra cosa, y hasta 1.5.0 estaban mezcladas en `titulos`. "Recartelado"
+   * es el término del oficio y está bien; "Cartelería de precios" es como le
+   * dice este equipo y también está bien. No es un defecto de la pieza: es
+   * vocabulario, es legítimamente local, y no hay nada que arreglar aguas
+   * arriba.
+   *
+   * Gana sobre `titulos` y sobre la pieza, y NO borra el término del oficio.
+   */
+  vocabulario?: Record<string, string>
   /** Rutas que este proyecto no muestra en el menú. */
   ocultas?: string[]
   /** clave del parámetro → valor de este proyecto. */
@@ -131,13 +150,25 @@ export function resolver(
   if (o.descripcion !== undefined) m.descripcion = o.descripcion
 
   m.pantallas = m.pantallas.map((p) => {
-    const tituloPropio = o.titulos?.[p.ruta]
-    marcar(`pantallas.${p.ruta}.titulo`, tituloPropio !== undefined)
+    const delNegocio = o.vocabulario?.[p.ruta]
+    const corregido = o.titulos?.[p.ruta]
+    marcar(`pantallas.${p.ruta}.vocabulario`, delNegocio !== undefined)
+    // El origen del título sólo dice `instalacion` si el override CAMBIA algo.
+    // Un override idéntico a la pieza no es una decisión del negocio, y marcarlo
+    // como tal hace que el portal afirme algo que no pasó.
+    marcar(
+      `pantallas.${p.ruta}.titulo`,
+      corregido !== undefined && corregido !== p.titulo,
+    )
     const oculta = o.ocultas?.includes(p.ruta)
     marcar(`pantallas.${p.ruta}.navegable`, oculta === true)
     return {
       ...p,
-      titulo: tituloPropio ?? p.titulo,
+      // Orden: vocabulario del negocio → corrección de la pieza → la pieza.
+      titulo: delNegocio ?? corregido ?? p.titulo,
+      // El término del oficio no se pierde nunca. Es el punto entero de 1.5.0.
+      titulo_de_oficio: p.titulo,
+      nombre_en_el_negocio: delNegocio,
       navegable: oculta ? false : p.navegable,
     }
   })
@@ -216,6 +247,32 @@ export function validarOverrides(delPool: Manifiesto, o: Overrides): RechazoOver
       out.push({ campo: `titulos.${ruta}`, motivo: 'Un título vacío deja la cabecera en blanco.' })
     }
   }
+  // El vocabulario del negocio: mismas reglas que un título, más una propia.
+  for (const [ruta, nombre] of Object.entries(o.vocabulario ?? {})) {
+    const p = delPool.pantallas.find((x) => x.ruta === ruta)
+    if (!p) {
+      out.push({ campo: `vocabulario.${ruta}`, motivo: 'La pieza no declara esa pantalla.' })
+      continue
+    }
+    if (p.titulo_dinamico) {
+      out.push({
+        campo: `vocabulario.${ruta}`,
+        motivo: 'Esa pantalla se titula con sus datos: una etiqueta fija le quitaría información.',
+      })
+    }
+    if (!nombre.trim()) {
+      out.push({ campo: `vocabulario.${ruta}`, motivo: 'Un nombre vacío deja la cabecera en blanco.' })
+    }
+    if (nombre.trim() === p.titulo) {
+      // No es un detalle de prolijidad: un override idéntico a la pieza hace que
+      // el origen diga "decisión de este negocio" sobre algo que nadie decidió.
+      out.push({
+        campo: `vocabulario.${ruta}`,
+        motivo: `Es idéntico al término del oficio ("${p.titulo}"). Un override que no cambia nada hace que el origen mienta: si acá se dice igual, no hace falta declararlo.`,
+      })
+    }
+  }
+
   for (const ruta of o.ocultas ?? []) {
     if (!rutas.has(ruta)) out.push({ campo: `ocultas.${ruta}`, motivo: 'La pieza no declara esa pantalla.' })
   }

@@ -312,6 +312,19 @@ export type Molde =
 
 export interface PantallaDeclarada {
   ruta: string
+  /**
+   * EL TÉRMINO DEL OFICIO. Cómo se llama esta cosa en el rubro.
+   *
+   * Vive en la PIEZA porque es lo que hace que la pieza sirva en otro negocio:
+   * "Recartelado" es el término del oficio en farmacia, lo entienda o no el
+   * equipo de un negocio en particular.
+   *
+   * Desde 1.5.0 esto NO es "el título que se muestra". El que se muestra es el
+   * nombre del negocio si existe, y éste si no. La distinción existe porque
+   * hasta 1.4.0 la única forma de registrar cómo le dice un equipo a algo era
+   * pisar el título, y eso BORRABA el término del oficio: el pool se llevaba el
+   * vocabulario de un negocio al negocio siguiente.
+   */
   titulo: string
   molde: Molde
   /** Permiso que la habilita. Vacío = cualquiera del proyecto. */
@@ -349,6 +362,25 @@ export interface PantallaDeclarada {
    * una deuda que nunca se puede pagar.
    */
   redirige_a?: string
+  /**
+   * Sólo aparece en el manifiesto EFECTIVO (pieza + instalación), nunca en la
+   * declaración de la pieza: es el `titulo` de la pieza, guardado antes de que
+   * el vocabulario del negocio lo tape.
+   *
+   * Existe para tres cosas concretas, y las tres se necesitaban:
+   *   · que el chat entienda las dos formas de nombrar lo mismo
+   *   · que un pool instalado en otro negocio NO herede este vocabulario
+   *   · que se pueda volver al término del oficio sin buscarlo en el historial
+   */
+  titulo_de_oficio?: string
+  /**
+   * Cómo le dice ESTE negocio. Sólo en el manifiesto efectivo.
+   *
+   * Ausente significa "acá le decimos como en el oficio", que es una respuesta
+   * distinta de "acá le decimos igual que en el oficio pero lo declaramos": la
+   * segunda deja un override que no cambia nada y hace que el origen mienta.
+   */
+  nombre_en_el_negocio?: string
 }
 
 export interface AccionDeclarada {

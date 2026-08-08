@@ -70,6 +70,12 @@ export const CLASIFICACION: CampoClasificado[] = [
       'EL CAMPO QUE ORIGINÓ ESTA SESIÓN. "Transferencias entre sucursales" es el texto de ESTE proyecto; otro querría el suyo. Vivía en la pieza compartida y cambiarlo en un proyecto se lo cambiaba al otro.',
   },
   {
+    campo: 'pantallas[].vocabulario',
+    nivel: 'instalacion',
+    motivo:
+      'Cómo le dice ESTE equipo a una pantalla. Es lo más de instalación que hay: no corrige nada de la pieza, no viaja a otro negocio, y el término del oficio queda intacto abajo. Es la mitad legítima de lo que hasta 1.4.0 se hacía pisando el título.',
+  },
+  {
     campo: 'pantallas[].molde',
     nivel: 'pool',
     fueAmbiguo: true,

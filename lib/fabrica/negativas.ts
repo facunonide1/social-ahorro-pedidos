@@ -54,7 +54,7 @@ export interface Negativa {
  * constante cambia y el chat deja de mentir sin que nadie tenga que acordarse
  * de él.
  */
-export const GOBIERNA_HOY = ['titulos', 'ocultas', 'nombre', 'descripcion']
+export const GOBIERNA_HOY = ['titulos', 'vocabulario', 'ocultas', 'nombre', 'descripcion']
 
 /**
  * Se declara, todavía no se lee, pero SÍ se puede proponer.
@@ -85,6 +85,7 @@ const CLAVES_DE_OVERRIDE = new Set([
   'nombre',
   'descripcion',
   'titulos',
+  'vocabulario',
   'ocultas',
   'configurable',
   'dimensiones',
