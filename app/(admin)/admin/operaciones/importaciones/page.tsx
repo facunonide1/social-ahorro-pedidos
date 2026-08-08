@@ -1,6 +1,7 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { tituloDePantalla } from '@/lib/os/definicion'
 
 import { ImportacionesClient } from './importaciones-client'
 
@@ -8,6 +9,10 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Importaciones' }
 
 export default async function ImportacionesPage() {
+  // Puede venir de la declaración de la fábrica. Si el lector está apagado
+  // o algo falla, devuelve este mismo texto: la pantalla no cambia.
+  const tituloDeclarado = await tituloDePantalla('stock', '/admin/operaciones/importaciones', 'Importaciones')
+
   const profile = await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador'] })
   const sb = createClient()
 
@@ -20,7 +25,7 @@ export default async function ImportacionesPage() {
   return (
     <>
       <PageHeader
-        title="Importaciones"
+        title={tituloDeclarado}
         description="Subí el Excel diario de SIFACO por sucursal. NORA detecta ventas por diferencia de stock."
         breadcrumbs={[{ label: 'Operaciones' }, { label: 'Importaciones' }]}
       />

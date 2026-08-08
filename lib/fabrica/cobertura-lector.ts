@@ -53,7 +53,7 @@ export async function coberturaDe(
 
   const version = await versionActual(clave)
   const gobernables = (version?.manifiesto.pantallas ?? []).filter(
-    (p) => !p.titulo_dinamico && p.pertenencia !== 'prestada',
+    (p) => !p.titulo_dinamico && !p.redirige_a && p.pertenencia !== 'prestada',
   )
 
   // Una diferencia registrada ANTES del último cambio de declaración puede

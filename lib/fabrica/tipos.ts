@@ -340,6 +340,15 @@ export interface PantallaDeclarada {
    * etiqueta fija sería quitarle información a la pantalla, no configurarla.
    */
   titulo_dinamico?: boolean
+  /**
+   * La ruta no muestra nada: redirige a otra.
+   *
+   * Existe porque el catálogo tiene que saber que la ruta existe —alguien puede
+   * tener el link guardado— pero no hay cabecera que gobernar. Declararla como
+   * pantalla común la dejaba para siempre en la lista de "sin cablear", que es
+   * una deuda que nunca se puede pagar.
+   */
+  redirige_a?: string
 }
 
 export interface AccionDeclarada {

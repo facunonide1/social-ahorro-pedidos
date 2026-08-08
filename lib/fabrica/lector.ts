@@ -229,7 +229,7 @@ export async function obtenerDefinicion(
     // fila, y una etiqueta fija le quitaría información a la pantalla.
     titulos: Object.fromEntries(
       r.manifiesto.pantallas
-        .filter((p) => !p.titulo_dinamico)
+        .filter((p) => !p.titulo_dinamico && !p.redirige_a)
         .map((p) => [p.ruta, p.titulo]),
     ),
   }

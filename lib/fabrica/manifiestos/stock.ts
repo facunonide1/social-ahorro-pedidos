@@ -82,7 +82,9 @@ export const MANIFIESTO_STOCK: Manifiesto = {
     { ruta: '/admin/operaciones/stock/[id]', titulo: 'Ficha de item', molde: 'ficha', permiso: 'operaciones', navegable: false, titulo_dinamico: true },
     { ruta: '/admin/operaciones/stock/nuevo', titulo: 'Alta de item', molde: 'wizard', permiso: 'operaciones', navegable: false },
     { ruta: '/admin/operaciones/transferencias/[id]', titulo: 'Ficha de transferencia', molde: 'ficha', permiso: 'operaciones', navegable: false, titulo_dinamico: true },
-    { ruta: '/admin/operaciones/transferencias/nueva', titulo: 'Nueva transferencia', molde: 'wizard', permiso: 'operaciones', navegable: false },
+    // No es una pantalla: redirige al listado. El catálogo la conoce porque la
+    // ruta existe, pero no hay cabecera que gobernar.
+    { ruta: '/admin/operaciones/transferencias/nueva', titulo: 'Nueva transferencia', molde: 'wizard', permiso: 'operaciones', navegable: false, redirige_a: '/admin/operaciones/transferencias' },
     { ruta: '/admin/operaciones/inventarios/[id]', titulo: 'Ficha de inventario', molde: 'ficha', permiso: 'operaciones', navegable: false, titulo_dinamico: true },
     { ruta: '/admin/operaciones/control-zonas/[id]', titulo: 'Ficha de control de zona', molde: 'ficha', permiso: 'operaciones', navegable: false, titulo_dinamico: true },
 

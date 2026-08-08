@@ -72,7 +72,7 @@ export async function verificarPool(args: {
   const efectivo = version ? resolver(version.manifiesto, propios?.overrides ?? null).manifiesto : null
 
   const gobernables = (efectivo?.pantallas ?? []).filter(
-    (p) => !p.titulo_dinamico && p.pertenencia !== 'prestada',
+    (p) => !p.titulo_dinamico && !p.redirige_a && p.pertenencia !== 'prestada',
   )
 
   const base: ResultadoVerificacion = {
