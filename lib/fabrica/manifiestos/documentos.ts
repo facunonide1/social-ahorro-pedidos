@@ -40,18 +40,17 @@ export const MANIFIESTO_DOCUMENTOS: Manifiesto = {
     { tabla: 'sucursales', rol: 'Qué punto compró. Tiene impacto fiscal, así que va siempre explícito', acceso: 'leida', dueno: 'configuracion' },
   ],
 
-  // Los títulos son EXACTAMENTE los que muestra cada pantalla, carácter por
-  // carácter. Al conectar el lector quedó claro que `titulo` estaba escrito
-  // como etiqueta de catálogo ("Documentos", "Revisión de lectura") y no como
-  // el texto que la persona ve ("Documentos a pagar", "Revisar documento").
-  // Describir tolera un sinónimo; gobernar no: si difieren, prender el lector
-  // le cambia la cabecera a alguien que no pidió que se la cambien.
+  // Los títulos de la PIEZA son etiquetas de catálogo, no el texto exacto de un
+  // proyecto. En v0.62 se metió acá el texto de Social Ahorro para que el lector
+  // no le cambiara la cabecera a nadie; eso funcionó pero estaba en el nivel
+  // equivocado. Desde v0.64 el texto exacto de cada negocio vive en los
+  // overrides de su instalación, y acá queda el default de la pieza.
   pantallas: [
     // Todas viven bajo /admin/finanzas: el motor no tiene sección propia.
-    { ruta: '/admin/finanzas/documentos', titulo: 'Documentos a pagar', molde: 'lista_maestra', permiso: 'finanzas', navegable: false },
-    { ruta: '/admin/finanzas/documentos/lote', titulo: 'Cargar facturas en lote', molde: 'wizard', permiso: 'finanzas', navegable: false },
+    { ruta: '/admin/finanzas/documentos', titulo: 'Documentos', molde: 'lista_maestra', permiso: 'finanzas', navegable: false },
+    { ruta: '/admin/finanzas/documentos/lote', titulo: 'Carga en lote', molde: 'wizard', permiso: 'finanzas', navegable: false },
         // Tiene parámetro pero su título es fijo: se revisó y se deja constancia.
-    { ruta: '/admin/finanzas/documentos/revision/[id]', titulo: 'Revisar documento', molde: 'ficha', permiso: 'finanzas', navegable: false, titulo_dinamico: false },
+    { ruta: '/admin/finanzas/documentos/revision/[id]', titulo: 'Revisión de lectura', molde: 'ficha', permiso: 'finanzas', navegable: false, titulo_dinamico: false },
 
     // El título sale del documento: tipo, punto de venta y número. El lector no
     // la gobierna — reemplazar eso por una etiqueta fija sería quitarle

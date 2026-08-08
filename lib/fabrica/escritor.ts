@@ -2,6 +2,13 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { MANIFIESTOS } from './manifiestos'
 import { validarManifiesto } from './validador'
 import { versionActual } from './versiones'
+import { CAMPOS_DE_INSTALACION } from './clasificacion'
+import {
+  overridesActuales,
+  validarOverrides,
+  type Overrides,
+  type RechazoOverride,
+} from './overrides'
 import type { Manifiesto, PantallaDeclarada } from './tipos'
 
 /**
@@ -331,4 +338,100 @@ export async function personasQueLoVen(manifiesto: Manifiesto): Promise<number> 
     // Si no se puede contar, se dice que no se sabe en vez de inventar un número.
     return 0
   }
+}
+
+/* ── Escribir en el nivel de la instalación ──────────────────────────────── */
+
+/**
+ * Un cambio de instalación NO es un cambio de pool.
+ *
+ * Cambiar un título creaba una versión del pool, y eso está mal: el pool es la
+ * pieza compartida y un título es de este negocio. Desde v0.64 cada nivel tiene
+ * su propia línea de versiones, con las mismas reglas.
+ */
+export async function escribirOverride(args: {
+  proyectoId: string
+  clave: string
+  overrides: Overrides
+  motivo: string
+  autorId: string
+  revierteA?: string
+}): Promise<{ ok: boolean; numero?: number; rechazos?: RechazoOverride[]; error?: string }> {
+  if (!args.motivo?.trim()) {
+    return { ok: false, error: 'Hace falta escribir por qué se hace este cambio.' }
+  }
+
+  const adm = createAdminClient()
+  const { data: inst } = await adm
+    .from('fab_instalaciones')
+    .select('id, pool:fab_pools!inner(clave)')
+    .eq('proyecto_id', args.proyectoId)
+    .eq('fab_pools.clave', args.clave)
+    .maybeSingle()
+  const instalacion = inst as unknown as { id: string } | null
+  if (!instalacion) return { ok: false, error: 'Ese pool no está instalado en este proyecto.' }
+
+  const delPool = await versionActual(args.clave)
+  if (!delPool) return { ok: false, error: 'La pieza no tiene una versión actual.' }
+
+  const rechazos = validarOverrides(delPool.manifiesto, args.overrides)
+  if (rechazos.length > 0) return { ok: false, rechazos }
+
+  const { error } = await adm.rpc('fab_escribir_override', {
+    p_instalacion_id: instalacion.id,
+    p_overrides: args.overrides as unknown as Record<string, unknown>,
+    p_motivo: args.motivo.trim(),
+    p_autor: args.autorId,
+    p_revierte_a: args.revierteA ?? null,
+  })
+  if (error) return { ok: false, error: 'No se pudo guardar. No se cambió nada.' }
+
+  const nueva = await overridesActuales(instalacion.id)
+  return { ok: true, numero: nueva?.numero }
+}
+
+/**
+ * Rechaza un cambio de pool hecho desde el contexto de un proyecto.
+ *
+ * Es la regla que impide que "configurar" se convierta en "bifurcar". Alguien
+ * parado en un proyecto puede cambiar lo suyo; para cambiar la PIEZA hay que
+ * estar parado en el catálogo, y eso es una decisión distinta con otras
+ * consecuencias — la toman todos los proyectos que la instalaron.
+ */
+export function rechazarSiEsDelPool(campos: string[]): { ok: boolean; motivo?: string } {
+  const delPool = campos.filter((c) => !CAMPOS_DE_INSTALACION.has(c))
+  if (delPool.length === 0) return { ok: true }
+  return {
+    ok: false,
+    motivo:
+      `${delPool.join(', ')} ${delPool.length === 1 ? 'es de la pieza' : 'son de la pieza'} y no de este proyecto. ` +
+      'Cambiarlo desde acá lo cambiaría para todos los proyectos que la instalaron.',
+  }
+}
+
+export async function revertirOverrideA(args: {
+  proyectoId: string
+  clave: string
+  versionId: string
+  motivo: string
+  autorId: string
+}): Promise<{ ok: boolean; numero?: number; error?: string }> {
+  const adm = createAdminClient()
+  const { data } = await adm
+    .from('fab_instalacion_versiones')
+    .select('id, numero, overrides')
+    .eq('id', args.versionId)
+    .maybeSingle()
+  const v = data as unknown as { id: string; numero: number; overrides: Overrides } | null
+  if (!v) return { ok: false, error: 'No se encontró esa versión.' }
+
+  const r = await escribirOverride({
+    proyectoId: args.proyectoId,
+    clave: args.clave,
+    overrides: v.overrides,
+    motivo: args.motivo?.trim() || `Vuelve a la versión ${v.numero} de la instalación.`,
+    autorId: args.autorId,
+    revierteA: v.id,
+  })
+  return { ok: r.ok, numero: r.numero, error: r.error ?? r.rechazos?.map((x) => x.motivo).join(' · ') }
 }

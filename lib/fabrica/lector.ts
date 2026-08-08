@@ -2,6 +2,7 @@ import * as React from 'react'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { validarManifiesto } from './validador'
+import { overridesActuales, resolver as aplicarOverrides } from './overrides'
 import { PROYECTO_SOCIAL_AHORRO } from './flag'
 import type { EstadoLector } from './lector-estados'
 import type { Manifiesto } from './tipos'
@@ -75,7 +76,7 @@ const resolver = porRequest(async (pool: string): Promise<Resuelto> => {
     const { data, error } = await adm
       .from('fab_instalaciones')
       .select(
-        'lector, estado, pool:fab_pools!inner(clave, versiones:fab_pool_versiones(manifiesto, estado, numero, es_actual))',
+        'id, lector, estado, pool:fab_pools!inner(clave, versiones:fab_pool_versiones(manifiesto, estado, numero, es_actual))',
       )
       .eq('proyecto_id', PROYECTO_SOCIAL_AHORRO)
       .eq('fab_pools.clave', pool)
@@ -85,6 +86,7 @@ const resolver = porRequest(async (pool: string): Promise<Resuelto> => {
     if (error || !data) return vacio
 
     const fila = data as unknown as {
+      id: string
       lector: EstadoLector
       estado: string
       pool: { clave: string; versiones: { manifiesto: Manifiesto; estado: string; numero: number }[] } | null
@@ -121,8 +123,12 @@ const resolver = porRequest(async (pool: string): Promise<Resuelto> => {
       }
     }
 
-    // 4 · listo.
-    return { estado: fila.lector, manifiesto: actual.manifiesto, motivoFallback: null }
+    // 4 · la pieza con lo de ESTE proyecto encima.
+    // Sin este paso, dos proyectos con la misma pieza verían lo mismo, que es
+    // exactamente el problema que esta separación vino a resolver.
+    const propios = await overridesActuales(fila.id)
+    const { manifiesto } = aplicarOverrides(actual.manifiesto, propios?.overrides ?? null)
+    return { estado: fila.lector, manifiesto, motivoFallback: null }
   } catch {
     // La fábrica caída no puede tirar abajo Social Ahorro. Ni siquiera se
     // registra el evento: registrar requiere la misma base que acaba de fallar.

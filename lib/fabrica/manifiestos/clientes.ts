@@ -124,8 +124,9 @@ export const MANIFIESTO_CLIENTES: Manifiesto = {
           reversible: false,
           compromete_tercero: true,
           motivo: 'Sale del equipo: le llega a un cliente por push o por mail. Nada que salga hacia afuera se manda sin que una persona lo suelte.',
-          brecha:
-            'El cron corre y manda sin confirmación. La regla la escribió una persona una vez, pero nadie mira antes de cada envío. Falta el paso de confirmación entre armar la campaña y soltarla.',
+          // La brecha NO va acá: es un hecho sobre el sistema de Social Ahorro,
+          // no sobre la pieza. Otro proyecto puede instalar Clientes con el paso
+          // de confirmación puesto. Vive en los overrides de la instalación.
         },
         {
           clave: 'eliminar_cliente',
