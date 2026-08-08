@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { BotonPanico } from '@/components/fabrica/controles-lector'
 import { BotonVerificar, DecidirPropuesta } from '@/components/fabrica/controles-taller'
 import { ChatTaller } from '@/components/fabrica/chat-taller'
+import { bitacora } from '@/lib/fabrica/chat'
 import { puedeArmar, requireFabricaAccess } from '@/lib/fabrica/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { traerProyecto } from '@/lib/fabrica/datos'
@@ -50,10 +51,11 @@ export default async function TallerPage({
   const expiradas = await expirarVencidas(proyecto.id)
   const verificados = await verificarLoQueHagaFalta(proyecto.id)
 
-  const [propuestas, estados, ultimas] = await Promise.all([
+  const [propuestas, estados, ultimas, conversaciones] = await Promise.all([
     listarPropuestas(proyecto.id),
     estadoDelLector(proyecto.id),
     ultimasVerificaciones(proyecto.id),
+    bitacora(proyecto.id),
   ])
   const s = salud(propuestas)
 
@@ -309,6 +311,43 @@ export default async function TallerPage({
         )}
       </section>
 
+      {/* ── La bitácora ───────────────────────────────────────────────── */}
+      <section>
+        <h2 className="text-sm font-semibold tracking-tight">
+          Registro de conversaciones
+          <span className="ml-2 font-normal text-muted-foreground">{conversaciones.length}</span>
+        </h2>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          Qué se pidió, qué contestó NORA y en qué terminó. Se guardan{' '}
+          <span className="font-medium">todos</span> los turnos, no sólo los que
+          terminaron en propuesta: lo que se pide y no se puede es la lista de lo
+          que falta construir, ordenada por cuánta gente la pidió.
+        </p>
+        {conversaciones.length === 0 ? (
+          <p className="mt-3 rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+            Todavía nadie habló con NORA acá.
+          </p>
+        ) : (
+          <div className="mt-3 divide-y divide-border rounded-lg border border-border">
+            {conversaciones.map((t) => (
+              <details key={t.id} className="px-4 py-3 text-sm">
+                <summary className="cursor-pointer list-none">
+                  <span className="font-medium">{t.mensaje}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {String(t.creadoAt).slice(0, 16).replace('T', ' ')}
+                    {t.negativa && ` · dijo que no: ${ETIQUETA_NEGATIVA[t.negativa] ?? t.negativa}`}
+                    {t.propuestaId && ` · propuso, carril ${t.carril}`}
+                    {!t.negativa && !t.propuestaId && ' · sólo contestó'}
+                    {!t.podiaProponer && ' · el que preguntó no podía proponer'}
+                  </span>
+                </summary>
+                <p className="mt-2 whitespace-pre-wrap text-muted-foreground">{t.respuesta}</p>
+              </details>
+            ))}
+          </div>
+        )}
+      </section>
+
       {/* ── Intentos prohibidos ───────────────────────────────────────── */}
       <section>
         <h2 className="text-sm font-semibold tracking-tight">
@@ -355,6 +394,14 @@ function Campo({ titulo, children }: { titulo: string; children: React.ReactNode
       <dd className="min-w-0 flex-1">{children}</dd>
     </div>
   )
+}
+
+/** Los cuatro motivos, en castellano, para la bitácora. */
+const ETIQUETA_NEGATIVA: Record<string, string> = {
+  constitucional: 'toca la constitución',
+  no_existe: 'necesita algo que no existe',
+  fuera_del_lector: 'el lector todavía no gobierna eso',
+  proyecto_no_listo: 'el proyecto no está listo',
 }
 
 function Filtro({

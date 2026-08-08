@@ -142,6 +142,7 @@ grep -inE "alter table|drop table|drop column|rename" supabase/migrations/00*_fa
 
 # 3 · PRUEBA DE EXTRACCIÓN, de verdad
 mv lib/fabrica app/fabrica components/fabrica /tmp/       # sacar la fábrica
+mv scripts/fabrica-*.ts /tmp/                             # y sus scripts de consola
 # reemplazar el cuerpo de lib/os/definicion.ts por `return enCodigo`
 rm -rf .next && npx tsc --noEmit && npm run build          # tiene que dar verde
 mv /tmp/{lib,app,components}-fabrica ...                   # restaurar
@@ -150,3 +151,8 @@ mv /tmp/{lib,app,components}-fabrica ...                   # restaurar
 El paso 3 hay que correrlo, no razonarlo. Los tipos generados en `.next/`
 guardan las rutas del build anterior: sin borrar `.next` da 26 errores falsos
 sobre rutas de la fábrica que ya no existen.
+
+Los `scripts/fabrica-*.ts` también se van, y hasta v0.66 el procedimiento no los
+nombraba. No es un detalle de prolijidad: `npm run build` los tipa igual que al
+resto, así que dejarlos rompe el build con veinte errores que parecen de la
+frontera y no lo son. Son archivos de la fábrica: se extraen con ella.

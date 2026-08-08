@@ -1,11 +1,14 @@
 import Anthropic from '@anthropic-ai/sdk'
 
+import { createAdminClient } from '@/lib/supabase/server'
+
 import { CAMPOS_DE_INSTALACION } from './clasificacion'
 import { estadoDelLector, type EstadoPool } from './flag'
 import {
   advertencia,
   NO_LEIDO_PERO_PROPONIBLE,
   porQueNo,
+  type MotivoNegativa,
   type Negativa,
 } from './negativas'
 import { listarPropuestas, proponer } from './propuestas'
@@ -157,7 +160,9 @@ después de que la persona se ilusione.
 ${puedeProponer ? `CAMPOS QUE PODÉS PROPONER, y ninguno más:\n${cat.camposPropuestos.map((c) => `  · ${c}`).join('\n')}` : ''}
 
 CUATRO MOTIVOS PARA DECIR QUE NO. Decilos en castellano llano, en la primera
-frase, y ofrecé siempre qué SÍ se puede hacer en su lugar:
+frase, ofrecé siempre qué SÍ se puede hacer en su lugar, y llamá además a
+no_se_puede con el motivo — la explicación la lee una persona, el motivo se
+cuenta:
   1. TOCA LA CONSTITUCIÓN — está en la lista de INTOCABLES del pool. No se hace
      por esta vía, nunca, ni con aprobación. Explicá qué protege ese límite.
   2. NECESITA ALGO QUE NO EXISTE — una pantalla, un parámetro o un
@@ -170,10 +175,16 @@ frase, y ofrecé siempre qué SÍ se puede hacer en su lugar:
      sobre algo que no gobierna da la ilusión de que el cambio se va a ver.
 
 ANTES DE PROPONER, PREGUNTÁ LO QUE CAMBIA EL RESULTADO. Una o dos preguntas, no
-un interrogatorio, y sólo si la respuesta cambia lo que vas a proponer; si el
-pedido ya es inequívoco, proponé. La pregunta más frecuente: ¿es una decisión de
-ESTE negocio o de la pieza compartida? Desde acá sólo se cambia lo de este
-negocio.
+un interrogatorio, y sólo si la respuesta cambia lo que vas a proponer.
+
+HAY UNA QUE SIEMPRE CAMBIA EL RESULTADO Y VA SIEMPRE, aunque el pedido parezca
+inequívoco: ¿esto es una decisión de ESTE negocio, o la pieza está mal para
+todos los que la usan? No preguntás porque necesites permiso —desde acá sólo
+podés tocar lo de este negocio y con eso alcanza para hacerlo—; preguntás porque
+si la pieza está mal para todos, taparlo con un override local esconde el
+defecto en vez de arreglarlo, y el próximo negocio que instale la pieza se come
+el mismo problema. Preguntala, esperá la respuesta, y recién ahí proponé. Si te
+dicen que es de la pieza, decilo y no propongas el override.
 
 CUANDO HAY MÁS DE UN CAMINO, ofrecé dos o tres opciones con lo que cuesta cada
 una, y SIEMPRE la opción de no cambiar nada, con el argumento honesto a favor.
@@ -195,7 +206,40 @@ Castellano rioplatense, directo, sin adornos. Nada de emojis, nada de "¡Excelen
 pregunta!". Respuestas cortas: esto es una herramienta de trabajo.`
 }
 
-/* ── La única herramienta ────────────────────────────────────────────────── */
+/* ── Las dos herramientas ────────────────────────────────────────────────── */
+
+/**
+ * Decir que no también es un resultado, y hay que poder contarlo.
+ *
+ * Sin esto, una negativa es un párrafo de prosa: se puede leer, no se puede
+ * medir. Y la medición es el punto — el día que "necesita algo que no existe"
+ * sea el 40% de las negativas, eso no es un problema del chat, es la lista de
+ * lo que hay que construir ordenada por cuánta gente la pidió.
+ *
+ * No cambia lo que la persona lee: el texto lo escribe el modelo igual. Esto
+ * sólo le pide que además clasifique lo que acaba de decir.
+ */
+const HERRAMIENTA_NO: Anthropic.Tool = {
+  name: 'no_se_puede',
+  description:
+    'Llamala SIEMPRE que le digas a la persona que algo no se puede hacer, además de explicárselo en tu respuesta. No reemplaza la explicación: la clasifica para poder contarla después.',
+  input_schema: {
+    type: 'object',
+    properties: {
+      motivo: {
+        type: 'string',
+        enum: ['constitucional', 'no_existe', 'fuera_del_lector', 'proyecto_no_listo'],
+        description:
+          'constitucional: está en los intocables. no_existe: pantalla, parámetro o comportamiento no declarado. fuera_del_lector: se declara pero el lector todavía no lo lee. proyecto_no_listo: el pool está apagado, en sombra o con diferencias sin resolver.',
+      },
+      que_pidio: {
+        type: 'string',
+        description: 'En una línea, qué pidió la persona. Es lo que se va a contar.',
+      },
+    },
+    required: ['motivo', 'que_pidio'],
+  },
+}
 
 const HERRAMIENTA: Anthropic.Tool = {
   name: 'proponer_cambio',
@@ -230,14 +274,84 @@ const HERRAMIENTA: Anthropic.Tool = {
   },
 }
 
-/* ── La conversación ─────────────────────────────────────────────────────── */
+/* ── El registro ─────────────────────────────────────────────────────────── */
 
 export interface Turno {
   rol: 'usuario' | 'nora'
   texto: string
 }
 
-export async function conversar(args: {
+/**
+ * La bitácora.
+ *
+ * Se escribe con service_role y NUNCA lanza: si el registro falla, la persona
+ * igual tiene que ver su respuesta. Perder una línea de bitácora es malo;
+ * perder la conversación por perder la bitácora es peor.
+ *
+ * Registra TODOS los turnos, no sólo los que terminan en propuesta. Un chat
+ * donde sólo quedan los pedidos que salieron bien no sirve para medir nada: lo
+ * interesante son los que dijeron que no.
+ */
+async function registrar(args: {
+  proyectoId: string
+  usuarioId: string
+  puedeProponer: boolean
+  mensaje: string
+  r: RespuestaChat
+}): Promise<RespuestaChat> {
+  try {
+    await createAdminClient()
+      .from('fab_chat_turnos')
+      .insert({
+        proyecto_id: args.proyectoId,
+        usuario_id: args.usuarioId,
+        mensaje: args.mensaje,
+        respuesta: args.r.texto,
+        podia_proponer: args.puedeProponer,
+        propuesta_id: args.r.propuestaId ?? null,
+        carril: args.r.carril ?? null,
+        negativa: args.r.negativa?.motivo ?? null,
+      })
+  } catch {
+    // A propósito en silencio. Ver arriba.
+  }
+  return args.r
+}
+
+export interface TurnoRegistrado {
+  id: string
+  mensaje: string
+  respuesta: string
+  podiaProponer: boolean
+  propuestaId: string | null
+  carril: string | null
+  negativa: string | null
+  creadoAt: string
+}
+
+/** La bitácora, para mirarla desde el Taller. */
+export async function bitacora(proyectoId: string, limite = 20): Promise<TurnoRegistrado[]> {
+  const { data } = await createAdminClient()
+    .from('fab_chat_turnos')
+    .select('*')
+    .eq('proyecto_id', proyectoId)
+    .order('creado_at', { ascending: false })
+    .limit(limite)
+  return ((data ?? []) as unknown as Record<string, never>[]).map((f) => ({
+    id: f.id,
+    mensaje: f.mensaje,
+    respuesta: f.respuesta,
+    podiaProponer: f.podia_proponer,
+    propuestaId: f.propuesta_id,
+    carril: f.carril,
+    negativa: f.negativa,
+    creadoAt: f.creado_at,
+  }))
+}
+
+/* ── La conversación ─────────────────────────────────────────────────────── */
+
+export interface PedidoDeChat {
   proyectoId: string
   usuarioId: string
   puedeProponer: boolean
@@ -245,7 +359,26 @@ export async function conversar(args: {
   mensaje: string
   /** Sólo para los scripts de consola, que no tienen sesión. */
   conAdmin?: boolean
-}): Promise<RespuestaChat> {
+}
+
+/**
+ * Un turno de conversación, de punta a punta.
+ *
+ * El registro se hace acá y no en cada `return` de adentro: una salida sin
+ * registrar es exactamente la que después nadie encuentra.
+ */
+export async function conversar(args: PedidoDeChat): Promise<RespuestaChat> {
+  const r = await responder(args)
+  return registrar({
+    proyectoId: args.proyectoId,
+    usuarioId: args.usuarioId,
+    puedeProponer: args.puedeProponer,
+    mensaje: args.mensaje,
+    r,
+  })
+}
+
+async function responder(args: PedidoDeChat): Promise<RespuestaChat> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
     // No se simula una respuesta. Un asistente que contesta sin modelo es
@@ -277,9 +410,10 @@ export async function conversar(args: {
       max_tokens: 2000,
       thinking: { type: 'adaptive' },
       system: systemPrompt(cat, args.puedeProponer),
-      // Si no puede proponer, la herramienta NI SE OFRECE. No alcanza con
-      // pedírselo por texto.
-      tools: args.puedeProponer ? [HERRAMIENTA] : [],
+      // Si no puede proponer, la herramienta de proponer NI SE OFRECE. No
+      // alcanza con pedírselo por texto. La de decir que no va siempre: el que
+      // sólo consulta también recibe negativas, y también hay que contarlas.
+      tools: args.puedeProponer ? [HERRAMIENTA, HERRAMIENTA_NO] : [HERRAMIENTA_NO],
       messages: mensajes,
     })
   } catch {
@@ -292,8 +426,21 @@ export async function conversar(args: {
     .join('\n')
     .trim()
 
-  const uso = respuesta.content.find((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
-  if (!uso) return { texto }
+  const usos = respuesta.content.filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use')
+
+  // La negativa declarada por el modelo. No corta nada ni cambia el texto: sólo
+  // etiqueta para la bitácora lo que el modelo ya explicó a su manera.
+  const declarada = usos.find((u) => u.name === 'no_se_puede')
+  const negativaDeclarada: Negativa | undefined = declarada
+    ? {
+        motivo: (declarada.input as { motivo: MotivoNegativa }).motivo,
+        texto: (declarada.input as { que_pidio: string }).que_pidio,
+        salida: '',
+      }
+    : undefined
+
+  const uso = usos.find((u) => u.name === 'proponer_cambio')
+  if (!uso) return { texto, negativa: negativaDeclarada }
 
   /* ── Quiso proponer: se decide acá, no en el modelo ───────────────── */
   const e = uso.input as {
