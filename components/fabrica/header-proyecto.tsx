@@ -31,6 +31,7 @@ export function HeaderProyecto({
     { label: 'Moldes', href: `${base}/moldes` },
     { label: 'Censo', href: `${base}/censo` },
     { label: 'Lector', href: `${base}/lector` },
+    { label: 'Taller', href: `${base}/taller` },
     { label: 'Usuarios', href: `${base}/usuarios` },
     { label: 'Actividad', href: `${base}/actividad` },
     { label: 'Configuración', href: `${base}/configuracion` },

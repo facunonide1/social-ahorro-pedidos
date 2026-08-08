@@ -1,0 +1,99 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+
+import { puedeArmar, requireFabricaAccess } from '@/lib/fabrica/auth'
+import { traerProyecto } from '@/lib/fabrica/datos'
+import { aplicar, proponer, rechazar, revertirPropuesta } from '@/lib/fabrica/propuestas'
+import { verificarPool } from '@/lib/fabrica/verificador'
+import type { Overrides } from '@/lib/fabrica/overrides'
+
+async function permiso(slug: string) {
+  const acceso = await requireFabricaAccess()
+  const proyecto = await traerProyecto(slug)
+  if (!proyecto) return { ok: false as const, error: 'No se encontró el proyecto.' }
+  if (!puedeArmar(acceso, proyecto.id)) {
+    return { ok: false as const, error: 'Tu rol en este proyecto no alcanza para decidir en el Taller.' }
+  }
+  return { ok: true as const, proyecto, acceso }
+}
+
+export async function accionProponer(
+  slug: string,
+  clave: string,
+  cambio: Overrides,
+  porque: string,
+): Promise<{ ok: boolean; carril?: string; error?: string }> {
+  const p = await permiso(slug)
+  if (!p.ok) return { ok: false, error: p.error }
+
+  const r = await proponer({
+    proyectoId: p.proyecto.id,
+    clave,
+    cambio,
+    porque,
+    autorId: p.acceso.usuarioId,
+  })
+  revalidatePath(`/fabrica/${slug}/taller`)
+  return { ok: r.ok, carril: r.propuesta?.carril, error: r.error }
+}
+
+export async function accionAplicar(
+  slug: string,
+  propuestaId: string,
+  nota?: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const p = await permiso(slug)
+  if (!p.ok) return { ok: false, error: p.error }
+  const r = await aplicar({ propuestaId, autorId: p.acceso.usuarioId, nota })
+  revalidatePath(`/fabrica/${slug}/taller`)
+  return { ok: r.ok, error: r.error }
+}
+
+export async function accionRechazar(
+  slug: string,
+  propuestaId: string,
+  nota: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const p = await permiso(slug)
+  if (!p.ok) return { ok: false, error: p.error }
+  const r = await rechazar({ propuestaId, autorId: p.acceso.usuarioId, nota })
+  revalidatePath(`/fabrica/${slug}/taller`)
+  return r
+}
+
+export async function accionRevertirPropuesta(
+  slug: string,
+  propuestaId: string,
+  nota: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const p = await permiso(slug)
+  if (!p.ok) return { ok: false, error: p.error }
+  const r = await revertirPropuesta({ propuestaId, autorId: p.acceso.usuarioId, nota })
+  revalidatePath(`/fabrica/${slug}/taller`)
+  return r
+}
+
+/** "Verificar este pool ahora", sin esperar a que alguien navegue. */
+export async function accionVerificar(
+  slug: string,
+  clave: string,
+): Promise<{ ok: boolean; resumen?: string; error?: string }> {
+  const p = await permiso(slug)
+  if (!p.ok) return { ok: false, error: p.error }
+
+  const r = await verificarPool({
+    proyectoId: p.proyecto.id,
+    clave,
+    autorId: p.acceso.usuarioId,
+    origen: 'provocada',
+  })
+  revalidatePath(`/fabrica/${slug}/taller`)
+  return {
+    ok: true,
+    resumen:
+      r.declaradas === 0
+        ? (r.motivo ?? 'No hay pantallas gobernables.')
+        : `${r.resueltas}/${r.declaradas} resueltas · ${r.cableadas} cableadas · ${r.diferencias} problema(s).`,
+  }
+}
