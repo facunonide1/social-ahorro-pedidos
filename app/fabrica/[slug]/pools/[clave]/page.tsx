@@ -8,6 +8,7 @@ import { MANIFIESTOS } from '@/lib/fabrica/manifiestos'
 import { BotonRevertir, EditorDeclaracion } from '@/components/fabrica/editor-declaracion'
 import { historial, manifiestoVigente } from '@/lib/fabrica/versiones'
 import { historialInstalacion, overridesActuales, resolver } from '@/lib/fabrica/overrides'
+import { procedenciaDe, type Procedencia } from '@/lib/fabrica/procedencia'
 import { estadoDelLector } from '@/lib/fabrica/flag'
 import { ETIQUETA_MOLDE, type Participacion, type TipoDiferencia } from '@/lib/fabrica/tipos'
 
@@ -75,6 +76,10 @@ export default async function VerificacionPoolPage({
   const instalacionId = await idInstalacion(proyecto.id, params.clave)
   const propios = instalacionId ? await overridesActuales(instalacionId) : null
   const { manifiesto, origenes } = resolver(deLaPieza, propios?.overrides ?? null)
+  // Por qué cada valor está como está. Se despliega al lado del valor y no en
+  // una pantalla aparte: una procedencia a dos clics del valor es una
+  // procedencia que nadie mira.
+  const procedencia = await procedenciaDe(params.clave, proyecto.id)
   const versionesInstalacion = instalacionId ? await historialInstalacion(instalacionId) : []
   const { prefijos } = entrada
   const verificacion = await verificarEspejo(manifiesto, prefijos, createClient(), entrada.excluir)
@@ -210,16 +215,28 @@ export default async function VerificacionPoolPage({
                 <tr key={p.ruta} className="border-t border-border">
                   <td className="px-3 py-2 font-medium">
                     {p.titulo}
-                    {origenes[`pantallas.${p.ruta}.titulo`] === 'instalacion' && (
+                    {p.nombre_en_el_negocio && p.titulo_de_oficio !== p.titulo && (
                       <Badge variant="info" className="ml-2 font-normal">
-                        de este proyecto
+                        acá se dice así · en el oficio, &ldquo;{p.titulo_de_oficio}&rdquo;
                       </Badge>
                     )}
+                    {!p.nombre_en_el_negocio &&
+                      origenes[`pantallas.${p.ruta}.titulo`] === 'instalacion' && (
+                        <Badge variant="warning" className="ml-2 font-normal">
+                          corrige a la pieza
+                        </Badge>
+                      )}
                     {p.pertenencia === 'prestada' && (
                       <Badge variant="warning" className="ml-2 font-normal">
                         prestada
                       </Badge>
                     )}
+                    <PorQueEstaAsi
+                      procedencia={
+                        procedencia.get(`pantallas.${p.ruta}.vocabulario`) ??
+                        procedencia.get(`pantallas.${p.ruta}.titulo`)
+                      }
+                    />
                   </td>
                   <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{p.ruta}</td>
                   <td className="px-3 py-2">
@@ -520,5 +537,40 @@ export default async function VerificacionPoolPage({
         </section>
       )}
     </div>
+  )
+}
+
+
+/**
+ * Por qué este valor está así.
+ *
+ * Un `<details>` y no un tooltip ni una pantalla aparte: la procedencia se
+ * consulta cuando alguien duda de un valor, y en ese momento tiene que estar al
+ * lado del valor. A dos clics es una procedencia que nadie mira.
+ */
+function PorQueEstaAsi({ procedencia }: { procedencia?: Procedencia }) {
+  if (!procedencia) {
+    // Ausente NO se dibuja como vacío: "no registrada" es una respuesta, y es
+    // distinta de "nadie lo tocó nunca".
+    return (
+      <span className="ml-2 text-[11px] font-normal text-muted-foreground">
+        procedencia no registrada
+      </span>
+    )
+  }
+  return (
+    <details className="mt-1 text-[11px] font-normal">
+      <summary className="cursor-pointer text-muted-foreground">por qué está así</summary>
+      <p className="mt-1 max-w-xl text-muted-foreground">
+        {procedencia.motivo}
+        {procedencia.esReversion && ' (fue una reversión)'}
+      </p>
+      <p className="mt-0.5 text-muted-foreground">
+        {procedencia.nivel === 'pool' ? 'decisión de la pieza' : 'decisión de este proyecto'} ·{' '}
+        {String(procedencia.decididoAt).slice(0, 16).replace('T', ' ')}
+        {procedencia.valorAnterior != null &&
+          ` · antes decía ${JSON.stringify(procedencia.valorAnterior)}`}
+      </p>
+    </details>
   )
 }

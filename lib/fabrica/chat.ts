@@ -12,6 +12,7 @@ import {
   type Negativa,
 } from './negativas'
 import { anotarPedido, ETIQUETA_FALTA, type QueFalta } from './pedidos'
+import { camposConHistoriaDificil } from './procedencia'
 import { listarPropuestas, proponer } from './propuestas'
 import { overridesActuales, resolver, type Overrides } from './overrides'
 import { versionActual } from './versiones'
@@ -72,6 +73,8 @@ export interface PoolVisible {
 
 export interface CatalogoVisible {
   pools: PoolVisible[]
+  /** Campos que ya se cambiaron y se dieron para atrás. */
+  historiaDificil: { campo: string; poolClave: string; reversiones: number }[]
   /** Los únicos campos que este usuario puede proponer. Vacío = sólo consultar. */
   camposPropuestos: string[]
   propuestasRecientes: { pool: string; que: string; estado: string; carril: string }[]
@@ -117,6 +120,7 @@ export async function catalogoVisible(
     // Si no puede proponer, la lista va vacía Y la herramienta no se ofrece.
     camposPropuestos: opciones.puedeProponer ? [...CAMPOS_DE_INSTALACION] : [],
     propuestasRecientes: recientes,
+    historiaDificil: await camposConHistoriaDificil(proyectoId),
   }
 }
 
@@ -231,6 +235,13 @@ los tenés.
 
 EL CATÁLOGO:
 ${cat.pools.map(unPool).join('\n')}
+
+CAMPOS QUE YA SE CAMBIARON Y SE DIERON PARA ATRÁS. Antes de proponer sobre
+alguno de éstos, decilo y preguntá qué cambió desde entonces. No te niegues por
+esto —a veces la tercera es la buena— pero mandarlo sin un motivo nuevo es
+hacerle perder el tiempo a quien firma. El motivo de cada reversión está
+guardado; si te lo preguntan, decí que se puede ver en la declaración del pool.
+${cat.historiaDificil.map((h) => `  ${h.poolClave} · ${h.campo} · ${h.reversiones} reversión(es)`).join('\n') || '  ninguno'}
 
 PROPUESTAS RECIENTES (no repitas lo que ya se rechazó):
 ${cat.propuestasRecientes.map((p) => `  ${p.pool}: ${p.que} → ${p.estado} (${p.carril})`).join('\n') || '  ninguna'}

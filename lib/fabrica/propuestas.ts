@@ -287,6 +287,9 @@ export async function aplicar(args: {
     overrides: fusionar(propios?.overrides ?? {}, p.cambio),
     motivo: `${p.porque} (propuesta del Taller${args.nota ? ` · ${args.nota}` : ''})`,
     autorId: args.autorId,
+    // La propuesta viaja hasta la procedencia: es lo que después permite leer
+    // "por qué está así" y llegar a la conversación que lo pidió.
+    propuestaId: p.id,
   })
   if (!r.ok) {
     return { ok: false, error: r.error ?? r.rechazos?.map((x) => `${x.campo}: ${x.motivo}`).join(' · ') }
@@ -366,6 +369,7 @@ export async function revertirPropuesta(args: {
     versionId: lista[1].id,
     motivo: args.nota?.trim() || 'Revertida desde el Taller.',
     autorId: args.autorId,
+    propuestaId: p.id,
   })
   if (!r.ok) return { ok: false, error: r.error }
 

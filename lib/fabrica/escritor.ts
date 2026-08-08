@@ -1,6 +1,11 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { MANIFIESTOS } from './manifiestos'
 import { validarManifiesto } from './validador'
+import {
+  camposQueCambian,
+  camposQueCambianEnLaPieza,
+  registrarProcedencia,
+} from './procedencia'
 import { versionActual } from './versiones'
 import { CAMPOS_DE_INSTALACION } from './clasificacion'
 import {
@@ -234,6 +239,8 @@ export async function escribirVersion(args: {
   gobernando: boolean
   /** Si nace de un revert, a qué versión vuelve. */
   revierteA?: string
+  /** La propuesta que lo originó, si vino de una. */
+  propuestaId?: string
 }): Promise<ResultadoEscritura> {
   if (!args.motivo?.trim()) {
     return { ok: false, error: 'Hace falta escribir por qué se hace este cambio.' }
@@ -250,6 +257,10 @@ export async function escribirVersion(args: {
     .maybeSingle()
   if (!pool) return { ok: false, error: 'No existe ese pool.' }
 
+  // Se lee ANTES de escribir: después ya no está, y sin el valor anterior la
+  // procedencia dice qué quedó pero no qué se cambió.
+  const previa = await versionActual(args.clave)
+
   const { data, error } = await adm.rpc('fab_escribir_version', {
     p_pool_id: (pool as { id: string }).id,
     p_manifiesto: args.manifiesto as unknown as Record<string, unknown>,
@@ -263,6 +274,21 @@ export async function escribirVersion(args: {
   }
 
   const nueva = await versionActual(args.clave)
+
+  // LA PROCEDENCIA SE ESCRIBE ACÁ Y EN NINGÚN OTRO LADO, porque el escritor es
+  // el único camino por el que se escribe una declaración. Si se registrara en
+  // el llamador, cada llamador nuevo sería una fuente de valores sin historia.
+  await registrarProcedencia({
+    nivel: 'pool',
+    poolClave: args.clave,
+    cambios: previa ? camposQueCambianEnLaPieza(previa.manifiesto, args.manifiesto) : [],
+    motivo: args.motivo.trim(),
+    versionId: String(data),
+    propuestaId: args.propuestaId ?? null,
+    esReversion: !!args.revierteA,
+    autorId: args.autorId,
+  })
+
   return { ok: true, versionId: String(data), numero: nueva?.numero }
 }
 
@@ -356,6 +382,8 @@ export async function escribirOverride(args: {
   motivo: string
   autorId: string
   revierteA?: string
+  /** La propuesta que lo originó, si vino de una. */
+  propuestaId?: string
 }): Promise<{ ok: boolean; numero?: number; rechazos?: RechazoOverride[]; error?: string }> {
   if (!args.motivo?.trim()) {
     return { ok: false, error: 'Hace falta escribir por qué se hace este cambio.' }
@@ -377,6 +405,8 @@ export async function escribirOverride(args: {
   const rechazos = validarOverrides(delPool.manifiesto, args.overrides)
   if (rechazos.length > 0) return { ok: false, rechazos }
 
+  const previos = await overridesActuales(instalacion.id)
+
   const { error } = await adm.rpc('fab_escribir_override', {
     p_instalacion_id: instalacion.id,
     p_overrides: args.overrides as unknown as Record<string, unknown>,
@@ -387,6 +417,19 @@ export async function escribirOverride(args: {
   if (error) return { ok: false, error: 'No se pudo guardar. No se cambió nada.' }
 
   const nueva = await overridesActuales(instalacion.id)
+
+  await registrarProcedencia({
+    nivel: 'instalacion',
+    poolClave: args.clave,
+    proyectoId: args.proyectoId,
+    cambios: camposQueCambian(previos?.overrides ?? null, args.overrides),
+    motivo: args.motivo.trim(),
+    versionId: nueva?.id ?? null,
+    propuestaId: args.propuestaId ?? null,
+    esReversion: !!args.revierteA,
+    autorId: args.autorId,
+  })
+
   return { ok: true, numero: nueva?.numero }
 }
 
@@ -415,6 +458,7 @@ export async function revertirOverrideA(args: {
   versionId: string
   motivo: string
   autorId: string
+  propuestaId?: string
 }): Promise<{ ok: boolean; numero?: number; error?: string }> {
   const adm = createAdminClient()
   const { data } = await adm
@@ -432,6 +476,7 @@ export async function revertirOverrideA(args: {
     motivo: args.motivo?.trim() || `Vuelve a la versión ${v.numero} de la instalación.`,
     autorId: args.autorId,
     revierteA: v.id,
+    propuestaId: args.propuestaId,
   })
   return { ok: r.ok, numero: r.numero, error: r.error ?? r.rechazos?.map((x) => x.motivo).join(' · ') }
 }
