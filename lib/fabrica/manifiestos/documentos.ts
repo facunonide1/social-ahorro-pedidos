@@ -17,7 +17,7 @@ import type { Manifiesto } from '../tipos'
  * construyó y el manifiesto no lo rompe.
  */
 export const MANIFIESTO_DOCUMENTOS: Manifiesto = {
-  formato: '1.1.0',
+  formato: '1.2.0',
   pool: 'documentos',
   nombre: 'Motor de documentos',
   categoria: 'nucleo',
@@ -35,7 +35,7 @@ export const MANIFIESTO_DOCUMENTOS: Manifiesto = {
     { tabla: 'doc_items_alias', rol: 'Cómo se llama el mismo item en el papel de cada tercero', acceso: 'propia' },
     { tabla: 'doc_precios_historial', rol: 'Lo que se pagó de verdad por cada item, y cuándo. La base del costo', acceso: 'propia' },
 
-    { tabla: 'proveedores', rol: 'El tercero que emite el papel', acceso: 'leida', dueno: 'proveedores' },
+    { tabla: 'proveedores', rol: 'El tercero que emite el papel', acceso: 'leida', dueno: 'compras' },
     { tabla: 'productos_catalogo', rol: 'El item al que hay que asociar cada renglón', acceso: 'leida', dueno: 'configuracion' },
     { tabla: 'sucursales', rol: 'Qué punto compró. Tiene impacto fiscal, así que va siempre explícito', acceso: 'leida', dueno: 'configuracion' },
   ],
@@ -58,7 +58,7 @@ export const MANIFIESTO_DOCUMENTOS: Manifiesto = {
   ],
 
   depende_de: ['configuracion', 'tareas'],
-  usado_por: ['ofertas', 'compras'],
+  usado_por: ['ofertas', 'compras', 'finanzas'],
 
   agentes: [
     {

@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * trabajo asignado con vencimiento y verificación. Existe igual en un taller.
  */
 export const MANIFIESTO_TAREAS: Manifiesto = {
-  formato: '1.1.0',
+  formato: '1.2.0',
   pool: 'tareas',
   nombre: 'Tareas',
   categoria: 'nucleo',
@@ -95,7 +95,7 @@ export const MANIFIESTO_TAREAS: Manifiesto = {
   // Relevado buscando quién inserta en `tareas`. El validador contrasta contra
   // el depende_de de los manifiestos declarados; los que todavía no se
   // declararon quedan anotados como no verificables, no como verdad.
-  usado_por: ['ofertas', 'stock', 'compras', 'documentos', 'comunicacion', 'compliance'],
+  usado_por: ['ofertas', 'stock', 'compras', 'documentos', 'finanzas', 'comunicacion', 'compliance'],
 
   agentes: [
     {

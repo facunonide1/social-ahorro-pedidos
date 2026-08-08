@@ -14,7 +14,7 @@ import type { Manifiesto } from './tipos'
  * ejecutar antes de commitear sin credenciales de nada.
  */
 
-export const FORMATO_ACTUAL = '1.1.0'
+export const FORMATO_ACTUAL = '1.2.0'
 
 export interface Problema {
   campo: string
@@ -30,6 +30,13 @@ const ACCIONES_PERMISO = new Set(['ver', 'crear', 'editar', 'aprobar', 'eliminar
 const PARTICIPACIONES = new Set(['sugiere', 'prepara', 'informa', 'hace_y_avisa', 'nunca'])
 const CAPACIDADES = new Set([
   'cargar', 'recomendar', 'detectar', 'ejecutar', 'responder', 'explicar', 'priorizar',
+])
+const LIMITES = new Set([
+  'cumplimiento_regulado', 'autoridad_precio', 'umbrales_y_permisos',
+  'control_de_caja', 'auditoria', 'confirmacion_humana',
+])
+const TIPOS_CONSTITUCIONALES = new Set([
+  'entidad', 'campo', 'accion', 'automatizacion', 'parametro',
 ])
 
 /** Valida un manifiesto solo, sin mirar a los demás. */
@@ -116,6 +123,64 @@ export function validarManifiesto(m: Manifiesto): Problema[] {
     if (perm.acciones.length === 0) err(`permisos.${perm.modulo}`, 'sin acciones')
     for (const a of perm.acciones) {
       if (!ACCIONES_PERMISO.has(a)) err(`permisos.${perm.modulo}`, `acción desconocida: ${a}`)
+    }
+  }
+
+  /* ── Constitución ──────────────────────────────────────────────────── */
+  // Lo que no se toca. El campo `modificable` existe SÓLO para poder
+  // rechazarlo: sin él, marcar algo como modificable sería simplemente no
+  // declararlo, y no habría nada contra qué fallar.
+  const clavesConfigurables = new Set((m.configurable ?? []).map((c) => c.clave))
+  for (const c of m.constitucional ?? []) {
+    if (!LIMITES.has(c.limite)) err(`constitucional.${c.elemento}`, `límite desconocido: ${c.limite}`)
+    if (!TIPOS_CONSTITUCIONALES.has(c.tipo)) {
+      err(`constitucional.${c.elemento}`, `tipo desconocido: ${c.tipo}`)
+    }
+    if (!c.motivo) {
+      err(
+        `constitucional.${c.elemento}`,
+        'sin motivo: es lo que se lee cuando alguien pide tocarlo, y sin eso el límite parece un capricho',
+      )
+    }
+    // EL RECHAZO QUE JUSTIFICA EL CAMPO.
+    if ((c as { modificable?: unknown }).modificable === true) {
+      err(
+        `constitucional.${c.elemento}`,
+        `declarado modificable bajo el límite "${c.limite}". Un elemento constitucional no se modifica por configuración`,
+      )
+    }
+    // Y la contradicción más silenciosa: declararlo intocable arriba y ofrecerlo
+    // como parámetro abajo.
+    if (clavesConfigurables.has(c.elemento)) {
+      err(
+        `constitucional.${c.elemento}`,
+        'está declarado constitucional y a la vez ofrecido como parámetro configurable',
+      )
+    }
+  }
+
+  /* ── Deprecadas ────────────────────────────────────────────────────── */
+  const propiasTablas = new Set(m.entidades.map((e) => e.tabla))
+  for (const d of m.deprecadas ?? []) {
+    if (!d.motivo) err(`deprecadas.${d.tabla}`, 'sin motivo')
+    if (!d.desde) err(`deprecadas.${d.tabla}`, 'sin fecha de baja')
+    // Una tabla deprecada declarada también como propia viaja a cada proyecto
+    // nuevo: es exactamente lo que el campo existe para evitar.
+    if (propiasTablas.has(d.tabla)) {
+      err(`deprecadas.${d.tabla}`, 'declarada deprecada y a la vez como entidad del pool')
+    }
+  }
+
+  /* ── Dimensiones ───────────────────────────────────────────────────── */
+  for (const d of m.dimensiones ?? []) {
+    if (d.columnas.length === 0) err(`dimensiones.${d.clave}`, 'sin columnas: no se puede verificar')
+    for (const col of d.columnas) {
+      if (!col.includes('.')) {
+        err(`dimensiones.${d.clave}`, `"${col}" tiene que ser tabla.columna para poder verificarse`)
+      }
+    }
+    if (d.valores.length < 2) {
+      avi(`dimensiones.${d.clave}`, 'con menos de dos valores no parte nada')
     }
   }
 

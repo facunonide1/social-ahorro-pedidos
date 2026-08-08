@@ -3,6 +3,7 @@ import { MANIFIESTO_CENTRO_DATOS, PREFIJOS_CENTRO_DATOS, EXCLUIR_CENTRO_DATOS } 
 import { MANIFIESTO_CLIENTES, PREFIJOS_CLIENTES } from './clientes'
 import { MANIFIESTO_CONFIGURACION, PREFIJOS_CONFIGURACION, EXCLUIR_CONFIGURACION } from './configuracion'
 import { MANIFIESTO_DOCUMENTOS, PREFIJOS_DOCUMENTOS, EXCLUIR_DOCUMENTOS } from './documentos'
+import { MANIFIESTO_FINANZAS, PREFIJOS_FINANZAS, EXCLUIR_FINANZAS } from './finanzas'
 import { MANIFIESTO_INTELIGENCIA, PREFIJOS_INTELIGENCIA, EXCLUIR_INTELIGENCIA } from './inteligencia'
 import { MANIFIESTO_OFERTAS, PREFIJOS_OFERTAS } from './ofertas'
 import { MANIFIESTO_STOCK, PREFIJOS_STOCK, EXCLUIR_STOCK } from './stock'
@@ -33,6 +34,7 @@ export const MANIFIESTOS: Record<string, PoolDeclarado> = {
   tareas: { manifiesto: MANIFIESTO_TAREAS, prefijos: PREFIJOS_TAREAS },
   clientes: { manifiesto: MANIFIESTO_CLIENTES, prefijos: PREFIJOS_CLIENTES },
   stock: { manifiesto: MANIFIESTO_STOCK, prefijos: PREFIJOS_STOCK, excluir: EXCLUIR_STOCK },
+  finanzas: { manifiesto: MANIFIESTO_FINANZAS, prefijos: PREFIJOS_FINANZAS, excluir: EXCLUIR_FINANZAS },
   ofertas: { manifiesto: MANIFIESTO_OFERTAS, prefijos: PREFIJOS_OFERTAS },
 }
 

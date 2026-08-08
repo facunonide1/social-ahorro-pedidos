@@ -169,8 +169,46 @@ export interface Manifiesto {
   subapp?: string | null
   /** Lo que cambia entre proyectos sin cambiar la pieza. */
   configurable?: ParametroConfigurable[]
+  /** Lo que NO cambia nunca, con el límite que lo protege. */
+  constitucional?: ElementoConstitucional[]
+  /**
+   * Dimensiones que PARTEN el sector sin dividirlo en sectores.
+   *
+   * Compras maneja tres rubros —farmacia, perfumería, supermercado— y no son
+   * tres sectores: son un filtro sobre el mismo circuito, con las mismas
+   * pantallas y las mismas reglas. Declararla como dimensión es lo que evita
+   * que la fábrica proponga triplicar el pool cada vez que aparece un rubro.
+   */
+  dimensiones?: DimensionTransversal[]
   /** Los agentes que este pool aporta. Vacío es una respuesta válida. */
   agentes?: AgenteDeclarado[]
+  /**
+   * Tablas que el sector todavía tiene pero ya no usa.
+   *
+   * Se listan aparte y NO como entidades propias: una tabla deprecada que se
+   * declara propia viaja a cada proyecto nuevo. Declararla acá deja el rastro
+   * —existe, no se usa, se va a borrar— sin que la fábrica la propague.
+   */
+  deprecadas?: TablaDeprecada[]
+}
+
+export interface DimensionTransversal {
+  clave: string
+  etiqueta: string
+  /** `tabla.columna` donde vive el valor, para poder verificarla. */
+  columnas: string[]
+  /** Los valores que toma hoy en este proyecto. Configurables. */
+  valores: string[]
+  motivo: string
+}
+
+export interface TablaDeprecada {
+  tabla: string
+  /** Qué la reemplazó. */
+  reemplazada_por?: string
+  /** Desde cuándo no se usa. */
+  desde: string
+  motivo: string
 }
 
 /**
@@ -221,6 +259,22 @@ export interface EntidadDeclarada {
   campos_sensibles?: string[]
   /** Esta entidad existe por sucursal aunque el pool sea global (o al revés). */
   alcance?: 'global' | 'por_sucursal'
+  /**
+   * Roles que pueden verla, además del alcance por punto.
+   *
+   * El alcance por sucursal no alcanza cuando el dato es sensible dentro del
+   * propio punto: el saldo de caja general lo ve quien maneja plata, no todo
+   * el que trabaja ahí. Son dos filtros distintos y hacen falta los dos.
+   */
+  restringido_a_rol?: string[]
+  /**
+   * Qué pool genera las filas de esta entidad, cuando no es el dueño.
+   *
+   * Distinto de `escriben_otros`, que dice "acá también escribe alguien más".
+   * Esto dice de dónde VIENEN las filas: la cuenta por pagar nace de un
+   * documento leído, en una sola dirección y nunca al revés.
+   */
+  generada_por?: string
   /**
    * Referencia polimórfica: la entidad apunta a cualquier fila de cualquier
    * pool, sin FK y sin enumerar destinos.
@@ -409,6 +463,50 @@ export interface ParametroConfigurable {
   etiqueta: string
   tipo: 'texto' | 'numero' | 'booleano' | 'lista'
   default?: unknown
+}
+
+/* ── Constitución ────────────────────────────────────────────────────────── */
+
+/**
+ * Los seis límites que la fábrica NO puede mover: ni por configuración, ni por
+ * chat, ni a pedido del dueño del proyecto.
+ *
+ * Están en el formato y no sólo en la doctrina porque la próxima pieza es el
+ * lector: una declaración que gobierna sin conocer los límites puede apagar un
+ * control sin que nadie se entere de que lo apagó.
+ */
+export type LimiteConstitucional =
+  /** Lo que el rubro obliga por ley. */
+  | 'cumplimiento_regulado'
+  /** Quién manda sobre el precio de venta. */
+  | 'autoridad_precio'
+  /** Umbrales de aprobación y permisos: se cambian a mano. */
+  | 'umbrales_y_permisos'
+  /** Control de caja: el arqueo ciego no se configura. */
+  | 'control_de_caja'
+  /** Auditoría: no se desactiva, no se borra, no se edita. */
+  | 'auditoria'
+  /** Confirmación humana antes de ejecutar. */
+  | 'confirmacion_humana'
+
+/**
+ * Un elemento del pool que cae bajo un límite constitucional.
+ *
+ * `modificable: false` es el default y el único valor sensato; el campo existe
+ * para que el validador pueda RECHAZAR una declaración que lo ponga en true.
+ * Sin el campo, marcar algo como modificable sería simplemente no declararlo,
+ * y no habría nada que rechazar.
+ */
+export interface ElementoConstitucional {
+  limite: LimiteConstitucional
+  /** entidad | campo | accion | automatizacion | parametro */
+  tipo: 'entidad' | 'campo' | 'accion' | 'automatizacion' | 'parametro'
+  /** Qué es exactamente: nombre de tabla, `tabla.columna`, clave de acción. */
+  elemento: string
+  /** Por qué no se puede tocar. Se lee cuando alguien pide tocarlo. */
+  motivo: string
+  /** Siempre false. Ponerlo en true es un error de validación. */
+  modificable?: false
 }
 
 /* ── Comparador declaración ↔ código ─────────────────────────────────────── */

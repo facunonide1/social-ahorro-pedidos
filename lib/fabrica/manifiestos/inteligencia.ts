@@ -19,7 +19,7 @@ import type { Manifiesto } from '../tipos'
  * Vocabulario NEUTRO: asistente, aviso, aprobación, registro de auditoría.
  */
 export const MANIFIESTO_INTELIGENCIA: Manifiesto = {
-  formato: '1.1.0',
+  formato: '1.2.0',
   pool: 'inteligencia',
   nombre: 'Inteligencia',
   categoria: 'nucleo',
