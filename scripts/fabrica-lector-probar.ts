@@ -18,7 +18,7 @@ import type { EstadoLector } from '../lib/fabrica/lector-estados'
 const POOL = process.argv[2] ?? 'documentos'
 
 /** Las pantallas cableadas, con el título que el código usaría. */
-const CABLEADAS: Record<string, [string, string][]> = {
+const ESPERADOS: Record<string, [string, string][]> = {
   documentos: [
     ['/admin/finanzas/documentos', 'Documentos a pagar'],
     ['/admin/finanzas/documentos/lote', 'Cargar facturas en lote'],
@@ -55,7 +55,7 @@ async function estadoActual(): Promise<EstadoLector> {
 
 async function titulos(): Promise<[string, string, string][]> {
   const out: [string, string, string][] = []
-  for (const [ruta, enCodigo] of CABLEADAS[POOL] ?? []) {
+  for (const [ruta, enCodigo] of ESPERADOS[POOL] ?? []) {
     out.push([ruta, enCodigo, await tituloDePantalla(POOL, ruta, enCodigo)])
   }
   return out
@@ -82,7 +82,7 @@ async function main() {
   await poner('sombra')
   console.log('\n── SOMBRA · compara pero no gobierna ────────────────────')
   const antes = await contarEventos()
-  for (const [ruta, enCodigo] of CABLEADAS[POOL] ?? []) {
+  for (const [ruta, enCodigo] of ESPERADOS[POOL] ?? []) {
     await compararEnSombra(POOL, ruta, enCodigo)
   }
   for (const [ruta, enCodigo, devuelto] of await titulos()) {

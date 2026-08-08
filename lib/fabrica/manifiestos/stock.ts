@@ -76,12 +76,15 @@ export const MANIFIESTO_STOCK: Manifiesto = {
     { ruta: '/admin/operaciones/irregularidades', titulo: 'Irregularidades', molde: 'bandeja', permiso: 'operaciones' },
     { ruta: '/admin/operaciones/asistente', titulo: 'Asistente', molde: 'chat', permiso: 'operaciones' },
 
-    { ruta: '/admin/operaciones/stock/[id]', titulo: 'Ficha de item', molde: 'ficha', permiso: 'operaciones', navegable: false },
+    // Cuatro fichas con título dinámico, verificado leyendo cada pantalla:
+    // muestran el nombre del item, las sucursales de la transferencia, el punto
+    // del inventario y el nombre de la zona. El lector no las gobierna.
+    { ruta: '/admin/operaciones/stock/[id]', titulo: 'Ficha de item', molde: 'ficha', permiso: 'operaciones', navegable: false, titulo_dinamico: true },
     { ruta: '/admin/operaciones/stock/nuevo', titulo: 'Alta de item', molde: 'wizard', permiso: 'operaciones', navegable: false },
-    { ruta: '/admin/operaciones/transferencias/[id]', titulo: 'Ficha de transferencia', molde: 'ficha', permiso: 'operaciones', navegable: false },
+    { ruta: '/admin/operaciones/transferencias/[id]', titulo: 'Ficha de transferencia', molde: 'ficha', permiso: 'operaciones', navegable: false, titulo_dinamico: true },
     { ruta: '/admin/operaciones/transferencias/nueva', titulo: 'Nueva transferencia', molde: 'wizard', permiso: 'operaciones', navegable: false },
-    { ruta: '/admin/operaciones/inventarios/[id]', titulo: 'Ficha de inventario', molde: 'ficha', permiso: 'operaciones', navegable: false },
-    { ruta: '/admin/operaciones/control-zonas/[id]', titulo: 'Ficha de control de zona', molde: 'ficha', permiso: 'operaciones', navegable: false },
+    { ruta: '/admin/operaciones/inventarios/[id]', titulo: 'Ficha de inventario', molde: 'ficha', permiso: 'operaciones', navegable: false, titulo_dinamico: true },
+    { ruta: '/admin/operaciones/control-zonas/[id]', titulo: 'Ficha de control de zona', molde: 'ficha', permiso: 'operaciones', navegable: false, titulo_dinamico: true },
 
     // Existe, es de Stock, y el menú no la lleva: muestra el resultado de las
     // cargas masivas que hace el importador de Centro de Datos.
