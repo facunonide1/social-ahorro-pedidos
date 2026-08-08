@@ -178,10 +178,15 @@ export async function proponer(args: {
   const instalacionId = await idInstalacion(args.proyectoId, args.clave)
   const propios = instalacionId ? await overridesActuales(instalacionId) : null
   const { manifiesto: efectivo } = resolver(delPool.manifiesto, propios?.overrides ?? null)
-  const { manifiesto: propuesto } = resolver(delPool.manifiesto, {
-    ...(propios?.overrides ?? {}),
-    ...args.cambio,
-  })
+  // FUSIONAR, no pisar. Con un spread superficial, proponer un título borraba
+  // los otros overrides del proyecto: `titulos` es un objeto y el spread lo
+  // reemplaza entero. Lo destapó el diff de la prueba, que mostró tres cambios
+  // en una propuesta que tocaba uno — y de no haberlo mirado, aprobarla habría
+  // devuelto dos pantallas al default sin que nadie lo pidiera.
+  const { manifiesto: propuesto } = resolver(
+    delPool.manifiesto,
+    fusionar(propios?.overrides ?? {}, args.cambio),
+  )
   const personas = await personasQueLoVen(delPool.manifiesto)
   const gobernando = await estaGobernando(args.proyectoId, args.clave)
   const queCambia = diffLegible(efectivo, propuesto, { gobernando, personasConAcceso: personas })
