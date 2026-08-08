@@ -37,6 +37,11 @@ está en el manifiesto no existe, y se dice que no existe.
 - **Ofrecer alternativas**, incluida siempre la de no cambiar nada, con el
   argumento honesto a favor.
 - **Decir que no**, con el motivo y con una salida.
+- **Anotar un pedido de construcción** cuando lo que se pide no existe — y sólo
+  si la persona dice que sí. Ver abajo.
+- **Entender las dos formas de nombrar una pantalla**: el término del oficio y
+  cómo le dice este negocio.
+- **Avisar que un campo ya se cambió y se dio para atrás**, con cuántas veces.
 
 El prompt se arma con el manifiesto **efectivo** del proyecto —la pieza con lo
 de este negocio encima—, no con la semilla del repo: hablar desde la pieza
@@ -54,6 +59,11 @@ pelada sería hablar de valores que acá no rigen.
   instalación; lo demás va por la pieza compartida.
 - **Proponer solo.** Responde a pedidos. No hay propuestas automáticas sacadas
   del uso, porque todavía no hay datos de uso.
+- **Anotar un pedido sin que se lo pidan.** Ofrece y espera. Un pedido anotado
+  porque el asistente creyó entender que hacía falta ensucia la cola con
+  comentarios al pasar, y una cola con ruido se deja de mirar. Es la única regla
+  del chat que **no se puede verificar en código**: desde acá no se distingue un
+  "sí" de un "bueno, dale".
 
 ---
 
@@ -98,6 +108,65 @@ alguien un cambio que no va a pasar. La negativa se decide en código
 
 El prompt igual los explica. Eso sirve para que la respuesta sea buena, no para
 que sea segura. La seguridad no se delega al texto.
+
+---
+
+## Los dos nombres de cada pantalla
+
+Desde el formato 1.5.0 hay dos, y no son lo mismo:
+
+- **El término del oficio** vive en la pieza. Es el nombre de la cosa en el
+  rubro: "Recartelado", "Inventarios".
+- **El nombre de este negocio** vive en la instalación. Es cómo le dice el
+  equipo: "Cartelería de precios", "Conteos de sucursal".
+
+El chat entiende las dos. Si le preguntás por "inventarios" contesta que la
+pantalla existe y que acá figura como "Conteos de sucursal".
+
+Y distingue los dos casos cuando alguien quiere cambiar un nombre:
+
+| Lo que dicen | Qué es | Dónde va |
+|---|---|---|
+| "acá le decimos distinto" | vocabulario, legítimo y permanente | override `vocabulario`; no borra el término del oficio |
+| "la pieza dice algo que está mal, para todos" | un defecto de la pieza | se dice, y se ofrece anotarlo contra la pieza |
+
+El segundo caso importa: taparlo con un override local esconde el defecto, y el
+próximo negocio que instale la pieza se lo come.
+
+---
+
+## La cola de construcción
+
+Cuando la respuesta es "eso no existe", NORA lo ofrece y —si le dicen que sí— lo
+anota en `/fabrica/construccion` con:
+
+- **el pedido en las palabras de la persona**, sin resumir: lo que se pierde al
+  resumir es el motivo, que es lo único que después permite saber si dos pedidos
+  son el mismo
+- **qué falta**: molde · entidad · comportamiento · integración ·
+  capacidad del lector
+- **el contexto** que se supo, y la conversación de la que salió
+
+La cola se ordena **por demanda, no por fecha**: primero lo que se pidió en más
+proyectos distintos. Es la diferencia entre construir lo que hace falta y
+construir lo que se pidió último.
+
+No hay agrupación automática: el sistema sugiere pedidos parecidos por palabras
+en común y una persona decide si son el mismo. Un motor semántico que se
+equivoca fusiona dos pedidos distintos y borra el que menos gente pidió, que
+suele ser el que más falta hace.
+
+---
+
+## La procedencia
+
+Cada valor declarado guarda quién lo decidió, cuándo y por qué. El chat recibe
+la lista de campos que **ya se cambiaron y se dieron para atrás**, con cuántas
+veces, y tiene la instrucción de decirlo y preguntar qué cambió antes de
+proponer sobre ellos.
+
+No se niega por esto —a veces la tercera es la buena— pero mandarlo sin un
+motivo nuevo es hacerle perder el tiempo a quien firma.
 
 ---
 
@@ -153,7 +222,8 @@ instale la pieza se come el mismo problema.
 
 ```bash
 npx tsx scripts/fabrica-probar-negativas.ts   # las cuatro negativas, dos capas
-npx tsx scripts/fabrica-probar-chat.ts        # los ocho pasos, contra producción
+npx tsx scripts/fabrica-probar-chat.ts        # los ocho pasos de v0.66
+npx tsx scripts/fabrica-probar-v067.ts        # pedidos, vocabulario y procedencia
 ```
 
 Ambos corren contra la base real a propósito. Un chat que sólo se probó contra
