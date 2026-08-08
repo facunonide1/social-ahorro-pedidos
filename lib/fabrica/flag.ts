@@ -42,8 +42,14 @@ export interface EstadoPool {
  * Se lee con el cliente de sesión: las políticas de RLS deciden, igual que en
  * el resto del portal.
  */
-export async function estadoDelLector(proyectoId: string): Promise<EstadoPool[]> {
-  const sb = createClient()
+export async function estadoDelLector(
+  proyectoId: string,
+  // `conAdmin` existe para los scripts de consola, que no tienen sesión. Un
+  // estado que sólo se puede leer dentro de un render es un estado que no se
+  // puede probar antes de confiar en él.
+  opciones: { conAdmin?: boolean } = {},
+): Promise<EstadoPool[]> {
+  const sb = opciones.conAdmin ? createAdminClient() : createClient()
 
   const { data: inst } = await sb
     .from('fab_instalaciones')

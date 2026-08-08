@@ -1,4 +1,3 @@
-import { CAMPOS_DE_INSTALACION } from './clasificacion'
 import type { EstadoPool } from './flag'
 import type { Manifiesto } from './tipos'
 
@@ -49,19 +48,48 @@ export interface Negativa {
 }
 
 /**
- * LO QUE EL LECTOR GOBIERNA HOY: títulos de pantalla, y nada más.
+ * LO QUE EL LECTOR GOBIERNA HOY: presentación y navegación, y nada más.
  *
  * Está acá y no en un comentario porque el día que el lector lea algo más, esta
- * constante cambia y el chat deja de mentir sin que nadie se acuerde de él.
+ * constante cambia y el chat deja de mentir sin que nadie tenga que acordarse
+ * de él.
  */
 export const GOBIERNA_HOY = ['titulos', 'ocultas', 'nombre', 'descripcion']
 
-/** Lo que se declara pero todavía usa el código del sector. */
-const DECLARADO_PERO_NO_LEIDO: Record<string, string> = {
+/**
+ * Se declara, todavía no se lee, pero SÍ se puede proponer.
+ *
+ * La propuesta es legítima: deja la decisión tomada y firmada para cuando el
+ * lector la lea. Lo que no es legítimo es dejar que la persona crea que ya
+ * cambió algo, así que se advierte antes y la advertencia viaja con la
+ * propuesta.
+ */
+export const NO_LEIDO_PERO_PROPONIBLE: Record<string, string> = {
   configurable: 'los parámetros de configuración',
   dimensiones: 'las listas de valores',
-  agentes: 'las acciones del asistente',
 }
+
+/**
+ * Se declara y NO se propone desde acá, ni con advertencia.
+ *
+ * Un permiso o una acción del asistente mal puestos no se ven raros: alguien ve
+ * lo que no debe, o el sistema hace algo que nadie firmó. Esto espera a que el
+ * lector los lea de verdad, con su reversión probada.
+ */
+const NI_CON_ADVERTENCIA: Record<string, string> = {
+  agentes: 'las acciones y la autonomía del asistente',
+}
+
+/** Claves válidas de un override, y qué campo de la clasificación son. */
+const CLAVES_DE_OVERRIDE = new Set([
+  'nombre',
+  'descripcion',
+  'titulos',
+  'ocultas',
+  'configurable',
+  'dimensiones',
+  'agentes',
+])
 
 export interface PedidoEvaluable {
   clave: string
@@ -143,19 +171,28 @@ export function porQueNo(
 
   /* ── 3 · fuera de lo que el lector gobierna ───────────────────────── */
   for (const campo of pedido.campos) {
-    if (!CAMPOS_DE_INSTALACION.has(campo)) {
+    if (!CLAVES_DE_OVERRIDE.has(campo)) {
       return {
         motivo: 'fuera_del_lector',
         texto: `"${campo}" es una decisión de la pieza compartida, no de este proyecto. Cambiarlo acá lo cambiaría para todos los negocios que la usan.`,
         salida:
-          'Desde este proyecto sólo se pueden ajustar los campos de instalación. Si el cambio tiene que valer para todos, va por la pieza.',
+          'Desde este proyecto sólo se pueden ajustar los campos de instalación. Si el cambio tiene que valer para todos, va por la pieza y por la gente que la mantiene.',
       }
     }
-    const noLeido = DECLARADO_PERO_NO_LEIDO[campo]
-    if (noLeido && !GOBIERNA_HOY.includes(campo)) {
+    const duro = NI_CON_ADVERTENCIA[campo]
+    if (duro) {
       return {
         motivo: 'fuera_del_lector',
-        texto: `Hoy el lector gobierna títulos de pantalla y nada más. ${noLeido[0].toUpperCase()}${noLeido.slice(1)} se declaran, pero el sistema sigue usando su código: si lo cambiamos, queda escrito y NO se ve en pantalla.`,
+        texto: `Hoy el lector gobierna títulos de pantalla y qué se ve en el menú, nada más. ${duro[0].toUpperCase()}${duro.slice(1)} se declaran, pero el sistema sigue usando su código, y eso no se propone desde acá ni con advertencia: si un título sale mal se ve raro, si una acción sale mal el sistema hace algo que nadie firmó.`,
+        salida:
+          'Lo anoto como pedido para cuando el lector lea las acciones, que es cuando va a poder revertirse. Mientras tanto se cambia en el código, con deploy y con quien lo mantiene.',
+      }
+    }
+    const blando = NO_LEIDO_PERO_PROPONIBLE[campo]
+    if (blando && !GOBIERNA_HOY.includes(campo)) {
+      return {
+        motivo: 'fuera_del_lector',
+        texto: `Hoy el lector gobierna títulos de pantalla y qué se ve en el menú, nada más. ${blando[0].toUpperCase()}${blando.slice(1)} se declaran, pero el sistema sigue usando su código: si lo cambiamos, queda escrito y NO se ve en pantalla.`,
         salida:
           'Puedo dejar la propuesta igual, si querés que la decisión quede tomada y registrada para cuando el lector la lea. Pero te lo digo antes, no después.',
       }

@@ -2,7 +2,12 @@ import Anthropic from '@anthropic-ai/sdk'
 
 import { CAMPOS_DE_INSTALACION } from './clasificacion'
 import { estadoDelLector, type EstadoPool } from './flag'
-import { advertencia, GOBIERNA_HOY, porQueNo, type Negativa } from './negativas'
+import {
+  advertencia,
+  NO_LEIDO_PERO_PROPONIBLE,
+  porQueNo,
+  type Negativa,
+} from './negativas'
 import { listarPropuestas, proponer } from './propuestas'
 import { overridesActuales, resolver, type Overrides } from './overrides'
 import { versionActual } from './versiones'
@@ -75,9 +80,9 @@ export interface CatalogoVisible {
  */
 export async function catalogoVisible(
   proyectoId: string,
-  opciones: { puedeProponer: boolean },
+  opciones: { puedeProponer: boolean; conAdmin?: boolean },
 ): Promise<CatalogoVisible> {
-  const estados = await estadoDelLector(proyectoId)
+  const estados = await estadoDelLector(proyectoId, { conAdmin: opciones.conAdmin })
 
   const pools = await Promise.all(
     estados.map(async (estado): Promise<PoolVisible> => {
@@ -238,6 +243,8 @@ export async function conversar(args: {
   puedeProponer: boolean
   historia: Turno[]
   mensaje: string
+  /** Sólo para los scripts de consola, que no tienen sesión. */
+  conAdmin?: boolean
 }): Promise<RespuestaChat> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
@@ -249,7 +256,10 @@ export async function conversar(args: {
     }
   }
 
-  const cat = await catalogoVisible(args.proyectoId, { puedeProponer: args.puedeProponer })
+  const cat = await catalogoVisible(args.proyectoId, {
+    puedeProponer: args.puedeProponer,
+    conAdmin: args.conAdmin,
+  })
   const anthropic = new Anthropic({ apiKey })
 
   const mensajes: Anthropic.MessageParam[] = [
@@ -321,7 +331,7 @@ export async function conversar(args: {
   // ahí la propuesta es legítima y lo que corresponde es advertir, no negarse.
   const soloAdvierte =
     no?.motivo === 'fuera_del_lector' &&
-    Object.keys(cambio).every((c) => CAMPOS_DE_INSTALACION.has(c) && !GOBIERNA_HOY.includes(c))
+    Object.keys(cambio).every((c) => c in NO_LEIDO_PERO_PROPONIBLE)
   if (no && !soloAdvierte) {
     return { texto: [texto, no.texto, no.salida].filter(Boolean).join('\n\n').trim(), negativa: no }
   }
