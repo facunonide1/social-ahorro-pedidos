@@ -11,7 +11,7 @@ Y su reverso, que costó igual de caro:
 
 Hasta v0.66 aparecieron **cinco** indicadores que mentían. Los cinco se
 encontraron **por casualidad**, probando otra cosa. En v0.67 se buscaron a
-propósito y aparecieron **seis más**. Eso deja de ser mala suerte y pasa a ser
+propósito y aparecieron **siete más** — seis arreglados y uno abierto. Eso deja de ser mala suerte y pasa a ser
 un patrón: en un sistema que mide su propia salud, el modo de falla por defecto
 no es romperse, es tranquilizar.
 
@@ -46,7 +46,7 @@ Y una quinta que salió de v0.67:
 
 ---
 
-## Los once que mintieron
+## Los doce que mintieron
 
 | # | Indicador | Qué decía | Por qué mentía | Cuándo |
 |---|-----------|-----------|----------------|--------|
@@ -61,9 +61,19 @@ Y una quinta que salió de v0.67:
 | 9 | Salud del Taller | "0% ignoradas" | Sin propuestas devolvía 0, que se lee como salud perfecta | v0.67 |
 | 10 | Resumen de "verificar ahora" | "0/8 · 0 · 0 problemas" | Se comía el "el lector está apagado" cuando había pantallas declaradas | v0.67 |
 | 11 | Validador de manifiesto | *(nada)* | **Lanzaba** con un manifiesto corrupto; el lector lo atrapaba y el pool quedaba como si el flag estuviera bajo, sin registrar fallback | v0.67 |
+| 12 | El corte temporal | "0 diferencias" | El corte es **por pool**: tocar una ruta borra las alarmas de todas las otras | v0.67, **abierto** |
 
 El **11** es el peor de la lista: un manifiesto roto en la base se veía
 exactamente igual que un pool que nadie prendió.
+
+El **12 sigue abierto** y es el reverso del arreglo de v0.66. `corteDe()` devuelve
+la fecha del último cambio de declaración del POOL, así que escribir el
+vocabulario de una pantalla puso en cero las diferencias de las otras nueve, que
+no se habían resuelto en absoluto. El arreglo correcto es un corte por CAMPO, y
+`fab_procedencia` ya tiene el dato para calcularlo — cada fila sabe qué campo
+cambió y cuándo. No se hizo en v0.67 para no rediseñar el corte al final de una
+sesión; mientras tanto, el número se vuelve a hacer verdadero corriendo
+`fabrica-comparar-piezas.ts`.
 
 Los seis de v0.67 se encontraron a propósito. Tres los destapó el chat
 trabajando —se negó a proponer sobre un pool impecable, y tenía razón según lo
