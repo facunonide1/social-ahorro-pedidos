@@ -1,4 +1,8 @@
-import { compararEnSombra, obtenerDefinicion } from '@/lib/fabrica/lector'
+import {
+  compararEnSombra,
+  compararParametroEnSombra,
+  obtenerDefinicion,
+} from '@/lib/fabrica/lector'
 
 /**
  * EL ÚNICO PUNTO EN QUE SOCIAL AHORRO LE PREGUNTA ALGO A LA FÁBRICA.
@@ -17,9 +21,17 @@ import { compararEnSombra, obtenerDefinicion } from '@/lib/fabrica/lector'
  *
  * ── CÓMO SACAR LA FÁBRICA DE ACÁ ───────────────────────────────────────────
  *
- * Hay UN import arriba y DOS usos abajo. Borrando el import y reemplazando el
- * cuerpo por `return enCodigo`, Social Ahorro compila y funciona sin la
+ * Hay UN import arriba y dos funciones abajo. Borrando el import y reemplazando
+ * cada cuerpo por `return enCodigo`, Social Ahorro compila y funciona sin la
  * carpeta `lib/fabrica/`. Está probado, no supuesto: ver docs/fabrica/FRONTERA.md.
+ *
+ * ── POR QUÉ SON DOS FUNCIONES Y NO DOS PUNTOS DE CONTACTO ──────────────────
+ *
+ * Desde v0.68 hay `tituloDePantalla` y `parametro`. Siguen siendo UN punto: el
+ * mismo archivo, el mismo import, la misma garantía y el mismo fallback. Lo que
+ * cambia es qué se pregunta, y eso tiene que ser explícito — un
+ * `declaracion(aspecto, clave)` genérico haría que el llamador no sepa qué
+ * garantía tiene.
  */
 
 /**
@@ -42,12 +54,56 @@ export async function tituloDePantalla(
     const def = await obtenerDefinicion(pool, 'pantallas')
     // `null` significa "usá lo tuyo": flag apagado, en sombra, o algo falló y
     // ya quedó registrado del lado de la fábrica.
-    if (!def) return enCodigo
+    if (!def || def.aspecto !== 'pantallas') return enCodigo
 
     const declarado = def.titulos[ruta]
     // Una declaración sin esta pantalla no es motivo para dejar la cabecera en
     // blanco. Se usa el código, que es lo que se venía usando.
     return declarado && declarado.trim() ? declarado : enCodigo
+  } catch {
+    return enCodigo
+  }
+}
+
+/**
+ * El valor de un parámetro de configuración.
+ *
+ * ── LA DIFERENCIA CON UN TÍTULO, QUE NO ES MENOR ────────────────────────────
+ *
+ * Un título mal leído se ve feo. Un parámetro mal leído hace que el sistema se
+ * comporte distinto sin que nadie lo note: se avisa un vencimiento tarde, o se
+ * avisa siempre. Por eso el lector sólo devuelve los ponderados `inocuo` u
+ * `operativo`, y los 14 `sensible` se declaran y no se leen.
+ *
+ * La garantía es la misma que en los títulos y por el mismo motivo: si la
+ * fábrica no contesta, se usa `enCodigo`, que es el valor que el sector venía
+ * usando. Nadie queda sin parámetro.
+ *
+ * @param pool     Clave del pool que declara este parámetro.
+ * @param clave    La clave del parámetro, tal como está declarada.
+ * @param enCodigo El valor que el código usaría. Es también el fallback.
+ */
+export async function parametro<T>(pool: string, clave: string, enCodigo: T): Promise<T> {
+  try {
+    // En sombra compara y registra; en cualquier otro estado no hace nada.
+    await compararParametroEnSombra(pool, clave, enCodigo)
+
+    const def = await obtenerDefinicion(pool, 'parametros')
+    if (!def || def.aspecto !== 'parametros') return enCodigo
+
+    const declarado = def.valores[clave]
+    // Ausente puede significar dos cosas: que no está declarado, o que está
+    // declarado como `sensible` y el lector no lo devuelve. En las dos, el valor
+    // del código es la respuesta correcta.
+    if (declarado === undefined || declarado === null) return enCodigo
+
+    // Y el tipo tiene que coincidir. Un número que llega como texto porque
+    // alguien escribió "30" en un jsonb no se convierte en silencio: se usa el
+    // del código. Convertir sería adivinar, y adivinar sobre un parámetro es
+    // cambiar el comportamiento sin que nadie lo haya pedido.
+    if (typeof declarado !== typeof enCodigo) return enCodigo
+
+    return declarado as T
   } catch {
     return enCodigo
   }

@@ -112,7 +112,8 @@ export async function verificarPool(args: {
   // Con el lector prendido se comprueba además que el camino real lo entregue:
   // que la declaración resuelva no garantiza que el lector la esté sirviendo.
   const delLector = instalacion.lector === 'prendido'
-    ? (await obtenerDefinicion(args.clave, 'pantallas'))?.titulos ?? null
+    ? ((await obtenerDefinicion(args.clave, 'pantallas')) as { titulos: Record<string, string> } | null)
+        ?.titulos ?? null
     : null
 
   const pantallas: ResultadoPantalla[] = gobernables.map((p) => {

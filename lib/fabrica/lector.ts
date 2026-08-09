@@ -35,7 +35,7 @@ import type { Manifiesto } from './tipos'
  */
 
 /** Qué parte del manifiesto se está pidiendo. */
-export type Aspecto = 'pantallas'
+export type Aspecto = 'pantallas' | 'parametros'
 
 export interface DefinicionPantallas {
   aspecto: 'pantallas'
@@ -43,7 +43,30 @@ export interface DefinicionPantallas {
   titulos: Record<string, string>
 }
 
-export type Definicion = DefinicionPantallas
+/**
+ * Los parámetros que el lector gobierna.
+ *
+ * SÓLO los ponderados `inocuo` u `operativo`. Los 14 `sensible` se declaran y
+ * NO se leen: un parámetro sensible mal leído afloja un control o mueve plata, y
+ * eso espera a que este mecanismo tenga historia. Un título mal leído se ve
+ * feo; un parámetro mal leído hace que el sistema se comporte distinto sin que
+ * nadie lo note.
+ *
+ * El filtro está acá, en el lector, y no en el llamador: si estuviera en el
+ * llamador, cada llamador nuevo sería una oportunidad de leer un sensible.
+ */
+export interface DefinicionParametros {
+  aspecto: 'parametros'
+  /** clave → valor declarado. Sólo inocuos y operativos. */
+  valores: Record<string, unknown>
+  /** clave → de dónde salió, para que el portal pueda decirlo. */
+  pesos: Record<string, string>
+}
+
+export type Definicion = DefinicionPantallas | DefinicionParametros
+
+/** Los pesos que el lector gobierna hoy. El resto se declara y no se lee. */
+export const PESOS_GOBERNADOS = ['inocuo', 'operativo'] as const
 
 interface Resuelto {
   estado: EstadoLector
@@ -242,16 +265,30 @@ export async function obtenerDefinicion(
     return null
   }
 
-  const definicion: DefinicionPantallas = {
-    aspecto: 'pantallas',
-    // Las de título dinámico quedan afuera: su cabecera sale de los datos de la
-    // fila, y una etiqueta fija le quitaría información a la pantalla.
-    titulos: Object.fromEntries(
-      r.manifiesto.pantallas
-        .filter((p) => !p.titulo_dinamico && !p.redirige_a)
-        .map((p) => [p.ruta, p.titulo]),
-    ),
-  }
+  const definicion: Definicion =
+    aspecto === 'parametros'
+      ? {
+          aspecto: 'parametros',
+          valores: Object.fromEntries(
+            (r.manifiesto.configurable ?? [])
+              .filter((c) => (PESOS_GOBERNADOS as readonly string[]).includes(c.peso))
+              .filter((c) => c.default !== undefined)
+              .map((c) => [c.clave, c.default]),
+          ),
+          pesos: Object.fromEntries(
+            (r.manifiesto.configurable ?? []).map((c) => [c.clave, c.peso]),
+          ),
+        }
+      : {
+          aspecto: 'pantallas',
+          // Las de título dinámico quedan afuera: su cabecera sale de los datos
+          // de la fila, y una etiqueta fija le quitaría información.
+          titulos: Object.fromEntries(
+            r.manifiesto.pantallas
+              .filter((p) => !p.titulo_dinamico && !p.redirige_a)
+              .map((p) => [p.ruta, p.titulo]),
+          ),
+        }
 
   // En sombra NO se devuelve la declaración: se devuelve null para que el
   // sector use el código, y la comparación la hace quien preguntó llamando a
@@ -282,6 +319,60 @@ export async function tituloGobernante(pool: string, ruta: string): Promise<stri
   const p = r.manifiesto.pantallas.find((x) => x.ruta === ruta)
   if (!p || p.titulo_dinamico || p.redirige_a) return null
   return p.titulo?.trim() ? p.titulo : null
+}
+
+/**
+ * QUÉ VALOR DE PARÁMETRO GOBIERNA HOY, sin comparar y sin registrar nada.
+ *
+ * El equivalente de `tituloGobernante` para parámetros, y por el mismo motivo:
+ * observar y afirmar no pueden pasar por la misma puerta (hallazgo 15).
+ *
+ * Devuelve también de dónde salió, porque con un parámetro eso importa más que
+ * con un título: un número que se comporta distinto sin que se sepa por qué es
+ * exactamente el problema que este bloque tiene que no crear.
+ */
+export async function parametroGobernante(
+  pool: string,
+  clave: string,
+): Promise<{ valor: unknown; peso: string; gobernado: boolean } | null> {
+  const r = await resolver(pool)
+  if (!r.manifiesto) return null
+  const c = (r.manifiesto.configurable ?? []).find((x) => x.clave === clave)
+  if (!c) return null
+  const gobernado =
+    (PESOS_GOBERNADOS as readonly string[]).includes(c.peso) && r.estado === 'prendido'
+  return { valor: c.default, peso: c.peso, gobernado }
+}
+
+/**
+ * En sombra, para un parámetro: compara lo declarado contra lo que usa el
+ * código y registra la diferencia.
+ *
+ * Separado de `compararEnSombra` a propósito: comparten la forma pero no la
+ * clave del detalle —`ruta` contra `clave`—, y unificarlos obligaría a un
+ * campo genérico que después nadie sabe leer. El corte por campo depende de
+ * poder distinguirlos (`campoDelEvento`).
+ */
+export async function compararParametroEnSombra(
+  pool: string,
+  clave: string,
+  enCodigo: unknown,
+): Promise<void> {
+  const r = await resolver(pool)
+  if (r.estado !== 'sombra') return
+  if (!r.manifiesto) {
+    await registrar(pool, 'fallback', 'parametros', r.motivoFallback, { clave, estado: 'sombra' })
+    return
+  }
+  const c = (r.manifiesto.configurable ?? []).find((x) => x.clave === clave)
+  if (!c || !(PESOS_GOBERNADOS as readonly string[]).includes(c.peso)) return
+  if (JSON.stringify(c.default) !== JSON.stringify(enCodigo)) {
+    await registrar(pool, 'diferencia', 'parametros', 'El parámetro declarado no es el del código.', {
+      clave,
+      en_codigo: enCodigo,
+      en_declaracion: c.default,
+    })
+  }
 }
 
 /**
