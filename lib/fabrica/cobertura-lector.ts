@@ -1,4 +1,5 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { cortesPorCampo, diferenciasAbiertas } from './corte'
 import { versionActual } from './versiones'
 import { overridesActuales } from './overrides'
 
@@ -71,13 +72,14 @@ export async function coberturaDe(
       .select('ruta, ultima_consulta')
       .eq('proyecto_id', proyectoId)
       .eq('pool_clave', clave),
+    // Se traen TODAS y se filtran por el corte de su campo. Filtrar por fecha
+    // en la consulta sería volver al corte por pool, que es el hallazgo 12.
     sb
       .from('fab_lector_eventos')
-      .select('tipo')
+      .select('tipo, aspecto, detalle, ocurrido_at')
       .eq('proyecto_id', proyectoId)
       .eq('pool_clave', clave)
-      .eq('tipo', 'diferencia')
-      .gte('ocurrido_at', desde),
+      .eq('tipo', 'diferencia'),
   ])
 
   // Sólo cuentan las consultas posteriores al último cambio: una pantalla que
@@ -88,7 +90,16 @@ export async function coberturaDe(
       .map((c) => c.ruta),
   )
   const sinVerificar = gobernables.filter((p) => !vistas.has(p.ruta)).map((p) => p.ruta)
-  const diferencias = (eventos ?? []).length
+  const cortes = await cortesPorCampo(clave)
+  // Campos distintos en desacuerdo, no eventos registrados. Ver el comentario de
+  // `diferenciasAbiertas`: contar eventos infla el número y un indicador inflado
+  // se ignora igual de rápido que uno en cero.
+  const abiertas = diferenciasAbiertas(
+    (eventos ?? []) as { aspecto: string | null; detalle: unknown; ocurrido_at: string }[],
+    cortes,
+    desde,
+  )
+  const diferencias = abiertas.campos.size + abiertas.sinCampo
   const ultimaConsulta =
     ((consultas ?? []) as { ultima_consulta: string }[])
       .map((c) => c.ultima_consulta)

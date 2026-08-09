@@ -11,7 +11,7 @@ Y su reverso, que costó igual de caro:
 
 Hasta v0.66 aparecieron **cinco** indicadores que mentían. Los cinco se
 encontraron **por casualidad**, probando otra cosa. En v0.67 se buscaron a
-propósito y aparecieron **ocho más** — siete arreglados y uno parcial. Eso deja de ser mala suerte y pasa a ser
+propósito y aparecieron **ocho más**. En v0.68, arreglando uno de ellos, aparecieron **dos más**. Eso deja de ser mala suerte y pasa a ser
 un patrón: en un sistema que mide su propia salud, el modo de falla por defecto
 no es romperse, es tranquilizar.
 
@@ -47,7 +47,7 @@ Y una quinta que salió de v0.67:
 
 ---
 
-## Los trece que mintieron
+## Los quince que mintieron
 
 | # | Indicador | Qué decía | Por qué mentía | Cuándo |
 |---|-----------|-----------|----------------|--------|
@@ -62,8 +62,10 @@ Y una quinta que salió de v0.67:
 | 9 | Salud del Taller | "0% ignoradas" | Sin propuestas devolvía 0, que se lee como salud perfecta | v0.67 |
 | 10 | Resumen de "verificar ahora" | "0/8 · 0 · 0 problemas" | Se comía el "el lector está apagado" cuando había pantallas declaradas | v0.67 |
 | 11 | Validador de manifiesto | *(nada)* | **Lanzaba** con un manifiesto corrupto; el lector lo atrapaba y el pool quedaba como si el flag estuviera bajo, sin registrar fallback | v0.67 |
-| 12 | El corte temporal | "0 diferencias" | El corte es **por pool**: tocar una ruta borra las alarmas de todas las otras | v0.67, **parcial** |
+| 12 | El corte temporal | "0 diferencias" | El corte era **por pool**: tocar una ruta borraba las alarmas de las otras | v0.67 → **arreglado en v0.68** |
 | 13 | Corte + dedupe juntos | "0 diferencias" y no volvían | El corte las escondía y el dedupe de 24 h impedía re-registrarlas: diez diferencias vivas, invisibles por un día | v0.67 |
+| 14 | Conteo de diferencias | "37 diferencias" | Al pasar el corte a por campo empezó a contar EVENTOS y no campos: 37 eventos, 10 problemas. Inflar es tan malo como esconder | v0.68 |
+| 15 | Leer el valor gobernante | "17 diferencias" | Observar y afirmar pasaban por la misma puerta: un script que sólo quería MIRAR pasaba `'FALLBACK'` como literal del código y eso quedaba en el log como diferencia real. 14 eventos inventados | v0.68 |
 
 El **11** es el peor de la lista: un manifiesto roto en la base se veía
 exactamente igual que un pool que nadie prendió.
@@ -75,14 +77,17 @@ dos son correctos. Juntos hacían desaparecer diez diferencias vivas por 24 hora
 Arreglado: la ventana del dedupe nunca es más vieja que el corte, porque un
 cambio de declaración empieza la cuenta de nuevo.
 
-El **12 queda parcial** y es el reverso del arreglo de v0.66. `corteDe()` devuelve
-la fecha del último cambio de declaración del POOL, así que escribir el
-vocabulario de una pantalla puso en cero las diferencias de las otras nueve, que
-no se habían resuelto en absoluto. El arreglo correcto es un corte por CAMPO, y
-`fab_procedencia` ya tiene el dato para calcularlo — cada fila sabe qué campo
-cambió y cuándo. No se hizo en v0.67 para no rediseñar el corte al final de una
-sesión. Con el 13 arreglado el número YA se puede volver a hacer verdadero
-corriendo `fabrica-comparar-piezas.ts`, que es lo que antes no funcionaba.
+El **12 se arregló en v0.68**: el corte pasó a ser por CAMPO, usando
+`fab_procedencia`, que sabe qué campo cambió y cuándo. Una diferencia sólo se
+considera resuelta si cambió el campo que la produjo, y sólo si el cambio fue en
+la PIEZA — un override de instalación no toca lo que se compara, así que no puede
+resolver nada.
+
+El **14 y el 15 salieron de arreglar el 12**, y eso también es un patrón: cada
+arreglo de un indicador es la mejor oportunidad para crear el siguiente. El 14 es
+el mismo error del otro lado —pasó de esconder 10 a inflar a 37— y el 15 es la
+quinta pregunta en otra forma: el canal de observación y el de afirmación no
+pueden ser el mismo. Quien mira no afirma nada.
 
 Los ocho de v0.67 se encontraron a propósito. Tres los destapó el chat
 trabajando —se negó a proponer sobre un pool impecable, y tenía razón según lo
@@ -96,7 +101,8 @@ que el indicador le decía—, y dos los destapó la prueba adversaria.
 |-----------|---|---|---|---|
 | `coberturaDe()` | no: `no_verificado` | sí, tres veredictos | sí, `corteDe()` | sí |
 | `verificarPool()` | no: siempre trae `motivo` | sí, y dice qué **no** puede verificar | n/a (mide el ahora) | sí |
-| `estadoDelLector()` | no | sí | sí, desde v0.66 | sí, verificado contra la tabla |
+| `estadoDelLector()` | no | sí | sí, **por campo** desde v0.68 | sí, verificado contra la tabla |
+| `tituloGobernante()` | no: `null` si no gobierna | sí | n/a | n/a — y NO registra nada: sólo mira |
 | `salud()` | ya no: `null` | sí, desde v0.67 | n/a | n/a (en memoria) |
 | `chequearCenso()` | no: recorre los manifiestos del repo, no puede leer nada y callarse | sí: un sector ausente sale como error | n/a | sí |
 | `carrilDeCampo()` | no: lo desconocido cae en rojo | sí | n/a | n/a |
@@ -113,12 +119,16 @@ que el indicador le decía—, y dos los destapó la prueba adversaria.
 npx tsx scripts/fabrica-indicadores-adversario.ts
 ```
 
-15 casos. Le pone a cada indicador una situación donde no hay nada que medir
+21 casos. Le pone a cada indicador una situación donde no hay nada que medir
 —pool inexistente, pool apagado, manifiesto corrupto, cola vacía, override que
 no cambia nada, estado que no existe— y verifica que **no** devuelva un número
 tranquilizador. Sale 1 si alguno miente.
 
-Dos de los trece de la tabla los encontró esta prueba en su primera corrida.
+Dos de los quince de la tabla los encontró esta prueba en su primera corrida.
+
+Desde v0.68 hay un bloque que ejercita **corte y dedupe juntos**, no cada pieza
+por separado: el hallazgo 13 no estaba en ninguna de las dos, estaba en la
+combinación, y probarlas de a una es lo que lo dejó pasar.
 
 **Cada caso trae su contraprueba.** Verificar que algo da cero cuando no hay
 nada no alcanza: hay que verificar que da distinto de cero cuando sí hay. Si no,

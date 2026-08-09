@@ -17,7 +17,10 @@ import {
   revertirA,
 } from '../lib/fabrica/escritor'
 import { historial, versionActual } from '../lib/fabrica/versiones'
+// Se MIRA con `tituloGobernante`, que no compara ni registra: pasar un literal
+// inventado como 'FALLBACK' lo dejaba en el log como una diferencia real.
 import { tituloDePantalla } from '../lib/os/definicion'
+import { tituloGobernante } from '../lib/fabrica/lector'
 import { PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
 
 const POOL = process.argv[2] ?? 'documentos'
@@ -94,6 +97,8 @@ async function main() {
   )
 
   /* ── 2 · el cambio gobierna, sin deploy ────────────────────────────── */
+  // Acá sí se pasa el literal REAL —el título original—, así que la comparación
+  // que dispare es legítima. Lo que no se puede es inventar un literal.
   const enVivo = await tituloDePantalla(POOL, RUTA, tituloOriginal)
   paso(
     2,
@@ -117,7 +122,7 @@ async function main() {
   )
 
   /* ── 4 · volvió ────────────────────────────────────────────────────── */
-  const trasRevertir = await tituloDePantalla(POOL, RUTA, 'FALLBACK')
+  const trasRevertir = await tituloGobernante(POOL, RUTA)
   paso(
     4,
     trasRevertir === tituloOriginal,

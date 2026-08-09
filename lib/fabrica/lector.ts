@@ -3,6 +3,7 @@ import * as React from 'react'
 import { createAdminClient } from '@/lib/supabase/server'
 import { validarManifiesto } from './validador'
 import { corteDe } from './cobertura-lector'
+import { corteParaRegistrar } from './corte'
 import { overridesActuales, resolver as aplicarOverrides } from './overrides'
 import { PROYECTO_SOCIAL_AHORRO } from './flag'
 import type { EstadoLector } from './lector-estados'
@@ -180,7 +181,13 @@ async function registrar(
     // Un cambio de declaración empieza la cuenta de nuevo: lo que se registre
     // después es información nueva aunque el texto sea idéntico.
     const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    const corte = await corteDe(PROYECTO_SOCIAL_AHORRO, pool).catch(() => hace24h)
+    // El corte DEL CAMPO, no el del pool: si fuera el del pool, tocar una ruta
+    // reabriría el dedupe de todas las demás y el panel se llenaría del mismo
+    // problema repetido. Es el mismo corte que usa el conteo, a propósito.
+    const corteDelPool = await corteDe(PROYECTO_SOCIAL_AHORRO, pool).catch(() => hace24h)
+    const corte = await corteParaRegistrar(pool, aspecto, detalle, corteDelPool).catch(
+      () => hace24h,
+    )
     const desde = corte > hace24h ? corte : hace24h
     const { data: yaHay } = await adm
       .from('fab_lector_eventos')
@@ -252,6 +259,29 @@ export async function obtenerDefinicion(
   if (r.estado === 'sombra') return null
 
   return definicion
+}
+
+/**
+ * QUÉ TÍTULO GOBIERNA HOY, sin comparar y sin registrar nada.
+ *
+ * Existe porque hasta v0.68 observar y afirmar pasaban por la misma puerta. Un
+ * script que sólo quería MIRAR qué resuelve la declaración tenía que llamar a
+ * `tituloDePantalla(pool, ruta, 'FALLBACK')` — y ese 'FALLBACK' se registraba
+ * como el literal del código, o sea como una diferencia real. Catorce eventos
+ * inventados en el log, que inflaron el conteo de diferencias de 13 a 17.
+ *
+ * Es la quinta pregunta otra vez, en otra forma: el canal de observación y el de
+ * afirmación no pueden ser el mismo. Quien mira no afirma nada.
+ *
+ * Devuelve `null` si la declaración no gobierna esta pantalla, en cualquiera de
+ * sus sentidos: flag apagado, sin versión, no valida, o no declarada.
+ */
+export async function tituloGobernante(pool: string, ruta: string): Promise<string | null> {
+  const r = await resolver(pool)
+  if (!r.manifiesto) return null
+  const p = r.manifiesto.pantallas.find((x) => x.ruta === ruta)
+  if (!p || p.titulo_dinamico || p.redirige_a) return null
+  return p.titulo?.trim() ? p.titulo : null
 }
 
 /**

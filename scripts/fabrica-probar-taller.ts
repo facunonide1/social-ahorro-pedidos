@@ -5,7 +5,9 @@
  * Deja el título como estaba. Sale 1 si algún paso falla.
  */
 import { aplicar, listarPropuestas, proponer, revertirPropuesta } from '../lib/fabrica/propuestas'
-import { tituloDePantalla } from '../lib/os/definicion'
+// Se MIRA con `tituloGobernante`, que no compara ni registra: pasar un literal
+// inventado como 'FALLBACK' lo dejaba en el log como una diferencia real.
+import { tituloGobernante } from '../lib/fabrica/lector'
 import { versionActual } from '../lib/fabrica/versiones'
 import { PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
 
@@ -22,7 +24,7 @@ function paso(n: number, ok: boolean, texto: string) {
 
 async function main() {
   const version = await versionActual(POOL)
-  const original = await tituloDePantalla(POOL, RUTA, 'FALLBACK')
+  const original = await tituloGobernante(POOL, RUTA)
   console.log(`Pool ${POOL} · pieza v${version?.numero} · título hoy: "${original}"`)
 
   /* ── 1 · pedir un cambio de etiqueta ─────────────────────────────── */
@@ -58,7 +60,7 @@ async function main() {
 
   /* ── 4 · aprobar y ver el cambio sin deploy ───────────────────────── */
   const r4 = await aplicar({ propuestaId: p!.id, autorId: AUTOR })
-  const enVivo = await tituloDePantalla(POOL, RUTA, 'FALLBACK')
+  const enVivo = await tituloGobernante(POOL, RUTA)
   paso(4, r4.ok && enVivo === NUEVO, `la pantalla ahora devuelve "${enVivo}" sin deploy`)
 
   /* ── 5 · revertir desde el Taller ─────────────────────────────────── */
@@ -67,7 +69,7 @@ async function main() {
     autorId: AUTOR,
     nota: 'Fin de la prueba: vuelve al título anterior.',
   })
-  const trasRevertir = await tituloDePantalla(POOL, RUTA, 'FALLBACK')
+  const trasRevertir = await tituloGobernante(POOL, RUTA)
   paso(5, r5.ok && trasRevertir === original, `volvió a "${trasRevertir}"${r5.ok ? '' : ` · ${r5.error}`}`)
 
   /* ── 6 · intentar algo PROHIBIDO ──────────────────────────────────── */

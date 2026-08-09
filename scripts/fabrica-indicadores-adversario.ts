@@ -16,6 +16,12 @@
  * inexistentes. Sale 1 si algún indicador miente.
  */
 import { carrilDeCampo } from '../lib/fabrica/carriles'
+import {
+  corteParaRegistrar,
+  diferenciasAbiertas,
+  sigueVivo,
+  SIN_CORTE,
+} from '../lib/fabrica/corte'
 import { colaDeConstruccion } from '../lib/fabrica/pedidos'
 import { estadoDelLector, PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
 import { cambiarEstadoLector } from '../lib/fabrica/flag'
@@ -200,7 +206,59 @@ async function main() {
     `carril=${desconocido.carril} — ${desconocido.motivo.slice(0, 90)}`,
   )
 
-  /* ── 9 · la cola de construcción vacía ────────────────────────────── */
+  /* ── 9 · CORTE + DEDUPE, la combinación ───────────────────────────── */
+  //
+  // El hallazgo 13 de v0.67 no estaba en el corte ni en el dedupe: estaba en
+  // cómo se combinaban. Por eso este caso ejercita LOS DOS JUNTOS y no cada
+  // uno por separado, que es lo que los dejó pasar la primera vez.
+  console.log('\nCORTE + DEDUPE (la combinación)')
+  {
+    const cortes = new Map<string, string>([['pantallas./x.titulo', '2026-01-02T00:00:00Z']])
+    const viejo = { aspecto: 'pantallas', detalle: { ruta: '/x' }, ocurrido_at: '2026-01-01T00:00:00Z' }
+    const nuevo = { aspecto: 'pantallas', detalle: { ruta: '/x' }, ocurrido_at: '2026-01-03T00:00:00Z' }
+    const otraRuta = { aspecto: 'pantallas', detalle: { ruta: '/y' }, ocurrido_at: '2026-01-01T00:00:00Z' }
+
+    caso(
+      'un evento anterior al cambio DE SU CAMPO no cuenta',
+      !sigueVivo(viejo, cortes, SIN_CORTE),
+      'evento del 01, el campo cambió el 02 → resuelto',
+    )
+    caso(
+      'y uno posterior SÍ cuenta (si no, el corte esconde todo)',
+      sigueVivo(nuevo, cortes, SIN_CORTE),
+      'evento del 03, el campo cambió el 02 → sigue abierto',
+    )
+    caso(
+      'tocar un campo NO resuelve las diferencias de otro',
+      sigueVivo(otraRuta, cortes, SIN_CORTE),
+      '/y del 01 sigue vivo aunque /x haya cambiado el 02 — es el hallazgo 12',
+    )
+    caso(
+      'la ventana del dedupe nunca empieza antes del corte del campo',
+      (await corteParaRegistrar('stock', 'pantallas', { ruta: '/admin/operaciones/alertas' }, SIN_CORTE)) >=
+        SIN_CORTE,
+      'si empezara antes, el corte esconde y el dedupe impide volver a registrar — hallazgo 13',
+    )
+    const cinco = Array.from({ length: 5 }, (_, i) => ({
+      aspecto: 'pantallas',
+      detalle: { ruta: '/x' },
+      ocurrido_at: `2026-01-0${i + 3}T00:00:00Z`,
+    }))
+    const abiertas = diferenciasAbiertas(cinco, cortes, SIN_CORTE)
+    caso(
+      'cinco eventos del mismo campo son UN problema, no cinco',
+      abiertas.campos.size === 1 && abiertas.sinCampo === 0,
+      `${abiertas.campos.size} campo(s) abierto(s) de ${cinco.length} eventos — inflar es tan malo como esconder`,
+    )
+    const dos = diferenciasAbiertas([...cinco, otraRuta], cortes, SIN_CORTE)
+    caso(
+      'y dos campos distintos son DOS (si no, el 1 de arriba sería ciego)',
+      dos.campos.size === 2,
+      `${dos.campos.size} campo(s) abierto(s)`,
+    )
+  }
+
+  /* ── 10 · la cola de construcción vacía ───────────────────────────── */
   console.log('\nCOLA DE CONSTRUCCIÓN')
   const cola = await colaDeConstruccion({ conAdmin: true })
   caso(

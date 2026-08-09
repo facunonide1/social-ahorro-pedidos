@@ -12,7 +12,9 @@
 import { aplicar, listarPropuestas, revertirPropuesta } from '../lib/fabrica/propuestas'
 import { bitacora, conversar, type Turno } from '../lib/fabrica/chat'
 import { PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
-import { tituloDePantalla } from '../lib/os/definicion'
+// Se MIRA con `tituloGobernante`, que no compara ni registra: pasar un literal
+// inventado como 'FALLBACK' lo dejaba en el log como una diferencia real.
+import { tituloGobernante } from '../lib/fabrica/lector'
 
 // Los pasos 1 a 5 van sobre STOCK y no sobre documentos a propósito: en
 // documentos ya hubo propuestas de título aplicadas y revertidas por las
@@ -46,7 +48,7 @@ async function main() {
     process.exit(1)
   }
 
-  const original = await tituloDePantalla(POOL, RUTA, 'FALLBACK')
+  const original = await tituloGobernante(POOL, RUTA)
   console.log(`Pool ${POOL} · ${RUTA} se llama hoy "${original}"`)
   const antes = await listarPropuestas(PROYECTO_SOCIAL_AHORRO, { conAdmin: true })
 
@@ -99,7 +101,7 @@ async function main() {
 
   /* ── 4 · aprobar desde el Taller y verlo sin deploy ───────────────── */
   const r4 = p ? await aplicar({ propuestaId: p.id, autorId: AUTOR }) : { ok: false }
-  const enVivo = await tituloDePantalla(POOL, RUTA, 'FALLBACK')
+  const enVivo = await tituloGobernante(POOL, RUTA)
   paso(4, r4.ok && enVivo !== original, `la pantalla ahora devuelve "${enVivo}" sin deploy`)
 
   /* ── 5 · revertir ─────────────────────────────────────────────────── */
@@ -110,7 +112,7 @@ async function main() {
         nota: 'Fin de la prueba del chat: vuelve al título anterior.',
       })
     : { ok: false, error: 'no hubo propuesta' }
-  const trasRevertir = await tituloDePantalla(POOL, RUTA, 'FALLBACK')
+  const trasRevertir = await tituloGobernante(POOL, RUTA)
   paso(5, r5.ok && trasRevertir === original, `volvió a "${trasRevertir}"`)
 
   /* ── 6 · algo constitucional ──────────────────────────────────────── */

@@ -15,7 +15,9 @@ import { escribirOverride } from '../lib/fabrica/escritor'
 import { estadoDelLector, PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
 import { historialDeCampo, procedenciaDe } from '../lib/fabrica/procedencia'
 import { overridesActuales } from '../lib/fabrica/overrides'
-import { tituloDePantalla } from '../lib/os/definicion'
+// Se MIRA con `tituloGobernante`, que no compara ni registra: pasar un literal
+// inventado como 'FALLBACK' lo dejaba en el log como una diferencia real.
+import { tituloGobernante } from '../lib/fabrica/lector'
 import { versionActual } from '../lib/fabrica/versiones'
 
 const AUTOR = '5bf8468f-c6a2-4231-8bcb-3c943777bf03'
@@ -97,7 +99,7 @@ async function main() {
   )!
   const previos = await overridesActuales(estado.instalacionId)
   const pieza = (await versionActual(POOL))!.manifiesto.pantallas.find((p) => p.ruta === RUTA)!
-  const original = await tituloDePantalla(POOL, RUTA, 'FALLBACK')
+  const original = await tituloGobernante(POOL, RUTA)
 
   const r4 = await escribirOverride({
     proyectoId: PROYECTO_SOCIAL_AHORRO,
@@ -110,7 +112,7 @@ async function main() {
       'Vocabulario de este negocio: al inventario físico acá le dicen "conteo de sucursal". El término del oficio no se toca. Prueba de v0.67.',
     autorId: AUTOR,
   })
-  const conVocabulario = await tituloDePantalla(POOL, RUTA, 'FALLBACK')
+  const conVocabulario = await tituloGobernante(POOL, RUTA)
   const efectivo = (await versionActual(POOL))!
   const propios = await overridesActuales(estado.instalacionId)
   const { resolver } = await import('../lib/fabrica/overrides')
@@ -163,7 +165,7 @@ async function main() {
     motivo: 'Fin de la prueba de v0.67: se saca el vocabulario de prueba.',
     autorId: AUTOR,
   })
-  const alFinal = await tituloDePantalla(POOL, RUTA, 'FALLBACK')
+  const alFinal = await tituloGobernante(POOL, RUTA)
   console.log(`\nla pantalla volvió a "${alFinal}"${alFinal === original ? '' : ' ✗ NO VOLVIÓ'}`)
   if (alFinal !== original) fallo = true
 

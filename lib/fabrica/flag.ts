@@ -1,5 +1,6 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { corteDe } from './cobertura-lector'
+import { cortesPorCampo, diferenciasAbiertas, SIN_CORTE } from './corte'
 import { ESTADOS_LECTOR } from './lector-estados'
 import type { EstadoLector } from './lector-estados'
 
@@ -67,7 +68,7 @@ export async function estadoDelLector(
   const [{ data: eventos }, { data: cambios }] = await Promise.all([
     sb
       .from('fab_lector_eventos')
-      .select('pool_clave, tipo, ocurrido_at')
+      .select('pool_clave, tipo, aspecto, detalle, ocurrido_at')
       .eq('proyecto_id', proyectoId),
     sb
       .from('fab_lector_cambios')
@@ -76,33 +77,53 @@ export async function estadoDelLector(
       .order('cambiado_at', { ascending: false }),
   ])
 
-  // EL CORTE, el mismo que usa el verificador.
+  // EL CORTE, POR CAMPO desde v0.68.
   //
-  // Sin esto, un pool que se limpió sigue contando las diferencias de antes de
-  // limpiarlo. Stock se verificó 14/14 y se prendió, y el panel seguía diciendo
-  // "25 sin resolver" — una alarma vieja, que la regla de v0.64 pone a la misma
-  // altura que un cero mentiroso. Lo destapó el chat, que se negó a proponer un
-  // título sobre un pool que estaba impecable.
-  const cortes = new Map<string, string>()
+  // Sin corte, un pool que se limpió sigue contando las diferencias de antes de
+  // limpiarlo (hallazgo 3). Con el corte por POOL, tocar una ruta borraba las
+  // alarmas de las otras nueve (hallazgo 12). Por campo: una diferencia sólo se
+  // resuelve si cambió el campo que la produjo.
+  const cortesDelPool = new Map<string, string>()
+  const cortesDeCampo = new Map<string, Map<string, string>>()
   await Promise.all(
     filas.map(async (f) => {
       const clave = f.pool?.clave
-      if (clave) cortes.set(clave, await corteDe(proyectoId, clave))
+      if (!clave) return
+      cortesDelPool.set(clave, await corteDe(proyectoId, clave))
+      cortesDeCampo.set(clave, await cortesPorCampo(clave))
     }),
   )
 
-  const conteo = new Map<string, { diferencias: number; fallbacks: number }>()
-  for (const e of (eventos ?? []) as {
+  // Se agrupan por pool y se cuentan CAMPOS DISTINTOS, no eventos: un mismo
+  // campo con cinco eventos es un problema, no cinco.
+  const porPool = new Map<string, typeof todos>()
+  const todos = ((eventos ?? []) as {
     pool_clave: string
     tipo: string
+    aspecto: string | null
+    detalle: unknown
     ocurrido_at: string
-  }[]) {
-    const corte = cortes.get(e.pool_clave)
-    if (corte && e.ocurrido_at < corte) continue
-    const c = conteo.get(e.pool_clave) ?? { diferencias: 0, fallbacks: 0 }
-    if (e.tipo === 'diferencia') c.diferencias++
-    else c.fallbacks++
-    conteo.set(e.pool_clave, c)
+  }[])
+  for (const e of todos) porPool.set(e.pool_clave, [...(porPool.get(e.pool_clave) ?? []), e])
+
+  const conteo = new Map<string, { diferencias: number; fallbacks: number }>()
+  for (const [clave, suyos] of porPool) {
+    const cortes = cortesDeCampo.get(clave) ?? new Map()
+    const corte = cortesDelPool.get(clave) ?? SIN_CORTE
+    const dif = diferenciasAbiertas(
+      suyos.filter((e) => e.tipo === 'diferencia'),
+      cortes,
+      corte,
+    )
+    const fb = diferenciasAbiertas(
+      suyos.filter((e) => e.tipo !== 'diferencia'),
+      cortes,
+      corte,
+    )
+    conteo.set(clave, {
+      diferencias: dif.campos.size + dif.sinCampo,
+      fallbacks: fb.campos.size + fb.sinCampo,
+    })
   }
 
   // El email vive en auth.users, que no se lee con la sesión del usuario.
