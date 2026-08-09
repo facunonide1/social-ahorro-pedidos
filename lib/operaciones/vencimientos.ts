@@ -212,8 +212,13 @@ export async function getVencimientos(adm: Adm, f: { sucursalId: string | null; 
   })
 }
 
-export function resumenVencimientos(rows: VencimientoRow[]) {
-  const urgentes = rows.filter((r) => r.dias_restantes <= 30)
+/**
+ * @param diasAviso Ventana de aviso, en días. Puede venir de la declaración de
+ *                  la fábrica; el default es el valor que el código usaba, así
+ *                  que llamarla sin el argumento se comporta igual que antes.
+ */
+export function resumenVencimientos(rows: VencimientoRow[], diasAviso = 30) {
+  const urgentes = rows.filter((r) => r.dias_restantes <= diasAviso)
   const devolver = rows.filter((r) => r.accion === 'devolver')
   const porCerrar = devolver.filter((r) => r.ventana_estado === 'por_cerrar')
   return {

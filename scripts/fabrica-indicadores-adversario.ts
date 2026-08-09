@@ -26,7 +26,8 @@ import { colaDeConstruccion } from '../lib/fabrica/pedidos'
 import { estadoDelLector, PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
 import { cambiarEstadoLector } from '../lib/fabrica/flag'
 import { camposQueCambian } from '../lib/fabrica/procedencia'
-import { obtenerDefinicion } from '../lib/fabrica/lector'
+import { obtenerDefinicion, parametroGobernante } from '../lib/fabrica/lector'
+import { parametro } from '../lib/os/definicion'
 import { procedenciaDe } from '../lib/fabrica/procedencia'
 import { resolver, validarOverrides } from '../lib/fabrica/overrides'
 import { salud } from '../lib/fabrica/propuestas'
@@ -258,7 +259,61 @@ async function main() {
     )
   }
 
-  /* ── 10 · la cola de construcción vacía ───────────────────────────── */
+  /* ── 10 · EL FALLBACK TOTAL SOBRE PARÁMETROS ──────────────────────── */
+  //
+  // Un título mal leído se ve feo; un parámetro mal leído hace que el sistema se
+  // comporte distinto sin que nadie lo note. Así que el fallback tiene que ser
+  // total en TODOS los caminos, y cada caso trae su contraprueba.
+  //
+  // NO se corrompe un manifiesto de producción para probar el camino del
+  // manifiesto inválido: ese camino ya está cubierto por el caso del validador
+  // más arriba —que ya no lanza— y romper producción para verlo sería peor que
+  // no verlo.
+  console.log('\nPARÁMETROS · fallback total')
+  {
+    caso(
+      'un pool que no existe devuelve el valor del código',
+      (await parametro('pool-que-no-existe', 'lo_que_sea', 30)) === 30,
+      'sin pool → 30, el valor que el sector venía usando',
+    )
+    caso(
+      'un parámetro no declarado devuelve el valor del código',
+      (await parametro('stock', 'parametro-que-no-existe', 30)) === 30,
+      'sin declaración → 30',
+    )
+    // Los 14 sensibles se declaran y NO se leen. Es el alcance del bloque C.
+    const sensible = await parametro('documentos', 'umbral_confianza_auto', 0.5)
+    const declarado = await parametroGobernante('documentos', 'umbral_confianza_auto')
+    caso(
+      'un parámetro SENSIBLE no se lee, aunque esté declarado',
+      sensible === 0.5 && declarado?.valor === 0.9 && declarado?.gobernado === false,
+      `el código dice 0.5, la declaración dice ${declarado?.valor} (peso ${declarado?.peso}) → gobierna 0.5`,
+    )
+    caso(
+      'y uno OPERATIVO sí se lee (si no, el caso de arriba sería ciego)',
+      (await parametro('stock', 'dias_aviso_vencimiento', 999)) !== 999,
+      `el código dice 999, gobierna ${await parametro('stock', 'dias_aviso_vencimiento', 999)}`,
+    )
+    caso(
+      'un tipo que no coincide no se convierte en silencio',
+      (await parametro('stock', 'dias_aviso_vencimiento', 'treinta')) === 'treinta',
+      'la declaración tiene un número y el código un texto → gana el código, no se adivina',
+    )
+    // Un pool apagado: el sector usa su código y NO se registra fallback, porque
+    // con el flag abajo eso no es un fallback, es el funcionamiento normal.
+    const apagado2 = (await estadoDelLector(PROYECTO_SOCIAL_AHORRO, { conAdmin: true })).find(
+      (e) => e.lector === 'apagado',
+    )
+    if (apagado2) {
+      caso(
+        `un pool apagado (${apagado2.clave}) devuelve el código`,
+        (await parametro(apagado2.clave, 'multi_punto', true)) === true,
+        'flag abajo → el sector usa lo suyo',
+      )
+    }
+  }
+
+  /* ── 11 · la cola de construcción vacía ───────────────────────────── */
   console.log('\nCOLA DE CONSTRUCCIÓN')
   const cola = await colaDeConstruccion({ conAdmin: true })
   caso(

@@ -21,8 +21,10 @@ type Carga = { producto_id: string | null; sku: string | null; nombre: string; f
 const ACCION_ICON: Record<AccionVenc, any> = { devolver: Undo2, reponer: ArrowUpFromLine, transferir: Truck, liquidar: Tag, baja: AlertTriangle, vigilar: CalendarClock }
 const money = (n: number) => `$${Math.round(n).toLocaleString('es-AR')}`
 
-export function VencimientosClient({ filas, resumen, sucursales, proveedores, sucursalActiva, esTodas }: {
+export function VencimientosClient({ filas, resumen, sucursales, proveedores, sucursalActiva, esTodas, diasAviso = 30 }: {
   filas: VencimientoRow[]; resumen: Resumen; sucursales: Suc[]; proveedores: Prov[]; sucursalActiva: string | null; esTodas: boolean
+  /** Ventana de aviso. Llega resuelta desde el server; el default es el del código. */
+  diasAviso?: number
 }) {
   const router = useRouter()
   const [cargar, setCargar] = useState(false)
@@ -97,7 +99,7 @@ export function VencimientosClient({ filas, resumen, sucursales, proveedores, su
                       </div>
                     </td>
                     {esTodas && <td className="px-3 py-2 text-xs">{r.sucursal}</td>}
-                    <td className="px-3 py-2 text-right"><div className="text-xs">{r.fecha_vencimiento}</div><div className={cn('text-[11px] font-medium', r.dias_restantes <= 0 ? 'text-rose-600' : r.dias_restantes <= 30 ? 'text-amber-600' : 'text-muted-foreground')}>{r.dias_restantes <= 0 ? 'vencido' : `en ${r.dias_restantes}d`}</div></td>
+                    <td className="px-3 py-2 text-right"><div className="text-xs">{r.fecha_vencimiento}</div><div className={cn('text-[11px] font-medium', r.dias_restantes <= 0 ? 'text-rose-600' : r.dias_restantes <= diasAviso ? 'text-amber-600' : 'text-muted-foreground')}>{r.dias_restantes <= 0 ? 'vencido' : `en ${r.dias_restantes}d`}</div></td>
                     <td className="px-3 py-2 text-right"><Ventana r={r} /></td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{r.stock_gondola}/{r.stock_deposito}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{r.dias_stock_restante != null ? `${r.dias_stock_restante}d` : '—'}</td>
