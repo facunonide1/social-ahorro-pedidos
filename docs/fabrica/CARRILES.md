@@ -85,10 +85,67 @@ los manifiestos declarados, con el verde deshabilitado (el estado de hoy).
 | --- | --- | --- |
 | Etiquetas y títulos | sí | **no** |
 | Visibilidad y orden | sí | **no** |
-| Umbrales configurables | no | — |
+| Umbrales configurables | sólo si el parámetro pesa `inocuo` | **no** |
 | Valores de una dimensión | no | — |
 | Nivel de participación | no | — |
 | Estructura de la pieza | no | — |
 | Elementos constitucionales | nunca | — |
 
 Todo pide firma. Es a propósito.
+
+---
+
+## Por qué en v0.68 NO se habilitó el primer verde
+
+La sesión v0.68 tenía como bloque final habilitar el carril verde para los
+parámetros `inocuo`, **si había historia suficiente**. Se midió y no la hay. Las
+tres condiciones fallan, y cada una alcanzaría sola.
+
+### 1 · Cero cambios aprobados que hayan quedado aplicados
+
+De 9 propuestas en la historia del proyecto:
+
+| Estado | Cuántas |
+| --- | --- |
+| aplicadas y que **siguen** aplicadas | **0** |
+| aplicadas y después revertidas | 6 |
+| rechazadas | 3 |
+
+Las 6 aplicadas las revirtió su propio script de prueba minutos después. No hay
+historia de uso: hay historia de pruebas. Habilitar la aplicación automática
+apoyándose en eso sería confundir "lo probamos" con "lo usamos".
+
+### 2 · Los 4 parámetros `inocuo` viven en pools apagados
+
+| Parámetro | Lector del pool |
+| --- | --- |
+| `inteligencia.resumen_diario_activo` | apagado |
+| `tareas.puntaje_activo` | apagado |
+| `clientes.puntos_activos` | apagado |
+| `compras.radar_demanda` | apagado |
+
+Un cambio en verde sobre cualquiera de ellos se aplicaría solo y **no se vería
+en ninguna parte**. Eso choca de frente con la regla del propio carril verde: un
+cambio que se aplica solo y nadie ve es un cambio que nadie puede revertir.
+
+Los dos pools prendidos no tienen ningún `inocuo`: los 3 parámetros de
+documentos son los 3 sensibles, y los 3 de stock son operativos.
+
+### 3 · El verde no está implementado como automatización
+
+Hoy el carril verde es una **clasificación**, no una automatización: una
+propuesta que cae en verde se inserta igual como `pendiente` y espera firma.
+Nada la aplica sola.
+
+Eso significa que "habilitar el verde" hoy cambiaría la etiqueta y nada más — y
+una etiqueta que promete que algo se aplica solo, sobre un mecanismo que no lo
+aplica, es exactamente la clase de promesa que la fábrica no hace.
+
+### Qué haría falta, en orden
+
+1. Que algún pool prendido declare un parámetro `inocuo`, o que se prenda un pool
+   que ya tenga uno.
+2. Una historia real de cambios aprobados que se hayan quedado: usados, no
+   probados.
+3. Implementar la aplicación automática con su aviso y su deshacer de un toque —
+   el aviso no es opcional, es lo que hace que el verde sea reversible.
