@@ -11,7 +11,7 @@ Y su reverso, que costó igual de caro:
 
 Hasta v0.66 aparecieron **cinco** indicadores que mentían. Los cinco se
 encontraron **por casualidad**, probando otra cosa. En v0.67 se buscaron a
-propósito y aparecieron **siete más** — seis arreglados y uno abierto. Eso deja de ser mala suerte y pasa a ser
+propósito y aparecieron **ocho más** — siete arreglados y uno parcial. Eso deja de ser mala suerte y pasa a ser
 un patrón: en un sistema que mide su propia salud, el modo de falla por defecto
 no es romperse, es tranquilizar.
 
@@ -31,7 +31,8 @@ Todo indicador nuevo las contesta por escrito antes de entrar:
 3. **¿Tiene corte temporal donde corresponde?**
    Un evento anterior al último cambio de declaración puede estar resuelto por
    ese cambio. Todos los indicadores usan el mismo corte (`corteDe()`); si uno
-   lo usara y otro no, el panel se contradiría a sí mismo.
+   lo usara y otro no, el panel se contradiría a sí mismo. Y si hay dedupe, su
+   ventana **no puede ser más vieja que el corte** — ver el hallazgo 13.
 4. **¿Consulta el esquema real o asume nombres de columnas?**
    Un `.select()` con una columna que no existe **no lanza**: devuelve `data`
    en `null`, y todo conteo derivado da cero. Es la forma más barata de fabricar
@@ -46,7 +47,7 @@ Y una quinta que salió de v0.67:
 
 ---
 
-## Los doce que mintieron
+## Los trece que mintieron
 
 | # | Indicador | Qué decía | Por qué mentía | Cuándo |
 |---|-----------|-----------|----------------|--------|
@@ -61,21 +62,29 @@ Y una quinta que salió de v0.67:
 | 9 | Salud del Taller | "0% ignoradas" | Sin propuestas devolvía 0, que se lee como salud perfecta | v0.67 |
 | 10 | Resumen de "verificar ahora" | "0/8 · 0 · 0 problemas" | Se comía el "el lector está apagado" cuando había pantallas declaradas | v0.67 |
 | 11 | Validador de manifiesto | *(nada)* | **Lanzaba** con un manifiesto corrupto; el lector lo atrapaba y el pool quedaba como si el flag estuviera bajo, sin registrar fallback | v0.67 |
-| 12 | El corte temporal | "0 diferencias" | El corte es **por pool**: tocar una ruta borra las alarmas de todas las otras | v0.67, **abierto** |
+| 12 | El corte temporal | "0 diferencias" | El corte es **por pool**: tocar una ruta borra las alarmas de todas las otras | v0.67, **parcial** |
+| 13 | Corte + dedupe juntos | "0 diferencias" y no volvían | El corte las escondía y el dedupe de 24 h impedía re-registrarlas: diez diferencias vivas, invisibles por un día | v0.67 |
 
 El **11** es el peor de la lista: un manifiesto roto en la base se veía
 exactamente igual que un pool que nadie prendió.
 
-El **12 sigue abierto** y es el reverso del arreglo de v0.66. `corteDe()` devuelve
+El **13** es el que enseñó más, porque no está en ninguna de las dos piezas: está
+en cómo se combinan. El corte descarta los eventos anteriores al último cambio de
+declaración; el dedupe se niega a registrar algo que "ya está". Por separado los
+dos son correctos. Juntos hacían desaparecer diez diferencias vivas por 24 horas.
+Arreglado: la ventana del dedupe nunca es más vieja que el corte, porque un
+cambio de declaración empieza la cuenta de nuevo.
+
+El **12 queda parcial** y es el reverso del arreglo de v0.66. `corteDe()` devuelve
 la fecha del último cambio de declaración del POOL, así que escribir el
 vocabulario de una pantalla puso en cero las diferencias de las otras nueve, que
 no se habían resuelto en absoluto. El arreglo correcto es un corte por CAMPO, y
 `fab_procedencia` ya tiene el dato para calcularlo — cada fila sabe qué campo
 cambió y cuándo. No se hizo en v0.67 para no rediseñar el corte al final de una
-sesión; mientras tanto, el número se vuelve a hacer verdadero corriendo
-`fabrica-comparar-piezas.ts`.
+sesión. Con el 13 arreglado el número YA se puede volver a hacer verdadero
+corriendo `fabrica-comparar-piezas.ts`, que es lo que antes no funcionaba.
 
-Los seis de v0.67 se encontraron a propósito. Tres los destapó el chat
+Los ocho de v0.67 se encontraron a propósito. Tres los destapó el chat
 trabajando —se negó a proponer sobre un pool impecable, y tenía razón según lo
 que el indicador le decía—, y dos los destapó la prueba adversaria.
 
@@ -109,7 +118,7 @@ npx tsx scripts/fabrica-indicadores-adversario.ts
 no cambia nada, estado que no existe— y verifica que **no** devuelva un número
 tranquilizador. Sale 1 si alguno miente.
 
-Dos de los once de la tabla los encontró esta prueba en su primera corrida.
+Dos de los trece de la tabla los encontró esta prueba en su primera corrida.
 
 **Cada caso trae su contraprueba.** Verificar que algo da cero cuando no hay
 nada no alcanza: hay que verificar que da distinto de cero cuando sí hay. Si no,

@@ -2,6 +2,7 @@ import * as React from 'react'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { validarManifiesto } from './validador'
+import { corteDe } from './cobertura-lector'
 import { overridesActuales, resolver as aplicarOverrides } from './overrides'
 import { PROYECTO_SOCIAL_AHORRO } from './flag'
 import type { EstadoLector } from './lector-estados'
@@ -169,7 +170,18 @@ async function registrar(
     // Una pantalla se abre muchas veces por día y la diferencia sería siempre
     // la misma. Se registra una vez por día por pool/aspecto/detalle, para que
     // el panel muestre problemas distintos y no el mismo problema repetido.
-    const desde = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    //
+    // PERO LA VENTANA NO PUEDE SER MÁS VIEJA QUE EL CORTE, y esto costó caro:
+    // el corte descarta los eventos anteriores al último cambio de declaración,
+    // y el dedupe se negaba a volver a registrarlos porque "ya estaban". Entre
+    // los dos hacían desaparecer diez diferencias vivas por 24 horas — el corte
+    // las escondía y el dedupe impedía que volvieran a aparecer.
+    //
+    // Un cambio de declaración empieza la cuenta de nuevo: lo que se registre
+    // después es información nueva aunque el texto sea idéntico.
+    const hace24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const corte = await corteDe(PROYECTO_SOCIAL_AHORRO, pool).catch(() => hace24h)
+    const desde = corte > hace24h ? corte : hace24h
     const { data: yaHay } = await adm
       .from('fab_lector_eventos')
       .select('id')
