@@ -1,4 +1,5 @@
 import { emitirAviso } from '@/lib/ai/nora'
+import { parametro } from '@/lib/os/definicion'
 import {
   DOC_ALERTA_EXCESO_PCT,
   DOC_ALERTA_MONTO_MINIMO,
@@ -122,8 +123,13 @@ async function alertaAumentoFueraDePatron(adm: Adm, documentoId: string): Promis
   // La referencia: cuánto se movió el resto de lo que compra este proveedor.
   const promedio = variaciones.reduce((a, v) => a + v.varPct, 0) / variaciones.length
 
+  // La suba mínima puede venir de la declaración de la fábrica. Si el lector
+  // está apagado o algo falla, devuelve DOC_ALERTA_SUBA_PCT, que es el valor
+  // que este código venía usando: no cambia nada.
+  const subaMinima = await parametro('compras', 'alerta_suba_pct', DOC_ALERTA_SUBA_PCT)
+
   for (const v of variaciones) {
-    if (v.varPct < DOC_ALERTA_SUBA_PCT) continue
+    if (v.varPct < subaMinima) continue
     if (v.varPct - promedio < DOC_ALERTA_EXCESO_PCT) continue
 
     // Cuánta plata mueve: unidades compradas en la ventana × diferencia.
