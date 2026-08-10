@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * son de cualquier perecedero; una zona es un pedazo del depósito.
  */
 export const MANIFIESTO_STOCK: Manifiesto = {
-  formato: '1.5.0',
+  formato: '1.6.0',
   pool: 'stock',
   nombre: 'Stock',
   categoria: 'generico',
@@ -159,11 +159,19 @@ export const MANIFIESTO_STOCK: Manifiesto = {
   ],
 
   configurable: [
-    { clave: 'controla_vencimientos', etiqueta: 'Sigue fechas de vencimiento', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Apagarlo deja de seguir fechas de vencimiento: en un perecedero eso es incumplir.' },
-    { clave: 'controla_lotes', etiqueta: 'Sigue partidas o lotes', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Sin lote no hay trazabilidad de la partida, que es lo que se necesita en un recall.' },
-    { clave: 'dias_aviso_vencimiento', etiqueta: 'Días de anticipación para avisar', tipo: 'numero', default: 30, peso: 'operativo', peso_motivo: 'Cambia con cuánta anticipación se avisa: mal puesto, se avisa tarde o se avisa siempre.' },
-    { clave: 'transferencias_entre_puntos', etiqueta: 'Mueve mercadería entre puntos', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Prende o apaga el circuito de traslados.' },
-    { clave: 'control_por_zonas', etiqueta: 'Divide el espacio en zonas con responsable', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Divide el espacio en zonas con responsable.' },
+    { clave: 'controla_vencimientos', etiqueta: 'Sigue fechas de vencimiento', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Apagarlo deja de seguir fechas de vencimiento: en un perecedero eso es incumplir.'  },
+    { clave: 'controla_lotes', etiqueta: 'Sigue partidas o lotes', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Sin lote no hay trazabilidad de la partida, que es lo que se necesita en un recall.'  },
+    {
+      clave: 'dias_aviso_vencimiento', etiqueta: 'Días de anticipación para avisar', tipo: 'entero', default: 30, peso: 'operativo', peso_motivo: 'Cambia con cuánta anticipación se avisa: mal puesto, se avisa tarde o se avisa siempre.', minimo: 1, maximo: 365, unidad: 'dias',
+      depende_de: [
+        { archivo: "app/(admin)/admin/operaciones/vencimientos/page.tsx", donde: "VencimientosPage", cableado: true, efecto: "Resuelve la ventana y la pasa al resumen y a la pantalla." },
+        { archivo: "lib/operaciones/vencimientos.ts", donde: "resumenVencimientos", cableado: true, efecto: "Cuenta cuántos vencimientos entran en la ventana." },
+        { archivo: "app/(admin)/admin/operaciones/vencimientos/vencimientos-client.tsx", donde: "VencimientosClient", cableado: true, efecto: "Pinta en ámbar los que entran en la ventana." },
+        { archivo: "lib/os/subapps.ts", donde: "badge de Operaciones", cableado: false, efecto: "Cuenta los vencimientos del badge del dock con un literal 30." },
+      ],
+    },
+    { clave: 'transferencias_entre_puntos', etiqueta: 'Mueve mercadería entre puntos', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Prende o apaga el circuito de traslados.'  },
+    { clave: 'control_por_zonas', etiqueta: 'Divide el espacio en zonas con responsable', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Divide el espacio en zonas con responsable.'  },
   ],
 }
 

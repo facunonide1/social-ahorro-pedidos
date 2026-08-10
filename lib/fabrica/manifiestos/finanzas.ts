@@ -22,7 +22,7 @@ import type { Manifiesto } from '../tipos'
  * cualquier negocio que mueva plata.
  */
 export const MANIFIESTO_FINANZAS: Manifiesto = {
-  formato: '1.5.0',
+  formato: '1.6.0',
   pool: 'finanzas',
   nombre: 'Finanzas',
   categoria: 'generico',
@@ -209,10 +209,10 @@ export const MANIFIESTO_FINANZAS: Manifiesto = {
   ],
 
   configurable: [
-    { clave: 'dias_aviso_vencimiento', etiqueta: 'Días de anticipación para avisar un vencimiento', tipo: 'numero', default: 7, peso: 'operativo', peso_motivo: 'Anticipación del aviso de un vencimiento de pago.' },
-    { clave: 'maneja_cheques', etiqueta: 'Opera con valores a fecha', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Prende o apaga el circuito de valores a fecha.' },
-    { clave: 'caja_por_turno', etiqueta: 'La caja se abre y cierra por turno', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Apagarlo saca el arqueo por turno, que es donde vive el control de caja.' },
-    { clave: 'concilia_banco', etiqueta: 'Concilia contra el extracto bancario', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Prende o apaga la conciliación contra el extracto.' },
+    { clave: 'dias_aviso_vencimiento', etiqueta: 'Días de anticipación para avisar un vencimiento', tipo: 'entero', default: 7, peso: 'operativo', peso_motivo: 'Anticipación del aviso de un vencimiento de pago.', minimo: 1, maximo: 90, unidad: 'dias' },
+    { clave: 'maneja_cheques', etiqueta: 'Opera con valores a fecha', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Prende o apaga el circuito de valores a fecha.'  },
+    { clave: 'caja_por_turno', etiqueta: 'La caja se abre y cierra por turno', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Apagarlo saca el arqueo por turno, que es donde vive el control de caja.'  },
+    { clave: 'concilia_banco', etiqueta: 'Concilia contra el extracto bancario', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Prende o apaga la conciliación contra el extracto.'  },
   ],
 
   deprecadas: [

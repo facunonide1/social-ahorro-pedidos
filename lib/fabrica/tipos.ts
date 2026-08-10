@@ -524,11 +524,80 @@ export type Peso =
   /** Si se cambia mal, se pierde plata, se afloja un control o se incumple algo. */
   | 'sensible'
 
+/**
+ * La unidad de un parámetro numérico.
+ *
+ * No es decoración: es lo que hace que un valor sea legible y comparable. "7"
+ * no dice nada; "7 días" se puede discutir. Y sin unidad, dos parámetros que
+ * miden cosas distintas se ven iguales — que fue exactamente el problema que
+ * el peso vino a resolver en v0.66, un nivel más abajo.
+ */
+export type Unidad = 'dias' | 'horas' | 'pesos' | 'porcentaje' | 'unidades' | 'veces'
+
+/**
+ * DÓNDE SE USA UN PARÁMETRO.
+ *
+ * Es lo que permite contestar dos preguntas que hasta 1.5.0 no se podían
+ * contestar:
+ *
+ *   · ¿qué se rompe si cambio esto?
+ *   · ¿el cableado está completo o a medias?
+ *
+ * La segunda es la peligrosa. Un parámetro usado en tres lugares y cableado en
+ * dos es PEOR que uno sin cablear: se comporta distinto en cada pantalla y
+ * nadie lo nota. Sin esta lista, ese estado es indetectable.
+ *
+ * NO SE ESCRIBE DE MEMORIA. Se detecta recorriendo el código —ver
+ * `scripts/fabrica-detectar-dependencias.ts`— y una persona confirma. Escribir
+ * de memoria dónde se usa algo es el mismo error que escribir de memoria un
+ * nombre de columna, que ya falló cuatro veces.
+ */
+export interface DependenciaDeParametro {
+  /** Ruta del archivo, relativa a la raíz del repo. */
+  archivo: string
+  /** Función, componente o pantalla que lo consume. */
+  donde: string
+  /**
+   * true  = ya recibe el valor de la fábrica.
+   * false = todavía usa un literal. Es el cableado a medias, con nombre.
+   */
+  cableado: boolean
+  /** Qué hace con el valor, en una línea. Se lee antes de aprobar un cambio. */
+  efecto?: string
+}
+
 export interface ParametroConfigurable {
   clave: string
   etiqueta: string
-  tipo: 'texto' | 'numero' | 'booleano' | 'lista'
+  /**
+   * Desde 1.6.0 se distingue `numero` de `entero`.
+   *
+   * No es purismo: una ventana de vencimientos en 7.5 días no significa nada, y
+   * un umbral de confianza en 1 en vez de 0.9 sí. Sin la distinción el
+   * validador no puede rechazar ninguno de los dos.
+   */
+  tipo: 'texto' | 'numero' | 'entero' | 'booleano' | 'lista'
   default?: unknown
+
+  /* ── El contrato, desde 1.6.0 ─────────────────────────────────────── */
+
+  /**
+   * Mínimo y máximo, para los numéricos.
+   *
+   * Hasta 1.5.0 nada impedía aprobar una ventana de vencimientos en -5 o en
+   * 100000. El primero no avisa nunca y el segundo avisa siempre; los dos
+   * cambian el comportamiento en silencio y ninguno se veía raro en el diff.
+   */
+  minimo?: number
+  maximo?: number
+  /** Qué mide. Obligatoria en los numéricos: un número sin unidad no se discute. */
+  unidad?: Unidad
+  /** Los valores posibles, si es lista cerrada. */
+  valores?: string[]
+
+  /** Dónde se usa. Detectada contra el código, nunca escrita de memoria. */
+  depende_de?: DependenciaDeParametro[]
+
   /**
    * Obligatorio desde 1.4.0.
    *
@@ -539,6 +608,51 @@ export interface ParametroConfigurable {
   peso: Peso
   /** Por qué ese peso. Se lee cuando alguien discute la clasificación. */
   peso_motivo?: string
+}
+
+/**
+ * ¿El valor entra en el contrato del parámetro?
+ *
+ * Vive acá y no en el validador porque lo usan TRES: el validador del
+ * manifiesto, el escritor —que rechaza antes de guardar— y el lector, que cae
+ * al código si lo que está guardado quedó fuera de rango. Si cada uno tuviera
+ * su copia, tarde o temprano uno aceptaría lo que otro rechaza.
+ *
+ * Devuelve el motivo en castellano, o `null` si el valor es válido.
+ */
+export function fueraDeContrato(p: ParametroConfigurable, valor: unknown): string | null {
+  if (valor === undefined || valor === null) return 'no tiene valor'
+
+  if (p.tipo === 'booleano') {
+    return typeof valor === 'boolean' ? null : `tiene que ser sí o no, y llegó ${typeof valor}`
+  }
+  if (p.tipo === 'texto') {
+    return typeof valor === 'string' ? null : `tiene que ser texto, y llegó ${typeof valor}`
+  }
+  if (p.tipo === 'lista') {
+    if (typeof valor !== 'string') return `tiene que ser uno de los valores permitidos`
+    if (p.valores && !p.valores.includes(valor)) {
+      return `"${valor}" no está entre los valores permitidos (${p.valores.join(', ')})`
+    }
+    return null
+  }
+
+  // numero | entero
+  if (typeof valor !== 'number' || Number.isNaN(valor)) {
+    return `tiene que ser un número, y llegó ${typeof valor}`
+  }
+  if (p.tipo === 'entero' && !Number.isInteger(valor)) {
+    const u = p.unidad ? ` ${p.unidad}` : ''
+    return `tiene que ser un número entero: ${valor}${u} no significa nada`
+  }
+  const u = p.unidad ? ` ${p.unidad}` : ''
+  if (p.minimo !== undefined && valor < p.minimo) {
+    return `${valor}${u} está por debajo del mínimo (${p.minimo}${u})`
+  }
+  if (p.maximo !== undefined && valor > p.maximo) {
+    return `${valor}${u} está por encima del máximo (${p.maximo}${u})`
+  }
+  return null
 }
 
 /* ── Constitución ────────────────────────────────────────────────────────── */

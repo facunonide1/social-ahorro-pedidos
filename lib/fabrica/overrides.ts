@@ -1,5 +1,6 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { puedeBajarA } from './clasificacion'
+import { fueraDeContrato } from './tipos'
 import type { Manifiesto, Participacion } from './tipos'
 
 /**
@@ -277,11 +278,17 @@ export function validarOverrides(delPool: Manifiesto, o: Overrides): RechazoOver
     if (!rutas.has(ruta)) out.push({ campo: `ocultas.${ruta}`, motivo: 'La pieza no declara esa pantalla.' })
   }
 
-  const claves = new Set((delPool.configurable ?? []).map((c) => c.clave))
-  for (const clave of Object.keys(o.configurable ?? {})) {
-    if (!claves.has(clave)) {
+  const porClave = new Map((delPool.configurable ?? []).map((c) => [c.clave, c]))
+  for (const [clave, valor] of Object.entries(o.configurable ?? {})) {
+    const p = porClave.get(clave)
+    if (!p) {
       out.push({ campo: `configurable.${clave}`, motivo: 'La pieza no ofrece ese parámetro.' })
+      continue
     }
+    // EL CONTRATO SE VERIFICA ANTES DE GUARDAR, no al leer. Rechazar acá
+    // convierte un comportamiento raro dentro de seis meses en un mensaje hoy.
+    const mal = fueraDeContrato(p, valor)
+    if (mal) out.push({ campo: `configurable.${clave}`, motivo: `${p.etiqueta}: ${mal}.` })
   }
 
   const dims = new Set((delPool.dimensiones ?? []).map((d) => d.clave))

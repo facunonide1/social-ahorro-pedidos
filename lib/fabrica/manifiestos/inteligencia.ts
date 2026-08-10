@@ -19,7 +19,7 @@ import type { Manifiesto } from '../tipos'
  * Vocabulario NEUTRO: asistente, aviso, aprobación, registro de auditoría.
  */
 export const MANIFIESTO_INTELIGENCIA: Manifiesto = {
-  formato: '1.5.0',
+  formato: '1.6.0',
   pool: 'inteligencia',
   nombre: 'Inteligencia',
   categoria: 'nucleo',
@@ -151,9 +151,9 @@ export const MANIFIESTO_INTELIGENCIA: Manifiesto = {
   ],
 
   configurable: [
-    { clave: 'resumen_diario_activo', etiqueta: 'Arma el resumen del día solo', tipo: 'booleano', default: true, peso: 'inocuo', peso_motivo: 'Si está mal, el resumen aparece o no aparece. Nada más.' },
-    { clave: 'requiere_aprobacion_acciones', etiqueta: 'Toda acción del asistente pasa por aprobación', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Apagarlo saca la cola de aprobaciones del medio. Es el control, no una preferencia.' },
-    { clave: 'retencion_auditoria_dias', etiqueta: 'Días que se guarda el registro de auditoría', tipo: 'numero', default: 3650, peso: 'sensible', peso_motivo: 'Acortarlo es borrar auditoría con otro nombre.' },
+    { clave: 'resumen_diario_activo', etiqueta: 'Arma el resumen del día solo', tipo: 'booleano', default: true, peso: 'inocuo', peso_motivo: 'Si está mal, el resumen aparece o no aparece. Nada más.'  },
+    { clave: 'requiere_aprobacion_acciones', etiqueta: 'Toda acción del asistente pasa por aprobación', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Apagarlo saca la cola de aprobaciones del medio. Es el control, no una preferencia.'  },
+    { clave: 'retencion_auditoria_dias', etiqueta: 'Días que se guarda el registro de auditoría', tipo: 'entero', default: 3650, peso: 'sensible', peso_motivo: 'Acortarlo es borrar auditoría con otro nombre.', minimo: 365, maximo: 7300, unidad: 'dias' },
   ],
 }
 

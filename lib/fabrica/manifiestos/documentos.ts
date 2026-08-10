@@ -17,7 +17,7 @@ import type { Manifiesto } from '../tipos'
  * construyó y el manifiesto no lo rompe.
  */
 export const MANIFIESTO_DOCUMENTOS: Manifiesto = {
-  formato: '1.5.0',
+  formato: '1.6.0',
   pool: 'documentos',
   nombre: 'Motor de documentos',
   categoria: 'nucleo',
@@ -123,9 +123,21 @@ export const MANIFIESTO_DOCUMENTOS: Manifiesto = {
   ],
 
   configurable: [
-    { clave: 'umbral_confianza_auto', etiqueta: 'Confianza mínima para asociar solo', tipo: 'numero', default: 0.9, peso: 'sensible', peso_motivo: 'Bajarlo hace que el modelo asocie renglones sin que nadie mire, y de ahí sale un costo mal cargado.' },
-    { clave: 'usos_minimos_alias', etiqueta: 'Veces que hay que confirmar un alias antes de darlo por bueno', tipo: 'numero', default: 3, peso: 'sensible', peso_motivo: 'Bajarlo da por bueno un alias con poca evidencia y ensucia el historial de precios.' },
-    { clave: 'punto_de_compra_obligatorio', etiqueta: 'Exige indicar en qué punto se compró', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Es el punto que emite el comprobante: tiene impacto fiscal.' },
+    {
+      clave: 'umbral_confianza_auto', etiqueta: 'Confianza mínima para asociar solo', tipo: 'numero', default: 0.9, peso: 'sensible', peso_motivo: 'Bajarlo hace que el modelo asocie renglones sin que nadie mire, y de ahí sale un costo mal cargado.', minimo: 0.5, maximo: 1,
+      depende_de: [
+        { archivo: "lib/documentos/config.ts", donde: "DOC_UMBRAL_AUTO", cableado: false, efecto: "Lee el umbral de process.env, no de la fábrica." },
+        { archivo: "lib/documentos/matchear.ts", donde: "matchear", cableado: false, efecto: "Decide si asocia un renglón solo." },
+      ],
+    },
+    {
+      clave: 'usos_minimos_alias', etiqueta: 'Veces que hay que confirmar un alias antes de darlo por bueno', tipo: 'entero', default: 3, peso: 'sensible', peso_motivo: 'Bajarlo da por bueno un alias con poca evidencia y ensucia el historial de precios.', minimo: 1, maximo: 50, unidad: 'veces',
+      depende_de: [
+        { archivo: "lib/documentos/config.ts", donde: "DOC_USOS_MIN_AUTO", cableado: false, efecto: "Lee el mínimo de process.env, no de la fábrica." },
+        { archivo: "lib/documentos/matchear.ts", donde: "matchear", cableado: false, efecto: "Cuántas veces hay que confirmar un alias antes de darlo por bueno." },
+      ],
+    },
+    { clave: 'punto_de_compra_obligatorio', etiqueta: 'Exige indicar en qué punto se compró', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Es el punto que emite el comprobante: tiene impacto fiscal.'  },
   ],
 }
 

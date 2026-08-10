@@ -1,3 +1,4 @@
+import { fueraDeContrato } from './tipos'
 import type { Manifiesto } from './tipos'
 
 /**
@@ -14,7 +15,7 @@ import type { Manifiesto } from './tipos'
  * ejecutar antes de commitear sin credenciales de nada.
  */
 
-export const FORMATO_ACTUAL = '1.5.0'
+export const FORMATO_ACTUAL = '1.6.0'
 
 export interface Problema {
   campo: string

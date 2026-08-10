@@ -7,6 +7,7 @@ import { corteParaRegistrar } from './corte'
 import { overridesActuales, resolver as aplicarOverrides } from './overrides'
 import { PROYECTO_SOCIAL_AHORRO } from './flag'
 import type { EstadoLector } from './lector-estados'
+import { fueraDeContrato } from './tipos'
 import type { Manifiesto } from './tipos'
 
 /**
@@ -269,10 +270,26 @@ export async function obtenerDefinicion(
     aspecto === 'parametros'
       ? {
           aspecto: 'parametros',
+          // UN VALOR FUERA DE CONTRATO NO SE DEVUELVE.
+          //
+          // El escritor lo rechaza al guardar, pero eso no alcanza: el rango
+          // puede haberse achicado después, o alguien puede haber tocado la
+          // base por afuera. Si lo guardado no cumple, el lector se calla y el
+          // sector usa su valor — con constancia, no en silencio.
           valores: Object.fromEntries(
             (r.manifiesto.configurable ?? [])
               .filter((c) => (PESOS_GOBERNADOS as readonly string[]).includes(c.peso))
               .filter((c) => c.default !== undefined)
+              .filter((c) => {
+                const mal = fueraDeContrato(c, c.default)
+                if (mal) {
+                  void registrar(pool, 'fallback', 'parametros', `${c.etiqueta}: ${mal}.`, {
+                    clave: c.clave,
+                    valor_guardado: c.default,
+                  })
+                }
+                return !mal
+              })
               .map((c) => [c.clave, c.default]),
           ),
           pesos: Object.fromEntries(

@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * caso del mismo circuito, no una entidad aparte del rubro.
  */
 export const MANIFIESTO_COMPRAS: Manifiesto = {
-  formato: '1.5.0',
+  formato: '1.6.0',
   pool: 'compras',
   nombre: 'Compras',
   categoria: 'generico',
@@ -211,11 +211,17 @@ export const MANIFIESTO_COMPRAS: Manifiesto = {
   ],
 
   configurable: [
-    { clave: 'dias_ventana_costo', etiqueta: 'Días para comparar la evolución de un costo', tipo: 'numero', default: 60, peso: 'operativo', peso_motivo: 'Ventana para comparar la evolución de un costo.' },
-    { clave: 'alerta_suba_pct', etiqueta: 'Porcentaje de suba que dispara un aviso', tipo: 'numero', default: 15, peso: 'operativo', peso_motivo: 'Umbral de suba que dispara un aviso: mal puesto, avisa siempre o no avisa nunca.' },
-    { clave: 'concilia_tres_puntas', etiqueta: 'Cruza orden, remito y factura', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Apagarlo da por buena una factura sin cruzarla contra lo pedido y lo recibido.' },
-    { clave: 'maneja_devoluciones', etiqueta: 'Devuelve mercadería al tercero', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Prende o apaga el circuito de devolución al tercero.' },
-    { clave: 'radar_demanda', etiqueta: 'Registra la venta perdida por faltante', tipo: 'booleano', default: true, peso: 'inocuo', peso_motivo: 'Registra o no la venta perdida. Si está mal, falta un dato de análisis.' },
+    { clave: 'dias_ventana_costo', etiqueta: 'Días para comparar la evolución de un costo', tipo: 'entero', default: 60, peso: 'operativo', peso_motivo: 'Ventana para comparar la evolución de un costo.', minimo: 7, maximo: 365, unidad: 'dias' },
+    {
+      clave: 'alerta_suba_pct', etiqueta: 'Porcentaje de suba que dispara un aviso', tipo: 'numero', default: 15, peso: 'operativo', peso_motivo: 'Umbral de suba que dispara un aviso: mal puesto, avisa siempre o no avisa nunca.', minimo: 1, maximo: 100, unidad: 'porcentaje',
+      depende_de: [
+        { archivo: "lib/documentos/config.ts", donde: "DOC_ALERTA_SUBA_PCT", cableado: false, efecto: "Lee el porcentaje de process.env, no de la fábrica." },
+        { archivo: "lib/documentos/alertas-costo.ts", donde: "alertasDeCosto", cableado: false, efecto: "Descarta las subas por debajo del umbral." },
+      ],
+    },
+    { clave: 'concilia_tres_puntas', etiqueta: 'Cruza orden, remito y factura', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Apagarlo da por buena una factura sin cruzarla contra lo pedido y lo recibido.'  },
+    { clave: 'maneja_devoluciones', etiqueta: 'Devuelve mercadería al tercero', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Prende o apaga el circuito de devolución al tercero.'  },
+    { clave: 'radar_demanda', etiqueta: 'Registra la venta perdida por faltante', tipo: 'booleano', default: true, peso: 'inocuo', peso_motivo: 'Registra o no la venta perdida. Si está mal, falta un dato de análisis.'  },
   ],
 
   deprecadas: [
