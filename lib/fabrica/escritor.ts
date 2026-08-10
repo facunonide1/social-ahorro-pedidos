@@ -71,6 +71,24 @@ export interface LineaDiff {
 }
 
 /**
+ * LA VERSIÓN DEL DIFERENCIADOR.
+ *
+ * Se guarda con cada propuesta, igual que el prompt de extracción guarda la
+ * suya. Es lo que permite saber que un diff viejo no es comparable con uno
+ * nuevo — y hace falta porque ya pasó: hasta v0.69 el diff sólo miraba
+ * pantallas, así que hay propuestas guardadas diciendo "No cambia nada" sobre
+ * cambios que sí cambiaron algo.
+ *
+ * El historial NO se reescribe. Una decisión firmada se lee como se firmó; lo
+ * que se agrega es con qué se calculó.
+ *
+ *   1.0.0  hasta v0.69 · sólo pantallas (título y alta/baja)
+ *   1.1.0  v0.69 · suma parámetros
+ *   2.0.0  v0.70 · suma navegación, dimensiones, agentes, nombre y descripción
+ */
+export const DIFERENCIADOR_VERSION = '2.0.0'
+
+/**
  * El diff entre dos manifiestos, en frases.
  *
  * No JSON crudo: quien aprueba un cambio tiene que poder leer qué va a pasar
@@ -122,6 +140,93 @@ export function diffLegible(
       costo: costoDeParametro(c, contexto),
       // Un parámetro se deshace volviendo el valor, pero lo que el sistema hizo
       // MIENTRAS estuvo puesto no se deshace solo. Ver `costoDeParametro`.
+      reversibleSinPerdida: true,
+    })
+  }
+
+  /* ── Navegación ────────────────────────────────────────────────────── */
+  //
+  // Sacar una pantalla del menú no cambia el título y hasta v0.70 no producía
+  // ninguna línea: la propuesta llegaba a la cola diciendo "No cambia nada"
+  // sobre una pantalla que iba a desaparecer de la vista de todos.
+  for (const p of propuesto.pantallas) {
+    const antes = porRuta.get(p.ruta)
+    if (!antes || antes.navegable === p.navegable) continue
+    out.push({
+      texto:
+        p.navegable === false
+          ? `${p.ruta} deja de aparecer en el menú. La pantalla sigue existiendo y se puede llegar por link.`
+          : `${p.ruta} vuelve a aparecer en el menú.`,
+      costo: contexto.gobernando
+        ? 'Deshacerlo la devuelve al menú en la request siguiente.'
+        : 'El pool no está gobernado: el cambio queda declarado y no se ve.',
+      reversibleSinPerdida: true,
+    })
+  }
+
+  /* ── Dimensiones ───────────────────────────────────────────────────── */
+  const dimAntes = new Map((actual.dimensiones ?? []).map((d) => [d.clave, d]))
+  for (const d of propuesto.dimensiones ?? []) {
+    const x = dimAntes.get(d.clave)
+    if (!x || JSON.stringify(x.valores) === JSON.stringify(d.valores)) continue
+    const sacados = x.valores.filter((v) => !d.valores.includes(v))
+    out.push({
+      texto:
+        `Los valores de ${d.etiqueta ?? d.clave} pasan de ${x.valores.length} a ${d.valores.length}` +
+        (sacados.length ? `. Se sacan: ${sacados.join(', ')}.` : '.'),
+      // Sacar un valor de una dimensión NO es reversible sin pérdida: puede
+      // haber filas que ya lo usan, y volver a agregarlo no las recupera si
+      // algo las migró mientras tanto.
+      costo: sacados.length
+        ? `Deshacerlo devuelve los valores a la lista, pero lo que se haya reclasificado mientras tanto NO vuelve solo.`
+        : 'Deshacerlo saca los valores agregados. No se pierde nada.',
+      reversibleSinPerdida: sacados.length === 0,
+    })
+  }
+
+  /* ── Agentes ───────────────────────────────────────────────────────── */
+  //
+  // El lector todavía NO lee esto, pero se puede proponer —y cae en rojo—. Sin
+  // línea de diff, la lista de intentos prohibidos mostraba "no cambia nada"
+  // sobre un intento de subirle la autonomía a un agente.
+  const agAntes = new Map((actual.agentes ?? []).map((a) => [a.clave, a]))
+  for (const a of propuesto.agentes ?? []) {
+    const x = agAntes.get(a.clave)
+    if (!x) continue
+    const accAntes = new Map(x.acciones.map((c) => [c.clave, c]))
+    for (const acc of a.acciones) {
+      const y = accAntes.get(acc.clave)
+      if (!y) continue
+      if (y.participacion !== acc.participacion) {
+        out.push({
+          texto: `La autonomía de "${acc.titulo}" (${a.nombre}) pasa de ${y.participacion} a ${acc.participacion}.`,
+          costo:
+            'El lector todavía no lee las acciones del asistente: el cambio queda declarado y el sistema sigue pidiendo lo mismo.',
+          reversibleSinPerdida: true,
+        })
+      }
+      if ((y.brecha ?? null) !== (acc.brecha ?? null)) {
+        out.push({
+          texto: `La brecha declarada de "${acc.titulo}" pasa de ${JSON.stringify(y.brecha ?? null)} a ${JSON.stringify(acc.brecha ?? null)}.`,
+          costo: 'Es documentación de lo que falta: deshacerlo no toca ningún comportamiento.',
+          reversibleSinPerdida: true,
+        })
+      }
+    }
+  }
+
+  /* ── Identidad del pool ────────────────────────────────────────────── */
+  if (actual.nombre !== propuesto.nombre) {
+    out.push({
+      texto: `El pool pasa de llamarse "${actual.nombre}" a "${propuesto.nombre}".`,
+      costo: 'Deshacerlo devuelve el nombre. No toca ninguna pantalla.',
+      reversibleSinPerdida: true,
+    })
+  }
+  if ((actual.descripcion ?? null) !== (propuesto.descripcion ?? null)) {
+    out.push({
+      texto: 'Cambia la descripción del pool.',
+      costo: 'Deshacerlo devuelve la descripción. No toca ninguna pantalla.',
       reversibleSinPerdida: true,
     })
   }

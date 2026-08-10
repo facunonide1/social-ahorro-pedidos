@@ -7,6 +7,7 @@ import {
   type TipoCampo,
 } from './carriles'
 import {
+  DIFERENCIADOR_VERSION,
   diffLegible,
   escribirOverride,
   personasQueLoVen,
@@ -55,6 +56,8 @@ export interface Propuesta {
   origen: 'humano' | 'verificador'
   /** true = la aplicó el carril verde, no una persona. */
   aplicadaAutomaticamente: boolean
+  /** Con qué versión del diferenciador se calculó `queCambia`. NULL = anterior a v0.70. */
+  diferenciadorVersion: string | null
   huella: string
   vecesRechazada: number
   creadaAt: string
@@ -80,6 +83,7 @@ interface Fila {
   estado: EstadoPropuesta
   origen: 'humano' | 'verificador'
   aplicada_automaticamente: boolean
+  diferenciador_version: string | null
   huella: string
   veces_rechazada: number
   creada_at: string
@@ -105,6 +109,7 @@ const aPropuesta = (f: Fila): Propuesta => ({
   estado: f.estado,
   origen: f.origen,
   aplicadaAutomaticamente: f.aplicada_automaticamente === true,
+  diferenciadorVersion: f.diferenciador_version ?? null,
   huella: f.huella,
   vecesRechazada: f.veces_rechazada ?? 0,
   creadaAt: f.creada_at,
@@ -264,6 +269,9 @@ export async function proponer(args: {
       // el intento queda a la vista.
       estado: veredicto.carril === 'rojo' ? 'rechazada' : 'pendiente',
       origen: args.origen ?? 'humano',
+      // Con qué versión se calculó este diff. Sin esto, un diff viejo y uno
+      // nuevo se leen igual y no lo son.
+      diferenciador_version: DIFERENCIADOR_VERSION,
       huella,
       creada_por: args.autorId,
       decidida_at: veredicto.carril === 'rojo' ? new Date().toISOString() : null,
