@@ -27,7 +27,13 @@ async function main() {
 
   console.log(`\n${r.total} parámetros · ${r.gobernados} gobernados (inocuo + operativo)\n`)
 
-  for (const estado of ['parcial', 'sin_cablear', 'completo', 'sin_declarar'] as const) {
+  for (const estado of [
+    'conflicto_de_fuente',
+    'parcial',
+    'sin_cablear',
+    'completo',
+    'sin_declarar',
+  ] as const) {
     const los = revisiones.filter((x) => x.gobernado && x.estado === estado)
     if (los.length === 0) continue
     console.log(`■ ${ETIQUETA_CABLEADO[estado].toUpperCase()} · ${los.length}`)
@@ -51,8 +57,15 @@ async function main() {
       `${r.completos} completo(s) · ${r.parciales} A MEDIAS · ${r.sinCablear} sin cablear · ` +
       `${r.sinDeclarar} sin declarar dónde se usan (no verificables)`,
   )
+  // El conflicto de fuente va APARTE del denominador de gobernados, porque un
+  // parámetro con dos fuentes vivas no lo devuelve el lector: contarlo entre
+  // los gobernados infla la cuenta, que es el hallazgo 14 en otra tabla.
+  console.log(
+    `CONFLICTOS DE FUENTE (fuera de esa cuenta): ${r.conflictosDeFuente}` +
+      (r.conflictos.length ? ` — ${r.conflictos.join(', ')}` : ''),
+  )
   console.log('')
-  process.exit(r.parciales > 0 ? 1 : 0)
+  process.exit(r.parciales > 0 || r.conflictosDeFuente > 0 ? 1 : 0)
 }
 
 main()

@@ -584,6 +584,45 @@ export interface DependenciaDeParametro {
   efecto?: string
 }
 
+/**
+ * OTRA FUENTE DEL MISMO VALOR.
+ *
+ * ── EL PROBLEMA ─────────────────────────────────────────────────────────────
+ *
+ * Cuatro parámetros se leían además de una variable de entorno, y nada decía
+ * cuál ganaba. El sistema se habría comportado según una mientras el Taller
+ * mostraba la otra, y ningún indicador lo habría detectado: cada lado es
+ * coherente consigo mismo. Es el modo de falla del cableado a medias, un nivel
+ * más arriba.
+ *
+ * ── LA REGLA DE PRECEDENCIA, ÚNICA PARA TODOS ───────────────────────────────
+ *
+ *   1 · si el pool está prendido y hay valor declarado VÁLIDO → gana la
+ *       declaración
+ *   2 · si no → gana el valor del código, que es el que el sector pasa como
+ *       tercer argumento de `parametro()`
+ *
+ * Una variable de entorno no es una tercera regla: es UNA FORMA de escribir el
+ * valor del código. Se resuelve pasándola como fallback —
+ * `parametro('compras', 'alerta_suba_pct', DOC_ALERTA_SUBA_PCT)`— y entonces las
+ * dos fuentes quedan ordenadas en vez de compitiendo.
+ *
+ * Lo que NO se hace es dejar las dos vivas sin decir cuál gana.
+ */
+export interface FuenteDeParametro {
+  tipo: 'variable_de_entorno' | 'constante' | 'tabla'
+  /** El nombre exacto: la constante, la variable o la tabla.columna. */
+  nombre: string
+  /**
+   * es_el_fallback  la otra fuente se pasa como valor del código. Ordenadas.
+   * no_gobernable   el parámetro NO lo lee el lector mientras exista la otra
+   *                 fuente. Es una respuesta válida y se muestra así.
+   * sin_resolver    hay dos fuentes y nadie decidió. Es un CONFLICTO.
+   */
+  resuelto: 'es_el_fallback' | 'no_gobernable' | 'sin_resolver'
+  nota?: string
+}
+
 export interface ParametroConfigurable {
   clave: string
   etiqueta: string
@@ -615,6 +654,15 @@ export interface ParametroConfigurable {
 
   /** Dónde se usa. Detectada contra el código, nunca escrita de memoria. */
   depende_de?: DependenciaDeParametro[]
+  /**
+   * Otra fuente conocida del mismo valor, y cómo se resolvió la convivencia.
+   *
+   * Ausente significa "no se le conoce otra fuente", que es distinto de "se
+   * revisó y no tiene". Lo primero es un hueco, lo segundo es un dato — y hoy
+   * el relevamiento (scripts/fabrica-relevar-fuentes.ts) cubre variables de
+   * entorno y fallbacks distintos, no tablas.
+   */
+  fuente?: FuenteDeParametro
 
   /**
    * Obligatorio desde 1.4.0.
@@ -638,6 +686,25 @@ export interface ParametroConfigurable {
  *
  * Devuelve el motivo en castellano, o `null` si el valor es válido.
  */
+/**
+ * ¿Este parámetro tiene una segunda fuente sin resolver?
+ *
+ * Es la única condición que se agrega a "lo lee el lector", y se pone acá al
+ * lado del contrato porque es la misma clase de pregunta: si el valor no se
+ * puede usar con confianza, no se usa.
+ */
+export function tieneConflictoDeFuente(p: ParametroConfigurable): boolean {
+  return p.fuente?.resuelto === 'sin_resolver'
+}
+
+/** ¿El lector puede devolver este parámetro? Peso Y fuente, las dos cosas. */
+export function esGobernable(p: ParametroConfigurable, pesosGobernados: readonly string[]): boolean {
+  if (!pesosGobernados.includes(p.peso)) return false
+  // Con la fuente sin resolver o marcada no gobernable, el lector se calla. Un
+  // valor que compite con otro no es un valor: es una discusión.
+  return p.fuente?.resuelto !== 'sin_resolver' && p.fuente?.resuelto !== 'no_gobernable'
+}
+
 export function fueraDeContrato(p: ParametroConfigurable, valor: unknown): string | null {
   if (valor === undefined || valor === null) return 'no tiene valor'
 

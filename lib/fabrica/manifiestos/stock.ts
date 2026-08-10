@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * son de cualquier perecedero; una zona es un pedazo del depósito.
  */
 export const MANIFIESTO_STOCK: Manifiesto = {
-  formato: '1.6.0',
+  formato: '1.7.0',
   pool: 'stock',
   nombre: 'Stock',
   categoria: 'generico',

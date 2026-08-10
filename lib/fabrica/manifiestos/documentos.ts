@@ -17,7 +17,7 @@ import type { Manifiesto } from '../tipos'
  * construyó y el manifiesto no lo rompe.
  */
 export const MANIFIESTO_DOCUMENTOS: Manifiesto = {
-  formato: '1.6.0',
+  formato: '1.7.0',
   pool: 'documentos',
   nombre: 'Motor de documentos',
   categoria: 'nucleo',
@@ -125,6 +125,7 @@ export const MANIFIESTO_DOCUMENTOS: Manifiesto = {
   configurable: [
     {
       clave: 'umbral_confianza_auto', etiqueta: 'Confianza mínima para asociar solo', tipo: 'numero', default: 0.9, peso: 'sensible', peso_motivo: 'Bajarlo hace que el modelo asocie renglones sin que nadie mire, y de ahí sale un costo mal cargado.', minimo: 0.5, maximo: 1,
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_UMBRAL_AUTO", resuelto: 'no_gobernable', nota: "Es sensible, así que el lector no lo devuelve igual. Mientras exista DOC_UMBRAL_AUTO, el valor efectivo sale de ahí y la declaración es documentación, no gobierno. Se dice para que nadie lo lea al revés." },
       depende_de: [
         { archivo: "lib/documentos/config.ts", donde: "DOC_UMBRAL_AUTO", via: 'literal', efecto: "Lee el umbral de process.env, no de la fábrica." },
         { archivo: "lib/documentos/matchear.ts", donde: "matchear", via: 'literal', efecto: "Decide si asocia un renglón solo." },
@@ -132,6 +133,7 @@ export const MANIFIESTO_DOCUMENTOS: Manifiesto = {
     },
     {
       clave: 'usos_minimos_alias', etiqueta: 'Veces que hay que confirmar un alias antes de darlo por bueno', tipo: 'entero', default: 3, peso: 'sensible', peso_motivo: 'Bajarlo da por bueno un alias con poca evidencia y ensucia el historial de precios.', minimo: 1, maximo: 50, unidad: 'veces',
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_USOS_MIN_AUTO", resuelto: 'no_gobernable', nota: "Mismo caso que umbral_confianza_auto: sensible y con fuente de entorno viva." },
       depende_de: [
         { archivo: "lib/documentos/config.ts", donde: "DOC_USOS_MIN_AUTO", via: 'literal', efecto: "Lee el mínimo de process.env, no de la fábrica." },
         { archivo: "lib/documentos/matchear.ts", donde: "matchear", via: 'literal', efecto: "Cuántas veces hay que confirmar un alias antes de darlo por bueno." },

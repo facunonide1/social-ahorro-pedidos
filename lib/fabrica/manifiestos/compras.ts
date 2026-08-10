@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * caso del mismo circuito, no una entidad aparte del rubro.
  */
 export const MANIFIESTO_COMPRAS: Manifiesto = {
-  formato: '1.6.0',
+  formato: '1.7.0',
   pool: 'compras',
   nombre: 'Compras',
   categoria: 'generico',
@@ -211,9 +211,13 @@ export const MANIFIESTO_COMPRAS: Manifiesto = {
   ],
 
   configurable: [
-    { clave: 'dias_ventana_costo', etiqueta: 'Días para comparar la evolución de un costo', tipo: 'entero', default: 60, peso: 'operativo', peso_motivo: 'Ventana para comparar la evolución de un costo.', minimo: 7, maximo: 365, unidad: 'dias' },
+    {
+      clave: 'dias_ventana_costo', etiqueta: 'Días para comparar la evolución de un costo', tipo: 'entero', default: 60, peso: 'operativo', peso_motivo: 'Ventana para comparar la evolución de un costo.', minimo: 7, maximo: 365, unidad: 'dias',
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_DIAS_DATO_FRESCO", resuelto: 'sin_resolver', nota: "Se confirmó leyendo el comentario: DOC_DIAS_DATO_FRESCO es \"a partir de cuántos días un costo deja de ser comparable\", bajo la sección del comparador de costos. DOC_CONC_VENTANA_DIAS, que tiene el mismo valor 60, es de conciliación y NO es esta. Queda sin resolver a propósito: no se cablea en esta sesión, y resolverlo sin cablearlo sería declarar un orden que nadie ejercita." },
+    },
     {
       clave: 'alerta_suba_pct', etiqueta: 'Porcentaje de suba que dispara un aviso', tipo: 'numero', default: 15, peso: 'operativo', peso_motivo: 'Umbral de suba que dispara un aviso: mal puesto, avisa siempre o no avisa nunca.', minimo: 1, maximo: 100, unidad: 'porcentaje',
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_ALERTA_SUBA_PCT", resuelto: 'es_el_fallback', nota: "La constante se pasa como tercer argumento de parametro(): la declaración gana con el pool prendido, la variable de entorno gana si no. Ordenadas, no compitiendo." },
       depende_de: [
         { archivo: "lib/documentos/config.ts", donde: "DOC_ALERTA_SUBA_PCT", via: 'literal', efecto: "Lee el porcentaje de process.env, no de la fábrica." },
         { archivo: "lib/documentos/alertas-costo.ts", donde: "alertasDeCosto", via: 'literal', efecto: "Descarta las subas por debajo del umbral." },

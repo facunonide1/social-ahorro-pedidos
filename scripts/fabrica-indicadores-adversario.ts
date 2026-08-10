@@ -16,6 +16,10 @@
  * inexistentes. Sale 1 si algún indicador miente.
  */
 import { carrilDeCampo } from '../lib/fabrica/carriles'
+import { resumenCableado, revisarCableado } from '../lib/fabrica/cableado'
+import { MANIFIESTOS } from '../lib/fabrica/manifiestos'
+import { esGobernable, tieneConflictoDeFuente } from '../lib/fabrica/tipos'
+import { PESOS_GOBERNADOS } from '../lib/fabrica/lector'
 import {
   corteParaRegistrar,
   diferenciasAbiertas,
@@ -313,7 +317,50 @@ async function main() {
     }
   }
 
-  /* ── 11 · la cola de construcción vacía ───────────────────────────── */
+  /* ── 11 · CONFLICTO DE FUENTE ─────────────────────────────────────── */
+  console.log('\nFUENTE DE UN PARÁMETRO')
+  {
+    const base = { clave: 'x', etiqueta: 'X', tipo: 'entero' as const, peso: 'operativo' as const }
+    const limpio = { ...base }
+    const enConflicto = {
+      ...base,
+      fuente: { tipo: 'variable_de_entorno' as const, nombre: 'X_ENV', resuelto: 'sin_resolver' as const },
+    }
+    const ordenado = {
+      ...base,
+      fuente: { tipo: 'variable_de_entorno' as const, nombre: 'X_ENV', resuelto: 'es_el_fallback' as const },
+    }
+    caso(
+      'un parámetro con dos fuentes sin resolver NO es gobernable',
+      !esGobernable(enConflicto, PESOS_GOBERNADOS) && tieneConflictoDeFuente(enConflicto),
+      'el lector no arbitra una discusión entre dos fuentes',
+    )
+    caso(
+      'y uno sin otra fuente SÍ lo es (si no, el de arriba sería ciego)',
+      esGobernable(limpio, PESOS_GOBERNADOS) && !tieneConflictoDeFuente(limpio),
+      'sin segunda fuente, manda el peso y nada más',
+    )
+    caso(
+      'una fuente RESUELTA como fallback no bloquea: quedó ordenada',
+      esGobernable(ordenado, PESOS_GOBERNADOS) && !tieneConflictoDeFuente(ordenado),
+      'la variable de entorno pasa a ser el valor del código, no una fuente que compite',
+    )
+    // Y la contraprueba sobre datos reales: el conteo tiene que dar el número
+    // que da el relevamiento, no cero por no haber mirado.
+    const manifiestos = []
+    for (const clave of Object.keys(MANIFIESTOS)) {
+      const v = await versionActual(clave)
+      if (v) manifiestos.push({ clave, manifiesto: v.manifiesto })
+    }
+    const r = resumenCableado(revisarCableado(manifiestos))
+    caso(
+      'el indicador de conflicto cuenta los reales, no cero',
+      r.conflictosDeFuente > 0,
+      `${r.conflictosDeFuente} conflicto(s): ${r.conflictos.join(', ')}`,
+    )
+  }
+
+  /* ── 12 · la cola de construcción vacía ───────────────────────────── */
   console.log('\nCOLA DE CONSTRUCCIÓN')
   const cola = await colaDeConstruccion({ conAdmin: true })
   caso(

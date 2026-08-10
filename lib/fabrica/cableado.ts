@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 
 import { PESOS_GOBERNADOS } from './lector'
+import { esGobernable, tieneConflictoDeFuente } from './tipos'
 import type { Manifiesto, ParametroConfigurable } from './tipos'
 
 /**
@@ -34,13 +35,20 @@ import type { Manifiesto, ParametroConfigurable } from './tipos'
  * aplicado antes de repetirlo.
  */
 
-export type EstadoCableado = 'completo' | 'parcial' | 'sin_cablear' | 'sin_declarar'
+export type EstadoCableado =
+  | 'completo'
+  | 'parcial'
+  | 'sin_cablear'
+  | 'sin_declarar'
+  /** Hay otra fuente viva y nadie decidió cuál gana. Cablearlo empeora las cosas. */
+  | 'conflicto_de_fuente'
 
 export const ETIQUETA_CABLEADO: Record<EstadoCableado, string> = {
   completo: 'cableado completo y verificado',
   parcial: 'CABLEADO A MEDIAS',
   sin_cablear: 'sin cablear',
   sin_declarar: 'nadie declaró dónde se usa',
+  conflicto_de_fuente: 'CONFLICTO DE FUENTE',
 }
 
 export interface RevisionDeParametro {
@@ -97,8 +105,29 @@ export function revisarParametro(
   poolClave: string,
   p: ParametroConfigurable,
 ): RevisionDeParametro {
-  const gobernado = (PESOS_GOBERNADOS as readonly string[]).includes(p.peso)
+  // ARRASTRE de v0.70: "gobernado" ya no es sólo el peso. Un parámetro con la
+  // fuente sin resolver o marcada no gobernable NO lo devuelve el lector, así
+  // que contarlo entre los gobernados infla el denominador — el mismo error
+  // que el hallazgo 14, en otra cuenta.
+  const gobernado = esGobernable(p, PESOS_GOBERNADOS)
   const deps = p.depende_de ?? []
+
+  // El conflicto manda sobre todo lo demás: cablear un parámetro con dos
+  // fuentes vivas es crear el conflicto silencioso, no resolverlo.
+  if (tieneConflictoDeFuente(p)) {
+    return {
+      clave: p.clave,
+      poolClave,
+      peso: p.peso,
+      gobernado: false,
+      estado: 'conflicto_de_fuente',
+      verificados: [],
+      desmentidos: [],
+      faltan: [],
+      inexistentes: [],
+      motivo: `Tiene otra fuente viva (${p.fuente!.nombre}) y ninguna gana. Hay que resolver la fuente ANTES de cablear.`,
+    }
+  }
 
   const base = {
     clave: p.clave,
@@ -192,6 +221,7 @@ export function revisarCableado(
  * está mal" con "no lo pudimos revisar".
  */
 export function resumenCableado(revisiones: RevisionDeParametro[]) {
+  const conflictos = revisiones.filter((r) => r.estado === 'conflicto_de_fuente')
   const gobernados = revisiones.filter((r) => r.gobernado)
   const verificables = gobernados.filter((r) => r.estado !== 'sin_declarar')
   return {
@@ -202,5 +232,8 @@ export function resumenCableado(revisiones: RevisionDeParametro[]) {
     parciales: verificables.filter((r) => r.estado === 'parcial').length,
     sinCablear: verificables.filter((r) => r.estado === 'sin_cablear').length,
     sinDeclarar: gobernados.filter((r) => r.estado === 'sin_declarar').length,
+    /** Con dos fuentes vivas: no se cuentan como gobernados y son un problema. */
+    conflictosDeFuente: conflictos.length,
+    conflictos: conflictos.map((r) => `${r.poolClave}.${r.clave}`),
   }
 }

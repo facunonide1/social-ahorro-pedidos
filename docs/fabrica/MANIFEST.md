@@ -1,4 +1,4 @@
-# El manifiesto — formato 1.6.0
+# El manifiesto — formato 1.7.0
 
 Un **pool** es una pieza de software declarada como dato. El manifiesto es esa
 declaración: lo que la fábrica sabe de una pieza sin abrir su código.
@@ -38,6 +38,7 @@ Cada uno rompió algo.
 | **El Taller** (v0.65) | — |
 | **El peso** (v0.66) | `peso` en cada configurable, `redirige_a` en pantallas |
 | **El vocabulario** (v0.67) | `titulo` es el término del OFICIO; el nombre del negocio va como override `vocabulario` |
+| **La fuente** (v0.70) | `fuente` en cada parámetro con otra fuente conocida, y cómo se resolvió la convivencia |
 | **El contrato** (v0.69) | cada parámetro declara tipo (`entero` aparte de `numero`), `minimo`, `maximo`, `unidad` y `depende_de` |
 
 ---
@@ -48,7 +49,7 @@ Cada uno rompió algo.
 
 | Campo | Tipo | Qué es |
 | --- | --- | --- |
-| `formato` | `"1.6.0"` | Versión del **formato**, no del pool |
+| `formato` | `"1.7.0"` | Versión del **formato**, no del pool |
 | `pool` | slug | Clave única en el catálogo |
 | `nombre` | texto | Cómo se llama para una persona |
 | `descripcion` | texto | Qué hace, en dos líneas |

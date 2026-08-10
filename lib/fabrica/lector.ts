@@ -7,7 +7,7 @@ import { corteParaRegistrar } from './corte'
 import { overridesActuales, resolver as aplicarOverrides } from './overrides'
 import { PROYECTO_SOCIAL_AHORRO } from './flag'
 import type { EstadoLector } from './lector-estados'
-import { fueraDeContrato } from './tipos'
+import { esGobernable, fueraDeContrato } from './tipos'
 import type { Manifiesto } from './tipos'
 
 /**
@@ -278,7 +278,9 @@ export async function obtenerDefinicion(
           // sector usa su valor — con constancia, no en silencio.
           valores: Object.fromEntries(
             (r.manifiesto.configurable ?? [])
-              .filter((c) => (PESOS_GOBERNADOS as readonly string[]).includes(c.peso))
+              // Peso Y fuente. Un valor que compite con una variable de entorno
+              // no es un valor: es una discusión, y el lector no la arbitra.
+              .filter((c) => esGobernable(c, PESOS_GOBERNADOS))
               .filter((c) => c.default !== undefined)
               .filter((c) => {
                 const mal = fueraDeContrato(c, c.default)
@@ -351,14 +353,18 @@ export async function tituloGobernante(pool: string, ruta: string): Promise<stri
 export async function parametroGobernante(
   pool: string,
   clave: string,
-): Promise<{ valor: unknown; peso: string; gobernado: boolean } | null> {
+): Promise<{
+  valor: unknown
+  peso: string
+  gobernado: boolean
+  fuente: import('./tipos').FuenteDeParametro | null
+} | null> {
   const r = await resolver(pool)
   if (!r.manifiesto) return null
   const c = (r.manifiesto.configurable ?? []).find((x) => x.clave === clave)
   if (!c) return null
-  const gobernado =
-    (PESOS_GOBERNADOS as readonly string[]).includes(c.peso) && r.estado === 'prendido'
-  return { valor: c.default, peso: c.peso, gobernado }
+  const gobernado = esGobernable(c, PESOS_GOBERNADOS) && r.estado === 'prendido'
+  return { valor: c.default, peso: c.peso, gobernado, fuente: c.fuente ?? null }
 }
 
 /**
@@ -382,7 +388,7 @@ export async function compararParametroEnSombra(
     return
   }
   const c = (r.manifiesto.configurable ?? []).find((x) => x.clave === clave)
-  if (!c || !(PESOS_GOBERNADOS as readonly string[]).includes(c.peso)) return
+  if (!c || !esGobernable(c, PESOS_GOBERNADOS)) return
   if (JSON.stringify(c.default) !== JSON.stringify(enCodigo)) {
     await registrar(pool, 'diferencia', 'parametros', 'El parámetro declarado no es el del código.', {
       clave,
