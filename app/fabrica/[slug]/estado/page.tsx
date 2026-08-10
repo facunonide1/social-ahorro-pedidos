@@ -59,7 +59,7 @@ export default async function EstadoPage({ params }: { params: { slug: string } 
             [
               'Parámetros gobernados',
               `${sumar((p) => p.parametros.gobernados)} de ${sumar((p) => p.parametros.total)}`,
-              `${sumar((p) => p.parametros.sinConsumo)} revisados y no consumidos · ${sumar((p) => p.parametros.sensibles)} sensibles fuera del lector`,
+              `${sumar((p) => p.parametros.sensibles)} sensibles fuera del lector · ${sumar((p) => p.parametros.conBrecha)} con brecha · ${sumar((p) => p.hechos)} hechos (no son parámetros)`,
             ],
             [
               'Problemas abiertos',
@@ -127,9 +127,15 @@ export default async function EstadoPage({ params }: { params: { slug: string } 
                       </div>
                     )}
                     <div>
-                      {p.parametros.sensibles} sensible(s) · {p.parametros.sinConsumo} no consumido(s)
+                      {p.parametros.sensibles} sensible(s) · {p.parametros.conBrecha} con brecha
                       {p.parametros.conflictos > 0 && ` · ${p.parametros.conflictos} EN CONFLICTO`}
                     </div>
+                    {p.hechos > 0 && (
+                      <div>
+                        {p.hechos} hecho(s) de la pieza — no son parámetros y no se cuentan como
+                        tales
+                      </div>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-[11px]">
                     {p.diferencias === 0 &&

@@ -158,7 +158,9 @@ ${
   parámetros: ${
     m.configurable
       ?.map((c) => {
-        const estado = c.sin_consumo
+        const estado = c.brecha
+          ? 'declarado, el código no lo implementa'
+          : c.sin_consumo
           ? 'nadie lo lee'
           : c.fuente?.resuelto === 'sin_resolver'
             ? 'CONFLICTO de fuente'
@@ -169,6 +171,7 @@ ${
       })
       .join(' · ') || 'ninguno'
   }
+  hechos (NO son configurables: el circuito existe o no existe, no hay perilla): ${m.hechos?.map((h) => h.afirma).join(' · ') || 'ninguno'}
   INTOCABLES: ${m.constitucional?.map((c) => `${c.elemento} (${c.limite})`).join(' · ') || 'ninguno'}
   brechas abiertas: ${brechas.join(' · ') || 'ninguna'}`
 }
@@ -199,8 +202,9 @@ parámetros. Cada parámetro dice en el catálogo cuál es su caso, y no son lo
 mismo:
   GOBERNADO           el lector lo lee y cambiarlo cambia el comportamiento.
   nadie lo lee        se buscó en el código y no lo consulta nadie. Cambiarlo
-                      queda escrito y NO pasa nada. Casi siempre es porque
-                      describe qué hace la pieza y no es una perilla.
+                      queda escrito y NO pasa nada.
+  con brecha          está declarado y el código todavía no lo implementa.
+                      Cambiarlo no hace nada hasta que se construya.
   sensible, no se lee el lector no devuelve los sensibles todavía.
   CONFLICTO de fuente hay otra fuente viva del mismo valor y ninguna gana.
 Las acciones del asistente siguen sin leerse. Eso se dice ANTES, no después de

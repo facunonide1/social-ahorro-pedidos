@@ -45,9 +45,12 @@ export interface EstadoDePool {
     sinCablear: number
     sinDeclarar: number
     sinConsumo: number
+    conBrecha: number
     conflictos: number
     sensibles: number
   }
+  /** Lo que la pieza HACE y no se puede configurar. Desde 1.8.0 no son parámetros. */
+  hechos: number
   /** Overrides de este proyecto sobre la pieza. */
   overrides: number
   defectosAbiertos: number
@@ -97,8 +100,10 @@ export async function estadoDeLaFabrica(proyectoId: string): Promise<{
         sinDeclarar: r.sinDeclarar,
         sinConsumo: r.sinConsumo,
         conflictos: r.conflictosDeFuente,
+        conBrecha: r.conBrecha,
         sensibles: (m?.configurable ?? []).filter((c) => c.peso === 'sensible').length,
       },
+      hechos: (m?.hechos ?? []).length,
       // Se cuentan las CLAVES de override, no los objetos: `titulos` con tres
       // rutas son tres decisiones, no una.
       overrides: Object.values(propios?.overrides ?? {}).reduce(

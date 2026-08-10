@@ -16,7 +16,7 @@ import type { Manifiesto } from '../tipos'
  * es quien lo usa.
  */
 export const MANIFIESTO_CONFIGURACION: Manifiesto = {
-  formato: '1.7.0',
+  formato: '1.8.0',
   pool: 'configuracion',
   nombre: 'Configuración',
   categoria: 'nucleo',
@@ -104,15 +104,12 @@ export const MANIFIESTO_CONFIGURACION: Manifiesto = {
   ],
 
   configurable: [
-    {
-      clave: 'multi_punto', etiqueta: 'El negocio opera en más de un punto', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Cambia si el sistema razona por punto o global: mal puesto, la gente ve stock y caja del lugar equivocado.',
-      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
-    },
-    {
-      clave: 'codigo_item_externo', etiqueta: 'Los items tienen un código de un sistema externo', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Define si el item se identifica por un código de otro sistema. Mal puesto, deja de matchear.',
-      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
-    },
     { clave: 'permisos_finos', etiqueta: 'Permisos por módulo y acción, además del rol', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Apagarlo deja el permiso sólo en manos del rol y afloja un control. Cae bajo umbrales_y_permisos.'  },
+  ],
+
+  hechos: [
+    { clave: 'multi_punto', afirma: "El negocio opera en más de un punto", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'codigo_item_externo', afirma: "Los items tienen un código de un sistema externo", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
   ],
 }
 

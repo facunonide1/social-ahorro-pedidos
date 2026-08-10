@@ -18,7 +18,7 @@ import type { Manifiesto } from '../tipos'
  * configuración del proyecto, no de la pieza.
  */
 export const MANIFIESTO_CENTRO_DATOS: Manifiesto = {
-  formato: '1.7.0',
+  formato: '1.8.0',
   pool: 'centro-datos',
   nombre: 'Centro de Datos',
   categoria: 'nucleo',
@@ -129,10 +129,10 @@ export const MANIFIESTO_CENTRO_DATOS: Manifiesto = {
   configurable: [
     { clave: 'guarda_snapshot', etiqueta: 'Guarda cómo estaba todo antes de cada carga', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Sin la foto previa, una importación mal hecha es irreversible.'  },
     { clave: 'umbral_match_automatico', etiqueta: 'Confianza mínima para identificar solo', tipo: 'numero', default: 0.9, peso: 'sensible', peso_motivo: 'Bajarlo mete filas en el item equivocado y contamina el catálogo maestro del que dependen todos los pools.', minimo: 0.5, maximo: 1 },
-    {
-      clave: 'exporta_a_sistema_externo', etiqueta: 'Exporta hacia un sistema externo', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Cambia si el resultado sale hacia afuera. Mal puesto, alguien exporta o deja de exportar sin darse cuenta.',
-      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
-    },
+  ],
+
+  hechos: [
+    { clave: 'exporta_a_sistema_externo', afirma: "Exporta hacia un sistema externo", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
   ],
 }
 

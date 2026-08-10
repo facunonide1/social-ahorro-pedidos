@@ -22,7 +22,7 @@ import type { Manifiesto } from '../tipos'
  * cualquier negocio que mueva plata.
  */
 export const MANIFIESTO_FINANZAS: Manifiesto = {
-  formato: '1.7.0',
+  formato: '1.8.0',
   pool: 'finanzas',
   nombre: 'Finanzas',
   categoria: 'generico',
@@ -211,17 +211,14 @@ export const MANIFIESTO_FINANZAS: Manifiesto = {
   configurable: [
     {
       clave: 'dias_aviso_vencimiento', etiqueta: 'Días de anticipación para avisar un vencimiento', tipo: 'entero', default: 7, peso: 'operativo', peso_motivo: 'Anticipación del aviso de un vencimiento de pago.', minimo: 1, maximo: 90, unidad: 'dias',
-      sin_consumo: { motivo: "No se encontró ninguna constante ni literal que use esta ventana en el circuito de finanzas. Puede existir y estar escrito de una forma que la búsqueda por identificador exacto no alcanza; se declara como no consumido y no como verificado.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
-    },
-    {
-      clave: 'maneja_cheques', etiqueta: 'Opera con valores a fecha', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Prende o apaga el circuito de valores a fecha.',
-      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
+      brecha: "No se encontró ningún consumo de esta ventana en el circuito de finanzas. Puede existir escrito de una forma que la búsqueda por identificador exacto no alcanza: se declara la brecha y NO se afirma que no exista.",
     },
     { clave: 'caja_por_turno', etiqueta: 'La caja se abre y cierra por turno', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Apagarlo saca el arqueo por turno, que es donde vive el control de caja.'  },
-    {
-      clave: 'concilia_banco', etiqueta: 'Concilia contra el extracto bancario', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Prende o apaga la conciliación contra el extracto.',
-      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
-    },
+  ],
+
+  hechos: [
+    { clave: 'maneja_cheques', afirma: "Opera con valores a fecha", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'concilia_banco', afirma: "Concilia contra el extracto bancario", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
   ],
 
   deprecadas: [

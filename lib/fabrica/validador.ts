@@ -15,7 +15,7 @@ import type { Manifiesto } from './tipos'
  * ejecutar antes de commitear sin credenciales de nada.
  */
 
-export const FORMATO_ACTUAL = '1.7.0'
+export const FORMATO_ACTUAL = '1.8.0'
 
 export interface Problema {
   campo: string
@@ -117,6 +117,21 @@ export function validarManifiesto(m: Manifiesto): Problema[] {
     }
     if (e.referencia_abierta && !e.referencia_abierta.nota) {
       err(`entidades.${e.tabla}`, 'una referencia abierta sin nota no se entiende desde afuera')
+    }
+  }
+
+  /* ── Hechos ────────────────────────────────────────────────────────── */
+  const clavesConf = new Set((m.configurable ?? []).map((c) => c.clave))
+  const vistosHechos = new Set<string>()
+  for (const h of m.hechos ?? []) {
+    if (vistosHechos.has(h.clave)) err(`hechos.${h.clave}`, 'declarado dos veces')
+    vistosHechos.add(h.clave)
+    if (!h.afirma) err(`hechos.${h.clave}`, 'no dice qué afirma')
+    // Un hecho sin comprobación es una afirmación sin respaldo, y este proyecto
+    // ya sabe lo que cuesta una de ésas.
+    if (!h.comprobado_por) err(`hechos.${h.clave}`, 'no dice cómo se comprobó')
+    if (clavesConf.has(h.clave)) {
+      err(`hechos.${h.clave}`, 'está declarado como hecho Y como configurable: es una cosa o la otra')
     }
   }
 

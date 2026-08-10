@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * caso del mismo circuito, no una entidad aparte del rubro.
  */
 export const MANIFIESTO_COMPRAS: Manifiesto = {
-  formato: '1.7.0',
+  formato: '1.8.0',
   pool: 'compras',
   nombre: 'Compras',
   categoria: 'generico',
@@ -223,14 +223,11 @@ export const MANIFIESTO_COMPRAS: Manifiesto = {
       ],
     },
     { clave: 'concilia_tres_puntas', etiqueta: 'Cruza orden, remito y factura', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Apagarlo da por buena una factura sin cruzarla contra lo pedido y lo recibido.'  },
-    {
-      clave: 'maneja_devoluciones', etiqueta: 'Devuelve mercadería al tercero', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Prende o apaga el circuito de devolución al tercero.',
-      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
-    },
-    {
-      clave: 'radar_demanda', etiqueta: 'Registra la venta perdida por faltante', tipo: 'booleano', default: true, peso: 'inocuo', peso_motivo: 'Registra o no la venta perdida. Si está mal, falta un dato de análisis.',
-      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
-    },
+  ],
+
+  hechos: [
+    { clave: 'maneja_devoluciones', afirma: "Devuelve mercadería al tercero", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'radar_demanda', afirma: "Registra la venta perdida por faltante", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
   ],
 
   deprecadas: [

@@ -40,6 +40,8 @@ export type EstadoCableado =
   | 'parcial'
   | 'sin_cablear'
   | 'sin_declarar'
+  /** El código no lo implementa todavía, y está declarado. */
+  | 'con_brecha'
   /** Se buscó y el código no lo lee. No es un hueco: es una respuesta. */
   | 'sin_consumo'
   /** Hay otra fuente viva y nadie decidió cuál gana. Cablearlo empeora las cosas. */
@@ -50,6 +52,7 @@ export const ETIQUETA_CABLEADO: Record<EstadoCableado, string> = {
   parcial: 'CABLEADO A MEDIAS',
   sin_cablear: 'sin cablear',
   sin_declarar: 'nadie declaró dónde se usa',
+  con_brecha: 'el código todavía no lo implementa',
   sin_consumo: 'se buscó y el código no lo lee',
   conflicto_de_fuente: 'CONFLICTO DE FUENTE',
 }
@@ -141,6 +144,18 @@ export function revisarParametro(
     desmentidos: [] as string[],
     faltan: [] as string[],
     inexistentes: [] as string[],
+  }
+
+  // ARRASTRE de v0.71: una brecha declarada NO es "sin declarar". Sin esto,
+  // los tres que el código no implementa se contaban como huecos, que es
+  // exactamente la mezcla que esta sesión vino a deshacer.
+  if (p.brecha) {
+    return {
+      ...base,
+      gobernado: false,
+      estado: 'con_brecha',
+      motivo: p.brecha,
+    }
   }
 
   if (p.sin_consumo) {
@@ -246,6 +261,8 @@ export function resumenCableado(revisiones: RevisionDeParametro[]) {
     sinDeclarar: gobernados.filter((r) => r.estado === 'sin_declarar').length,
     /** Revisados y no consumidos: fuera del denominador de gobernados. */
     sinConsumo: revisiones.filter((r) => r.estado === 'sin_consumo').length,
+    /** Declarados y no implementados por el código. Fuera del denominador. */
+    conBrecha: revisiones.filter((r) => r.estado === 'con_brecha').length,
     /** Con dos fuentes vivas: no se cuentan como gobernados y son un problema. */
     conflictosDeFuente: conflictos.length,
     conflictos: conflictos.map((r) => `${r.poolClave}.${r.clave}`),

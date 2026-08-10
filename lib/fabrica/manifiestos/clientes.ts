@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * "obra social" acá adentro.
  */
 export const MANIFIESTO_CLIENTES: Manifiesto = {
-  formato: '1.7.0',
+  formato: '1.8.0',
   pool: 'clientes',
   nombre: 'Clientes',
   categoria: 'generico',
@@ -164,21 +164,15 @@ export const MANIFIESTO_CLIENTES: Manifiesto = {
 
   configurable: [
     {
-      clave: 'puntos_activos', etiqueta: 'Acumula puntos por compra', tipo: 'booleano', default: true, peso: 'inocuo', peso_motivo: 'Acumula o no acumula puntos.',
-      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
-    },
-    {
       clave: 'dias_riesgo_fuga', etiqueta: 'Días sin comprar para marcarlo en riesgo', tipo: 'entero', default: 90, peso: 'operativo', peso_motivo: 'Cambia a quién se marca como en riesgo: mal puesto, se llama de más o de menos.', minimo: 7, maximo: 730, unidad: 'dias',
-      sin_consumo: { motivo: "No hay ningún umbral de churn en el código: el único lugar donde aparece un corte por días es un endpoint de demo, con otros valores. El parámetro declara una regla que el sector todavía no aplica.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
+      brecha: "No hay ningún umbral de churn en el código. El único corte por días está en un endpoint de demo, con otros valores. La regla está declarada y el sector todavía no la aplica.",
     },
-    {
-      clave: 'dedup_automatico', etiqueta: 'Propone fusiones de clientes duplicados', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Propone fusiones o no. Fusionar sigue siendo humano, así que el riesgo es de trabajo.',
-      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
-    },
-    {
-      clave: 'canal_b2b', etiqueta: 'Maneja clientes empresa con cuenta corriente', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Prende o apaga el circuito de cuenta corriente de clientes empresa.',
-      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
-    },
+  ],
+
+  hechos: [
+    { clave: 'puntos_activos', afirma: "Acumula puntos por compra", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'dedup_automatico', afirma: "Propone fusiones de clientes duplicados", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'canal_b2b', afirma: "Maneja clientes empresa con cuenta corriente", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
   ],
 }
 

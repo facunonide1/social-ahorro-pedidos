@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * son de cualquier perecedero; una zona es un pedazo del depósito.
  */
 export const MANIFIESTO_STOCK: Manifiesto = {
-  formato: '1.7.0',
+  formato: '1.8.0',
   pool: 'stock',
   nombre: 'Stock',
   categoria: 'generico',
@@ -171,14 +171,11 @@ export const MANIFIESTO_STOCK: Manifiesto = {
         { archivo: "app/api/os/badges/route.ts", donde: "GET /api/os/badges", via: 'resuelve', efecto: "Resuelve la ventana una vez y se la pasa a todos los badges." },
       ],
     },
-    {
-      clave: 'transferencias_entre_puntos', etiqueta: 'Mueve mercadería entre puntos', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Prende o apaga el circuito de traslados.',
-      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
-    },
-    {
-      clave: 'control_por_zonas', etiqueta: 'Divide el espacio en zonas con responsable', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Divide el espacio en zonas con responsable.',
-      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
-    },
+  ],
+
+  hechos: [
+    { clave: 'transferencias_entre_puntos', afirma: "Mueve mercadería entre puntos", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'control_por_zonas', afirma: "Divide el espacio en zonas con responsable", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
   ],
 }
 

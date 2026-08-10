@@ -180,6 +180,12 @@ export interface Manifiesto {
    * que la fábrica proponga triplicar el pool cada vez que aparece un rubro.
    */
   dimensiones?: DimensionTransversal[]
+  /**
+   * Lo que la pieza HACE y no se puede cambiar por configuración.
+   *
+   * Desde 1.8.0. Antes vivían en `configurable`, donde prometían ser perillas.
+   */
+  hechos?: HechoDeLaPieza[]
   /** Los agentes que este pool aporta. Vacío es una respuesta válida. */
   agentes?: AgenteDeclarado[]
   /**
@@ -623,6 +629,37 @@ export interface FuenteDeParametro {
   nota?: string
 }
 
+/**
+ * UN HECHO SOBRE LA PIEZA.
+ *
+ * ── POR QUÉ HACE FALTA UN BLOQUE APARTE ─────────────────────────────────────
+ *
+ * Hasta 1.7.0 estas cosas vivían en `configurable`, y no son configuración:
+ * "opera con valores a fecha", "mueve mercadería entre puntos", "acumula puntos
+ * por compra". El circuito existe o no existe; no hay ningún booleano que
+ * alguien lea. Ponerlos en `configurable` PROMETE que se pueden cambiar y tener
+ * efecto, y no lo tienen.
+ *
+ * Y mientras vivieran ahí, cualquier métrica de la fábrica estaba inflada: en
+ * v0.70 el sistema decía "23 parámetros gobernados" y gobernaba 2. Separarlos no
+ * es prolijidad, es lo que hace que el conteo signifique algo.
+ *
+ * ── CÓMO SE COMPROBÓ ────────────────────────────────────────────────────────
+ *
+ * Un hecho sin `comprobado_por` es una afirmación sin respaldo, y este proyecto
+ * ya sabe lo que cuesta una de ésas. Es obligatorio.
+ */
+export interface HechoDeLaPieza {
+  clave: string
+  /** Qué afirma, en una línea que se lea sin contexto. */
+  afirma: string
+  /**
+   * Cómo se comprobó que es cierto. Un archivo, una tabla, una búsqueda: algo
+   * que otra persona pueda repetir.
+   */
+  comprobado_por: string
+}
+
 export interface ParametroConfigurable {
   clave: string
   etiqueta: string
@@ -692,6 +729,22 @@ export interface ParametroConfigurable {
   peso: Peso
   /** Por qué ese peso. Se lee cuando alguien discute la clasificación. */
   peso_motivo?: string
+  /**
+   * EL CÓDIGO TODAVÍA NO IMPLEMENTA ESTE PARÁMETRO.
+   *
+   * Mismo campo y mismo criterio que la brecha de una acción de agente, y por
+   * el mismo choque: el manifiesto declara qué DEBERÍA ser configurable y el
+   * código dice qué HACE hoy. Cuando difieren, borrar la declaración sería
+   * perder la decisión y sacarla de `configurable` sería fingir que nadie la
+   * pensó.
+   *
+   * Es la diferencia con un hecho: un hecho afirma lo que la pieza HACE; una
+   * brecha declara lo que la pieza DEBERÍA poder configurar y todavía no puede.
+   *
+   * `sla_default_horas` declara 24 y el código deja null: cablearlo no sería
+   * cablear, sería construir un comportamiento que no existe.
+   */
+  brecha?: string
 }
 
 /**
@@ -718,6 +771,10 @@ export function tieneConflictoDeFuente(p: ParametroConfigurable): boolean {
 /** ¿El lector puede devolver este parámetro? Peso Y fuente, las dos cosas. */
 export function esGobernable(p: ParametroConfigurable, pesosGobernados: readonly string[]): boolean {
   if (!pesosGobernados.includes(p.peso)) return false
+  // Con una brecha declarada, el código no lo implementa: devolver el valor
+  // sería devolver algo que nadie va a usar, y contarlo como gobernado infla el
+  // número — que es lo que esta sesión vino a arreglar.
+  if (p.brecha) return false
   // Con la fuente sin resolver o marcada no gobernable, el lector se calla. Un
   // valor que compite con otro no es un valor: es una discusión.
   return p.fuente?.resuelto !== 'sin_resolver' && p.fuente?.resuelto !== 'no_gobernable'
