@@ -14,7 +14,7 @@ import {
   type Overrides,
   type RechazoOverride,
 } from './overrides'
-import type { Manifiesto, PantallaDeclarada } from './tipos'
+import type { Manifiesto, PantallaDeclarada, ParametroConfigurable } from './tipos'
 
 /**
  * EL ESCRITOR.
@@ -106,6 +106,26 @@ export function diffLegible(
     }
   }
 
+  /* ── Los parámetros ────────────────────────────────────────────────── */
+  //
+  // Hasta v0.69 el diff sólo miraba pantallas, así que una propuesta que
+  // cambiaba un parámetro llegaba a la cola con `queCambia: []` y costo "No
+  // cambia nada." — sobre un cambio que altera el COMPORTAMIENTO del sistema.
+  // Es la peor versión del cero mentiroso: no dice que hay poco, dice que no
+  // hay nada, sobre lo único que sí cambia lo que el sistema hace.
+  const confAntes = new Map((actual.configurable ?? []).map((c) => [c.clave, c]))
+  for (const c of propuesto.configurable ?? []) {
+    const x = confAntes.get(c.clave)
+    if (!x || JSON.stringify(x.default) === JSON.stringify(c.default)) continue
+    out.push({
+      texto: describirParametro(x, c, contexto),
+      costo: costoDeParametro(c, contexto),
+      // Un parámetro se deshace volviendo el valor, pero lo que el sistema hizo
+      // MIENTRAS estuvo puesto no se deshace solo. Ver `costoDeParametro`.
+      reversibleSinPerdida: true,
+    })
+  }
+
   for (const [ruta, p] of porRuta) {
     if (!propuesto.pantallas.some((x) => x.ruta === ruta)) {
       out.push({
@@ -119,6 +139,63 @@ export function diffLegible(
   }
 
   return out
+}
+
+/**
+ * Qué cambia cuando cambia un parámetro, en una frase que se lea antes de
+ * firmar.
+ *
+ * Dice el valor con su unidad —"7 días", no "7"—, DÓNDE se usa, y si el
+ * cableado está completo. Lo último importa más de lo que parece: aprobar un
+ * cambio sobre un parámetro cableado a medias es aprobar que el sistema se
+ * comporte de dos maneras distintas al mismo tiempo, y quien firma tiene que
+ * saberlo antes y no después.
+ */
+function describirParametro(
+  antes: ParametroConfigurable,
+  ahora: ParametroConfigurable,
+  contexto: { gobernando: boolean; personasConAcceso: number },
+): string {
+  const u = ahora.unidad ? ` ${ahora.unidad}` : ''
+  const deps = ahora.depende_de ?? []
+  const cableados = deps.filter((d) => d.via !== 'literal')
+  const literales = deps.filter((d) => d.via === 'literal')
+
+  const donde =
+    deps.length === 0
+      ? ' El manifiesto no dice dónde se usa, así que NO se puede estimar el efecto.'
+      : literales.length === 0
+        ? ` Se usa en ${deps.length} lugar(es), todos gobernados: ${deps.map((d) => d.donde).join(', ')}.`
+        : ` Se usa en ${deps.length} lugar(es) y ${literales.length} todavía usa(n) un valor fijo ` +
+          `(${literales.map((d) => d.donde).join(', ')}): el cambio va a regir en ${cableados.length} y no en ${literales.length}.`
+
+  const quien = contexto.gobernando
+    ? ` Lo ven ${contexto.personasConAcceso} persona(s) con acceso al sector.`
+    : ' Todavía no lo ve nadie: el pool no está gobernado.'
+
+  return `${ahora.etiqueta} pasa de ${JSON.stringify(antes.default)}${u} a ${JSON.stringify(ahora.default)}${u}.${donde}${quien}`
+}
+
+/**
+ * Qué cuesta deshacer un cambio de parámetro.
+ *
+ * El valor vuelve con un revert, como un título. Lo que NO vuelve es lo que el
+ * sistema hizo mientras el valor estuvo puesto: una tarea creada, un aviso
+ * mandado, un renglón asociado solo. Eso hay que decirlo, porque "se deshace
+ * con un revert" a secas es una promesa que no se cumple.
+ */
+function costoDeParametro(
+  p: ParametroConfigurable,
+  contexto: { gobernando: boolean },
+): string {
+  if (!contexto.gobernando) {
+    return 'El pool no está gobernado: el cambio queda declarado y todavía no se ve.'
+  }
+  const efectos = (p.depende_de ?? []).map((d) => d.efecto ?? '').join(' ')
+  const dejaRastro = /avis|tarea|notific|asoci|crea/i.test(efectos)
+  return dejaRastro
+    ? 'El valor vuelve con un revert en la request siguiente. Lo que el sistema haya hecho mientras tanto —avisos, tareas, asociaciones— NO se deshace solo.'
+    : 'El valor vuelve con un revert en la request siguiente. No se pierde nada.'
 }
 
 function describirTitulo(

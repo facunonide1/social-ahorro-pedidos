@@ -13,6 +13,7 @@ import {
   revertirOverrideA,
   type LineaDiff,
 } from './escritor'
+import { efectoDe } from './efecto'
 import { overridesActuales, resolver, type Overrides } from './overrides'
 import { versionActual } from './versiones'
 
@@ -190,6 +191,19 @@ export async function proponer(args: {
   const personas = await personasQueLoVen(delPool.manifiesto)
   const gobernando = await estaGobernando(args.proyectoId, args.clave)
   const queCambia = diffLegible(efectivo, propuesto, { gobernando, personasConAcceso: personas })
+
+  // EL EFECTO ESTIMADO, cuando se puede calcular. Va pegado a la línea del
+  // parámetro y no aparte: quien firma lee una frase, no dos listas.
+  for (const c of campos) {
+    if (!c.campo.startsWith('configurable.')) continue
+    const clave = c.campo.slice('configurable.'.length)
+    const antes = (efectivo.configurable ?? []).find((x) => x.clave === clave)?.default
+    const e = await efectoDe(args.clave, clave, antes, c.valor)
+    const linea = queCambia.find((d) => d.texto.includes(
+      (propuesto.configurable ?? []).find((x) => x.clave === clave)?.etiqueta ?? '\u0000',
+    ))
+    if (linea) linea.texto = `${linea.texto} ${e.texto}`
+  }
 
   const { data, error } = await adm
     .from('fab_propuestas')
