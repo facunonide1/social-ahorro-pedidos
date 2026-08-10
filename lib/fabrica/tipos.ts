@@ -558,10 +558,28 @@ export interface DependenciaDeParametro {
   /** Función, componente o pantalla que lo consume. */
   donde: string
   /**
-   * true  = ya recibe el valor de la fábrica.
-   * false = todavía usa un literal. Es el cableado a medias, con nombre.
+   * CÓMO llega el valor a este lugar. Tres formas, y confundirlas hace que la
+   * verificación mienta:
+   *
+   *   resuelve  llama a `parametro()`. Es donde el valor ENTRA al sector.
+   *   recibe    lo toma como argumento o prop de quien lo resolvió. Está
+   *             cableado igual de bien, pero no se puede verificar buscando
+   *             `parametro(` — hay que buscar la señal.
+   *   literal   usa un valor fijo. Es lo que falta.
+   *
+   * La primera versión de esto era un booleano `cableado`, y la verificación
+   * marcó como "DESMIENTE AL MANIFIESTO" dos archivos que estaban perfectamente
+   * cableados: recibían el valor por argumento. El modelo estaba mal, no el
+   * código — y lo encontró la propia verificación, que es para lo que sirve.
    */
-  cableado: boolean
+  via: 'resuelve' | 'recibe' | 'literal'
+  /**
+   * El identificador por el cual se verifica un `recibe`: el nombre del
+   * argumento o de la prop. Sin esto, "recibe" sería una afirmación que nadie
+   * puede comprobar, y una afirmación incomprobable en el contrato es peor que
+   * un hueco.
+   */
+  senal?: string
   /** Qué hace con el valor, en una línea. Se lee antes de aprobar un cambio. */
   efecto?: string
 }

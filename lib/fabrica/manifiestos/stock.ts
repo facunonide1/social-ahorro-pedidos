@@ -164,10 +164,10 @@ export const MANIFIESTO_STOCK: Manifiesto = {
     {
       clave: 'dias_aviso_vencimiento', etiqueta: 'Días de anticipación para avisar', tipo: 'entero', default: 30, peso: 'operativo', peso_motivo: 'Cambia con cuánta anticipación se avisa: mal puesto, se avisa tarde o se avisa siempre.', minimo: 1, maximo: 365, unidad: 'dias',
       depende_de: [
-        { archivo: "app/(admin)/admin/operaciones/vencimientos/page.tsx", donde: "VencimientosPage", cableado: true, efecto: "Resuelve la ventana y la pasa al resumen y a la pantalla." },
-        { archivo: "lib/operaciones/vencimientos.ts", donde: "resumenVencimientos", cableado: true, efecto: "Cuenta cuántos vencimientos entran en la ventana." },
-        { archivo: "app/(admin)/admin/operaciones/vencimientos/vencimientos-client.tsx", donde: "VencimientosClient", cableado: true, efecto: "Pinta en ámbar los que entran en la ventana." },
-        { archivo: "lib/os/subapps.ts", donde: "badge de Operaciones", cableado: false, efecto: "Cuenta los vencimientos del badge del dock con un literal 30." },
+        { archivo: "app/(admin)/admin/operaciones/vencimientos/page.tsx", donde: "VencimientosPage", via: 'resuelve', efecto: "Resuelve la ventana y la pasa al resumen y a la pantalla." },
+        { archivo: "lib/operaciones/vencimientos.ts", donde: "resumenVencimientos", via: 'recibe', senal: "diasAviso", efecto: "Cuenta cuántos vencimientos entran en la ventana." },
+        { archivo: "app/(admin)/admin/operaciones/vencimientos/vencimientos-client.tsx", donde: "VencimientosClient", via: 'recibe', senal: "diasAviso", efecto: "Pinta en ámbar los que entran en la ventana." },
+        { archivo: "lib/os/subapps.ts", donde: "badge de Operaciones", via: 'literal', efecto: "Cuenta los vencimientos del badge del dock con un literal 30." },
       ],
     },
     { clave: 'transferencias_entre_puntos', etiqueta: 'Mueve mercadería entre puntos', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Prende o apaga el circuito de traslados.'  },
