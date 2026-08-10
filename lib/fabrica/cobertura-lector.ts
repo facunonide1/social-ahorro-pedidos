@@ -126,11 +126,19 @@ export async function coberturaDe(
     return { ...base, veredicto: 'no_verificado', motivo: 'La declaración no tiene pantallas gobernables.' }
   }
   if (base.verificadas === 0) {
+    // DOS CEROS DISTINTOS, y hasta v0.70 decían lo mismo.
+    //
+    // "Nunca consultó nadie" es un pool que puede no estar cableado. "Consultó,
+    // pero antes del último cambio de declaración" es un pool cableado cuya
+    // verificación quedó vieja porque se republicó. El segundo se arregla
+    // abriendo una pantalla; el primero, cableando.
+    const consultoAlgunaVez = base.ultimaConsulta !== null
     return {
       ...base,
       veredicto: 'no_verificado',
-      motivo:
-        'Ninguna de sus pantallas consultó al lector todavía. Puede ser que no estén cableadas, o que nadie las haya abierto.',
+      motivo: consultoAlgunaVez
+        ? `Sus pantallas consultaron al lector, pero antes del último cambio de declaración (${desde.slice(0, 16).replace('T', ' ')}). Lo verificado quedó viejo: alcanza con abrir una pantalla.`
+        : 'Ninguna de sus pantallas consultó al lector todavía. Puede ser que no estén cableadas, o que nadie las haya abierto.',
     }
   }
   if (diferencias > 0) return { ...base, veredicto: 'verificado_con_diferencias' }

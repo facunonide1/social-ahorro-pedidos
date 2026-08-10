@@ -25,6 +25,7 @@ export function HeaderProyecto({
   const base = `/fabrica/${slug}`
 
   const tabs = [
+    { label: 'Estado', href: `${base}/estado` },
     { label: 'Pools', href: base },
     { label: 'Cobertura', href: `${base}/cobertura` },
     { label: 'Dependencias', href: `${base}/dependencias` },
