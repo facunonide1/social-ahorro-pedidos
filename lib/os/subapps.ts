@@ -17,6 +17,17 @@ import { puede, type PermisoModulo, type PermisoAccion, type PermisosCustom } fr
 export type BadgeSeveridad = 'info' | 'warn' | 'danger'
 export type BadgeResult = { count: number; severidad: BadgeSeveridad } | null
 
+/**
+ * Valores que el endpoint resuelve una vez y les pasa a todos los badges.
+ *
+ * Cada uno lleva su default acá y en el llamador: si la fábrica no contesta, el
+ * badge cuenta exactamente lo que contaba antes.
+ */
+export interface ParamsDeBadge {
+  /** stock.dias_aviso_vencimiento — ventana de aviso de vencimientos. */
+  diasAvisoVencimiento?: number
+}
+
 /** Cliente Supabase mínimo que necesitan los badges (evita acoplar tipos). */
 type SbLike = { from: (t: string) => any }
 
@@ -55,8 +66,16 @@ export type SubAppManifest = {
   permisosRequeridos: PermisoModulo[]
   /** Restricción extra por rol (además de permisos). */
   rolesPermitidos?: AdminRole[]
-  /** Badge vivo (server-side): recibe el cliente y el userId. Barato o null. */
-  badge?: (sb: SbLike, userId: string, rol: AdminRole) => Promise<BadgeResult>
+  /**
+   * Badge vivo (server-side): recibe el cliente y el userId. Barato o null.
+   *
+   * `params` llega YA RESUELTO desde `/api/os/badges`, que es server-side y sí
+   * puede preguntarle a la fábrica. Este archivo NO importa el punto de
+   * contacto a propósito: es client-safe —lo importa el dock— y un import
+   * server-only acá rompe el build con un error que no habla de esto. Se
+   * intentó en v0.68 y hubo que revertirlo.
+   */
+  badge?: (sb: SbLike, userId: string, rol: AdminRole, params?: ParamsDeBadge) => Promise<BadgeResult>
   quickActions: QuickAction[]
   /** Registrada pero NO mostrada (sub-apps del catálogo aún no construidas). */
   proximamente?: boolean
@@ -147,10 +166,15 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Irregularidades', ruta: '/admin/operaciones/irregularidades' },
       { nombre: 'NORA (asistente)', ruta: '/admin/operaciones/asistente' },
     ],
-    badge: async (sb) => {
-      // Vencimientos vigentes que caen en los próximos 30 días.
+    badge: async (sb, _userId, _rol, params) => {
+      // Vencimientos vigentes que caen en la ventana de aviso.
+      //
+      // La ventana puede venir de la declaración de la fábrica, ya resuelta por
+      // el endpoint. Si no llega, se usan estos 30 días: el badge cuenta lo
+      // mismo que contaba antes.
+      const dias = params?.diasAvisoVencimiento ?? 30
       const n = await cuenta(sb.from('vencimientos').select('id', { count: 'exact', head: true })
-        .eq('estado', 'vigente').lte('fecha_vencimiento', enDiasISO(30)))
+        .eq('estado', 'vigente').lte('fecha_vencimiento', enDiasISO(dias)))
       return n > 0 ? { count: n, severidad: 'warn' } : null
     },
     quickActions: [
