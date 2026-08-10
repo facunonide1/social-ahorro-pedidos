@@ -11,7 +11,7 @@ Y su reverso, que costó igual de caro:
 
 Hasta v0.66 aparecieron **cinco** indicadores que mentían. Los cinco se
 encontraron **por casualidad**, probando otra cosa. En v0.67 se buscaron a
-propósito y aparecieron **ocho más**. En v0.68, arreglando uno de ellos, aparecieron **dos más**. Eso deja de ser mala suerte y pasa a ser
+propósito y aparecieron **ocho más**. En v0.68, arreglando uno de ellos, aparecieron **dos más**. En v0.69, extendiendo el sistema a comportamiento, **dos más**. Eso deja de ser mala suerte y pasa a ser
 un patrón: en un sistema que mide su propia salud, el modo de falla por defecto
 no es romperse, es tranquilizar.
 
@@ -47,7 +47,7 @@ Y una quinta que salió de v0.67:
 
 ---
 
-## Los quince que mintieron
+## Los diecisiete que mintieron
 
 | # | Indicador | Qué decía | Por qué mentía | Cuándo |
 |---|-----------|-----------|----------------|--------|
@@ -66,6 +66,8 @@ Y una quinta que salió de v0.67:
 | 13 | Corte + dedupe juntos | "0 diferencias" y no volvían | El corte las escondía y el dedupe de 24 h impedía re-registrarlas: diez diferencias vivas, invisibles por un día | v0.67 |
 | 14 | Conteo de diferencias | "37 diferencias" | Al pasar el corte a por campo empezó a contar EVENTOS y no campos: 37 eventos, 10 problemas. Inflar es tan malo como esconder | v0.68 |
 | 15 | Leer el valor gobernante | "17 diferencias" | Observar y afirmar pasaban por la misma puerta: un script que sólo quería MIRAR pasaba `'FALLBACK'` como literal del código y eso quedaba en el log como diferencia real. 14 eventos inventados | v0.68 |
+| 16 | Diff de una propuesta | "No cambia nada." | El diff sólo miraba pantallas: un cambio de PARÁMETRO llegaba a la cola con `queCambia: []`, sobre lo único que altera el comportamiento | v0.69 |
+| 17 | Huella de una propuesta | "ya se rechazó dos veces" | `JSON.stringify(o, keys)` FILTRA, no ordena: todas las propuestas de un mismo tipo compartían huella | v0.69 |
 
 El **11** es el peor de la lista: un manifiesto roto en la base se veía
 exactamente igual que un pool que nadie prendió.
@@ -82,6 +84,20 @@ El **12 se arregló en v0.68**: el corte pasó a ser por CAMPO, usando
 considera resuelta si cambió el campo que la produjo, y sólo si el cambio fue en
 la PIEZA — un override de instalación no toca lo que se compara, así que no puede
 resolver nada.
+
+El **16 es el que peor mentía de los diecisiete**, por lo que decía: una propuesta
+que cambiaba un parámetro llegaba a la cola diciendo **"No cambia nada"**, sobre
+un cambio que altera el comportamiento del sistema. El diff se escribió cuando la
+fábrica gobernaba presentación y nadie lo extendió cuando empezó a gobernar
+comportamiento. No es un cero que dice "hay poco": dice "no hay nada".
+
+El **17** es el más silencioso. `JSON.stringify(objeto, claves)` no ordena las
+claves: las FILTRA, en todos los niveles. Así que
+`{configurable:{dias_aviso_vencimiento:45}}` y
+`{configurable:{control_por_zonas:false}}` producían la misma huella
+`{"configurable":{}}`, y dos rechazos de cualquier cambio de parámetro
+bloqueaban para siempre cualquier otro del mismo pool. Se descubrió porque una
+prueba no pudo proponer un valor que nunca se había propuesto.
 
 El **14 y el 15 salieron de arreglar el 12**, y eso también es un patrón: cada
 arreglo de un indicador es la mejor oportunidad para crear el siguiente. El 14 es
@@ -109,6 +125,8 @@ que el indicador le decía—, y dos los destapó la prueba adversaria.
 | `parecidosA()` | no | sí, probado contra un casi-idéntico | n/a | sí |
 | `colaDeConstruccion()` | no: cuenta miembros reales | sí | n/a | sí |
 | `procedenciaDe()` | no: "procedencia no registrada" ≠ vacío | sí | n/a | sí |
+| `revisarCableado()` | no: cuatro estados, y `sin_declarar` ≠ "está bien" | sí, y el denominador excluye lo no verificable | n/a | n/a — sólo lee archivos |
+| `efectoDe()` | no: distingue "no sé calcularlo" de "hoy no hay datos" | sí | n/a | sí |
 | `bitacora()` | no | sí: guarda **todos** los turnos, no sólo los que salieron bien | n/a | sí |
 
 ---
@@ -124,7 +142,7 @@ npx tsx scripts/fabrica-indicadores-adversario.ts
 no cambia nada, estado que no existe— y verifica que **no** devuelva un número
 tranquilizador. Sale 1 si alguno miente.
 
-Dos de los quince de la tabla los encontró esta prueba en su primera corrida.
+Dos de los diecisiete de la tabla los encontró esta prueba en su primera corrida, y dos más aparecieron al extender el sistema a comportamiento.
 
 Desde v0.68 hay un bloque que ejercita **corte y dedupe juntos**, no cada pieza
 por separado: el hallazgo 13 no estaba en ninguna de las dos, estaba en la

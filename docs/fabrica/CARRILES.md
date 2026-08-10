@@ -95,7 +95,7 @@ Todo pide firma. Es a propósito.
 
 ---
 
-## Por qué en v0.68 NO se habilitó el primer verde
+## Por qué sigue sin habilitarse (revisado en v0.69)
 
 La sesión v0.68 tenía como bloque final habilitar el carril verde para los
 parámetros `inocuo`, **si había historia suficiente**. Se midió y no la hay. Las
@@ -131,21 +131,38 @@ cambio que se aplica solo y nadie ve es un cambio que nadie puede revertir.
 Los dos pools prendidos no tienen ningún `inocuo`: los 3 parámetros de
 documentos son los 3 sensibles, y los 3 de stock son operativos.
 
-### 3 · El verde no está implementado como automatización
+### 3 · El verde no estaba implementado como automatización — **resuelto en v0.69**
 
-Hoy el carril verde es una **clasificación**, no una automatización: una
-propuesta que cae en verde se inserta igual como `pendiente` y espera firma.
-Nada la aplica sola.
+Hasta v0.68 el carril verde era una **clasificación** y no una automatización:
+una propuesta que caía en verde se insertaba igual como `pendiente` y esperaba
+firma. La etiqueta prometía algo que el mecanismo no hacía.
 
-Eso significa que "habilitar el verde" hoy cambiaría la etiqueta y nada más — y
-una etiqueta que promete que algo se aplica solo, sobre un mecanismo que no lo
-aplica, es exactamente la clase de promesa que la fábrica no hace.
+En v0.69 se implementó, y se dejó **apagado**:
 
-### Qué haría falta, en orden
+- una propuesta en verde **se aplica sola**, sin firma
+- queda en el Taller como `aplicada`, con la chapa **"se aplicó sola · carril
+  verde"**, su diff completo y su botón de deshacer
+- si la aplicación automática falla, la propuesta **queda pendiente**: un verde
+  que no se pudo aplicar es una propuesta común, no un cambio perdido
+- se guarda `aplicada_automaticamente`, porque un cambio que se aplicó solo y uno
+  que alguien firmó no son lo mismo a la hora de mirar la historia. Sin esa
+  marca, la evidencia que hace falta para encender el verde —cuántos cambios
+  aprobó una persona sin incidentes— sería incontable, y se justificaría
+  encender el verde con los cambios que el propio verde aplicó
 
-1. Que algún pool prendido declare un parámetro `inocuo`, o que se prenda un pool
-   que ya tenga uno.
-2. Una historia real de cambios aprobados que se hayan quedado: usados, no
-   probados.
-3. Implementar la aplicación automática con su aviso y su deshacer de un toque —
-   el aviso no es opcional, es lo que hace que el verde sea reversible.
+Probado de punta a punta con el interruptor prendido a mano y apagado al
+terminar (`scripts/fabrica-probar-verde.ts`, 4/4). La prueba confirma además que
+**el peso manda sobre el interruptor**: un parámetro `operativo` cae en amarillo
+aunque el tipo `umbral` esté habilitado.
+
+### Qué falta para encenderlo, en orden
+
+1. **Un parámetro `inocuo` en un pool prendido.** Hoy los 4 inocuos viven en
+   pools apagados, y los dos prendidos no tienen ninguno.
+2. **Historia real de cambios aprobados que se hayan quedado**, contando sólo los
+   que firmó una persona (`aplicada_automaticamente = false`).
+3. Encender el interruptor del tipo de campo. Eso ya es un `upsert` en
+   `fab_carriles_habilitados`, no una sesión de desarrollo.
+
+El mecanismo se construyó ahora para que el día que haya evidencia sea un
+interruptor. La evidencia no se inventa.

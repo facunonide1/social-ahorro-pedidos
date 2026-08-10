@@ -53,6 +53,8 @@ export interface Propuesta {
   costoRevertir: string
   estado: EstadoPropuesta
   origen: 'humano' | 'verificador'
+  /** true = la aplicó el carril verde, no una persona. */
+  aplicadaAutomaticamente: boolean
   huella: string
   vecesRechazada: number
   creadaAt: string
@@ -77,6 +79,7 @@ interface Fila {
   costo_revertir: string
   estado: EstadoPropuesta
   origen: 'humano' | 'verificador'
+  aplicada_automaticamente: boolean
   huella: string
   veces_rechazada: number
   creada_at: string
@@ -101,6 +104,7 @@ const aPropuesta = (f: Fila): Propuesta => ({
   costoRevertir: f.costo_revertir,
   estado: f.estado,
   origen: f.origen,
+  aplicadaAutomaticamente: f.aplicada_automaticamente === true,
   huella: f.huella,
   vecesRechazada: f.veces_rechazada ?? 0,
   creadaAt: f.creada_at,
@@ -113,9 +117,46 @@ const aPropuesta = (f: Fila): Propuesta => ({
 /** Días que una propuesta espera antes de expirar. */
 export const DIAS_HASTA_EXPIRAR = 14
 
-/** La identidad de un cambio, para no volver a proponer lo mismo. */
+/**
+ * La identidad de un cambio, para no volver a proponer lo mismo.
+ *
+ * ── HALLAZGO 17 ─────────────────────────────────────────────────────────────
+ *
+ * La primera versión era `JSON.stringify(cambio, Object.keys(cambio).sort())`,
+ * con la intención de serializar con las claves ordenadas. Pero el segundo
+ * argumento de `JSON.stringify` no ordena: FILTRA. Y filtra en todos los
+ * niveles, así que sólo sobrevivían las claves de primer nivel y el contenido se
+ * vaciaba:
+ *
+ *   { configurable: { dias_aviso_vencimiento: 45 } }  →  {"configurable":{}}
+ *   { configurable: { dias_aviso_vencimiento: 7 } }   →  {"configurable":{}}
+ *   { configurable: { control_por_zonas: false } }    →  {"configurable":{}}
+ *   { titulos: { '/x': 'A' } }                        →  {"titulos":{}}
+ *
+ * TODAS las propuestas de un mismo tipo compartían huella. Consecuencias: dos
+ * rechazos de CUALQUIER cambio de parámetro bloqueaban para siempre cualquier
+ * otro cambio de parámetro del mismo pool, y una propuesta pendiente sobre un
+ * título hacía rebotar la de otro título como "idéntica".
+ *
+ * Se descubrió porque la prueba del carril verde no pudo proponer: "este cambio
+ * ya se rechazó dos veces", sobre un valor que nunca se había propuesto.
+ *
+ * Ahora se serializa con las claves ordenadas DE VERDAD, recursivamente.
+ */
+function ordenado(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(ordenado)
+  if (v && typeof v === 'object') {
+    return Object.fromEntries(
+      Object.keys(v as Record<string, unknown>)
+        .sort()
+        .map((k) => [k, ordenado((v as Record<string, unknown>)[k])]),
+    )
+  }
+  return v
+}
+
 function huellaDe(clave: string, cambio: Overrides): string {
-  return `${clave}:${JSON.stringify(cambio, Object.keys(cambio).sort())}`
+  return `${clave}:${JSON.stringify(ordenado(cambio))}`
 }
 
 /* ── Proponer ────────────────────────────────────────────────────────────── */
@@ -236,7 +277,34 @@ export async function proponer(args: {
     .single()
 
   if (error || !data) return { ok: false, error: 'No se pudo registrar la propuesta.' }
-  return { ok: true, propuesta: aPropuesta(data as unknown as Fila) }
+  const propuesta = aPropuesta(data as unknown as Fila)
+
+  /* ── 6 · el carril verde se aplica solo ───────────────────────────── */
+  //
+  // Hasta v0.68 el verde era una CLASIFICACIÓN y no una automatización: una
+  // propuesta en verde se insertaba como `pendiente` y esperaba firma igual que
+  // una amarilla. La etiqueta prometía algo que el mecanismo no hacía.
+  //
+  // Ahora se aplica de verdad. Y sigue sin encenderse: el interruptor por tipo
+  // de campo está vacío, así que `carrilDeCampo` no devuelve verde para nada.
+  // El mecanismo se construye para que el día que haya evidencia sea un
+  // interruptor y no una sesión — pero la evidencia no se inventa.
+  if (propuesta.carril === 'verde') {
+    const r = await aplicar({
+      propuestaId: propuesta.id,
+      autorId: args.autorId ?? null,
+      nota: 'Carril verde: se aplicó solo. Está en el Taller con su diff y su botón de deshacer.',
+      automatica: true,
+    })
+    // Si falla, la propuesta QUEDA PENDIENTE y no se pierde: un verde que no se
+    // pudo aplicar es una propuesta común, no un cambio perdido.
+    if (r.ok) {
+      const { data: fresca } = await adm.from('fab_propuestas').select('*').eq('id', propuesta.id).single()
+      if (fresca) return { ok: true, propuesta: aPropuesta(fresca as unknown as Fila) }
+    }
+  }
+
+  return { ok: true, propuesta }
 }
 
 /** Los campos que toca un cambio, con su valor. */
@@ -280,8 +348,18 @@ function costoDe(diff: LineaDiff[], gobernando: boolean): string {
 
 export async function aplicar(args: {
   propuestaId: string
-  autorId: string
+  autorId: string | null
   nota?: string
+  /**
+   * true = la aplicó el carril verde, no una persona.
+   *
+   * Se guarda porque un cambio que se aplicó solo y un cambio que alguien firmó
+   * NO son lo mismo a la hora de mirar la historia, aunque los dos terminen en
+   * `aplicada`. Sin esta marca, la evidencia que hace falta para encender el
+   * verde —cuántos cambios aprobó una persona sin incidentes— sería
+   * incontable: se mezclaría con los que se aplicaron solos.
+   */
+  automatica?: boolean
 }): Promise<{ ok: boolean; numero?: number; error?: string }> {
   const adm = createAdminClient()
   const { data } = await adm.from('fab_propuestas').select('*').eq('id', args.propuestaId).maybeSingle()
@@ -316,6 +394,7 @@ export async function aplicar(args: {
       decidida_at: new Date().toISOString(),
       decidida_por: args.autorId,
       nota_decision: args.nota ?? null,
+      aplicada_automaticamente: args.automatica === true,
     })
     .eq('id', p.id)
 

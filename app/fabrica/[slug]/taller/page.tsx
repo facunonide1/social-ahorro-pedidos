@@ -270,6 +270,13 @@ export default async function TallerPage({
                       <Badge variant={VARIANTE_ESTADO[p.estado]} className="font-normal">
                         {p.estado}
                       </Badge>
+                      {/* Un cambio que se aplica solo y nadie ve es un cambio
+                          que nadie puede revertir. El aviso no es opcional. */}
+                      {p.aplicadaAutomaticamente && (
+                        <Badge variant="info" className="font-normal">
+                          se aplicó sola · carril verde
+                        </Badge>
+                      )}
                       <span className="font-medium">{p.poolClave}</span>
                       <span className="text-xs text-muted-foreground">
                         {String(p.creadaAt).slice(0, 16).replace('T', ' ')} · {p.origen}

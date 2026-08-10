@@ -457,7 +457,8 @@ export async function escribirOverride(args: {
   clave: string
   overrides: Overrides
   motivo: string
-  autorId: string
+  /** NULL cuando la escribió el carril verde: no hubo persona detrás. */
+  autorId: string | null
   revierteA?: string
   /** La propuesta que lo originó, si vino de una. */
   propuestaId?: string
