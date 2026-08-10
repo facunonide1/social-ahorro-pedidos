@@ -663,6 +663,24 @@ export interface ParametroConfigurable {
    * entorno y fallbacks distintos, no tablas.
    */
   fuente?: FuenteDeParametro
+  /**
+   * SE BUSCÓ EN EL CÓDIGO Y NO LO LEE NADIE.
+   *
+   * Es distinto de no tener `depende_de`. Sin `depende_de` la respuesta es
+   * "nadie declaró dónde se usa" —un hueco—; con esto la respuesta es "se
+   * revisó, y el código no lo consulta" —un dato—. La distinción es la misma
+   * que separa un cero porque está bien de un cero porque no miró.
+   *
+   * Aparecieron 20 así en v0.70, y casi todos por el mismo motivo: describen
+   * QUÉ HACE la pieza —"opera con valores a fecha", "mueve mercadería entre
+   * puntos"— y no un valor que el código consulte. Ponerlos en `configurable`
+   * promete que se pueden cambiar y tener efecto, y no lo tienen.
+   */
+  sin_consumo?: {
+    motivo: string
+    /** Cómo se comprobó. Sin esto sería una afirmación sin respaldo. */
+    verificado_por: string
+  }
 
   /**
    * Obligatorio desde 1.4.0.

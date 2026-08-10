@@ -40,6 +40,8 @@ export type EstadoCableado =
   | 'parcial'
   | 'sin_cablear'
   | 'sin_declarar'
+  /** Se buscó y el código no lo lee. No es un hueco: es una respuesta. */
+  | 'sin_consumo'
   /** Hay otra fuente viva y nadie decidió cuál gana. Cablearlo empeora las cosas. */
   | 'conflicto_de_fuente'
 
@@ -48,6 +50,7 @@ export const ETIQUETA_CABLEADO: Record<EstadoCableado, string> = {
   parcial: 'CABLEADO A MEDIAS',
   sin_cablear: 'sin cablear',
   sin_declarar: 'nadie declaró dónde se usa',
+  sin_consumo: 'se buscó y el código no lo lee',
   conflicto_de_fuente: 'CONFLICTO DE FUENTE',
 }
 
@@ -138,6 +141,15 @@ export function revisarParametro(
     desmentidos: [] as string[],
     faltan: [] as string[],
     inexistentes: [] as string[],
+  }
+
+  if (p.sin_consumo) {
+    return {
+      ...base,
+      gobernado: false,
+      estado: 'sin_consumo',
+      motivo: `${p.sin_consumo.motivo} (${p.sin_consumo.verificado_por})`,
+    }
   }
 
   if (deps.length === 0) {
@@ -232,6 +244,8 @@ export function resumenCableado(revisiones: RevisionDeParametro[]) {
     parciales: verificables.filter((r) => r.estado === 'parcial').length,
     sinCablear: verificables.filter((r) => r.estado === 'sin_cablear').length,
     sinDeclarar: gobernados.filter((r) => r.estado === 'sin_declarar').length,
+    /** Revisados y no consumidos: fuera del denominador de gobernados. */
+    sinConsumo: revisiones.filter((r) => r.estado === 'sin_consumo').length,
     /** Con dos fuentes vivas: no se cuentan como gobernados y son un problema. */
     conflictosDeFuente: conflictos.length,
     conflictos: conflictos.map((r) => `${r.poolClave}.${r.clave}`),

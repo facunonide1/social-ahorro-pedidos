@@ -54,6 +54,10 @@ export interface Negativa {
  * constante cambia y el chat deja de mentir sin que nadie tenga que acordarse
  * de él.
  */
+// Desde v0.68 el lector también devuelve parámetros, pero SÓLO los gobernables
+// —peso inocuo u operativo, sin conflicto de fuente— y sólo los que alguien
+// cableó. Por eso `configurable` sigue fuera de esta lista: la respuesta correcta
+// depende del parámetro, no del campo, y el chat la da parámetro por parámetro.
 export const GOBIERNA_HOY = ['titulos', 'vocabulario', 'ocultas', 'nombre', 'descripcion']
 
 /**

@@ -33,6 +33,7 @@ async function main() {
     'sin_cablear',
     'completo',
     'sin_declarar',
+    'sin_consumo',
   ] as const) {
     const los = revisiones.filter((x) => x.gobernado && x.estado === estado)
     if (los.length === 0) continue
@@ -40,6 +41,10 @@ async function main() {
     for (const x of los) {
       console.log(`   ${x.poolClave}.${x.clave}`)
       if (estado === 'sin_declarar') continue
+      if (estado === 'sin_consumo') {
+        console.log(`     ${x.motivo}`)
+        continue
+      }
       console.log(`     ${x.motivo}`)
       for (const v of x.verificados) console.log(`     ✓ ${v}`)
       for (const d of x.desmentidos) console.log(`     ✗ DESMIENTE AL MANIFIESTO: ${d}`)
@@ -60,6 +65,9 @@ async function main() {
   // El conflicto de fuente va APARTE del denominador de gobernados, porque un
   // parámetro con dos fuentes vivas no lo devuelve el lector: contarlo entre
   // los gobernados infla la cuenta, que es el hallazgo 14 en otra tabla.
+  console.log(
+    `REVISADOS Y NO CONSUMIDOS (fuera de esa cuenta): ${r.sinConsumo} — se buscó en el código y no los lee nadie`,
+  )
   console.log(
     `CONFLICTOS DE FUENTE (fuera de esa cuenta): ${r.conflictosDeFuente}` +
       (r.conflictos.length ? ` — ${r.conflictos.join(', ')}` : ''),

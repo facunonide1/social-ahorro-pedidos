@@ -151,7 +151,10 @@ export const MANIFIESTO_INTELIGENCIA: Manifiesto = {
   ],
 
   configurable: [
-    { clave: 'resumen_diario_activo', etiqueta: 'Arma el resumen del día solo', tipo: 'booleano', default: true, peso: 'inocuo', peso_motivo: 'Si está mal, el resumen aparece o no aparece. Nada más.'  },
+    {
+      clave: 'resumen_diario_activo', etiqueta: 'Arma el resumen del día solo', tipo: 'booleano', default: true, peso: 'inocuo', peso_motivo: 'Si está mal, el resumen aparece o no aparece. Nada más.',
+      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
+    },
     { clave: 'requiere_aprobacion_acciones', etiqueta: 'Toda acción del asistente pasa por aprobación', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Apagarlo saca la cola de aprobaciones del medio. Es el control, no una preferencia.'  },
     { clave: 'retencion_auditoria_dias', etiqueta: 'Días que se guarda el registro de auditoría', tipo: 'entero', default: 3650, peso: 'sensible', peso_motivo: 'Acortarlo es borrar auditoría con otro nombre.', minimo: 365, maximo: 7300, unidad: 'dias' },
   ],

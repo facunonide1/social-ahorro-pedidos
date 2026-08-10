@@ -150,9 +150,18 @@ export const MANIFIESTO_TAREAS: Manifiesto = {
 
   configurable: [
     { clave: 'verificacion_obligatoria', etiqueta: 'Todo trabajo terminado pasa por un verificador', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Apagarlo hace que las tareas se cierren solas: la verificación deja de existir.'  },
-    { clave: 'exige_evidencia', etiqueta: 'Pide foto o archivo al cerrar', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Cambia si hay que subir foto al cerrar. Mal puesto, alguien trabaja de más o queda sin respaldo.'  },
-    { clave: 'puntaje_activo', etiqueta: 'Suma puntos al que ejecuta', tipo: 'booleano', default: true, peso: 'inocuo', peso_motivo: 'Suma o no suma puntos. Si está mal, alguien ve un número raro.'  },
-    { clave: 'sla_default_horas', etiqueta: 'Horas de plazo cuando el tipo no lo define', tipo: 'entero', default: 24, peso: 'operativo', peso_motivo: 'Define el plazo cuando el tipo no lo dice. Mal puesto, las tareas vencen antes o después de lo razonable.', minimo: 1, maximo: 720, unidad: 'horas' },
+    {
+      clave: 'exige_evidencia', etiqueta: 'Pide foto o archivo al cerrar', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Cambia si hay que subir foto al cerrar. Mal puesto, alguien trabaja de más o queda sin respaldo.',
+      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
+    },
+    {
+      clave: 'puntaje_activo', etiqueta: 'Suma puntos al que ejecuta', tipo: 'booleano', default: true, peso: 'inocuo', peso_motivo: 'Suma o no suma puntos. Si está mal, alguien ve un número raro.',
+      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
+    },
+    {
+      clave: 'sla_default_horas', etiqueta: 'Horas de plazo cuando el tipo no lo define', tipo: 'entero', default: 24, peso: 'operativo', peso_motivo: 'Define el plazo cuando el tipo no lo dice. Mal puesto, las tareas vencen antes o después de lo razonable.', minimo: 1, maximo: 720, unidad: 'horas',
+      sin_consumo: { motivo: "El código NO tiene este default: cuando el tipo de tarea no define sla_horas, la tarea se crea con null, o sea sin plazo. Cablearlo no sería cablear, sería construir un comportamiento que hoy no existe — y eso es un pedido de construcción, no una configuración.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
+    },
   ],
 }
 

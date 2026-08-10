@@ -155,7 +155,20 @@ ${
       .join('\n') || '    ninguno'
   }
   pantallas que NO se pueden retitular: ${noGob.map((x) => x.ruta).join(', ') || 'ninguna'}
-  parámetros declarados (todavía NO leídos): ${m.configurable?.map((c) => `${c.clave}[${c.peso}]=${JSON.stringify(c.default)}`).join(' · ') || 'ninguno'}
+  parámetros: ${
+    m.configurable
+      ?.map((c) => {
+        const estado = c.sin_consumo
+          ? 'nadie lo lee'
+          : c.fuente?.resuelto === 'sin_resolver'
+            ? 'CONFLICTO de fuente'
+            : c.peso === 'sensible'
+              ? 'sensible, no se lee'
+              : 'GOBERNADO'
+        return `${c.clave}[${c.peso}·${estado}]=${JSON.stringify(c.default)}`
+      })
+      .join(' · ') || 'ninguno'
+  }
   INTOCABLES: ${m.constitucional?.map((c) => `${c.elemento} (${c.limite})`).join(' · ') || 'ninguno'}
   brechas abiertas: ${brechas.join(' · ') || 'ninguna'}`
 }
@@ -181,10 +194,17 @@ Si alguien quiere cambiar un nombre, distinguí cuál de los dos casos es:
     defecto de la pieza. Un override así tapa el defecto y el próximo negocio
     que instale la pieza se lo come. Decilo y ofrecé anotarlo contra la pieza.
 
-LO ÚNICO QUE HOY GOBIERNA EL LECTOR: títulos de pantalla y qué se ve en el menú.
-Los parámetros y las acciones del asistente se DECLARAN, pero el sistema sigue
-usando su código: cambiarlos queda escrito y no se ve. Eso se dice ANTES, no
-después de que la persona se ilusione.
+QUÉ GOBIERNA HOY EL LECTOR: títulos de pantalla, qué se ve en el menú, y ALGUNOS
+parámetros. Cada parámetro dice en el catálogo cuál es su caso, y no son lo
+mismo:
+  GOBERNADO           el lector lo lee y cambiarlo cambia el comportamiento.
+  nadie lo lee        se buscó en el código y no lo consulta nadie. Cambiarlo
+                      queda escrito y NO pasa nada. Casi siempre es porque
+                      describe qué hace la pieza y no es una perilla.
+  sensible, no se lee el lector no devuelve los sensibles todavía.
+  CONFLICTO de fuente hay otra fuente viva del mismo valor y ninguna gana.
+Las acciones del asistente siguen sin leerse. Eso se dice ANTES, no después de
+que la persona se ilusione.
 
 ${puedeProponer ? `CAMPOS QUE PODÉS PROPONER, y ninguno más:\n${cat.camposPropuestos.map((c) => `  · ${c}`).join('\n')}` : ''}
 

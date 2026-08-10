@@ -156,8 +156,14 @@ export const MANIFIESTO_OFERTAS: Manifiesto = {
 
   configurable: [
     { clave: 'exporta_a_sistema_externo', etiqueta: 'Exporta el precio a un sistema externo', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Define si el precio sale hacia el sistema que tiene la autoridad sobre el precio de venta.'  },
-    { clave: 'requiere_confirmacion_en_punto', etiqueta: 'Pide confirmar la llegada al punto de venta', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Pide confirmar que la oferta llegó al mostrador.'  },
-    { clave: 'usa_briefs', etiqueta: 'Encarga la pieza de comunicación a un tercero', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Encarga o no la pieza de comunicación a un tercero.'  },
+    {
+      clave: 'requiere_confirmacion_en_punto', etiqueta: 'Pide confirmar la llegada al punto de venta', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Pide confirmar que la oferta llegó al mostrador.',
+      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
+    },
+    {
+      clave: 'usa_briefs', etiqueta: 'Encarga la pieza de comunicación a un tercero', tipo: 'booleano', default: true, peso: 'operativo', peso_motivo: 'Encarga o no la pieza de comunicación a un tercero.',
+      sin_consumo: { motivo: "Describe qué hace la pieza, no un valor que el código consulte: el circuito existe o no existe, y no hay nada que lea este booleano.", verificado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. v0.70." },
+    },
   ],
 }
 
