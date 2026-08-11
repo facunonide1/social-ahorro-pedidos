@@ -213,12 +213,13 @@ export const MANIFIESTO_COMPRAS: Manifiesto = {
   configurable: [
     {
       clave: 'dias_ventana_costo', etiqueta: 'Días para comparar la evolución de un costo', tipo: 'entero', default: 60, peso: 'operativo', peso_motivo: 'Ventana para comparar la evolución de un costo.', minimo: 7, maximo: 365, unidad: 'dias',
-      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_DIAS_DATO_FRESCO", resuelto: 'no_gobernable', nota: "Resuelto en v0.71 como NO GOBERNABLE, con el mismo criterio que los dos sensibles de documentos. Cablearlo exige tocar CUATRO archivos de Social Ahorro —lib/documentos/costos.ts, app/api/documentos/costo/[itemId]/route.ts, app/(admin)/admin/compras/costos/page.tsx y lib/documentos/alertas-costo.ts, con cinco lugares de consumo— y esta sesión tiene la frontera en cero. Mientras exista DOC_DIAS_DATO_FRESCO, el valor efectivo sale de ahí y la declaración es documentación, no gobierno. Se dice para que nadie la lea al revés. Cablearlo es el trabajo de una sesión que pueda tocar el sector." },
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_DIAS_DATO_FRESCO", resuelto: 'es_el_fallback', nota: "Cableado en v0.72: DOC_DIAS_DATO_FRESCO pasa a ser el tercer argumento de parametro() en los cinco lugares de consumo. Las dos fuentes quedan ordenadas —declaración primero con el pool prendido, variable de entorno después— en vez de compitiendo. No confundir con DOC_CONC_VENTANA_DIAS, que vale lo mismo pero es de conciliación: esa ambigüedad se resolvió leyendo en v0.70." },
       depende_de: [
-        { archivo: "lib/documentos/costos.ts", donde: "DOC_DIAS_DATO_FRESCO", via: 'literal', efecto: "Marca un precio como fresco o viejo en el comparador." },
-        { archivo: "app/api/documentos/costo/[itemId]/route.ts", donde: "DOC_DIAS_DATO_FRESCO", via: 'literal', efecto: "Filtra los precios frescos de la ficha de costo." },
-        { archivo: "app/(admin)/admin/compras/costos/page.tsx", donde: "DOC_DIAS_DATO_FRESCO", via: 'literal', efecto: "Se lo pasa a la pantalla del comparador." },
-        { archivo: "lib/documentos/alertas-costo.ts", donde: "DOC_DIAS_DATO_FRESCO", via: 'literal', efecto: "Acota desde cuándo se miran precios para la alerta." },
+        { archivo: "lib/documentos/costos.ts", donde: "fichaCostos", via: 'resuelve', efecto: "Marca cada precio de la ficha como fresco o viejo." },
+        { archivo: "lib/documentos/costos.ts", donde: "grillaComparador", via: 'resuelve', efecto: "Marca cada celda del comparador como fresca o vieja." },
+        { archivo: "app/api/documentos/costo/[itemId]/route.ts", donde: "GET", via: 'resuelve', efecto: "Filtra los precios frescos que compiten por ser el mejor, y devuelve la ventana usada." },
+        { archivo: "app/(admin)/admin/compras/costos/page.tsx", donde: "ComparadorCostosPage", via: 'resuelve', efecto: "Resuelve la ventana y se la pasa a la pantalla." },
+        { archivo: "lib/documentos/alertas-costo.ts", donde: "evaluarAlertasCosto", via: 'resuelve', efecto: "Acota desde cuándo se miran precios para la alerta de suba." },
       ],
     },
     {

@@ -1,4 +1,5 @@
 import { DOC_DIAS_DATO_FRESCO, DOC_DIAS_VOLUMEN, TENANT_ACTUAL } from '@/lib/documentos/config'
+import { parametro } from '@/lib/os/definicion'
 
 type Adm = any
 
@@ -68,6 +69,10 @@ export async function fichaCostos(
   itemId: string,
   opts: { soloFacturas?: boolean } = {},
 ): Promise<FichaCostos | null> {
+  // A partir de cuántos días un costo deja de ser comparable. Puede venir de la
+  // declaración de la fábrica; si el lector está apagado o algo falla, devuelve
+  // DOC_DIAS_DATO_FRESCO, que es lo que este código venía usando.
+  const diasFresco = await parametro('compras', 'dias_ventana_costo', DOC_DIAS_DATO_FRESCO)
   const { data: prod } = await adm
     .from('productos_catalogo')
     .select('id, sku, nombre')
@@ -150,7 +155,7 @@ export async function fichaCostos(
         ultimoNeto: neto(u),
         fecha: u.fecha,
         diasDesde: d,
-        fresco: d <= DOC_DIAS_DATO_FRESCO,
+        fresco: d <= diasFresco,
         compras: evs.length,
       }
     })
@@ -208,6 +213,8 @@ export async function grillaComparador(
   adm: Adm,
   opts: { soloFacturas?: boolean; rubro?: string | null } = {},
 ): Promise<{ filas: FilaComparador[]; proveedores: Array<{ id: string; nombre: string }>; totalAhorro: number }> {
+  // Ídem `fichaCostos`: la misma ventana, resuelta una vez por llamada.
+  const diasFresco = await parametro('compras', 'dias_ventana_costo', DOC_DIAS_DATO_FRESCO)
   let q = adm
     .from('doc_precios_historial')
     .select('item_id, tercero_id, fecha, precio_neto, precio_unitario, cantidad, origen, proveedores:tercero_id(razon_social), productos_catalogo:item_id(sku, nombre, rubro)')
@@ -257,7 +264,7 @@ export async function grillaComparador(
         neto: n,
         fecha: f.fecha,
         diasDesde: d,
-        fresco: d <= DOC_DIAS_DATO_FRESCO,
+        fresco: d <= diasFresco,
         origen: f.origen,
       }
     }

@@ -234,7 +234,10 @@ async function sugerenciaCambioProveedor(adm: Adm, documentoId: string): Promise
   const ctx = await contexto(adm, documentoId)
   if (!ctx || !ctx.items.length) return
 
-  const desde = new Date(Date.now() - DOC_DIAS_DATO_FRESCO * 86_400_000).toISOString().slice(0, 10)
+  // La misma ventana que usa el comparador, resuelta por la fábrica con el
+  // valor del código como fallback.
+  const diasFresco = await parametro('compras', 'dias_ventana_costo', DOC_DIAS_DATO_FRESCO)
+  const desde = new Date(Date.now() - diasFresco * 86_400_000).toISOString().slice(0, 10)
   const { data: otros } = await adm
     .from('doc_precios_historial')
     .select('item_id, tercero_id, fecha, precio_neto, precio_unitario, proveedores:tercero_id(razon_social)')

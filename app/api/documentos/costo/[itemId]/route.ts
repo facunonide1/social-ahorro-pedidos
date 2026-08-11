@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { gateDocumentos } from '@/lib/documentos/permisos'
 import { DOC_DIAS_DATO_FRESCO, TENANT_ACTUAL } from '@/lib/documentos/config'
+import { parametro } from '@/lib/os/definicion'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -51,7 +52,9 @@ export async function GET(_req: Request, { params }: { params: { itemId: string 
 
   // El mejor sale solo de datos frescos: un precio viejo no es una alternativa
   // real, es un recuerdo.
-  const frescos = filas.filter((f) => dias(f.fecha) <= DOC_DIAS_DATO_FRESCO)
+  // Puede venir de la declaración de la fábrica; el default es el del código.
+  const diasFresco = await parametro('compras', 'dias_ventana_costo', DOC_DIAS_DATO_FRESCO)
+  const frescos = filas.filter((f) => dias(f.fecha) <= diasFresco)
   const porProv = new Map<string, any>()
   for (const f of frescos) {
     const k = f.tercero_id ?? 'sin'
@@ -66,6 +69,6 @@ export async function GET(_req: Request, { params }: { params: { itemId: string 
       ? { neto: neto(m), fecha: m.fecha, proveedor: m.proveedores?.razon_social ?? 'sin proveedor', dias: dias(m.fecha) }
       : null,
     precioSugerido: prod?.precio_sugerido != null ? Number(prod.precio_sugerido) : null,
-    diasFresco: DOC_DIAS_DATO_FRESCO,
+    diasFresco,
   })
 }

@@ -5,6 +5,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { gateDocumentos } from '@/lib/documentos/permisos'
 import { grillaComparador } from '@/lib/documentos/costos'
 import { DOC_DIAS_DATO_FRESCO, DOC_DIAS_VOLUMEN } from '@/lib/documentos/config'
+import { parametro } from '@/lib/os/definicion'
 import { ComparadorCostosClient } from './comparador-costos-client'
 
 export const dynamic = 'force-dynamic'
@@ -26,6 +27,10 @@ export default async function ComparadorCostosPage({ searchParams }: { searchPar
 
   const soloFacturas = searchParams.solo !== 'todo'
   const adm = createAdminClient()
+  // Puede venir de la declaración de la fábrica. Si el lector está apagado o
+  // algo falla, devuelve estos mismos DOC_DIAS_DATO_FRESCO: la pantalla no
+  // cambia.
+  const diasFresco = await parametro('compras', 'dias_ventana_costo', DOC_DIAS_DATO_FRESCO)
   const { filas, proveedores, totalAhorro } = await grillaComparador(adm, {
     soloFacturas,
     rubro: searchParams.rubro ?? null,
@@ -44,7 +49,7 @@ export default async function ComparadorCostosPage({ searchParams }: { searchPar
           proveedores={proveedores}
           totalAhorro={totalAhorro}
           soloFacturas={soloFacturas}
-          diasFresco={DOC_DIAS_DATO_FRESCO}
+          diasFresco={diasFresco}
           diasVolumen={DOC_DIAS_VOLUMEN}
         />
       </div>
