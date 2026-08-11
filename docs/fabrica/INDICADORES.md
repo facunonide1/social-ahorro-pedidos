@@ -38,12 +38,38 @@ Todo indicador nuevo las contesta por escrito antes de entrar:
    en `null`, y todo conteo derivado da cero. Es la forma más barata de fabricar
    un cero mentiroso, y ya pasó cuatro veces.
 
-Y una quinta que salió de v0.67:
+Y las que salieron después:
 
 5. **¿Está comparando dos cosas que pueden ser la misma por construcción?**
    Comparar el título *efectivo* contra el literal del código es una tautología
    cuando el override se escribió copiando ese literal. Siempre da cero, y el
-   cero no dice nada.
+   cero no dice nada. *(v0.67)*
+6. **¿La categoría que se está midiendo existe?**
+   Además de "¿mide bien?", preguntar si lo que mide es una cosa real o una
+   agrupación inventada. Ninguna contraprueba la contesta, porque comparte la
+   definición del indicador que prueba. *(v0.71)*
+7. **¿Mide lo que hace falta, o algo cierto pero al lado?**
+   `resuelve` comprobaba que el ARCHIVO llamara a la fábrica. Es cierto, y está
+   al lado: un archivo con dos funciones que consumen el mismo parámetro daba
+   verde para cualquier nombre. *(v0.72)*
+
+---
+
+## Dos patologías distintas
+
+**Mentir** es decir un número que no es. **Medir al lado** es decir un número
+cierto que no contesta la pregunta. Confundirlas ensucia el conteo, así que se
+llevan aparte:
+
+| | Cuántas |
+|---|---|
+| Indicadores que mintieron | **19** |
+| Verificaciones que medían al lado | **2** |
+
+Las dos que medían al lado: la verificación por archivo en vez de por función
+*(v0.72, arreglada en v0.73 — encontró 3 consumidores mal declarados en la
+primera corrida)* y el cruce de fuentes dobles contra el campo `consume` en vez
+de `simbolo` *(v0.73, arreglado en el mismo bloque que lo creó)*.
 
 ---
 
