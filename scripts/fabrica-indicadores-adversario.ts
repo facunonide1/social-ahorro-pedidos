@@ -345,18 +345,32 @@ async function main() {
       esGobernable(ordenado, PESOS_GOBERNADOS) && !tieneConflictoDeFuente(ordenado),
       'la variable de entorno pasa a ser el valor del código, no una fuente que compite',
     )
-    // Y la contraprueba sobre datos reales: el conteo tiene que dar el número
-    // que da el relevamiento, no cero por no haber mirado.
+    // La contraprueba sobre datos reales.
+    //
+    // La primera versión afirmaba `conflictosDeFuente > 0`, y ROMPIÓ cuando el
+    // bloque B cerró el último conflicto: la prueba dependía de que el defecto
+    // existiera. Un caso así no verifica el indicador, verifica el estado — y
+    // el día que el estado mejora, se lee como si el indicador se hubiera roto.
+    //
+    // Lo que sí se puede afirmar siempre: el conteo COINCIDE con los que
+    // declaran la fuente sin resolver. Da cero cuando no hay y distinto de cero
+    // cuando hay, sin depender de cuál sea el caso hoy.
     const manifiestos = []
     for (const clave of Object.keys(MANIFIESTOS)) {
       const v = await versionActual(clave)
       if (v) manifiestos.push({ clave, manifiesto: v.manifiesto })
     }
+    const declarados = manifiestos.flatMap((m) =>
+      (m.manifiesto.configurable ?? [])
+        .filter((c) => c.fuente?.resuelto === 'sin_resolver')
+        .map((c) => `${m.clave}.${c.clave}`),
+    )
     const r = resumenCableado(revisarCableado(manifiestos))
     caso(
-      'el indicador de conflicto cuenta los reales, no cero',
-      r.conflictosDeFuente > 0,
-      `${r.conflictosDeFuente} conflicto(s): ${r.conflictos.join(', ')}`,
+      'el conteo de conflictos coincide con los declarados sin resolver',
+      r.conflictosDeFuente === declarados.length &&
+        declarados.every((d) => r.conflictos.includes(d)),
+      `${r.conflictosDeFuente} contado(s) · ${declarados.length} declarado(s) sin resolver${declarados.length ? `: ${declarados.join(', ')}` : ' (hoy ninguno, y el conteo lo refleja)'}`,
     )
   }
 

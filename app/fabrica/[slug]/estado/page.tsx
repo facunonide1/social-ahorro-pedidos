@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { ETIQUETA_CABLEADO } from '@/lib/fabrica/cableado'
 import { ETIQUETA_LECTOR } from '@/lib/fabrica/flag'
 import { ETIQUETA_VEREDICTO, VARIANTE_VEREDICTO } from '@/lib/fabrica/cobertura-lector'
-import { estadoDeLaFabrica, LO_QUE_NO_SE_PUEDE_AFIRMAR } from '@/lib/fabrica/estado'
+import { estadoDeLaFabrica, laCifra, LO_QUE_NO_SE_PUEDE_AFIRMAR } from '@/lib/fabrica/estado'
 import { traerProyecto } from '@/lib/fabrica/datos'
 
 export const dynamic = 'force-dynamic'
@@ -39,10 +39,17 @@ export default async function EstadoPage({ params }: { params: { slug: string } 
     <div className="space-y-8 p-4 md:p-6">
       <section>
         <h1 className="font-[family-name:var(--font-fraunces)] text-xl">Estado real</h1>
+        {/* LA CIFRA. Se calcula, no se escribe, y no se redondea para arriba:
+            si da vergüenza se publica igual. Es lo único que hace que suba por
+            trabajo y no por redacción. */}
+        <p className="mt-3 rounded-lg border border-border bg-muted/40 px-4 py-3 text-base font-medium">
+          {laCifra(pools)}
+        </p>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          Una foto con un solo criterio. Lo revisado y lo que no se pudo revisar
-          se cuentan <span className="font-medium">aparte</span>: un número que
-          los mezcla se lee mejor de lo que está.
+          Cuenta sólo lo que gobierna <span className="font-medium">de verdad</span>:
+          un parámetro con brecha, uno sensible, un hecho o un conflicto de fuente
+          no entran. Durante cuatro sesiones el sistema dijo &ldquo;23 parámetros
+          gobernados&rdquo; y gobernaba 2.
         </p>
       </section>
 

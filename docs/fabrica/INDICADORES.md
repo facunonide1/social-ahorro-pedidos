@@ -11,7 +11,7 @@ Y su reverso, que costó igual de caro:
 
 Hasta v0.66 aparecieron **cinco** indicadores que mentían. Los cinco se
 encontraron **por casualidad**, probando otra cosa. En v0.67 se buscaron a
-propósito y aparecieron **ocho más**. En v0.68, arreglando uno de ellos, aparecieron **dos más**. En v0.69, extendiendo el sistema a comportamiento, **dos más**. En v0.70, uno más — encontrado por la revisión de arrastre del mismo bloque que lo creó. Eso deja de ser mala suerte y pasa a ser
+propósito y aparecieron **ocho más**. En v0.68, arreglando uno de ellos, aparecieron **dos más**. En v0.69, extendiendo el sistema a comportamiento, **dos más**. En v0.70, uno más — encontrado por la revisión de arrastre del mismo bloque que lo creó. En v0.71, el más grande de todos: la categoría estaba mal. Eso deja de ser mala suerte y pasa a ser
 un patrón: en un sistema que mide su propia salud, el modo de falla por defecto
 no es romperse, es tranquilizar.
 
@@ -47,7 +47,7 @@ Y una quinta que salió de v0.67:
 
 ---
 
-## Los dieciocho que mintieron
+## Los diecinueve que mintieron
 
 | # | Indicador | Qué decía | Por qué mentía | Cuándo |
 |---|-----------|-----------|----------------|--------|
@@ -69,6 +69,7 @@ Y una quinta que salió de v0.67:
 | 16 | Diff de una propuesta | "No cambia nada." | El diff sólo miraba pantallas: un cambio de PARÁMETRO llegaba a la cola con `queCambia: []`, sobre lo único que altera el comportamiento | v0.69 |
 | 17 | Huella de una propuesta | "ya se rechazó dos veces" | `JSON.stringify(o, keys)` FILTRA, no ordena: todas las propuestas de un mismo tipo compartían huella | v0.69 |
 | 18 | Cobertura en cero | "ninguna consultó todavía" | Decía lo mismo para un pool sin cablear que para uno cableado cuya verificación quedó vieja al republicar | v0.70 |
+| 19 | Cualquier métrica de parámetros | "23 gobernados" | `configurable` mezclaba hechos con perillas: 17 de 37 no eran configuración. Todo lo que contara parámetros estaba inflado | v0.71 |
 
 El **11** es el peor de la lista: un manifiesto roto en la base se veía
 exactamente igual que un pool que nadie prendió.
@@ -91,6 +92,13 @@ que cambiaba un parámetro llegaba a la cola diciendo **"No cambia nada"**, sobr
 un cambio que altera el comportamiento del sistema. El diff se escribió cuando la
 fábrica gobernaba presentación y nadie lo extendió cuando empezó a gobernar
 comportamiento. No es un cero que dice "hay poco": dice "no hay nada".
+
+El **19** es el más grande y el más viejo: no era un cálculo mal hecho, era una
+**categoría mal armada**. `configurable` mezclaba perillas con hechos sobre la
+pieza —"opera con valores a fecha", "mueve mercadería"— y mientras las mezclara
+*todo* lo que contara parámetros estaba inflado. Durante cuatro sesiones el
+sistema dijo "23 parámetros gobernados" y gobernaba 2. Ningún indicador mentía
+por su cuenta: todos contaban bien una cosa que estaba mal definida.
 
 El **18** es el primero que se encontró **dentro del bloque que lo causó**, no una
 sesión después. Agregar la pantalla de estado puso el número de cobertura al
@@ -134,6 +142,8 @@ que el indicador le decía—, y dos los destapó la prueba adversaria.
 | `procedenciaDe()` | no: "procedencia no registrada" ≠ vacío | sí | n/a | sí |
 | `revisarCableado()` | no: cuatro estados, y `sin_declarar` ≠ "está bien" | sí, y el denominador excluye lo no verificable | n/a | n/a — sólo lee archivos |
 | `efectoDe()` | no: distingue "no sé calcularlo" de "hoy no hay datos" | sí | n/a | sí |
+| `laCifra()` | no: cuenta sólo lo que gobierna de verdad | sí: hechos, brechas, sensibles y conflictos quedan afuera | n/a | n/a |
+| `verificarIdentificador()` | no: tres estados, y `ambiguo` no es un fallo | sí | n/a | sí, lee el archivo |
 | `estadoDeLaFabrica()` | no: parte el denominador en gobernados / no consumidos / sensibles / conflictos | sí | usa el corte de cada indicador | sí |
 | `bitacora()` | no | sí: guarda **todos** los turnos, no sólo los que salieron bien | n/a | sí |
 
@@ -155,6 +165,12 @@ Dos de los diecisiete de la tabla los encontró esta prueba en su primera corrid
 Desde v0.68 hay un bloque que ejercita **corte y dedupe juntos**, no cada pieza
 por separado: el hallazgo 13 no estaba en ninguna de las dos, estaba en la
 combinación, y probarlas de a una es lo que lo dejó pasar.
+
+**Una contraprueba no puede depender de que el defecto exista.** En v0.71 un caso
+afirmaba "el conteo de conflictos da más de cero" y se rompió cuando se cerró el
+último conflicto: verificaba el estado, no el indicador, y el día que el estado
+mejora se lee como si el indicador se hubiera roto. Ahora afirma que el conteo
+**coincide** con los declarados, que es cierto con cero y con diez.
 
 **Cada caso trae su contraprueba.** Verificar que algo da cero cuando no hay
 nada no alcanza: hay que verificar que da distinto de cero cuando sí hay. Si no,

@@ -121,6 +121,28 @@ export async function estadoDeLaFabrica(proyectoId: string): Promise<{
   return { pools, revisiones: revisarCableado(manifiestos) }
 }
 
+/**
+ * QUÉ GOBIERNA LA FÁBRICA HOY, EN UNA LÍNEA.
+ *
+ * Se calcula, no se escribe. Y no se redondea para arriba: si el número da
+ * vergüenza, se publica igual — es el que hay, y publicarlo es lo único que
+ * hace que suba por trabajo y no por redacción.
+ *
+ * Cuenta SÓLO lo que gobierna de verdad: un parámetro con brecha, uno sensible,
+ * un hecho o un conflicto de fuente no cuentan. Durante cuatro sesiones el
+ * sistema dijo "23 parámetros gobernados" y gobernaba 2.
+ */
+export function laCifra(pools: EstadoDePool[]): string {
+  const prendidos = pools.filter((p) => p.lector === 'prendido')
+  const pantallas = prendidos.reduce((a, p) => a + p.pantallas.gobernables, 0)
+  const gobernados = pools.reduce((a, p) => a + p.parametros.completos, 0)
+  const parametros = pools.reduce((a, p) => a + p.parametros.total + p.hechos, 0)
+  return (
+    `Presentación en ${prendidos.length} de ${pools.length} pools ` +
+    `(${pantallas} pantallas) · ${gobernados} parámetros de ${parametros}`
+  )
+}
+
 /* ── Lo que NO se puede afirmar ──────────────────────────────────────────── */
 
 export interface Limite {
