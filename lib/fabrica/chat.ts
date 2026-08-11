@@ -172,7 +172,18 @@ ${
       })
       .join(' · ') || 'ninguno'
   }
-  hechos (NO son configurables: el circuito existe o no existe, no hay perilla): ${m.hechos?.map((h) => h.afirma).join(' · ') || 'ninguno'}
+  hechos (NO son configurables: el circuito existe o no existe, no hay perilla).
+  Un CONDICIONADO depende de cómo está armado este negocio y puede dejar de ser
+  cierto en otro, así que no lo presentes como una garantía de la pieza:
+${
+    m.hechos
+      ?.map(
+        (h) =>
+          `    ${h.tipo === 'condicionado' ? 'CONDICIONADO' : 'permanente '} · ${h.afirma}` +
+          (h.depende_de ? ` (depende de: ${h.depende_de})` : ''),
+      )
+      .join('\n') || '    ninguno'
+  }
   INTOCABLES: ${m.constitucional?.map((c) => `${c.elemento} (${c.limite})`).join(' · ') || 'ninguno'}
   brechas abiertas: ${brechas.join(' · ') || 'ninguna'}`
 }

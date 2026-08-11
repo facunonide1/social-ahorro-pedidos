@@ -67,7 +67,7 @@ export default async function EstadoPage({ params }: { params: { slug: string } 
             [
               'Parámetros gobernados',
               `${sumar((p) => p.parametros.gobernados)} de ${sumar((p) => p.parametros.total)}`,
-              `${sumar((p) => p.parametros.sensibles)} sensibles fuera del lector · ${sumar((p) => p.parametros.conBrecha)} con brecha · ${sumar((p) => p.hechos)} hechos (no son parámetros)`,
+              `${sumar((p) => p.parametros.sensibles)} sensibles fuera del lector · ${sumar((p) => p.parametros.conBrecha)} con brecha · ${sumar((p) => p.hechos.permanentes)} hechos permanentes + ${sumar((p) => p.hechos.condicionados)} condicionados (no son parámetros)`,
             ],
             [
               'Problemas abiertos',
@@ -138,10 +138,11 @@ export default async function EstadoPage({ params }: { params: { slug: string } 
                       {p.parametros.sensibles} sensible(s) · {p.parametros.conBrecha} con brecha
                       {p.parametros.conflictos > 0 && ` · ${p.parametros.conflictos} EN CONFLICTO`}
                     </div>
-                    {p.hechos > 0 && (
+                    {p.hechos.permanentes + p.hechos.condicionados > 0 && (
                       <div>
-                        {p.hechos} hecho(s) de la pieza — no son parámetros y no se cuentan como
-                        tales
+                        {p.hechos.permanentes} hecho(s) permanente(s)
+                        {p.hechos.condicionados > 0 &&
+                          ` · ${p.hechos.condicionados} condicionado(s): dependen de cómo está armado este negocio y no viajan con la pieza`}
                       </div>
                     )}
                   </td>

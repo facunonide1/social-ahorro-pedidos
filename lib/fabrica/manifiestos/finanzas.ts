@@ -217,8 +217,8 @@ export const MANIFIESTO_FINANZAS: Manifiesto = {
   ],
 
   hechos: [
-    { clave: 'maneja_cheques', afirma: "Opera con valores a fecha", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
-    { clave: 'concilia_banco', afirma: "Concilia contra el extracto bancario", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'maneja_cheques', afirma: "Opera con valores a fecha", tipo: 'permanente', comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'concilia_banco', afirma: "Concilia contra el extracto bancario", tipo: 'permanente', comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
   ],
 
   deprecadas: [

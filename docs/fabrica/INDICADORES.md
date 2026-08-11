@@ -191,6 +191,26 @@ escala de producto.
 
 ---
 
+## La pregunta que salió del hallazgo 19
+
+> **¿La categoría que se está midiendo existe?**
+
+Además de "¿mide bien?", preguntar si lo que mide es una cosa real o una
+agrupación inventada. Ninguna contraprueba la contesta, porque comparte la
+definición del indicador que prueba.
+
+Aplicada en v0.72 a `hechos` —la categoría que v0.71 acababa de crear—
+encontró que **5 de los 17 no eran hechos sobre la pieza sino sobre el
+negocio**: "el negocio opera en más de un punto" no es una propiedad del
+software. La pieza funciona con un punto o con veinte; el hecho es cierto
+porque hoy hay cuatro sucursales cargadas. Ahora se declaran
+`condicionado`, con de qué dependen.
+
+Sin la distinción, un hecho condicionado se lee como una garantía de la pieza,
+y deja de ser cierto al instalarla en otro lado sin que nadie toque nada.
+
+---
+
 ## Cómo se agrega un indicador
 
 1. Contestar las cinco preguntas por escrito, en el comentario de la función.

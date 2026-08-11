@@ -132,7 +132,7 @@ export const MANIFIESTO_CENTRO_DATOS: Manifiesto = {
   ],
 
   hechos: [
-    { clave: 'exporta_a_sistema_externo', afirma: "Exporta hacia un sistema externo", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'exporta_a_sistema_externo', afirma: "Exporta hacia un sistema externo", tipo: 'condicionado', depende_de: "Si este negocio tiene un sistema externo al que exportar. La pieza tiene la exportación; que se use depende de la instalación.", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
   ],
 }
 

@@ -174,8 +174,8 @@ export const MANIFIESTO_STOCK: Manifiesto = {
   ],
 
   hechos: [
-    { clave: 'transferencias_entre_puntos', afirma: "Mueve mercadería entre puntos", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
-    { clave: 'control_por_zonas', afirma: "Divide el espacio en zonas con responsable", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'transferencias_entre_puntos', afirma: "Mueve mercadería entre puntos", tipo: 'permanente', comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'control_por_zonas', afirma: "Divide el espacio en zonas con responsable", tipo: 'permanente', comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
   ],
 }
 

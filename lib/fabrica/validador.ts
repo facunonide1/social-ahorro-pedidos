@@ -130,6 +130,17 @@ export function validarManifiesto(m: Manifiesto): Problema[] {
     // Un hecho sin comprobación es una afirmación sin respaldo, y este proyecto
     // ya sabe lo que cuesta una de ésas.
     if (!h.comprobado_por) err(`hechos.${h.clave}`, 'no dice cómo se comprobó')
+    if (h.tipo !== 'permanente' && h.tipo !== 'condicionado') {
+      err(`hechos.${h.clave}`, `tipo desconocido: ${h.tipo}. Es permanente o condicionado`)
+    }
+    // Un condicionado sin decir de qué depende se lee igual que un permanente,
+    // que es exactamente lo que la distinción vino a evitar.
+    if (h.tipo === 'condicionado' && !h.depende_de) {
+      err(`hechos.${h.clave}`, 'es condicionado y no dice de qué depende')
+    }
+    if (h.tipo === 'permanente' && h.depende_de) {
+      avi(`hechos.${h.clave}`, 'dice de qué depende pero se declara permanente: si depende de algo, es condicionado')
+    }
     if (clavesConf.has(h.clave)) {
       err(`hechos.${h.clave}`, 'está declarado como hecho Y como configurable: es una cosa o la otra')
     }

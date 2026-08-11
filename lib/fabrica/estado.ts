@@ -49,8 +49,13 @@ export interface EstadoDePool {
     conflictos: number
     sensibles: number
   }
-  /** Lo que la pieza HACE y no se puede configurar. Desde 1.8.0 no son parámetros. */
-  hechos: number
+  /**
+   * Lo que la pieza HACE y no se puede configurar. Desde 1.8.0 no son
+   * parámetros, y desde 1.9.0 se cuentan partidos: un condicionado depende de
+   * cómo está armado ESTE negocio y no viaja con la pieza, así que sumarlos
+   * juntos diría que la pieza garantiza más de lo que garantiza.
+   */
+  hechos: { permanentes: number; condicionados: number }
   /** Overrides de este proyecto sobre la pieza. */
   overrides: number
   defectosAbiertos: number
@@ -103,7 +108,10 @@ export async function estadoDeLaFabrica(proyectoId: string): Promise<{
         conBrecha: r.conBrecha,
         sensibles: (m?.configurable ?? []).filter((c) => c.peso === 'sensible').length,
       },
-      hechos: (m?.hechos ?? []).length,
+      hechos: {
+        permanentes: (m?.hechos ?? []).filter((h) => h.tipo !== 'condicionado').length,
+        condicionados: (m?.hechos ?? []).filter((h) => h.tipo === 'condicionado').length,
+      },
       // Se cuentan las CLAVES de override, no los objetos: `titulos` con tres
       // rutas son tres decisiones, no una.
       overrides: Object.values(propios?.overrides ?? {}).reduce(
@@ -136,7 +144,10 @@ export function laCifra(pools: EstadoDePool[]): string {
   const prendidos = pools.filter((p) => p.lector === 'prendido')
   const pantallas = prendidos.reduce((a, p) => a + p.pantallas.gobernables, 0)
   const gobernados = pools.reduce((a, p) => a + p.parametros.completos, 0)
-  const parametros = pools.reduce((a, p) => a + p.parametros.total + p.hechos, 0)
+  const parametros = pools.reduce(
+    (a, p) => a + p.parametros.total + p.hechos.permanentes + p.hechos.condicionados,
+    0,
+  )
   return (
     `Presentación en ${prendidos.length} de ${pools.length} pools ` +
     `(${pantallas} pantallas) · ${gobernados} parámetros de ${parametros}`

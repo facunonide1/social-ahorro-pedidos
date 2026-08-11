@@ -170,9 +170,9 @@ export const MANIFIESTO_CLIENTES: Manifiesto = {
   ],
 
   hechos: [
-    { clave: 'puntos_activos', afirma: "Acumula puntos por compra", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
-    { clave: 'dedup_automatico', afirma: "Propone fusiones de clientes duplicados", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
-    { clave: 'canal_b2b', afirma: "Maneja clientes empresa con cuenta corriente", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'puntos_activos', afirma: "Acumula puntos por compra", tipo: 'permanente', comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'dedup_automatico', afirma: "Propone fusiones de clientes duplicados", tipo: 'permanente', comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'canal_b2b', afirma: "Maneja clientes empresa con cuenta corriente", tipo: 'condicionado', depende_de: "Si este negocio atiende clientes empresa. La pieza tiene el circuito de cuenta corriente; que haya clientes b2b depende del negocio.", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
   ],
 }
 

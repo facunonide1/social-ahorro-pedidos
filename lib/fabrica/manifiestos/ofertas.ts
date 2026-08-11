@@ -159,8 +159,8 @@ export const MANIFIESTO_OFERTAS: Manifiesto = {
   ],
 
   hechos: [
-    { clave: 'requiere_confirmacion_en_punto', afirma: "Pide confirmar la llegada al punto de venta", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
-    { clave: 'usa_briefs', afirma: "Encarga la pieza de comunicación a un tercero", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'requiere_confirmacion_en_punto', afirma: "Pide confirmar la llegada al punto de venta", tipo: 'permanente', comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'usa_briefs', afirma: "Encarga la pieza de comunicación a un tercero", tipo: 'condicionado', depende_de: "Si este negocio encarga la comunicación a un tercero. La pieza tiene el brief; usarlo o no es del negocio.", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
   ],
 }
 

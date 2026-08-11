@@ -157,8 +157,8 @@ export const MANIFIESTO_TAREAS: Manifiesto = {
   ],
 
   hechos: [
-    { clave: 'exige_evidencia', afirma: "Pide foto o archivo al cerrar", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
-    { clave: 'puntaje_activo', afirma: "Suma puntos al que ejecuta", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'exige_evidencia', afirma: "Pide foto o archivo al cerrar", tipo: 'permanente', comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'puntaje_activo', afirma: "Suma puntos al que ejecuta", tipo: 'permanente', comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
   ],
 }
 

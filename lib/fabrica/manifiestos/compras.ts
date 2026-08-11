@@ -240,8 +240,8 @@ export const MANIFIESTO_COMPRAS: Manifiesto = {
   ],
 
   hechos: [
-    { clave: 'maneja_devoluciones', afirma: "Devuelve mercadería al tercero", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
-    { clave: 'radar_demanda', afirma: "Registra la venta perdida por faltante", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'maneja_devoluciones', afirma: "Devuelve mercadería al tercero", tipo: 'permanente', comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'radar_demanda', afirma: "Registra la venta perdida por faltante", tipo: 'permanente', comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
   ],
 
   deprecadas: [

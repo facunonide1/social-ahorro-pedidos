@@ -673,6 +673,23 @@ export interface HechoDeLaPieza {
   /** Qué afirma, en una línea que se lea sin contexto. */
   afirma: string
   /**
+   * PERMANENTE o CONDICIONADO, y la diferencia importa al instalar.
+   *
+   *   permanente   es cierto siempre que la pieza esté instalada. Viaja con
+   *                ella: si el pool está, el circuito está.
+   *   condicionado es cierto mientras se cumpla algo que NO depende de la
+   *                pieza — cómo está armado el negocio, qué datos tiene. Al
+   *                instalar la pieza en otro lado puede dejar de ser cierto sin
+   *                que nadie toque nada.
+   *
+   * Sin la distinción, un hecho condicionado se lee como una garantía. "El
+   * negocio opera en más de un punto" no es una propiedad del software: es una
+   * propiedad de ESTE negocio, y la pieza no la puede prometer.
+   */
+  tipo: 'permanente' | 'condicionado'
+  /** De qué depende, si es condicionado. Obligatorio en ese caso. */
+  depende_de?: string
+  /**
    * Cómo se comprobó que es cierto. Un archivo, una tabla, una búsqueda: algo
    * que otra persona pueda repetir.
    */

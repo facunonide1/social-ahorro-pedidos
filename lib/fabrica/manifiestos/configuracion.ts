@@ -108,8 +108,8 @@ export const MANIFIESTO_CONFIGURACION: Manifiesto = {
   ],
 
   hechos: [
-    { clave: 'multi_punto', afirma: "El negocio opera en más de un punto", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
-    { clave: 'codigo_item_externo', afirma: "Los items tienen un código de un sistema externo", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'multi_punto', afirma: "El negocio opera en más de un punto", tipo: 'condicionado', depende_de: "Cuántos puntos de venta tiene el negocio. No es una propiedad del software: la pieza funciona con uno o con veinte, y el hecho es cierto porque hoy hay cuatro sucursales cargadas.", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
+    { clave: 'codigo_item_externo', afirma: "Los items tienen un código de un sistema externo", tipo: 'condicionado', depende_de: "Si el catálogo de este negocio trae códigos de otro sistema. La pieza soporta las dos formas; el hecho depende de cómo se cargó el catálogo.", comprobado_por: "Se buscó la clave literal en los 689 archivos del sector y no aparece; se buscaron además anclas exactas por concepto. Ningún lugar del código lee este valor: el circuito existe o no existe. v0.70/v0.71." },
   ],
 }
 
