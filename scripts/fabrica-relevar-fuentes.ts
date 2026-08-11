@@ -89,6 +89,45 @@ function fallbacks(pool: string, clave: string): { archivo: string; literal: str
   return out
 }
 
+/**
+ * CONSTANTES QUE SE DEJAN EXPLÍCITAMENTE FUERA DEL MANIFIESTO.
+ *
+ * En v0.71 aparecieron 18 constantes de entorno consumidas por el código y no
+ * declaradas en ninguna parte. Declararlas todas habría repetido al revés el
+ * error que esta misma sesión arregló: meter en `configurable` cosas que no son
+ * decisiones de negocio.
+ *
+ * Así que se parten en dos y las dos quedan escritas. "Fuera con motivo" es una
+ * respuesta; "no las miramos" no lo es.
+ */
+const FUERA_CON_MOTIVO: Record<string, string> = {
+  // ── Infraestructura: no son decisiones de negocio ─────────────────────
+  DOC_MODELO: 'Qué modelo usa el motor de documentos. Es una decisión técnica y de costo, no del negocio.',
+  DOC_MAX_TOKENS: 'Techo técnico de la llamada al modelo.',
+  DOC_EFFORT: 'Esfuerzo de razonamiento del modelo. Técnico.',
+  DOC_MAX_BYTES: 'Tamaño máximo de archivo aceptado. Límite técnico.',
+  DOC_COMPRIMIR_DESDE_BYTES: 'A partir de qué tamaño se comprime una imagen. Técnico.',
+  DOC_LADO_MAX_PX: 'Lado máximo de la imagen que se manda al modelo. Técnico.',
+  DOC_CONCURRENCIA_LOTE: 'Cuántos documentos se procesan en paralelo. Técnico.',
+  DOC_MAX_ARCHIVOS_LOTE: 'Cuántos archivos entran en una carga. Técnico, aunque se roza con lo operativo.',
+
+  // ── De negocio, y NO se declaran en esta sesión ───────────────────────
+  //
+  // Declarar un parámetro no es agregar una línea: es elegirle el peso, el
+  // rango, la unidad y verificar dónde se consume. Hacerlo de apuro para once
+  // a la vez sería exactamente el trabajo que este proyecto no hace bien.
+  DOC_UMBRAL_SUGERENCIA: 'De negocio. Sin declarar: pendiente de peso, contrato y dependencias.',
+  DOC_MAX_CANDIDATOS: 'De negocio. Sin declarar: ídem.',
+  DOC_DIAS_VOLUMEN: 'De negocio. Sin declarar: ídem.',
+  DOC_ALERTA_MONTO_MINIMO: 'De negocio. Sin declarar: ídem.',
+  DOC_CONC_VENTANA_DIAS: 'De negocio, del circuito de conciliación. Sin declarar: ídem.',
+  DOC_CONC_TOL_CANTIDAD: 'De negocio. Sin declarar: ídem.',
+  DOC_CONC_TOL_PRECIO_PCT: 'De negocio. Sin declarar: ídem.',
+  DOC_CONC_TOL_PRECIO_ARS: 'De negocio. Sin declarar: ídem.',
+  DOC_CONC_MONTO_MINIMO: 'De negocio. Sin declarar: ídem.',
+  DOC_CONC_DIAS_TAREA: 'De negocio. Sin declarar: ídem.',
+}
+
 function main() {
   const constantes = constantesDeEntorno()
   console.log(`\n${constantes.length} constante(s) que leen de process.env con un default.\n`)
@@ -156,6 +195,21 @@ function main() {
   console.log(
     `CON FALLBACKS DISTINTOS: ${duplicados.length} — ${duplicados.join(', ') || 'ninguno'}`,
   )
+  // Y las que el código consume sin que el manifiesto las conozca.
+  const declaradas = new Set<string>()
+  for (const entrada of Object.values(MANIFIESTOS)) {
+    for (const c of entrada.manifiesto.configurable ?? []) {
+      if (c.fuente?.nombre) declaradas.add(c.fuente.nombre)
+      for (const d of c.depende_de ?? []) declaradas.add(d.donde)
+    }
+  }
+  const huerfanas = constantes.filter((c) => !declaradas.has(c.nombre) && !(c.nombre in FUERA_CON_MOTIVO))
+  console.log(`\nCONSUMIDAS Y NI DECLARADAS NI EXCLUIDAS: ${huerfanas.length}`)
+  for (const c of huerfanas) console.log(`  ${c.nombre} = ${c.valor}`)
+  console.log(
+    `FUERA CON MOTIVO: ${Object.keys(FUERA_CON_MOTIVO).length} (8 técnicas · ${Object.keys(FUERA_CON_MOTIVO).length - 8} de negocio, pendientes de declarar con peso y contrato)`,
+  )
+
   console.log(
     '\nEl match es por NOMBRE, nunca por valor: DOC_DIAS_VOLUMEN vale 90 y\n' +
       'clientes.dias_riesgo_fuga también, y no tienen nada que ver.\n',

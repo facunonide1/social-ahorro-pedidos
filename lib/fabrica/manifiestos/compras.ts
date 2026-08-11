@@ -213,7 +213,20 @@ export const MANIFIESTO_COMPRAS: Manifiesto = {
   configurable: [
     {
       clave: 'dias_ventana_costo', etiqueta: 'Días para comparar la evolución de un costo', tipo: 'entero', default: 60, peso: 'operativo', peso_motivo: 'Ventana para comparar la evolución de un costo.', minimo: 7, maximo: 365, unidad: 'dias',
-      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_DIAS_DATO_FRESCO", resuelto: 'sin_resolver', nota: "Se confirmó leyendo el comentario: DOC_DIAS_DATO_FRESCO es \"a partir de cuántos días un costo deja de ser comparable\", bajo la sección del comparador de costos. DOC_CONC_VENTANA_DIAS, que tiene el mismo valor 60, es de conciliación y NO es esta. Queda sin resolver a propósito: no se cablea en esta sesión, y resolverlo sin cablearlo sería declarar un orden que nadie ejercita." },
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_DIAS_DATO_FRESCO", resuelto: 'no_gobernable', nota: "Resuelto en v0.71 como NO GOBERNABLE, con el mismo criterio que los dos sensibles de documentos. Cablearlo exige tocar CUATRO archivos de Social Ahorro —lib/documentos/costos.ts, app/api/documentos/costo/[itemId]/route.ts, app/(admin)/admin/compras/costos/page.tsx y lib/documentos/alertas-costo.ts, con cinco lugares de consumo— y esta sesión tiene la frontera en cero. Mientras exista DOC_DIAS_DATO_FRESCO, el valor efectivo sale de ahí y la declaración es documentación, no gobierno. Se dice para que nadie la lea al revés. Cablearlo es el trabajo de una sesión que pueda tocar el sector." },
+      depende_de: [
+        { archivo: "lib/documentos/costos.ts", donde: "DOC_DIAS_DATO_FRESCO", via: 'literal', efecto: "Marca un precio como fresco o viejo en el comparador." },
+        { archivo: "app/api/documentos/costo/[itemId]/route.ts", donde: "DOC_DIAS_DATO_FRESCO", via: 'literal', efecto: "Filtra los precios frescos de la ficha de costo." },
+        { archivo: "app/(admin)/admin/compras/costos/page.tsx", donde: "DOC_DIAS_DATO_FRESCO", via: 'literal', efecto: "Se lo pasa a la pantalla del comparador." },
+        { archivo: "lib/documentos/alertas-costo.ts", donde: "DOC_DIAS_DATO_FRESCO", via: 'literal', efecto: "Acota desde cuándo se miran precios para la alerta." },
+      ],
+    },
+    {
+      clave: 'alerta_exceso_pct', etiqueta: 'Cuánto tiene que despegarse del promedio del proveedor', tipo: 'numero', default: 8, peso: 'operativo', peso_motivo: 'Separa "aumentó" de "aumentó más que el resto". Mal puesto, con inflación alta avisa de todo o de nada.', minimo: 1, maximo: 100, unidad: 'porcentaje',
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_ALERTA_EXCESO_PCT", resuelto: 'es_el_fallback', nota: "Se declara en v0.71: era la otra mitad de la alerta de costo y el manifiesto sólo conocía alerta_suba_pct. Declarar una y no la otra hacía creer que la alerta se controla con un solo número." },
+      depende_de: [
+        { archivo: "lib/documentos/alertas-costo.ts", donde: "evaluarAlertasCosto", via: 'literal', efecto: "Descarta las subas que no se despegan del promedio del proveedor." },
+      ],
     },
     {
       clave: 'alerta_suba_pct', etiqueta: 'Porcentaje de suba que dispara un aviso', tipo: 'numero', default: 15, peso: 'operativo', peso_motivo: 'Umbral de suba que dispara un aviso: mal puesto, avisa siempre o no avisa nunca.', minimo: 1, maximo: 100, unidad: 'porcentaje',
