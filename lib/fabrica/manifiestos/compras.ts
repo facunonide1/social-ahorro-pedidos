@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * caso del mismo circuito, no una entidad aparte del rubro.
  */
 export const MANIFIESTO_COMPRAS: Manifiesto = {
-  formato: '1.9.0',
+  formato: '2.0.0',
   pool: 'compras',
   nombre: 'Compras',
   categoria: 'generico',
@@ -215,25 +215,25 @@ export const MANIFIESTO_COMPRAS: Manifiesto = {
       clave: 'dias_ventana_costo', etiqueta: 'Días para comparar la evolución de un costo', tipo: 'entero', default: 60, peso: 'operativo', peso_motivo: 'Ventana para comparar la evolución de un costo.', minimo: 7, maximo: 365, unidad: 'dias',
       fuente: { tipo: 'variable_de_entorno', nombre: "DOC_DIAS_DATO_FRESCO", resuelto: 'es_el_fallback', nota: "Cableado en v0.72: DOC_DIAS_DATO_FRESCO pasa a ser el tercer argumento de parametro() en los cinco lugares de consumo. Las dos fuentes quedan ordenadas —declaración primero con el pool prendido, variable de entorno después— en vez de compitiendo. No confundir con DOC_CONC_VENTANA_DIAS, que vale lo mismo pero es de conciliación: esa ambigüedad se resolvió leyendo en v0.70." },
       depende_de: [
-        { archivo: "lib/documentos/costos.ts", donde: "fichaCostos", via: 'resuelve', efecto: "Marca cada precio de la ficha como fresco o viejo." },
-        { archivo: "lib/documentos/costos.ts", donde: "grillaComparador", via: 'resuelve', efecto: "Marca cada celda del comparador como fresca o vieja." },
-        { archivo: "app/api/documentos/costo/[itemId]/route.ts", donde: "GET", via: 'resuelve', efecto: "Filtra los precios frescos que compiten por ser el mejor, y devuelve la ventana usada." },
-        { archivo: "app/(admin)/admin/compras/costos/page.tsx", donde: "ComparadorCostosPage", via: 'resuelve', efecto: "Resuelve la ventana y se la pasa a la pantalla." },
-        { archivo: "lib/documentos/alertas-costo.ts", donde: "evaluarAlertasCosto", via: 'resuelve', efecto: "Acota desde cuándo se miran precios para la alerta de suba." },
+        { archivo: "lib/documentos/costos.ts", consume: "fichaCostos", via: 'resuelve', efecto: "Marca cada precio de la ficha como fresco o viejo." },
+        { archivo: "lib/documentos/costos.ts", consume: "grillaComparador", via: 'resuelve', efecto: "Marca cada celda del comparador como fresca o vieja." },
+        { archivo: "app/api/documentos/costo/[itemId]/route.ts", consume: "GET", via: 'resuelve', efecto: "Filtra los precios frescos que compiten por ser el mejor, y devuelve la ventana usada." },
+        { archivo: "app/(admin)/admin/compras/costos/page.tsx", consume: "ComparadorCostosPage", via: 'resuelve', efecto: "Resuelve la ventana y se la pasa a la pantalla." },
+        { archivo: "lib/documentos/alertas-costo.ts", consume: "sugerenciaCambioProveedor", simbolo: "DOC_DIAS_DATO_FRESCO", via: 'resuelve', efecto: "Acota desde cuándo se miran precios para sugerir cambiar de proveedor." },
       ],
     },
     {
       clave: 'alerta_exceso_pct', etiqueta: 'Cuánto tiene que despegarse del promedio del proveedor', tipo: 'numero', default: 8, peso: 'operativo', peso_motivo: 'Separa "aumentó" de "aumentó más que el resto". Mal puesto, con inflación alta avisa de todo o de nada.', minimo: 1, maximo: 100, unidad: 'porcentaje',
       fuente: { tipo: 'variable_de_entorno', nombre: "DOC_ALERTA_EXCESO_PCT", resuelto: 'es_el_fallback', nota: "Se declara en v0.71: era la otra mitad de la alerta de costo y el manifiesto sólo conocía alerta_suba_pct. Declarar una y no la otra hacía creer que la alerta se controla con un solo número." },
       depende_de: [
-        { archivo: "lib/documentos/alertas-costo.ts", donde: "evaluarAlertasCosto", via: 'literal', efecto: "Descarta las subas que no se despegan del promedio del proveedor." },
+        { archivo: "lib/documentos/alertas-costo.ts", consume: "alertaAumentoFueraDePatron", simbolo: "DOC_ALERTA_EXCESO_PCT", via: 'literal', efecto: "Descarta las subas que no se despegan del promedio del proveedor." },
       ],
     },
     {
       clave: 'alerta_suba_pct', etiqueta: 'Porcentaje de suba que dispara un aviso', tipo: 'numero', default: 15, peso: 'operativo', peso_motivo: 'Umbral de suba que dispara un aviso: mal puesto, avisa siempre o no avisa nunca.', minimo: 1, maximo: 100, unidad: 'porcentaje',
       fuente: { tipo: 'variable_de_entorno', nombre: "DOC_ALERTA_SUBA_PCT", resuelto: 'es_el_fallback', nota: "La constante se pasa como tercer argumento de parametro(): la declaración gana con el pool prendido, la variable de entorno gana si no. Ordenadas, no compitiendo." },
       depende_de: [
-        { archivo: "lib/documentos/alertas-costo.ts", donde: "evaluarAlertasCosto", via: 'resuelve', efecto: "Descarta las subas por debajo del umbral antes de avisar." },
+        { archivo: "lib/documentos/alertas-costo.ts", consume: "alertaAumentoFueraDePatron", simbolo: "DOC_ALERTA_SUBA_PCT", via: 'resuelve', efecto: "Descarta las subas por debajo del umbral antes de avisar." },
       ],
     },
     { clave: 'concilia_tres_puntas', etiqueta: 'Cruza orden, remito y factura', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Apagarlo da por buena una factura sin cruzarla contra lo pedido y lo recibido.'  },

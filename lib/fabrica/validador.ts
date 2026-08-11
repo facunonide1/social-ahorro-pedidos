@@ -15,7 +15,7 @@ import type { Manifiesto } from './tipos'
  * ejecutar antes de commitear sin credenciales de nada.
  */
 
-export const FORMATO_ACTUAL = '1.9.0'
+export const FORMATO_ACTUAL = '2.0.0'
 
 export interface Problema {
   campo: string

@@ -108,7 +108,7 @@ function main() {
       // código, que ese parámetro se consume desde esa constante. Está en el
       // manifiesto desde 1.6.0.
       const declaradas = (p.depende_de ?? [])
-        .map((d) => constantes.find((c) => c.nombre === d.donde))
+        .map((d) => constantes.find((c) => c.nombre === d.simbolo))
         .filter(Boolean) as Constante[]
 
       // ── 1b · CANDIDATO: el nombre se parece. Hay que leerlo. ──────────
@@ -162,7 +162,7 @@ function main() {
   for (const entrada of Object.values(MANIFIESTOS)) {
     for (const c of entrada.manifiesto.configurable ?? []) {
       if (c.fuente?.nombre) declaradas.add(c.fuente.nombre)
-      for (const d of c.depende_de ?? []) declaradas.add(d.donde)
+      for (const d of c.depende_de ?? []) declaradas.add(d.consume)
     }
   }
   const huerfanas = constantes.filter((c) => !declaradas.has(c.nombre) && !ES_EXCLUIDA.has(c.nombre))

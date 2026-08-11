@@ -270,9 +270,9 @@ function describirParametro(
     deps.length === 0
       ? ' El manifiesto no dice dónde se usa, así que NO se puede estimar el efecto.'
       : literales.length === 0
-        ? ` Se usa en ${deps.length} lugar(es), todos gobernados: ${deps.map((d) => d.donde).join(', ')}.`
+        ? ` Se usa en ${deps.length} lugar(es), todos gobernados: ${deps.map((d) => d.consume).join(', ')}.`
         : ` Se usa en ${deps.length} lugar(es) y ${literales.length} todavía usa(n) un valor fijo ` +
-          `(${literales.map((d) => d.donde).join(', ')}): el cambio va a regir en ${cableados.length} y no en ${literales.length}.`
+          `(${literales.map((d) => d.consume).join(', ')}): el cambio va a regir en ${cableados.length} y no en ${literales.length}.`
 
   const quien = contexto.gobernando
     ? ` Lo ven ${contexto.personasConAcceso} persona(s) con acceso al sector.`

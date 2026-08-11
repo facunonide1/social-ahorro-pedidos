@@ -561,8 +561,24 @@ export type Unidad = 'dias' | 'horas' | 'pesos' | 'porcentaje' | 'unidades' | 'v
 export interface DependenciaDeParametro {
   /** Ruta del archivo, relativa a la raíz del repo. */
   archivo: string
-  /** Función, componente o pantalla que lo consume. */
-  donde: string
+  /**
+   * QUIÉN CONSUME el valor: la función, el componente o el endpoint que lo usa.
+   *
+   * Es lo único que se verifica, y por eso está separado del símbolo desde
+   * 2.0.0. Hasta 1.9.0 un solo campo `donde` admitía las dos lecturas —quién
+   * consume y qué se consume— y nada obligaba a elegir: cuatro dependencias de
+   * `dias_ventana_costo` decían `DOC_DIAS_DATO_FRESCO`, el nombre de la
+   * CONSTANTE, y pasaban la verificación porque la constante sí existe en esos
+   * archivos. Verificaba una cosa cierta que no era la que hacía falta.
+   */
+  consume: string
+  /**
+   * QUÉ SE CONSUME ahí, si tiene nombre: la constante o el símbolo que se lee.
+   *
+   * Es documentación, no lo que se verifica. Un archivo que sólo DECLARA la
+   * constante no es un lugar de consumo: eso ya lo dice `fuente`.
+   */
+  simbolo?: string
   /**
    * CÓMO llega el valor a este lugar. Tres formas, y confundirlas hace que la
    * verificación mienta:

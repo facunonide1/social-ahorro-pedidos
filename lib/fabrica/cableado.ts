@@ -75,9 +75,9 @@ export const ETIQUETA_CABLEADO: Record<EstadoCableado, string> = {
  */
 export type EstadoIdentificador = 'verificado' | 'no_existe' | 'ambiguo'
 
-/** ¿`donde` parece un identificador de código? */
-function esIdentificador(donde: string): boolean {
-  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(donde)
+/** ¿El consumidor declarado parece un identificador de código? */
+function esIdentificador(consume: string): boolean {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(consume)
 }
 
 /**
@@ -88,7 +88,7 @@ function esIdentificador(donde: string): boolean {
  */
 export function verificarIdentificador(
   archivo: string,
-  donde: string,
+  consume: string,
   ancla?: string,
 ): EstadoIdentificador {
   if (!existsSync(archivo)) return 'no_existe'
@@ -96,12 +96,12 @@ export function verificarIdentificador(
   // EL ANCLA MANDA cuando `donde` no es un identificador: es la forma de
   // verificar un lugar que no tiene nombre de función. Coincidencia literal y
   // exacta, no búsqueda difusa.
-  if (!esIdentificador(donde)) {
+  if (!esIdentificador(consume)) {
     if (!ancla) return 'ambiguo'
     return readFileSync(archivo, 'utf8').includes(ancla) ? 'verificado' : 'no_existe'
   }
   const texto = readFileSync(archivo, 'utf8')
-  const d = donde.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const d = consume.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const formas = [
     `function\\s+${d}\\b`,
     `const\\s+${d}\\b`,
@@ -139,14 +139,84 @@ export interface RevisionDeParametro {
   motivo: string
 }
 
-/** ¿Este archivo llama a `parametro()` para esta clave? */
-function resuelve(archivo: string, pool: string, clave: string): boolean {
-  if (!existsSync(archivo)) return false
+/**
+ * ¿La FUNCIÓN declarada llama a `parametro()` para esta clave?
+ *
+ * ── LA PREGUNTA 7, APLICADA A ESTA VERIFICACIÓN ─────────────────────────────
+ *
+ * Hasta v0.72 se comprobaba que el ARCHIVO llamara a la fábrica. Eso es cierto
+ * y está al lado de lo que hace falta: `lib/documentos/costos.ts` tiene DOS
+ * funciones que consumen el mismo parámetro, y con la comprobación por archivo
+ * las dos daban verde aunque sólo una llamara. Una declaración podía nombrar
+ * cualquier función del archivo y pasar.
+ *
+ * Ahora se busca la llamada DENTRO del cuerpo de la función declarada,
+ * delimitado por balance de llaves desde su declaración. Si el consumidor no es
+ * un identificador —un badge anónimo— se cae al archivo entero y se dice que
+ * la verificación es de menor grado.
+ */
+function cuerpoDe(texto: string, consume: string): string | null {
+  const m = new RegExp(
+    `(?:export\\s+)?(?:default\\s+)?(?:async\\s+)?function\\s+${consume}\\b|` +
+      `(?:export\\s+)?const\\s+${consume}\\s*[:=]`,
+  ).exec(texto)
+  if (!m) return null
+
+  // La `{` del CUERPO, no la primera que aparezca: la lista de parámetros
+  // puede traer un tipo inline —`opts: { soloFacturas?: boolean } = {}`— y
+  // tomar esa daba un "cuerpo" de tres palabras donde nunca iba a estar la
+  // llamada. Todas las funciones dieron rojo hasta que se miró por qué.
+  let i = texto.indexOf('(', m.index)
+  if (i < 0) return null
+  let par = 0
+  for (; i < texto.length; i++) {
+    if (texto[i] === '(') par++
+    else if (texto[i] === ')') {
+      par--
+      if (par === 0) break
+    }
+  }
+  // Y después del TIPO DE RETORNO, que también puede traer llaves:
+  //   ): Promise<{ filas: Fila[]; total: number }> {
+  // Se salta hasta la `{` que abre a nivel de línea, o sea la que no está
+  // dentro de un `<...>` de genéricos.
+  let ang = 0
+  let desde = -1
+  for (let j = i + 1; j < texto.length; j++) {
+    const c = texto[j]
+    if (c === '<') ang++
+    else if (c === '>') ang--
+    else if (c === '{' && ang <= 0) {
+      desde = j
+      break
+    }
+  }
+  if (desde < 0) return null
+  let prof = 0
+  for (let i = desde; i < texto.length; i++) {
+    if (texto[i] === '{') prof++
+    else if (texto[i] === '}') {
+      prof--
+      if (prof === 0) return texto.slice(desde, i + 1)
+    }
+  }
+  return texto.slice(desde)
+}
+
+function resuelve(
+  archivo: string,
+  pool: string,
+  clave: string,
+  consume: string,
+): { ok: boolean; grado: 'en_la_funcion' | 'en_el_archivo' } {
+  if (!existsSync(archivo)) return { ok: false, grado: 'en_el_archivo' }
   const texto = readFileSync(archivo, 'utf8')
   const re = new RegExp(
     `parametro(?:<[^>]*>)?\\(\\s*'${pool}'\\s*,\\s*'${clave.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}'`,
   )
-  return re.test(texto)
+  const cuerpo = cuerpoDe(texto, consume)
+  if (cuerpo) return { ok: re.test(cuerpo), grado: 'en_la_funcion' }
+  return { ok: re.test(texto), grado: 'en_el_archivo' }
 }
 
 /**
@@ -247,14 +317,14 @@ export function revisarParametro(
 
   for (const d of deps) {
     if (!existsSync(d.archivo)) {
-      base.inexistentes.push(`${d.archivo} (${d.donde})`)
+      base.inexistentes.push(`${d.archivo} (${d.consume})`)
       continue
     }
-    const etiqueta = `${d.archivo} (${d.donde})`
+    const etiqueta = `${d.archivo} (${d.consume})`
 
     // El identificador se verifica SIEMPRE, incluso en un `literal`: una
     // dependencia que nombra algo inexistente es falsa aunque no esté cableada.
-    const ident = verificarIdentificador(d.archivo, d.donde, d.ancla)
+    const ident = verificarIdentificador(d.archivo, d.consume, d.ancla)
     if (ident === 'no_existe') base.identificadoresInexistentes.push(etiqueta)
     else if (ident === 'ambiguo') base.identificadoresAmbiguos.push(etiqueta)
 
@@ -262,8 +332,13 @@ export function revisarParametro(
       base.faltan.push(etiqueta)
       continue
     }
-    const ok = d.via === 'resuelve' ? resuelve(d.archivo, poolClave, p.clave) : recibe(d.archivo, d.senal)
-    if (ok) base.verificados.push(`${etiqueta} · ${d.via}`)
+    const r = d.via === 'resuelve' ? resuelve(d.archivo, poolClave, p.clave, d.consume) : null
+    const ok = r ? r.ok : recibe(d.archivo, d.senal)
+    if (ok) {
+      base.verificados.push(
+        `${etiqueta} · ${d.via}` + (r?.grado === 'en_el_archivo' ? ' (en el archivo, no en la función)' : ''),
+      )
+    }
     else base.desmentidos.push(`${etiqueta} · declarado "${d.via}"${d.senal ? ` con señal "${d.senal}"` : ''}`)
   }
 
