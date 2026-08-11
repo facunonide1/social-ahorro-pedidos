@@ -6,6 +6,7 @@ import { ETIQUETA_CABLEADO } from '@/lib/fabrica/cableado'
 import { ETIQUETA_LECTOR } from '@/lib/fabrica/flag'
 import { ETIQUETA_VEREDICTO, VARIANTE_VEREDICTO } from '@/lib/fabrica/cobertura-lector'
 import { estadoDeLaFabrica, laCifra, LO_QUE_NO_SE_PUEDE_AFIRMAR } from '@/lib/fabrica/estado'
+import { EXCLUIDAS } from '@/lib/fabrica/exclusiones'
 import { traerProyecto } from '@/lib/fabrica/datos'
 
 export const dynamic = 'force-dynamic'
@@ -174,6 +175,39 @@ export default async function EstadoPage({ params }: { params: { slug: string } 
           <span className="font-medium">no consumido</span> son distintos: el
           primero es un hueco, el segundo es un dato.
         </p>
+      </section>
+
+      {/* ── Lo que se miró y quedó afuera ─────────────────────────────── */}
+      <section>
+        <h2 className="text-sm font-semibold tracking-tight">
+          Constantes revisadas y dejadas afuera
+          <span className="ml-2 font-normal text-muted-foreground">{EXCLUIDAS.length}</span>
+        </h2>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+          Es la contracara del denominador honesto: si sólo se publica lo
+          declarado, lo no declarado se lee como olvido. Y los dos motivos no son
+          lo mismo — una decisión cerrada no es una deuda.
+        </p>
+        <div className="mt-3 overflow-x-auto rounded-lg border border-border">
+          <table className="w-full min-w-[40rem] text-sm">
+            <tbody>
+              {EXCLUIDAS.map((e) => (
+                <tr key={e.nombre} className="border-b border-border last:border-0">
+                  <td className="px-3 py-2 font-mono text-xs">{e.nombre}</td>
+                  <td className="px-3 py-2">
+                    <Badge
+                      variant={e.motivo === 'tecnica' ? 'outline' : 'warning'}
+                      className="font-normal"
+                    >
+                      {e.motivo === 'tecnica' ? 'técnica · decisión cerrada' : 'pendiente · deuda'}
+                    </Badge>
+                  </td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">{e.porque}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       {/* ── Lo que no se puede afirmar ────────────────────────────────── */}
