@@ -212,6 +212,65 @@ export const MANIFIESTO_COMPRAS: Manifiesto = {
 
   configurable: [
     {
+      clave: 'dias_volumen', etiqueta: "Ventana para medir cuánto se compró", tipo: 'entero', default: 90, peso: 'operativo', peso_motivo: "Pondera el ahorro por unidades compradas. Corta, subestima el impacto; larga, arrastra un volumen que ya no es el de hoy.", minimo: 7, maximo: 730, unidad: 'dias',
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_DIAS_VOLUMEN", resuelto: 'no_gobernable', nota: "Declarado en v0.73 con peso, rango y unidad. Todavía NO cableado: mientras exista DOC_DIAS_VOLUMEN el valor efectivo sale de ahí y la declaración es documentación, no gobierno. Cablearlo es el trabajo siguiente." },
+      depende_de: [
+        { archivo: "lib/documentos/alertas-costo.ts", consume: "alertaAumentoFueraDePatron", simbolo: "DOC_DIAS_VOLUMEN", via: 'literal', efecto: "Mide las unidades compradas en la ventana para calcular el impacto en plata." },
+      ],
+    },
+    {
+      clave: 'alerta_monto_minimo', etiqueta: "Plata en juego para que sea alerta y no sugerencia", tipo: 'numero', default: 10000, peso: 'operativo', peso_motivo: "Decide si algo interrumpe a alguien o queda como sugerencia. Mal puesto, molesta por monedas o se calla ante plata de verdad.", minimo: 0, maximo: 10000000, unidad: 'pesos',
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_ALERTA_MONTO_MINIMO", resuelto: 'no_gobernable', nota: "Declarado en v0.73 con peso, rango y unidad. Todavía NO cableado: mientras exista DOC_ALERTA_MONTO_MINIMO el valor efectivo sale de ahí y la declaración es documentación, no gobierno. Cablearlo es el trabajo siguiente." },
+      depende_de: [
+        { archivo: "lib/documentos/alertas-costo.ts", consume: "alertaAumentoFueraDePatron", simbolo: "DOC_ALERTA_MONTO_MINIMO", via: 'literal', efecto: "Sube la severidad de sugerencia a alerta." },
+        { archivo: "lib/documentos/alertas-costo.ts", consume: "alertaContraLista", simbolo: "DOC_ALERTA_MONTO_MINIMO", via: 'literal', efecto: "Ídem para la alerta contra lista de precios." },
+      ],
+    },
+    {
+      clave: 'conc_ventana_dias', etiqueta: "Días atrás para buscar órdenes candidatas", tipo: 'entero', default: 60, peso: 'operativo', peso_motivo: "Acota qué órdenes compiten por ser la del documento. Corta, no encuentra la orden y la conciliación queda sin par; larga, ofrece órdenes viejas que confunden.", minimo: 7, maximo: 365, unidad: 'dias',
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_CONC_VENTANA_DIAS", resuelto: 'no_gobernable', nota: "Declarado en v0.73 con peso, rango y unidad. Todavía NO cableado: mientras exista DOC_CONC_VENTANA_DIAS el valor efectivo sale de ahí y la declaración es documentación, no gobierno. Cablearlo es el trabajo siguiente." },
+      depende_de: [
+        { archivo: "lib/documentos/vincular.ts", consume: "ordenesCandidatas", simbolo: "DOC_CONC_VENTANA_DIAS", via: 'literal', efecto: "Acota la búsqueda de órdenes y penaliza las lejanas." },
+      ],
+    },
+    {
+      clave: 'conc_tol_cantidad', etiqueta: "Tolerancia de cantidad al conciliar", tipo: 'entero', default: 0, peso: 'sensible', peso_motivo: "Cero por defecto y a propósito: las unidades son enteras y una de menos es una de menos. Subirla da por buena mercadería que no llegó, que es plata.", minimo: 0, maximo: 100, unidad: 'unidades',
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_CONC_TOL_CANTIDAD", resuelto: 'no_gobernable', nota: "Declarado en v0.73 con peso, rango y unidad. Todavía NO cableado: mientras exista DOC_CONC_TOL_CANTIDAD el valor efectivo sale de ahí y la declaración es documentación, no gobierno. Cablearlo es el trabajo siguiente." },
+      depende_de: [
+        { archivo: "lib/documentos/conciliar.ts", consume: "conciliar", simbolo: "DOC_CONC_TOL_CANTIDAD", via: 'literal', efecto: "Decide si una diferencia de cantidad se da por buena." },
+      ],
+    },
+    {
+      clave: 'conc_tol_precio_pct', etiqueta: "Tolerancia de precio al conciliar, en porcentaje", tipo: 'numero', default: 1, peso: 'sensible', peso_motivo: "Afloja el control de que te cobren lo pactado. Subirla deja pasar sobreprecios sin que nadie los mire.", minimo: 0, maximo: 100, unidad: 'porcentaje',
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_CONC_TOL_PRECIO_PCT", resuelto: 'no_gobernable', nota: "Declarado en v0.73 con peso, rango y unidad. Todavía NO cableado: mientras exista DOC_CONC_TOL_PRECIO_PCT el valor efectivo sale de ahí y la declaración es documentación, no gobierno. Cablearlo es el trabajo siguiente." },
+      depende_de: [
+        { archivo: "lib/documentos/conciliar.ts", consume: "conciliar", simbolo: "DOC_CONC_TOL_PRECIO_PCT", via: 'literal', efecto: "Junto con la tolerancia en pesos, decide si una diferencia de precio se da por buena." },
+      ],
+    },
+    {
+      clave: 'conc_tol_precio_ars', etiqueta: "Tolerancia de precio al conciliar, en pesos", tipo: 'numero', default: 5, peso: 'sensible', peso_motivo: "La otra mitad de la tolerancia de precio: se toma la mayor de las dos. Mismo riesgo.", minimo: 0, maximo: 100000, unidad: 'pesos',
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_CONC_TOL_PRECIO_ARS", resuelto: 'no_gobernable', nota: "Declarado en v0.73 con peso, rango y unidad. Todavía NO cableado: mientras exista DOC_CONC_TOL_PRECIO_ARS el valor efectivo sale de ahí y la declaración es documentación, no gobierno. Cablearlo es el trabajo siguiente." },
+      depende_de: [
+        { archivo: "lib/documentos/conciliar.ts", consume: "conciliar", simbolo: "DOC_CONC_TOL_PRECIO_ARS", via: 'literal', efecto: "Piso en pesos de la tolerancia de precio." },
+      ],
+    },
+    {
+      clave: 'conc_monto_minimo', etiqueta: "Diferencia mínima para abrir una conciliación", tipo: 'numero', default: 2000, peso: 'sensible', peso_motivo: "Decide qué diferencias se miran y cuáles pasan sin que nadie las vea. Subirlo esconde plata por debajo del umbral.", minimo: 0, maximo: 1000000, unidad: 'pesos',
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_CONC_MONTO_MINIMO", resuelto: 'no_gobernable', nota: "Declarado en v0.73 con peso, rango y unidad. Todavía NO cableado: mientras exista DOC_CONC_MONTO_MINIMO el valor efectivo sale de ahí y la declaración es documentación, no gobierno. Cablearlo es el trabajo siguiente." },
+      depende_de: [
+        { archivo: "lib/documentos/conciliar.ts", consume: "conciliar", simbolo: "DOC_CONC_MONTO_MINIMO", via: 'literal', efecto: "Decide si la diferencia total amerita abrir una conciliación." },
+        { archivo: "lib/documentos/acciones-conciliacion.ts", consume: "reclamarFaltante", simbolo: "DOC_CONC_MONTO_MINIMO", via: 'literal', efecto: "Sube la severidad del reclamo de sugerencia a alerta." },
+        { archivo: "lib/documentos/acciones-conciliacion.ts", consume: "avisarDiferencia", simbolo: "DOC_CONC_MONTO_MINIMO", via: 'literal', efecto: "Decide si una diferencia amerita avisar." },
+      ],
+    },
+    {
+      clave: 'conc_dias_tarea', etiqueta: "Días con una diferencia sin resolver antes de avisar", tipo: 'entero', default: 7, peso: 'operativo', peso_motivo: "Cuánto se espera antes de generar la tarea de control. Corto, genera tareas de cosas que se estaban resolviendo; largo, la plata queda parada.", minimo: 1, maximo: 90, unidad: 'dias',
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_CONC_DIAS_TAREA", resuelto: 'no_gobernable', nota: "Declarado en v0.73 con peso, rango y unidad. Todavía NO cableado: mientras exista DOC_CONC_DIAS_TAREA el valor efectivo sale de ahí y la declaración es documentación, no gobierno. Cablearlo es el trabajo siguiente." },
+      depende_de: [
+        { archivo: "lib/documentos/dossier-proveedor.ts", consume: "generarTareasDeControl", simbolo: "DOC_CONC_DIAS_TAREA", via: 'literal', efecto: "Umbral de antigüedad para generar la tarea de control." },
+      ],
+    },
+    {
       clave: 'dias_ventana_costo', etiqueta: 'Días para comparar la evolución de un costo', tipo: 'entero', default: 60, peso: 'operativo', peso_motivo: 'Ventana para comparar la evolución de un costo.', minimo: 7, maximo: 365, unidad: 'dias',
       fuente: { tipo: 'variable_de_entorno', nombre: "DOC_DIAS_DATO_FRESCO", resuelto: 'es_el_fallback', nota: "Cableado en v0.72: DOC_DIAS_DATO_FRESCO pasa a ser el tercer argumento de parametro() en los cinco lugares de consumo. Las dos fuentes quedan ordenadas —declaración primero con el pool prendido, variable de entorno después— en vez de compitiendo. No confundir con DOC_CONC_VENTANA_DIAS, que vale lo mismo pero es de conciliación: esa ambigüedad se resolvió leyendo en v0.70." },
       depende_de: [

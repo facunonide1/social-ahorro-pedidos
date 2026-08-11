@@ -124,6 +124,21 @@ export const MANIFIESTO_DOCUMENTOS: Manifiesto = {
 
   configurable: [
     {
+      clave: 'umbral_sugerencia', etiqueta: "Confianza mínima para SUGERIR una asociación", tipo: 'numero', default: 0.3, peso: 'operativo', peso_motivo: "Sugerir de menos deja al revisor sin candidatos; sugerir de más lo llena de ruido. No asocia solo —eso es umbral_confianza_auto, que es sensible—, así que un error hace trabajar de más o de menos, no perder plata.", minimo: 0, maximo: 1,
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_UMBRAL_SUGERENCIA", resuelto: 'no_gobernable', nota: "Declarado en v0.73 con peso, rango y unidad. Todavía NO cableado: mientras exista DOC_UMBRAL_SUGERENCIA el valor efectivo sale de ahí y la declaración es documentación, no gobierno. Cablearlo es el trabajo siguiente." },
+      depende_de: [
+        { archivo: "lib/documentos/matchear.ts", consume: "matchearLineas", simbolo: "DOC_UMBRAL_SUGERENCIA", via: 'literal', efecto: "Umbral de similitud con que se piden y se aceptan candidatos." },
+        { archivo: "lib/documentos/matchear.ts", consume: "similitudCatalogo", simbolo: "DOC_UMBRAL_SUGERENCIA", via: 'literal', efecto: "Corta la lista de candidatos por similitud." },
+      ],
+    },
+    {
+      clave: 'max_candidatos', etiqueta: "Cuántas alternativas se ofrecen al revisar", tipo: 'entero', default: 3, peso: 'operativo', peso_motivo: "Con uno solo la persona no compara y acepta lo primero; con diez el revisor se pierde. Cambia cuánto trabaja quien revisa.", minimo: 1, maximo: 10, unidad: 'unidades',
+      fuente: { tipo: 'variable_de_entorno', nombre: "DOC_MAX_CANDIDATOS", resuelto: 'no_gobernable', nota: "Declarado en v0.73 con peso, rango y unidad. Todavía NO cableado: mientras exista DOC_MAX_CANDIDATOS el valor efectivo sale de ahí y la declaración es documentación, no gobierno. Cablearlo es el trabajo siguiente." },
+      depende_de: [
+        { archivo: "lib/documentos/matchear.ts", consume: "matchearLineas", simbolo: "DOC_MAX_CANDIDATOS", via: 'literal', efecto: "Cuántos candidatos se piden y se acumulan por renglón." },
+      ],
+    },
+    {
       clave: 'umbral_confianza_auto', etiqueta: 'Confianza mínima para asociar solo', tipo: 'numero', default: 0.9, peso: 'sensible', peso_motivo: 'Bajarlo hace que el modelo asocie renglones sin que nadie mire, y de ahí sale un costo mal cargado.', minimo: 0.5, maximo: 1,
       fuente: { tipo: 'variable_de_entorno', nombre: "DOC_UMBRAL_AUTO", resuelto: 'no_gobernable', nota: "Es sensible, así que el lector no lo devuelve igual. Mientras exista DOC_UMBRAL_AUTO, el valor efectivo sale de ahí y la declaración es documentación, no gobierno. Se dice para que nadie lo lea al revés." },
       depende_de: [

@@ -22,6 +22,12 @@
  * Meterlas en la misma bolsa haría que nueve pendientes se lean como resueltas.
  */
 
+/**
+ * En v0.71 había dos motivos: `tecnica` y `pendiente`. Las diez pendientes se
+ * declararon en v0.73, así que hoy sólo queda uno — y `pendiente` se deja en el
+ * tipo a propósito: la próxima constante de negocio que aparezca va a pasar por
+ * ese estado, y sacarlo obligaría a reinventarlo.
+ */
 export type MotivoExclusion = 'tecnica' | 'pendiente'
 
 export interface ConstanteExcluida {
@@ -46,21 +52,6 @@ export const EXCLUIDAS: ConstanteExcluida[] = [
       'Cuántos archivos entran en una carga. Roza lo operativo —quien carga lo siente— pero el límite existe por memoria y tiempo de proceso, no por una decisión del negocio.',
   },
 
-  /* ── De negocio, y todavía sin declarar ─────────────────────────────── */
-  //
-  // Declarar un parámetro no es agregar una línea: es elegirle el peso, el
-  // rango, la unidad y verificar dónde se consume. Hacerlo de apuro para nueve
-  // a la vez es exactamente el trabajo que este proyecto no hace bien.
-  { nombre: 'DOC_UMBRAL_SUGERENCIA', motivo: 'pendiente', porque: 'Confianza mínima para sugerir una asociación. Pendiente de peso, rango y unidad.' },
-  { nombre: 'DOC_MAX_CANDIDATOS', motivo: 'pendiente', porque: 'Cuántas alternativas se ofrecen al revisar. Pendiente.' },
-  { nombre: 'DOC_DIAS_VOLUMEN', motivo: 'pendiente', porque: 'Ventana para medir cuánto se compró y ponderar el ahorro. Pendiente.' },
-  { nombre: 'DOC_ALERTA_MONTO_MINIMO', motivo: 'pendiente', porque: 'Plata mínima en juego para molestar a alguien con una alerta. Pendiente.' },
-  { nombre: 'DOC_CONC_VENTANA_DIAS', motivo: 'pendiente', porque: 'Cuántos días atrás se buscan órdenes candidatas. Del circuito de conciliación. Pendiente.' },
-  { nombre: 'DOC_CONC_TOL_CANTIDAD', motivo: 'pendiente', porque: 'Tolerancia de cantidad al conciliar. Pendiente.' },
-  { nombre: 'DOC_CONC_TOL_PRECIO_PCT', motivo: 'pendiente', porque: 'Tolerancia de precio en porcentaje al conciliar. Pendiente.' },
-  { nombre: 'DOC_CONC_TOL_PRECIO_ARS', motivo: 'pendiente', porque: 'Tolerancia de precio en pesos al conciliar. Pendiente.' },
-  { nombre: 'DOC_CONC_MONTO_MINIMO', motivo: 'pendiente', porque: 'Monto mínimo para abrir una conciliación. Pendiente.' },
-  { nombre: 'DOC_CONC_DIAS_TAREA', motivo: 'pendiente', porque: 'Plazo de la tarea que abre una conciliación con diferencia. Pendiente.' },
 ]
 
 export const ES_EXCLUIDA = new Set(EXCLUIDAS.map((e) => e.nombre))
