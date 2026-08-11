@@ -53,6 +53,10 @@ async function main() {
       for (const i of x.inexistentes) console.log(`     ✗ el archivo no existe: ${i}`)
       for (const i of x.identificadoresInexistentes)
         console.log(`     ✗ el identificador NO existe en el archivo: ${i}`)
+      for (const i of x.identificadoresDebiles)
+        console.log(`     ≈ verificado por ANCLA (débil, se rompe si se reformatea): ${i}`)
+      for (const i of x.anclasQueNoCoinciden)
+        console.log(`     ? NO PUDE VERIFICAR: el ancla declarada no coincide: ${i}`)
       for (const i of x.identificadoresAmbiguos)
         console.log(`     ~ "donde" no es un identificador, no hay nada que verificar: ${i}`)
     }
@@ -72,8 +76,9 @@ async function main() {
   // los gobernados infla la cuenta, que es el hallazgo 14 en otra tabla.
   console.log(
     `IDENTIFICADORES DECLARADOS: ${r.identificadores.verificados} verificado(s) · ` +
-      `${r.identificadores.inexistentes} NO EXISTEN · ${r.identificadores.ambiguos} ambiguo(s) ` +
-      `(el "donde" no es un identificador y no hay nada que buscar)`,
+      `${r.identificadores.debiles} por ancla (DÉBIL) · ${r.identificadores.inexistentes} NO EXISTEN · ` +
+      `${r.identificadores.sinPoderVerificar} sin poder verificar (el ancla no coincide) · ` +
+      `${r.identificadores.ambiguos} ambiguo(s)`,
   )
   console.log(
     `CON BRECHA (fuera de esa cuenta): ${r.conBrecha} — declarados y no implementados por el código`,

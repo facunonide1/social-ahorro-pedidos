@@ -167,7 +167,7 @@ export const MANIFIESTO_STOCK: Manifiesto = {
         { archivo: "app/(admin)/admin/operaciones/vencimientos/page.tsx", consume: "VencimientosPage", via: 'resuelve', efecto: "Resuelve la ventana y la pasa al resumen y a la pantalla." },
         { archivo: "lib/operaciones/vencimientos.ts", consume: "resumenVencimientos", via: 'recibe', senal: "diasAviso", efecto: "Cuenta cuántos vencimientos entran en la ventana." },
         { archivo: "app/(admin)/admin/operaciones/vencimientos/vencimientos-client.tsx", consume: "VencimientosClient", via: 'recibe', senal: "diasAviso", efecto: "Pinta en ámbar los que entran en la ventana." },
-        { archivo: "lib/os/subapps.ts", consume: "badge de Operaciones", via: 'recibe', senal: "diasAvisoVencimiento", ancla: "params?.diasAvisoVencimiento ?? 30", efecto: "Cuenta los vencimientos del badge del dock." },
+        { archivo: "lib/os/subapps.ts", consume: "badge de Operaciones", via: 'recibe', senal: "diasAvisoVencimiento", ancla: "params?.diasAvisoVencimiento", efecto: "Cuenta los vencimientos del badge del dock." },
         { archivo: "app/api/os/badges/route.ts", consume: "GET", via: 'resuelve', efecto: "Resuelve la ventana una vez y se la pasa a todos los badges." },
       ],
     },

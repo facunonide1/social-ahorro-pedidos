@@ -183,8 +183,15 @@ export const LO_QUE_NO_SE_PUEDE_AFIRMAR: Limite[] = [
   {
     que: 'Que un parámetro esté cableado en todos los lugares donde se usa.',
     porque:
-      'Se verifica contra `depende_de`, que es una lista escrita por una persona. Si esa lista está incompleta, la verificación da verde sobre lo que no miró.',
-    paraPoder: 'Un detector que entienda el código en vez de buscar texto. Hoy hay uno que busca identificadores exactos y lo dice.',
+      'Se verifica contra `depende_de`, que es una lista escrita por una persona. Si esa lista está incompleta, la verificación da verde sobre lo que no miró. En v0.73 se encontraron tres consumidores mal declarados justamente así.',
+    paraPoder: 'Un detector que entienda el código en vez de buscar texto. Hoy hay uno que busca identificadores exactos dentro del cuerpo de la función declarada, y lo dice.',
+  },
+  {
+    que: 'Que un lugar verificado por ANCLA siga verificado mañana.',
+    porque:
+      'Un ancla es un fragmento de código en el manifiesto: sobrevive a un cambio de valor, no a un reformateo. Hoy hay 1, y se cuenta aparte de las verificaciones fuertes en vez de sumarse.',
+    paraPoder:
+      'Que ese lugar tenga un nombre de función. Mientras sea una arrow anónima dentro de un objeto, no hay identificador que anclar.',
   },
   {
     que: 'Que un parámetro "revisado y no consumido" de verdad no se use en ninguna parte.',

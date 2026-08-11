@@ -619,6 +619,20 @@ export interface DependenciaDeParametro {
    * Si un lugar no tiene ni identificador ni un ancla honesta, se deja sin
    * `ancla` y queda declarado como no verificable. Forzar un anclaje falso
    * sería peor que el hueco.
+   *
+   * ── ES UNA VERIFICACIÓN DÉBIL, Y SE DICE ────────────────────────────────
+   *
+   * Un ancla es un fragmento de código en el manifiesto: si alguien reformatea
+   * esa línea, deja de coincidir sin que nada haya cambiado de fondo. Una
+   * alarma que suena por un cambio de formato es la que entrena a ignorar el
+   * tablero, así que el indicador la cuenta APARTE de las verificaciones
+   * fuertes en vez de sumarlas.
+   *
+   * Por eso conviene el ancla más corta que siga probando el consumo. La
+   * primera versión era "params?.diasAvisoVencimiento ?? 30" e incluía el
+   * fallback: cambiar ese 30 —una decisión legítima— habría roto la
+   * verificación. Ahora es "params?.diasAvisoVencimiento", que prueba lo mismo
+   * y sobrevive a más cambios.
    */
   ancla?: string
   /** Qué hace con el valor, en una línea. Se lee antes de aprobar un cambio. */

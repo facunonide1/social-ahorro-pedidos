@@ -73,7 +73,21 @@ export const ETIQUETA_CABLEADO: Record<EstadoCableado, string> = {
  *               respuesta, no un fallo: hay lugares de consumo que no tienen
  *               nombre de función
  */
-export type EstadoIdentificador = 'verificado' | 'no_existe' | 'ambiguo'
+export type EstadoIdentificador =
+  /** Se encontró el identificador declarado o importado. Verificación FUERTE. */
+  | 'verificado'
+  /**
+   * Se encontró el ancla, que es un fragmento de código.
+   *
+   * Verificación DÉBIL, y se dice: si alguien reformatea esa línea, el ancla
+   * deja de coincidir sin que nada haya cambiado de fondo. Una alarma que suena
+   * por un cambio de formato es la que entrena a ignorar el tablero.
+   */
+  | 'verificado_debil'
+  | 'no_existe'
+  /** Hay ancla declarada y NO coincide: no se puede afirmar nada, ni bien ni mal. */
+  | 'ancla_no_coincide'
+  | 'ambiguo'
 
 /** ¿El consumidor declarado parece un identificador de código? */
 function esIdentificador(consume: string): boolean {
@@ -98,7 +112,10 @@ export function verificarIdentificador(
   // exacta, no búsqueda difusa.
   if (!esIdentificador(consume)) {
     if (!ancla) return 'ambiguo'
-    return readFileSync(archivo, 'utf8').includes(ancla) ? 'verificado' : 'no_existe'
+    // Un ancla que no coincide NO dice "el cableado está roto": dice "no pude
+    // verificar". Son cosas distintas y hasta v0.73 se leían igual — la
+    // primera manda a alguien a arreglar código que puede estar perfecto.
+    return readFileSync(archivo, 'utf8').includes(ancla) ? 'verificado_debil' : 'ancla_no_coincide'
   }
   const texto = readFileSync(archivo, 'utf8')
   const d = consume.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -132,8 +149,12 @@ export interface RevisionDeParametro {
   faltan: string[]
   /** Archivos declarados que no existen. Una dependencia inventada. */
   inexistentes: string[]
-  /** `donde` declarado que no existe en el archivo. Ídem, un nivel más fino. */
+  /** Consumidor declarado que no existe en el archivo. Ídem, un nivel más fino. */
   identificadoresInexistentes: string[]
+  /** Verificados por ancla: cierto hoy, y frágil ante un reformateo. */
+  identificadoresDebiles: string[]
+  /** Ancla declarada que no coincide: NO se pudo verificar. No es "está roto". */
+  anclasQueNoCoinciden: string[]
   /** `donde` que no es un identificador: no hay nada que verificar. */
   identificadoresAmbiguos: string[]
   motivo: string
@@ -267,6 +288,8 @@ export function revisarParametro(
       faltan: [],
       inexistentes: [],
       identificadoresInexistentes: [],
+      identificadoresDebiles: [],
+      anclasQueNoCoinciden: [],
       identificadoresAmbiguos: [],
       motivo: `Tiene otra fuente viva (${p.fuente!.nombre}) y ninguna gana. Hay que resolver la fuente ANTES de cablear.`,
     }
@@ -282,6 +305,8 @@ export function revisarParametro(
     faltan: [] as string[],
     inexistentes: [] as string[],
     identificadoresInexistentes: [] as string[],
+    identificadoresDebiles: [] as string[],
+    anclasQueNoCoinciden: [] as string[],
     identificadoresAmbiguos: [] as string[],
   }
 
@@ -327,6 +352,8 @@ export function revisarParametro(
     const ident = verificarIdentificador(d.archivo, d.consume, d.ancla)
     if (ident === 'no_existe') base.identificadoresInexistentes.push(etiqueta)
     else if (ident === 'ambiguo') base.identificadoresAmbiguos.push(etiqueta)
+    else if (ident === 'verificado_debil') base.identificadoresDebiles.push(etiqueta)
+    else if (ident === 'ancla_no_coincide') base.anclasQueNoCoinciden.push(etiqueta)
 
     if (d.via === 'literal') {
       base.faltan.push(etiqueta)
@@ -430,11 +457,17 @@ export function resumenCableado(revisiones: RevisionDeParametro[]) {
           a +
           (r.verificados.length + r.faltan.length + r.desmentidos.length) -
           r.identificadoresInexistentes.length -
-          r.identificadoresAmbiguos.length,
+          r.identificadoresAmbiguos.length -
+          r.identificadoresDebiles.length -
+          r.anclasQueNoCoinciden.length,
         0,
       ),
       inexistentes: revisiones.reduce((a, r) => a + r.identificadoresInexistentes.length, 0),
       ambiguos: revisiones.reduce((a, r) => a + r.identificadoresAmbiguos.length, 0),
+      /** Ciertos hoy, frágiles ante un reformateo. NO se suman a `verificados`. */
+      debiles: revisiones.reduce((a, r) => a + r.identificadoresDebiles.length, 0),
+      /** No se pudo verificar. Distinto de "está roto". */
+      sinPoderVerificar: revisiones.reduce((a, r) => a + r.anclasQueNoCoinciden.length, 0),
     },
     /** Con dos fuentes vivas: no se cuentan como gobernados y son un problema. */
     conflictosDeFuente: conflictos.length,
