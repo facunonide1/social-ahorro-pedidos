@@ -69,6 +69,39 @@ export type Definicion = DefinicionPantallas | DefinicionParametros
 /** Los pesos que el lector gobierna hoy. El resto se declara y no se lee. */
 export const PESOS_GOBERNADOS = ['inocuo', 'operativo'] as const
 
+/**
+ * QUÉ ASPECTOS LEE EL LECTOR HOY, para que nadie lo escriba a mano.
+ *
+ * El chat le estuvo diciendo a la gente que los parámetros no se leen: texto de
+ * v0.67, falso desde v0.68. Nadie lo notó durante tres sesiones porque estaba en
+ * una cadena, y una cadena no se desactualiza con un error de compilación.
+ *
+ * Es el mismo problema que el hallazgo 16 pero en la voz del producto: NORA
+ * desactualizada sobre sus propias capacidades. Y es peor que un indicador
+ * viejo, porque un indicador lo lee quien lo va a cuestionar y esto lo lee
+ * alguien que le está preguntando al sistema qué puede hacer.
+ *
+ * Ahora la lista vive acá, al lado de la implementación: agregar un aspecto es
+ * agregarlo a `Aspecto` y a esta constante, y lo que se le dice a la gente sale
+ * de acá.
+ */
+export const ASPECTOS_QUE_GOBIERNA: { aspecto: Aspecto; que: string; desde: string }[] = [
+  { aspecto: 'pantallas', que: 'el título de cada pantalla y si aparece en el menú', desde: 'v0.62' },
+  {
+    aspecto: 'parametros',
+    que: 'los parámetros ponderados inocuo u operativo, sin brecha y sin conflicto de fuente',
+    desde: 'v0.68',
+  },
+]
+
+/** Lo que se declara y el lector NO lee. Tan importante como lo de arriba. */
+export const ASPECTOS_QUE_NO_GOBIERNA: { que: string; porque: string }[] = [
+  { que: 'los permisos', porque: 'quién ve qué se resuelve en el código y en los intocables de Configuración' },
+  { que: 'las acciones y la autonomía del asistente', porque: 'un título mal se ve raro; una acción mal hace algo que nadie firmó' },
+  { que: 'las automatizaciones', porque: 'ídem: esperan a que el mecanismo tenga historia' },
+  { que: 'los parámetros sensibles', porque: 'uno mal leído afloja un control o mueve plata' },
+]
+
 interface Resuelto {
   estado: EstadoLector
   manifiesto: Manifiesto | null

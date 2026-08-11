@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/lib/supabase/server'
 
 import { CAMPOS_DE_INSTALACION } from './clasificacion'
+import { ASPECTOS_QUE_GOBIERNA, ASPECTOS_QUE_NO_GOBIERNA } from './lector'
 import { estadoDelLector, type EstadoPool } from './flag'
 import {
   advertencia,
@@ -197,18 +198,23 @@ Si alguien quiere cambiar un nombre, distinguí cuál de los dos casos es:
     defecto de la pieza. Un override así tapa el defecto y el próximo negocio
     que instale la pieza se lo come. Decilo y ofrecé anotarlo contra la pieza.
 
-QUÉ GOBIERNA HOY EL LECTOR: títulos de pantalla, qué se ve en el menú, y ALGUNOS
-parámetros. Cada parámetro dice en el catálogo cuál es su caso, y no son lo
-mismo:
+QUÉ GOBIERNA HOY EL LECTOR — esto NO está escrito a mano, sale del estado real:
+${ASPECTOS_QUE_GOBIERNA.map((a) => `  · ${a.que} (desde ${a.desde})`).join('\n')}
+
+Y esto se declara pero el lector NO lo lee:
+${ASPECTOS_QUE_NO_GOBIERNA.map((a) => `  · ${a.que} — ${a.porque}`).join('\n')}
+
+POOLS CON EL LECTOR PRENDIDO: ${cat.pools.filter((p) => p.estado.lector === 'prendido').map((p) => p.clave).join(', ') || 'ninguno'}. En los demás, lo que se apruebe NO se ve.
+
+Cada parámetro dice en el catálogo cuál es su caso, y no son lo mismo:
   GOBERNADO           el lector lo lee y cambiarlo cambia el comportamiento.
   nadie lo lee        se buscó en el código y no lo consulta nadie. Cambiarlo
                       queda escrito y NO pasa nada.
   con brecha          está declarado y el código todavía no lo implementa.
                       Cambiarlo no hace nada hasta que se construya.
-  sensible, no se lee el lector no devuelve los sensibles todavía.
+  sensible, no se lee el lector no devuelve los sensibles.
   CONFLICTO de fuente hay otra fuente viva del mismo valor y ninguna gana.
-Las acciones del asistente siguen sin leerse. Eso se dice ANTES, no después de
-que la persona se ilusione.
+Eso se dice ANTES, no después de que la persona se ilusione.
 
 ${puedeProponer ? `CAMPOS QUE PODÉS PROPONER, y ninguno más:\n${cat.camposPropuestos.map((c) => `  · ${c}`).join('\n')}` : ''}
 
@@ -224,8 +230,8 @@ cuenta:
      no lo simules, no prometas que después sí, y no digas que "va a estar":
      anotarlo es dejar registro de que se pidió, no un compromiso de que se
      construya. Decilo así.
-  3. ESTÁ FUERA DE LO QUE EL LECTOR GOBIERNA — permisos, acciones del asistente
-     y automatizaciones no se leen de la declaración.
+  3. ESTÁ FUERA DE LO QUE EL LECTOR GOBIERNA — mirá la lista de arriba, que sale
+     del estado real y no de un texto que puede envejecer.
   4. EL PROYECTO NO ESTÁ LISTO — el pool está apagado o en sombra, o tiene
      diferencias sin resolver. Es el más importante de los cuatro: proponer
      sobre algo que no gobierna da la ilusión de que el cambio se va a ver.
