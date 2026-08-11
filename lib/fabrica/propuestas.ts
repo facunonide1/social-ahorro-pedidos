@@ -322,6 +322,9 @@ function camposDe(cambio: Overrides): { campo: string; valor: unknown }[] {
     out.push({ campo: `titulos.${ruta}`, valor: titulo })
   }
   for (const ruta of cambio.ocultas ?? []) out.push({ campo: `ocultas.${ruta}`, valor: true })
+  for (const [clave, activa] of Object.entries(cambio.automatizaciones ?? {})) {
+    out.push({ campo: `automatizaciones.${clave}`, valor: activa })
+  }
   for (const [clave, valor] of Object.entries(cambio.configurable ?? {})) {
     out.push({ campo: `configurable.${clave}`, valor })
   }

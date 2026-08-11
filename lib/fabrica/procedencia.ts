@@ -160,6 +160,20 @@ export function camposQueCambian(antes: Overrides | null, ahora: Overrides): Cam
     }
   }
 
+  // Arrastre de v0.74: sin esto, apagar una automatización no dejaba
+  // procedencia — un cambio de comportamiento sin quién lo decidió ni por qué.
+  const autAntes = a.automatizaciones ?? {}
+  const autAhora = ahora.automatizaciones ?? {}
+  for (const k of new Set([...Object.keys(autAntes), ...Object.keys(autAhora)])) {
+    if (autAntes[k] !== autAhora[k]) {
+      out.push({
+        campo: `automatizaciones.${k}.activa`,
+        anterior: autAntes[k] ?? true,
+        nuevo: autAhora[k] ?? true,
+      })
+    }
+  }
+
   const ocultasAntes = new Set(a.ocultas ?? [])
   const ocultasAhora = new Set(ahora.ocultas ?? [])
   for (const r of new Set([...ocultasAntes, ...ocultasAhora])) {

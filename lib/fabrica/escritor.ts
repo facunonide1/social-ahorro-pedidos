@@ -215,6 +215,34 @@ export function diffLegible(
     }
   }
 
+  /* ── Automatizaciones ──────────────────────────────────────────────── */
+  //
+  // Un aspecto que se gobierna y el diff no muestra es el hallazgo 16 otra vez,
+  // así que entra con el aspecto, no después. Y el costo dice lo único que hay
+  // que saber antes de firmar: apagar no deshace.
+  const autAntes = new Map(
+    (actual.agentes ?? []).flatMap((a) => a.acciones).filter((c) => c.automatizacion).map((c) => [c.clave, c]),
+  )
+  for (const c of (propuesto.agentes ?? []).flatMap((a) => a.acciones)) {
+    if (!c.automatizacion) continue
+    const x = autAntes.get(c.clave)
+    if (!x?.automatizacion) continue
+    const antesActiva = x.automatizacion.activa !== false
+    const ahoraActiva = c.automatizacion.activa !== false
+    if (antesActiva === ahoraActiva) continue
+    out.push({
+      texto: ahoraActiva
+        ? `La automatización "${c.titulo}" vuelve a correr (${c.automatizacion.donde_corre}, ${c.automatizacion.disparo}).`
+        : `La automatización "${c.titulo}" deja de correr (${c.automatizacion.donde_corre}, ${c.automatizacion.disparo}).`,
+      costo: ahoraActiva
+        ? 'Vuelve a correr en su próximo disparo. Lo que no hizo mientras estuvo apagada NO se recupera solo.'
+        : `Deshacerlo la vuelve a prender. Pero APAGAR NO ES DESHACER: ${c.automatizacion.al_apagar}`,
+      // Apagar una automatización no se deshace sin pérdida: lo que dejó de
+      // hacer mientras estaba apagada no se recupera prendiéndola.
+      reversibleSinPerdida: false,
+    })
+  }
+
   /* ── Identidad del pool ────────────────────────────────────────────── */
   if (actual.nombre !== propuesto.nombre) {
     out.push({

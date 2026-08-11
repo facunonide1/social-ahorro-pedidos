@@ -36,7 +36,7 @@ import type { Manifiesto } from './tipos'
  */
 
 /** Qué parte del manifiesto se está pidiendo. */
-export type Aspecto = 'pantallas' | 'parametros'
+export type Aspecto = 'pantallas' | 'parametros' | 'automatizaciones'
 
 export interface DefinicionPantallas {
   aspecto: 'pantallas'
@@ -64,7 +64,19 @@ export interface DefinicionParametros {
   pesos: Record<string, string>
 }
 
-export type Definicion = DefinicionPantallas | DefinicionParametros
+/**
+ * Qué automatizaciones están activas.
+ *
+ * Sólo las que declaran contrato: una acción que alguien dispara no es una
+ * automatización y no tiene interruptor.
+ */
+export interface DefinicionAutomatizaciones {
+  aspecto: 'automatizaciones'
+  /** clave → si corre. */
+  activas: Record<string, boolean>
+}
+
+export type Definicion = DefinicionPantallas | DefinicionParametros | DefinicionAutomatizaciones
 
 /** Los pesos que el lector gobierna hoy. El resto se declara y no se lee. */
 export const PESOS_GOBERNADOS = ['inocuo', 'operativo'] as const
@@ -98,7 +110,6 @@ export const ASPECTOS_QUE_GOBIERNA: { aspecto: Aspecto; que: string; desde: stri
 export const ASPECTOS_QUE_NO_GOBIERNA: { que: string; porque: string }[] = [
   { que: 'los permisos', porque: 'quién ve qué se resuelve en el código y en los intocables de Configuración' },
   { que: 'las acciones y la autonomía del asistente', porque: 'un título mal se ve raro; una acción mal hace algo que nadie firmó' },
-  { que: 'las automatizaciones', porque: 'ídem: esperan a que el mecanismo tenga historia' },
   { que: 'los parámetros sensibles', porque: 'uno mal leído afloja un control o mueve plata' },
 ]
 
@@ -300,7 +311,17 @@ export async function obtenerDefinicion(
   }
 
   const definicion: Definicion =
-    aspecto === 'parametros'
+    aspecto === 'automatizaciones'
+      ? {
+          aspecto: 'automatizaciones',
+          activas: Object.fromEntries(
+            (r.manifiesto.agentes ?? [])
+              .flatMap((a) => a.acciones)
+              .filter((c) => c.automatizacion)
+              .map((c) => [c.clave, c.automatizacion!.activa !== false]),
+          ),
+        }
+      : aspecto === 'parametros'
       ? {
           aspecto: 'parametros',
           // UN VALOR FUERA DE CONTRATO NO SE DEVUELVE.

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
+import { automatizacionActiva } from '@/lib/os/definicion'
 import type { AdminRole } from '@/lib/types/admin'
 
 export const dynamic = 'force-dynamic'
@@ -30,6 +31,14 @@ export async function POST() {
 }
 
 async function run() {
+  // Puede venir de la declaración de la fábrica. Si el lector está apagado o
+  // algo falla, devuelve `true`: la automatización corre como venía corriendo.
+  // Un cron que corre de más se nota; uno que no corre, no.
+  const activa = await automatizacionActiva('stock', 'recalcular_rotacion', true)
+  if (!activa) {
+    return NextResponse.json({ ok: true, omitida: 'la declaración la tiene apagada' })
+  }
+
   const adm = createAdminClient()
   const ahora = Date.now()
   const d30 = new Date(ahora - 30 * 86_400_000).toISOString()

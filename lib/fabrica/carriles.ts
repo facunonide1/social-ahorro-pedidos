@@ -33,6 +33,8 @@ export type TipoCampo =
   | 'umbral'
   | 'dimension'
   | 'participacion'
+  /** Prender o apagar una automatización. */
+  | 'automatizacion'
   | 'estructura'
   | 'constitucional'
 
@@ -48,6 +50,7 @@ export const ETIQUETA_TIPO: Record<TipoCampo, string> = {
   umbral: 'Umbrales configurables',
   dimension: 'Valores de una dimensión',
   participacion: 'Nivel de participación de un agente',
+  automatizacion: 'Encendido de una automatización',
   estructura: 'Estructura de la pieza',
   constitucional: 'Elementos constitucionales',
 }
@@ -67,6 +70,7 @@ export function tipoDe(campo: string): TipoCampo {
   if (campo.startsWith('ocultas.') || campo.startsWith('navegable')) return 'visibilidad'
   if (campo.startsWith('configurable.')) return 'umbral'
   if (campo.startsWith('dimensiones.')) return 'dimension'
+  if (campo.startsWith('automatizaciones.')) return 'automatizacion'
   if (campo.includes('.participacion') || campo.startsWith('participacion')) return 'participacion'
   if (campo.startsWith('constitucional')) return 'constitucional'
   return 'estructura'
@@ -133,6 +137,22 @@ export function carrilDeCampo(args: {
           ? `Baja el nivel de una acción protegida por ${protegido.limite}: apretar el control se permite, aflojarlo no. Igual espera firma.`
           : 'Cambiar cuánto hace solo un agente espera decisión humana, aunque sea para bajarlo.',
       }
+    }
+  }
+
+  // Va ANTES del chequeo de "campo de la pieza": el tipo ya está decidido y
+  // la regla es la misma para los dos niveles.
+  // Una automatización se apaga con firma, siempre. NUNCA es candidata a verde:
+  // apagar algo que corre solo cambia comportamiento y no se deshace —lo que
+  // dejó de hacer mientras estuvo apagada no se recupera prendiéndola—.
+  if (tipo === 'automatizacion') {
+    return {
+      carril: 'amarillo',
+      tipo,
+      motivo:
+        args.valor === false
+          ? 'Apagar una automatización: siempre pide firma. Apagar no deshace lo que ya hizo, y lo que deje de hacer mientras esté apagada no se recupera al prenderla.'
+          : 'Prender una automatización: siempre pide firma.',
     }
   }
 
@@ -219,6 +239,10 @@ function esDeInstalacion(campo: string): boolean {
     'ocultas.': 'pantallas[].navegable',
     'configurable.': 'configurable → valores',
     'dimensiones.': 'dimensiones → valores',
+    // Arrastre de v0.74: sin esta raíz, apagar una automatización caía en rojo
+    // como "campo de la pieza compartida". La clasificación existía y este mapa
+    // no la conocía — son dos listas que hay que mover juntas.
+    'automatizaciones.': 'automatizaciones[].activa',
     nombre: 'nombre',
     descripcion: 'descripcion',
   }

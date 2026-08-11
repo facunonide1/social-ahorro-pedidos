@@ -108,3 +108,43 @@ export async function parametro<T>(pool: string, clave: string, enCodigo: T): Pr
     return enCodigo
   }
 }
+
+/**
+ * ¿Esta automatización está activa?
+ *
+ * ── LA DIFERENCIA CON UN PARÁMETRO, QUE NO ES MENOR ─────────────────────────
+ *
+ * Un parámetro mal leído hace que el sistema se comporte distinto. Una
+ * automatización mal leída hace que el sistema NO HAGA algo — y lo que no pasa
+ * no deja rastro. Si esta función devolviera `false` por un error, nadie se
+ * entera hasta que alguien pregunta por qué no llegó el aviso de ayer.
+ *
+ * Por eso el fallback es `enCodigo` y no `false`: ante cualquier duda, la
+ * automatización corre como venía corriendo. Un cron que corre de más se nota;
+ * uno que no corre, no.
+ *
+ * ── Y APAGAR NO ES DESHACER ─────────────────────────────────────────────────
+ *
+ * Apagarla evita lo que fuera a hacer de acá en adelante. Lo que ya hizo queda.
+ * El manifiesto obliga a declarar qué queda, y el Taller lo muestra antes de
+ * firmar.
+ *
+ * @param pool     Clave del pool que declara esta automatización.
+ * @param clave    La clave de la acción, tal como está declarada.
+ * @param enCodigo Si el código la correría. Es también el fallback.
+ */
+export async function automatizacionActiva(
+  pool: string,
+  clave: string,
+  enCodigo: boolean,
+): Promise<boolean> {
+  try {
+    const def = await obtenerDefinicion(pool, 'automatizaciones')
+    if (!def || def.aspecto !== 'automatizaciones') return enCodigo
+    const declarada = def.activas[clave]
+    if (typeof declarada !== 'boolean') return enCodigo
+    return declarada
+  } catch {
+    return enCodigo
+  }
+}

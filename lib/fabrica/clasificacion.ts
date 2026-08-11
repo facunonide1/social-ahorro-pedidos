@@ -168,6 +168,12 @@ export const CLASIFICACION: CampoClasificado[] = [
       'Un negocio puede tener al agente en `sugiere` y otro en `prepara`, según su confianza y su evidencia. PERO sólo hacia abajo: la instalación puede ser más conservadora que el pool, nunca más audaz, y un `nunca` no se mueve.',
   },
   {
+    campo: 'automatizaciones[].activa',
+    nivel: 'instalacion',
+    motivo:
+      'Un negocio puede apagar una automatización que otro tiene prendida: depende de cómo trabaja, no de la pieza. Sólo hacia abajo, igual que la participación — prender desde una instalación algo que la pieza declara apagado sería ser más audaz que la pieza.',
+  },
+  {
     campo: 'agentes[].acciones[].brecha',
     nivel: 'instalacion',
     motivo:
