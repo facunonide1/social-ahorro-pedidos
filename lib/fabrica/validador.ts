@@ -15,7 +15,7 @@ import type { Manifiesto } from './tipos'
  * ejecutar antes de commitear sin credenciales de nada.
  */
 
-export const FORMATO_ACTUAL = '2.0.0'
+export const FORMATO_ACTUAL = '2.1.0'
 
 export interface Problema {
   campo: string
@@ -280,6 +280,39 @@ export function validarManifiesto(m: Manifiesto): Problema[] {
     if (!ag.trabajo) err(`agentes.${ag.clave}`, 'sin trabajo declarado en lenguaje de negocio')
     if (ag.acciones.length === 0) err(`agentes.${ag.clave}`, 'un agente sin acciones no hace nada')
     for (const acc of ag.acciones) {
+      // ── El contrato de automatización, desde 2.1.0 ─────────────────
+      const auto = acc.automatizacion
+      if (auto) {
+        if (auto.corre_sola !== true) {
+          err(`agentes.${ag.clave}.${acc.clave}`, 'declara contrato de automatización sin corre_sola: si alguien la dispara, es una acción')
+        }
+        if (!['cron', 'trigger', 'evento'].includes(auto.disparo)) {
+          err(`agentes.${ag.clave}.${acc.clave}`, `disparo desconocido: ${auto.disparo}`)
+        }
+        if (!auto.donde_corre) {
+          err(`agentes.${ag.clave}.${acc.clave}`, 'no dice dónde corre: sin eso no se puede verificar nada')
+        }
+        // Sin esto, "apagala" se lee como "que no haya pasado", y eso es falso
+        // para toda automatización que ya corrió una vez.
+        if (!auto.al_apagar) {
+          err(`agentes.${ag.clave}.${acc.clave}`, 'no dice qué queda hecho si se apaga: apagar no es deshacer')
+        }
+        // Una que corre sola y le llega a alguien de afuera no es lo mismo que
+        // una que crea una tarea interna. El corte es de v0.60 y se aplica acá.
+        if (auto.corre_sola && acc.compromete_tercero && acc.participacion === 'hace_y_avisa') {
+          err(
+            `agentes.${ag.clave}.${acc.clave}`,
+            'corre sola, compromete a un tercero y está en hace_y_avisa: ese nivel exige reversibilidad y no comprometer a nadie de afuera',
+          )
+        }
+        if (auto.agendada === false && acc.participacion === 'hace_y_avisa') {
+          avi(
+            `agentes.${ag.clave}.${acc.clave}`,
+            'declarada hace_y_avisa y NO está agendada: no corre sola, así que el nivel declarado no describe lo que pasa',
+          )
+        }
+      }
+
       if (!PARTICIPACIONES.has(acc.participacion)) {
         err(`agentes.${ag.clave}.${acc.clave}`, `participación desconocida: ${acc.participacion}`)
       }

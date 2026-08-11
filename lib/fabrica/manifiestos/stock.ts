@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * son de cualquier perecedero; una zona es un pedazo del depósito.
  */
 export const MANIFIESTO_STOCK: Manifiesto = {
-  formato: '2.0.0',
+  formato: '2.1.0',
   pool: 'stock',
   nombre: 'Stock',
   categoria: 'generico',
@@ -118,11 +118,17 @@ export const MANIFIESTO_STOCK: Manifiesto = {
       ],
       se_activa_con: 'Importar el stock inicial y definir mínimos.',
       acciones: [
-        { clave: 'recalcular_alertas', titulo: 'Recalcular qué está por faltar', participacion: 'hace_y_avisa', reversible: true, motivo: 'Reescribe una lista derivada del stock. Se recalcula sola en la corrida siguiente.' },
+        { clave: 'recalcular_alertas', titulo: 'Recalcular qué está por faltar', participacion: 'hace_y_avisa', reversible: true, motivo: 'Reescribe una lista derivada del stock. Se recalcula sola en la corrida siguiente.',
+          automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/alertas-stock", agendada: true, al_apagar: "Las alertas ya calculadas quedan como están. Apagarla congela el cálculo: van a decir lo de la última corrida." },
+        },
         // Notifica a los supervisores del punto. Interno y sin compromiso.
         { clave: 'notificar_faltantes', titulo: 'Avisarle al encargado del punto', participacion: 'informa', reversible: false, compromete_tercero: false, motivo: 'Le llega a quien tiene el punto a cargo. Es información para trabajar, no un compromiso con nadie.' },
-        { clave: 'avisar_vencimientos', titulo: 'Avisar lo que se vence', participacion: 'informa', reversible: false, compromete_tercero: false, motivo: 'Aviso al equipo. Sacar la mercadería del salón lo hace una persona.' },
-        { clave: 'recalcular_rotacion', titulo: 'Recalcular la rotación', participacion: 'hace_y_avisa', reversible: true, motivo: 'Es un cálculo sobre ventas. No cambia stock ni precios.' },
+        { clave: 'avisar_vencimientos', titulo: 'Avisar lo que se vence', participacion: 'informa', reversible: false, compromete_tercero: false, motivo: 'Aviso al equipo. Sacar la mercadería del salón lo hace una persona.',
+          automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/alertas-stock", agendada: true, al_apagar: "Los avisos mandados quedan. Apagarla deja de avisar vencimientos nuevos." },
+        },
+        { clave: 'recalcular_rotacion', titulo: 'Recalcular la rotación', participacion: 'hace_y_avisa', reversible: true, motivo: 'Es un cálculo sobre ventas. No cambia stock ni precios.',
+          automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/metricas-stock", agendada: true, al_apagar: "La rotación calculada queda con el último valor. Apagarla la congela." },
+        },
         { clave: 'proponer_reposicion', titulo: 'Proponer qué reponer', participacion: 'sugiere', motivo: 'De acá sale una orden de compra. La decide una persona.' },
         { clave: 'detectar_irregularidades', titulo: 'Señalar lo que no cierra', participacion: 'sugiere', motivo: 'Marca la diferencia; explicarla es de quien estuvo ahí.' },
         {

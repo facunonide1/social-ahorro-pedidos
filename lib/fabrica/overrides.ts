@@ -39,6 +39,15 @@ export interface Overrides {
   configurable?: Record<string, unknown>
   /** clave de dimensión → valores de este proyecto. */
   dimensiones?: Record<string, string[]>
+  /**
+   * clave de automatización → si este proyecto la tiene activa.
+   *
+   * Sólo `false` es una decisión del proyecto: apagar es ser más conservador
+   * que la pieza, igual que bajar un nivel de participación. Poner `true` sobre
+   * algo que la pieza no declara sería inventar una automatización, y eso no se
+   * puede desde una instalación.
+   */
+  automatizaciones?: Record<string, boolean>
   /** clave de agente → ajustes de este proyecto. */
   agentes?: Record<
     string,
@@ -192,6 +201,7 @@ export function resolver(
 
   if (m.agentes) {
     m.agentes = m.agentes.map((ag) => {
+      void 0
       const propio = o.agentes?.[ag.clave]
       return {
         ...ag,
@@ -200,12 +210,17 @@ export function resolver(
           const brecha = propio?.brechas?.[acc.clave]
           marcar(`agentes.${ag.clave}.${acc.clave}.participacion`, nivel !== undefined)
           marcar(`agentes.${ag.clave}.${acc.clave}.brecha`, brecha !== undefined)
+          const apagada = o.automatizaciones?.[acc.clave]
+          marcar(`automatizaciones.${acc.clave}.activa`, apagada !== undefined)
           return {
             ...acc,
             // El nivel sólo puede BAJAR. La validación está en el escritor; acá
             // se aplica lo que ya pasó por ella.
             participacion: nivel ?? acc.participacion,
             brecha: brecha ?? acc.brecha,
+            automatizacion: acc.automatizacion
+              ? { ...acc.automatizacion, activa: apagada ?? acc.automatizacion.activa ?? true }
+              : acc.automatizacion,
           }
         }),
       }
@@ -289,6 +304,33 @@ export function validarOverrides(delPool: Manifiesto, o: Overrides): RechazoOver
     // convierte un comportamiento raro dentro de seis meses en un mensaje hoy.
     const mal = fueraDeContrato(p, valor)
     if (mal) out.push({ campo: `configurable.${clave}`, motivo: `${p.etiqueta}: ${mal}.` })
+  }
+
+  // Una automatización que la pieza no declara no se puede apagar ni prender:
+  // no existe. Y sólo se puede APAGAR — prenderla desde una instalación sería
+  // ser más audaz que la pieza, que es la misma regla del nivel de
+  // participación un escalón más arriba.
+  const automatizaciones = new Map(
+    (delPool.agentes ?? [])
+      .flatMap((a) => a.acciones)
+      .filter((c) => c.automatizacion)
+      .map((c) => [c.clave, c]),
+  )
+  for (const [clave, activa] of Object.entries(o.automatizaciones ?? {})) {
+    const acc = automatizaciones.get(clave)
+    if (!acc) {
+      out.push({
+        campo: `automatizaciones.${clave}`,
+        motivo: 'La pieza no declara esa automatización.',
+      })
+      continue
+    }
+    if (activa === true && acc.automatizacion?.activa === false) {
+      out.push({
+        campo: `automatizaciones.${clave}`,
+        motivo: `${acc.titulo}: la pieza la declara apagada. Un proyecto puede apagar lo que la pieza prende, nunca al revés.`,
+      })
+    }
   }
 
   const dims = new Set((delPool.dimensiones ?? []).map((d) => d.clave))

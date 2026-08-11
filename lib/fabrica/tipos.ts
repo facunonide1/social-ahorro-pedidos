@@ -438,7 +438,72 @@ export type Capacidad =
   | 'explicar'
   | 'priorizar'
 
+/**
+ * EL CONTRATO DE UNA AUTOMATIZACIÓN.
+ *
+ * ── QUÉ SE PUEDE GOBERNAR, Y QUÉ NO ─────────────────────────────────────────
+ *
+ * GOBERNABLE   si está activa · su nivel de participación, SOLO HACIA ABAJO ·
+ *              sus parámetros, que ya tienen contrato desde 1.6.0.
+ * NO GOBERNABLE qué hace —eso es código— · subir el nivel por encima del piso
+ *              que declara la pieza · cualquier cosa marcada constitucional.
+ *
+ * Confundirlos es prometer de más, que es lo que esta fábrica no hace.
+ *
+ * ── APAGAR NO ES DESHACER ───────────────────────────────────────────────────
+ *
+ * Apagar una automatización evita lo que fuera a hacer de acá en adelante. Lo
+ * que ya hizo QUEDA: los avisos mandados, las tareas creadas, los registros
+ * escritos. Es la diferencia con un título, que se revierte y no deja rastro, y
+ * por eso va en el costo de revertir y no en la letra chica.
+ */
+export interface ContratoDeAutomatizacion {
+  /**
+   * Corre sola. `false` o ausente = alguien la dispara, y entonces no es una
+   * automatización: es una acción.
+   *
+   * De las 54 acciones declaradas en v0.74, 43 caen de este lado.
+   */
+  corre_sola: true
+  /** cron | trigger de base | evento del sistema. */
+  disparo: 'cron' | 'trigger' | 'evento'
+  /** Dónde vive: la ruta del cron, el nombre del trigger, el evento. */
+  donde_corre: string
+  /**
+   * Si está agendada de verdad.
+   *
+   * Se declara porque ya apareció una que no lo estaba: `generar_recurrencias`
+   * tiene su ruta y no figura en vercel.json, o sea que está declarada como
+   * `hace_y_avisa` y no corre sola. Ausente no es lo mismo que false: ausente
+   * es "no se relevó".
+   */
+  agendada?: boolean
+  /**
+   * Si este proyecto la tiene activa.
+   *
+   * Es lo ÚNICO gobernable por declaración hoy, y es lo más útil: poder apagar
+   * una automatización sin un deploy. Ausente = activa, que es el estado de
+   * todas antes de que esto existiera.
+   */
+  activa?: boolean
+  /**
+   * Qué queda hecho si se apaga.
+   *
+   * Obligatorio: sin esto, "apagala" se lee como "que no haya pasado", y eso es
+   * falso para toda automatización que ya corrió una vez.
+   */
+  al_apagar: string
+}
+
 export interface AccionDeAgente {
+  /**
+   * El contrato, si corre sola. Ausente = es una acción que alguien dispara.
+   *
+   * Vive acá y no en un bloque aparte porque una automatización ES una acción
+   * de agente: tiene el mismo nivel de participación, las mismas marcas de
+   * tercero y dinero, y la misma brecha. Lo que cambia es quién la dispara.
+   */
+  automatizacion?: ContratoDeAutomatizacion
   /** Referencia a una AccionDeclarada del mismo pool, o una automatización propia. */
   clave: string
   titulo: string

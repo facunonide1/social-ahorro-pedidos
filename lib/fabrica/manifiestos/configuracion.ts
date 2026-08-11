@@ -16,7 +16,7 @@ import type { Manifiesto } from '../tipos'
  * es quien lo usa.
  */
 export const MANIFIESTO_CONFIGURACION: Manifiesto = {
-  formato: '2.0.0',
+  formato: '2.1.0',
   pool: 'configuracion',
   nombre: 'Configuración',
   categoria: 'nucleo',

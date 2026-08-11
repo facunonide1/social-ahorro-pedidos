@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * trabajo asignado con vencimiento y verificación. Existe igual en un taller.
  */
 export const MANIFIESTO_TAREAS: Manifiesto = {
-  formato: '2.0.0',
+  formato: '2.1.0',
   pool: 'tareas',
   nombre: 'Tareas',
   categoria: 'nucleo',
@@ -110,13 +110,23 @@ export const MANIFIESTO_TAREAS: Manifiesto = {
       ],
       se_activa_con: 'Cargar tipos de trabajo y marcar cuáles se repiten.',
       acciones: [
-        { clave: 'generar_agenda_dia', titulo: 'Armar la agenda del día', participacion: 'hace_y_avisa', reversible: true, motivo: 'Crea trabajo a partir de reglas que una persona configuró. Una tarea de más se descarta en un clic.' },
-        { clave: 'generar_recurrencias', titulo: 'Generar el trabajo que se repite', participacion: 'hace_y_avisa', reversible: true, motivo: 'Ejecuta una regla explícita, no una decisión propia.' },
-        { clave: 'marcar_vencidas', titulo: 'Marcar lo que se pasó de fecha', participacion: 'hace_y_avisa', reversible: true, motivo: 'Cambia un estado calculable a partir de la hora. No decide nada.' },
+        { clave: 'generar_agenda_dia', titulo: 'Armar la agenda del día', participacion: 'hace_y_avisa', reversible: true, motivo: 'Crea trabajo a partir de reglas que una persona configuró. Una tarea de más se descarta en un clic.',
+          automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/generar-agenda", agendada: true, al_apagar: "Las agendas ya generadas quedan. Apagarla deja a la gente sin agenda del día." },
+        },
+        { clave: 'generar_recurrencias', titulo: 'Generar el trabajo que se repite', participacion: 'hace_y_avisa', reversible: true, motivo: 'Ejecuta una regla explícita, no una decisión propia.',
+          automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/recurrencias", agendada: false, al_apagar: "Las tareas recurrentes ya creadas quedan." },
+        },
+        { clave: 'marcar_vencidas', titulo: 'Marcar lo que se pasó de fecha', participacion: 'hace_y_avisa', reversible: true, motivo: 'Cambia un estado calculable a partir de la hora. No decide nada.',
+          automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/marcar-vencidas", agendada: true, al_apagar: "Lo marcado vencido queda marcado. Apagarla deja tareas vencidas sin marcar." },
+        },
         // Emite hacia afuera de la pantalla: le notifica al supervisor. Pero es
         // hacia ADENTRO del equipo y no compromete a nadie, así que `informa`.
-        { clave: 'escalar_trabadas', titulo: 'Escalar lo que quedó parado', participacion: 'informa', reversible: false, compromete_tercero: false, motivo: 'Le avisa a un supervisor del equipo. Un aviso leído no se des-lee, y está bien: no compromete nada con nadie de afuera. El escalamiento no cierra ni reasigna nada solo.' },
-        { clave: 'evaluar_triggers', titulo: 'Crear trabajo cuando pasa algo', participacion: 'hace_y_avisa', reversible: true, motivo: 'Las condiciones las escribió una persona; el agente sólo las evalúa.' },
+        { clave: 'escalar_trabadas', titulo: 'Escalar lo que quedó parado', participacion: 'informa', reversible: false, compromete_tercero: false, motivo: 'Le avisa a un supervisor del equipo. Un aviso leído no se des-lee, y está bien: no compromete nada con nadie de afuera. El escalamiento no cierra ni reasigna nada solo.',
+          automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/escalamiento", agendada: true, al_apagar: "Los escalamientos ya avisados quedan: un aviso leído no se des-lee." },
+        },
+        { clave: 'evaluar_triggers', titulo: 'Crear trabajo cuando pasa algo', participacion: 'hace_y_avisa', reversible: true, motivo: 'Las condiciones las escribió una persona; el agente sólo las evalúa.',
+          automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/check-triggers", agendada: true, al_apagar: "Las tareas que los triggers ya crearon quedan." },
+        },
         { clave: 'pre_verificar_evidencia', titulo: 'Revisar la evidencia antes que una persona', participacion: 'sugiere', motivo: 'Deja una opinión. La verificación que vale sigue siendo humana.' },
         { clave: 'crear_tarea', titulo: 'Crear una tarea puntual', participacion: 'prepara' },
         { clave: 'verificar_trabajo_propio', titulo: 'Dar por bueno un trabajo', participacion: 'nunca', motivo: 'Nadie verifica lo que él mismo generó. Si el agente crea y aprueba, la verificación deja de existir.' },

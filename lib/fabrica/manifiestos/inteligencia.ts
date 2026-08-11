@@ -19,7 +19,7 @@ import type { Manifiesto } from '../tipos'
  * Vocabulario NEUTRO: asistente, aviso, aprobación, registro de auditoría.
  */
 export const MANIFIESTO_INTELIGENCIA: Manifiesto = {
-  formato: '2.0.0',
+  formato: '2.1.0',
   pool: 'inteligencia',
   nombre: 'Inteligencia',
   categoria: 'nucleo',
@@ -90,10 +90,14 @@ export const MANIFIESTO_INTELIGENCIA: Manifiesto = {
       ],
       se_activa_con: 'Cargar ventas de al menos un mes.',
       acciones: [
-        { clave: 'armar_resumen_diario', titulo: 'Armar el resumen del día', participacion: 'hace_y_avisa', reversible: true, motivo: 'Escribe un resumen y nada más. Se regenera a la corrida siguiente.' },
+        { clave: 'armar_resumen_diario', titulo: 'Armar el resumen del día', participacion: 'hace_y_avisa', reversible: true, motivo: 'Escribe un resumen y nada más. Se regenera a la corrida siguiente.',
+          automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/ai/resumen-diario", agendada: true, al_apagar: "El resumen ya publicado queda. Apagarla evita el del día siguiente." },
+        },
         { clave: 'publicar_aviso', titulo: 'Poner algo en el feed', participacion: 'informa', reversible: false, compromete_tercero: false, motivo: 'Es el buzón interno del equipo. Un aviso leído no se des-lee, y está bien: no compromete nada.' },
         { clave: 'priorizar_pendientes', titulo: 'Ordenar qué mirar primero', participacion: 'sugiere', motivo: 'Propone un orden. La agenda del día la decide una persona.' },
-        { clave: 'auditar_acciones', titulo: 'Registrar quién hizo qué', participacion: 'informa', reversible: false, compromete_tercero: false, motivo: 'Deja el registro. Es lo que permite reconstruir qué pasó cuando algo sale mal.' },
+        { clave: 'auditar_acciones', titulo: 'Registrar quién hizo qué', participacion: 'informa', reversible: false, compromete_tercero: false, motivo: 'Deja el registro. Es lo que permite reconstruir qué pasó cuando algo sale mal.',
+          automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/nora-auditor", agendada: true, al_apagar: "Lo auditado hasta hoy queda registrado. Apagarla deja de auditar de acá en adelante, que es un agujero en la auditoría." },
+        },
         {
           clave: 'aprobar_en_nombre_de_alguien',
           titulo: 'Aprobar algo que espera decisión',

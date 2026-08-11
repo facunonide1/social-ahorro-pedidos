@@ -18,7 +18,7 @@ import type { Manifiesto } from '../tipos'
  * configuración del proyecto, no de la pieza.
  */
 export const MANIFIESTO_CENTRO_DATOS: Manifiesto = {
-  formato: '2.0.0',
+  formato: '2.1.0',
   pool: 'centro-datos',
   nombre: 'Centro de Datos',
   categoria: 'nucleo',

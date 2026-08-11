@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * "obra social" acá adentro.
  */
 export const MANIFIESTO_CLIENTES: Manifiesto = {
-  formato: '2.0.0',
+  formato: '2.1.0',
   pool: 'clientes',
   nombre: 'Clientes',
   categoria: 'generico',
@@ -126,7 +126,8 @@ export const MANIFIESTO_CLIENTES: Manifiesto = {
           motivo: 'Sale del equipo: le llega a un cliente por push o por mail. Nada que salga hacia afuera se manda sin que una persona lo suelte.',
           // La brecha NO va acá: es un hecho sobre el sistema de Social Ahorro,
           // no sobre la pieza. Otro proyecto puede instalar Clientes con el paso
-          // de confirmación puesto. Vive en los overrides de la instalación.
+          // de confirmación puesto. Vive en los overrides de la instalación.,
+          automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/correr-automatizaciones", agendada: true, al_apagar: "Las campañas ya enviadas NO se pueden traer de vuelta: le llegaron a un cliente. Apagarla evita las siguientes y nada más." },
         },
         {
           clave: 'eliminar_cliente',
