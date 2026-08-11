@@ -128,7 +128,7 @@ export const MANIFIESTO_DOCUMENTOS: Manifiesto = {
       fuente: { tipo: 'variable_de_entorno', nombre: "DOC_UMBRAL_AUTO", resuelto: 'no_gobernable', nota: "Es sensible, así que el lector no lo devuelve igual. Mientras exista DOC_UMBRAL_AUTO, el valor efectivo sale de ahí y la declaración es documentación, no gobierno. Se dice para que nadie lo lea al revés." },
       depende_de: [
         { archivo: "lib/documentos/config.ts", donde: "DOC_UMBRAL_AUTO", via: 'literal', efecto: "Lee el umbral de process.env, no de la fábrica." },
-        { archivo: "lib/documentos/matchear.ts", donde: "matchear", via: 'literal', efecto: "Decide si asocia un renglón solo." },
+        { archivo: "lib/documentos/matchear.ts", donde: "matchearLineas", via: 'literal', efecto: "Decide si asocia un renglón solo." },
       ],
     },
     {
@@ -136,7 +136,7 @@ export const MANIFIESTO_DOCUMENTOS: Manifiesto = {
       fuente: { tipo: 'variable_de_entorno', nombre: "DOC_USOS_MIN_AUTO", resuelto: 'no_gobernable', nota: "Mismo caso que umbral_confianza_auto: sensible y con fuente de entorno viva." },
       depende_de: [
         { archivo: "lib/documentos/config.ts", donde: "DOC_USOS_MIN_AUTO", via: 'literal', efecto: "Lee el mínimo de process.env, no de la fábrica." },
-        { archivo: "lib/documentos/matchear.ts", donde: "matchear", via: 'literal', efecto: "Cuántas veces hay que confirmar un alias antes de darlo por bueno." },
+        { archivo: "lib/documentos/matchear.ts", donde: "matchearLineas", via: 'literal', efecto: "Cuántas veces hay que confirmar un alias antes de darlo por bueno." },
       ],
     },
     { clave: 'punto_de_compra_obligatorio', etiqueta: 'Exige indicar en qué punto se compró', tipo: 'booleano', default: true, peso: 'sensible', peso_motivo: 'Es el punto que emite el comprobante: tiene impacto fiscal.'  },

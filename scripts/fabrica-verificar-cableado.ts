@@ -50,7 +50,11 @@ async function main() {
       for (const v of x.verificados) console.log(`     ✓ ${v}`)
       for (const d of x.desmentidos) console.log(`     ✗ DESMIENTE AL MANIFIESTO: ${d}`)
       for (const f of x.faltan) console.log(`     · falta cablear: ${f}`)
-      for (const i of x.inexistentes) console.log(`     ✗ no existe: ${i}`)
+      for (const i of x.inexistentes) console.log(`     ✗ el archivo no existe: ${i}`)
+      for (const i of x.identificadoresInexistentes)
+        console.log(`     ✗ el identificador NO existe en el archivo: ${i}`)
+      for (const i of x.identificadoresAmbiguos)
+        console.log(`     ~ "donde" no es un identificador, no hay nada que verificar: ${i}`)
     }
     console.log('')
   }
@@ -67,6 +71,11 @@ async function main() {
   // parámetro con dos fuentes vivas no lo devuelve el lector: contarlo entre
   // los gobernados infla la cuenta, que es el hallazgo 14 en otra tabla.
   console.log(
+    `IDENTIFICADORES DECLARADOS: ${r.identificadores.verificados} verificado(s) · ` +
+      `${r.identificadores.inexistentes} NO EXISTEN · ${r.identificadores.ambiguos} ambiguo(s) ` +
+      `(el "donde" no es un identificador y no hay nada que buscar)`,
+  )
+  console.log(
     `CON BRECHA (fuera de esa cuenta): ${r.conBrecha} — declarados y no implementados por el código`,
   )
   console.log(
@@ -77,7 +86,9 @@ async function main() {
       (r.conflictos.length ? ` — ${r.conflictos.join(', ')}` : ''),
   )
   console.log('')
-  process.exit(r.parciales > 0 || r.conflictosDeFuente > 0 ? 1 : 0)
+  process.exit(
+    r.parciales > 0 || r.conflictosDeFuente > 0 || r.identificadores.inexistentes > 0 ? 1 : 0,
+  )
 }
 
 main()

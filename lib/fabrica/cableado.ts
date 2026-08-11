@@ -57,6 +57,56 @@ export const ETIQUETA_CABLEADO: Record<EstadoCableado, string> = {
   conflicto_de_fuente: 'CONFLICTO DE FUENTE',
 }
 
+/**
+ * ¿EL IDENTIFICADOR DECLARADO EXISTE EN EL ARCHIVO?
+ *
+ * Cierra el caso real de v0.70: el manifiesto decía `alertasDeCosto` y la
+ * función es `evaluarAlertasCosto`. La verificación no lo detectó porque
+ * comprobaba que el ARCHIVO llamara a la fábrica, no que `donde` fuera real.
+ *
+ * Tres estados y NO dos, porque colapsarlos volvería a esconder:
+ *
+ *   verificado  el identificador aparece como declaración en el archivo
+ *   no_existe   no aparece de ninguna forma. El manifiesto afirma algo falso
+ *   ambiguo     `donde` no es un identificador —"badge de Operaciones",
+ *               "GET /api/os/badges"— y no hay nada que buscar. Es una
+ *               respuesta, no un fallo: hay lugares de consumo que no tienen
+ *               nombre de función
+ */
+export type EstadoIdentificador = 'verificado' | 'no_existe' | 'ambiguo'
+
+/** ¿`donde` parece un identificador de código? */
+function esIdentificador(donde: string): boolean {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(donde)
+}
+
+/**
+ * Busca el identificador COMO DECLARACIÓN, no como cualquier aparición.
+ *
+ * Buscar la palabra suelta daría verde con un comentario que la menciona, que
+ * es el detector difuso de v0.69 otra vez.
+ */
+export function verificarIdentificador(archivo: string, donde: string): EstadoIdentificador {
+  if (!esIdentificador(donde)) return 'ambiguo'
+  if (!existsSync(archivo)) return 'no_existe'
+  const texto = readFileSync(archivo, 'utf8')
+  const d = donde.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const formas = [
+    `function\\s+${d}\\b`,
+    `const\\s+${d}\\b`,
+    `let\\s+${d}\\b`,
+    `class\\s+${d}\\b`,
+    // export default function X, export async function X, etc.
+    `export\\s+(?:default\\s+)?(?:async\\s+)?function\\s+${d}\\b`,
+    // Y el identificador IMPORTADO: existe en el scope de este archivo aunque
+    // se declare en otro. La primera versión no lo contemplaba y marcó como
+    // inexistentes cuatro constantes perfectamente importadas — el mismo error
+    // que el detector difuso, del lado del falso positivo.
+    `import\\s*\\{[^}]*\\b${d}\\b[^}]*\\}`,
+  ]
+  return formas.some((f) => new RegExp(f).test(texto)) ? 'verificado' : 'no_existe'
+}
+
 export interface RevisionDeParametro {
   clave: string
   poolClave: string
@@ -71,6 +121,10 @@ export interface RevisionDeParametro {
   faltan: string[]
   /** Archivos declarados que no existen. Una dependencia inventada. */
   inexistentes: string[]
+  /** `donde` declarado que no existe en el archivo. Ídem, un nivel más fino. */
+  identificadoresInexistentes: string[]
+  /** `donde` que no es un identificador: no hay nada que verificar. */
+  identificadoresAmbiguos: string[]
   motivo: string
 }
 
@@ -131,6 +185,8 @@ export function revisarParametro(
       desmentidos: [],
       faltan: [],
       inexistentes: [],
+      identificadoresInexistentes: [],
+      identificadoresAmbiguos: [],
       motivo: `Tiene otra fuente viva (${p.fuente!.nombre}) y ninguna gana. Hay que resolver la fuente ANTES de cablear.`,
     }
   }
@@ -144,6 +200,8 @@ export function revisarParametro(
     desmentidos: [] as string[],
     faltan: [] as string[],
     inexistentes: [] as string[],
+    identificadoresInexistentes: [] as string[],
+    identificadoresAmbiguos: [] as string[],
   }
 
   // ARRASTRE de v0.71: una brecha declarada NO es "sin declarar". Sin esto,
@@ -182,6 +240,13 @@ export function revisarParametro(
       continue
     }
     const etiqueta = `${d.archivo} (${d.donde})`
+
+    // El identificador se verifica SIEMPRE, incluso en un `literal`: una
+    // dependencia que nombra algo inexistente es falsa aunque no esté cableada.
+    const ident = verificarIdentificador(d.archivo, d.donde)
+    if (ident === 'no_existe') base.identificadoresInexistentes.push(etiqueta)
+    else if (ident === 'ambiguo') base.identificadoresAmbiguos.push(etiqueta)
+
     if (d.via === 'literal') {
       base.faltan.push(etiqueta)
       continue
@@ -199,6 +264,15 @@ export function revisarParametro(
       ...base,
       estado: 'parcial',
       motivo: `${base.inexistentes.length} dependencia(s) apuntan a archivos que no existen: el manifiesto afirma algo que no se puede verificar.`,
+    }
+  }
+  // Un identificador inexistente manda sobre el cableado: el manifiesto está
+  // afirmando algo falso, y todo lo demás se apoya en él.
+  if (base.identificadoresInexistentes.length > 0) {
+    return {
+      ...base,
+      estado: 'parcial',
+      motivo: `${base.identificadoresInexistentes.length} dependencia(s) nombran una función o constante que NO existe en el archivo declarado.`,
     }
   }
   if (base.desmentidos.length > 0) {
@@ -263,6 +337,19 @@ export function resumenCableado(revisiones: RevisionDeParametro[]) {
     sinConsumo: revisiones.filter((r) => r.estado === 'sin_consumo').length,
     /** Declarados y no implementados por el código. Fuera del denominador. */
     conBrecha: revisiones.filter((r) => r.estado === 'con_brecha').length,
+    /** Los tres estados del identificador, sin colapsar. */
+    identificadores: {
+      verificados: revisiones.reduce(
+        (a, r) =>
+          a +
+          (r.verificados.length + r.faltan.length + r.desmentidos.length) -
+          r.identificadoresInexistentes.length -
+          r.identificadoresAmbiguos.length,
+        0,
+      ),
+      inexistentes: revisiones.reduce((a, r) => a + r.identificadoresInexistentes.length, 0),
+      ambiguos: revisiones.reduce((a, r) => a + r.identificadoresAmbiguos.length, 0),
+    },
     /** Con dos fuentes vivas: no se cuentan como gobernados y son un problema. */
     conflictosDeFuente: conflictos.length,
     conflictos: conflictos.map((r) => `${r.poolClave}.${r.clave}`),
