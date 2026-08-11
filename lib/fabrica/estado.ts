@@ -176,15 +176,6 @@ export const LO_QUE_NO_SE_PUEDE_AFIRMAR: Limite[] = [
     paraPoder: 'Un detector que entienda el código en vez de buscar texto. Hoy hay uno que busca identificadores exactos y lo dice.',
   },
   {
-    // v0.71 cerró la mayor parte de este límite, pero NO todo: se reescribe con
-    // lo que efectivamente quedó, en vez de sacarlo.
-    que: 'Que un lugar de consumo cuyo `donde` no es un identificador sea real.',
-    porque:
-      'Desde v0.71 se verifica que la función o constante nombrada exista en el archivo declarado —y encontró dos que no existían—. Pero hay lugares de consumo sin nombre de función: "badge de Operaciones", "GET /api/os/badges". Ahí no hay identificador que buscar y quedan en `ambiguo`: hoy son 2.',
-    paraPoder:
-      'Que esos lugares declaren un identificador real, o aceptar que una ruta HTTP no lo tiene y verificarla de otra forma.',
-  },
-  {
     que: 'Que un parámetro "revisado y no consumido" de verdad no se use en ninguna parte.',
     porque:
       'Se buscó la clave literal y anclas por concepto. Un consumo escrito de otra forma se escapa; se declara "no consumido" y no "verificado que no existe".',

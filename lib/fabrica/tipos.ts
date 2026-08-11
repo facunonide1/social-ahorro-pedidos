@@ -586,6 +586,25 @@ export interface DependenciaDeParametro {
    * un hueco.
    */
   senal?: string
+  /**
+   * ANCLAJE PARA LO QUE NO TIENE NOMBRE DE FUNCIÓN.
+   *
+   * Hay lugares de consumo que no son una función con nombre: un badge que es
+   * una arrow anónima dentro de un objeto, por ejemplo. Ahí `donde` es una
+   * descripción —"badge de Operaciones"— y no hay identificador que buscar, así
+   * que la verificación los dejaba en `ambiguo` sin poder decir nada.
+   *
+   * `ancla` es un fragmento EXACTO que tiene que aparecer en el archivo: la
+   * expresión concreta que consume el valor. Se verifica por coincidencia
+   * literal, que es fuerte justamente porque es específica — anclar en algo
+   * genérico volvería a dar verde sobre cualquier cosa, que es el detector
+   * difuso de v0.69.
+   *
+   * Si un lugar no tiene ni identificador ni un ancla honesta, se deja sin
+   * `ancla` y queda declarado como no verificable. Forzar un anclaje falso
+   * sería peor que el hueco.
+   */
+  ancla?: string
   /** Qué hace con el valor, en una línea. Se lee antes de aprobar un cambio. */
   efecto?: string
 }

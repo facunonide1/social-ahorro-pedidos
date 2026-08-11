@@ -17,7 +17,7 @@ import type { Manifiesto } from '../tipos'
  * construyó y el manifiesto no lo rompe.
  */
 export const MANIFIESTO_DOCUMENTOS: Manifiesto = {
-  formato: '1.8.0',
+  formato: '1.9.0',
   pool: 'documentos',
   nombre: 'Motor de documentos',
   categoria: 'nucleo',

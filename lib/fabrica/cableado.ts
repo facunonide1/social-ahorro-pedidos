@@ -86,9 +86,20 @@ function esIdentificador(donde: string): boolean {
  * Buscar la palabra suelta daría verde con un comentario que la menciona, que
  * es el detector difuso de v0.69 otra vez.
  */
-export function verificarIdentificador(archivo: string, donde: string): EstadoIdentificador {
-  if (!esIdentificador(donde)) return 'ambiguo'
+export function verificarIdentificador(
+  archivo: string,
+  donde: string,
+  ancla?: string,
+): EstadoIdentificador {
   if (!existsSync(archivo)) return 'no_existe'
+
+  // EL ANCLA MANDA cuando `donde` no es un identificador: es la forma de
+  // verificar un lugar que no tiene nombre de función. Coincidencia literal y
+  // exacta, no búsqueda difusa.
+  if (!esIdentificador(donde)) {
+    if (!ancla) return 'ambiguo'
+    return readFileSync(archivo, 'utf8').includes(ancla) ? 'verificado' : 'no_existe'
+  }
   const texto = readFileSync(archivo, 'utf8')
   const d = donde.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const formas = [
@@ -243,7 +254,7 @@ export function revisarParametro(
 
     // El identificador se verifica SIEMPRE, incluso en un `literal`: una
     // dependencia que nombra algo inexistente es falsa aunque no esté cableada.
-    const ident = verificarIdentificador(d.archivo, d.donde)
+    const ident = verificarIdentificador(d.archivo, d.donde, d.ancla)
     if (ident === 'no_existe') base.identificadoresInexistentes.push(etiqueta)
     else if (ident === 'ambiguo') base.identificadoresAmbiguos.push(etiqueta)
 

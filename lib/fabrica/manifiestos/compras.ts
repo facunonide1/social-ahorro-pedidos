@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * caso del mismo circuito, no una entidad aparte del rubro.
  */
 export const MANIFIESTO_COMPRAS: Manifiesto = {
-  formato: '1.8.0',
+  formato: '1.9.0',
   pool: 'compras',
   nombre: 'Compras',
   categoria: 'generico',

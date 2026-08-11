@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * son de cualquier perecedero; una zona es un pedazo del depósito.
  */
 export const MANIFIESTO_STOCK: Manifiesto = {
-  formato: '1.8.0',
+  formato: '1.9.0',
   pool: 'stock',
   nombre: 'Stock',
   categoria: 'generico',
@@ -167,8 +167,8 @@ export const MANIFIESTO_STOCK: Manifiesto = {
         { archivo: "app/(admin)/admin/operaciones/vencimientos/page.tsx", donde: "VencimientosPage", via: 'resuelve', efecto: "Resuelve la ventana y la pasa al resumen y a la pantalla." },
         { archivo: "lib/operaciones/vencimientos.ts", donde: "resumenVencimientos", via: 'recibe', senal: "diasAviso", efecto: "Cuenta cuántos vencimientos entran en la ventana." },
         { archivo: "app/(admin)/admin/operaciones/vencimientos/vencimientos-client.tsx", donde: "VencimientosClient", via: 'recibe', senal: "diasAviso", efecto: "Pinta en ámbar los que entran en la ventana." },
-        { archivo: "lib/os/subapps.ts", donde: "badge de Operaciones", via: 'recibe', senal: "diasAvisoVencimiento", efecto: "Cuenta los vencimientos del badge del dock." },
-        { archivo: "app/api/os/badges/route.ts", donde: "GET /api/os/badges", via: 'resuelve', efecto: "Resuelve la ventana una vez y se la pasa a todos los badges." },
+        { archivo: "lib/os/subapps.ts", donde: "badge de Operaciones", via: 'recibe', senal: "diasAvisoVencimiento", ancla: "params?.diasAvisoVencimiento ?? 30", efecto: "Cuenta los vencimientos del badge del dock." },
+        { archivo: "app/api/os/badges/route.ts", donde: "GET", via: 'resuelve', efecto: "Resuelve la ventana una vez y se la pasa a todos los badges." },
       ],
     },
   ],
