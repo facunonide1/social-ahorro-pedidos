@@ -127,10 +127,13 @@ async function alertaAumentoFueraDePatron(adm: Adm, documentoId: string): Promis
   // está apagado o algo falla, devuelve DOC_ALERTA_SUBA_PCT, que es el valor
   // que este código venía usando: no cambia nada.
   const subaMinima = await parametro('compras', 'alerta_suba_pct', DOC_ALERTA_SUBA_PCT)
+  // La otra mitad de la misma alerta: cuánto tiene que despegarse del promedio
+  // del proveedor. Mismo patrón y mismo fallback.
+  const excesoMinimo = await parametro('compras', 'alerta_exceso_pct', DOC_ALERTA_EXCESO_PCT)
 
   for (const v of variaciones) {
     if (v.varPct < subaMinima) continue
-    if (v.varPct - promedio < DOC_ALERTA_EXCESO_PCT) continue
+    if (v.varPct - promedio < excesoMinimo) continue
 
     // Cuánta plata mueve: unidades compradas en la ventana × diferencia.
     const { data: vol } = await adm

@@ -226,7 +226,7 @@ export const MANIFIESTO_COMPRAS: Manifiesto = {
       clave: 'alerta_exceso_pct', etiqueta: 'Cuánto tiene que despegarse del promedio del proveedor', tipo: 'numero', default: 8, peso: 'operativo', peso_motivo: 'Separa "aumentó" de "aumentó más que el resto". Mal puesto, con inflación alta avisa de todo o de nada.', minimo: 1, maximo: 100, unidad: 'porcentaje',
       fuente: { tipo: 'variable_de_entorno', nombre: "DOC_ALERTA_EXCESO_PCT", resuelto: 'es_el_fallback', nota: "Se declara en v0.71: era la otra mitad de la alerta de costo y el manifiesto sólo conocía alerta_suba_pct. Declarar una y no la otra hacía creer que la alerta se controla con un solo número." },
       depende_de: [
-        { archivo: "lib/documentos/alertas-costo.ts", consume: "alertaAumentoFueraDePatron", simbolo: "DOC_ALERTA_EXCESO_PCT", via: 'literal', efecto: "Descarta las subas que no se despegan del promedio del proveedor." },
+        { archivo: "lib/documentos/alertas-costo.ts", consume: "alertaAumentoFueraDePatron", simbolo: "DOC_ALERTA_EXCESO_PCT", via: 'resuelve', efecto: "Descarta las subas que no se despegan del promedio del proveedor." },
       ],
     },
     {

@@ -38,6 +38,42 @@ export interface Efecto {
 
 type Estimador = (actual: unknown, propuesto: unknown) => Promise<Efecto>
 
+/**
+ * PARÁMETROS QUE SON DOS MITADES DE LA MISMA DECISIÓN.
+ *
+ * ── QUÉ SE VERIFICÓ ─────────────────────────────────────────────────────────
+ *
+ * `alerta_suba_pct` y `alerta_exceso_pct` filtran la misma alerta con un Y:
+ * primero "subió al menos tanto", después "y se despegó al menos tanto del
+ * promedio de su proveedor". Miden cosas distintas —suba absoluta y exceso
+ * relativo— así que NO hay incoherencia aritmética entre ellas: que el exceso
+ * sea mayor que la suba tiene sentido perfecto, y significa "avisame sólo de lo
+ * que subió y además se destacó".
+ *
+ * ── LO QUE SÍ FALTA, Y ES DEL FORMATO ───────────────────────────────────────
+ *
+ * El manifiesto no tiene forma de decir que dos parámetros son dos mitades de
+ * una decisión. Quien aprueba un cambio a uno ve una línea sobre uno, y no se
+ * entera de que hay otro filtro en la misma alerta. Cambiar la suba de 15 a 5
+ * parece "avisar más" y puede no cambiar nada si el exceso sigue en 8.
+ *
+ * Mientras el formato no lo exprese, se avisa acá: es el lugar donde quien
+ * firma lo va a leer. No es un reemplazo del campo que falta — es lo que se
+ * puede hacer sin inventarlo.
+ */
+const PARES: Record<string, { con: string; porque: string }> = {
+  'compras.alerta_suba_pct': {
+    con: 'alerta_exceso_pct',
+    porque:
+      'La alerta de costo tiene DOS filtros en Y: la suba mínima y cuánto tiene que despegarse del promedio del proveedor. Cambiar uno solo puede no cambiar nada, porque el otro sigue filtrando.',
+  },
+  'compras.alerta_exceso_pct': {
+    con: 'alerta_suba_pct',
+    porque:
+      'Ídem: es la otra mitad de la misma alerta. Los dos filtros se aplican juntos.',
+  },
+}
+
 const ESTIMADORES: Record<string, Estimador> = {
   'stock.dias_aviso_vencimiento': async (actual, propuesto) => {
     const adm = createAdminClient()
@@ -65,17 +101,28 @@ export async function efectoDe(
   actual: unknown,
   propuesto: unknown,
 ): Promise<Efecto> {
+  // El aviso del par va SIEMPRE, se pueda estimar el efecto o no: es lo que
+  // evita aprobar media decisión creyendo que se aprobó entera.
+  const par = PARES[`${poolClave}.${clave}`]
+  const avisoPar = par ? ` Ojo: ${par.porque} El otro es ${par.con}.` : ''
+
   const est = ESTIMADORES[`${poolClave}.${clave}`]
   if (!est) {
     return {
       calculable: false,
       // "No sé calcularlo" es distinto de "no hay datos", y se dice cuál es.
-      texto: 'No puedo estimar el efecto: no hay una forma escrita de calcular qué cambia con este parámetro.',
+      texto:
+        'No puedo estimar el efecto: no hay una forma escrita de calcular qué cambia con este parámetro.' +
+        avisoPar,
     }
   }
   try {
-    return await est(actual, propuesto)
+    const e = await est(actual, propuesto)
+    return { ...e, texto: e.texto + avisoPar }
   } catch {
-    return { calculable: false, texto: 'No puedo estimar el efecto: falló la consulta que lo calcula.' }
+    return {
+      calculable: false,
+      texto: 'No puedo estimar el efecto: falló la consulta que lo calcula.' + avisoPar,
+    }
   }
 }
