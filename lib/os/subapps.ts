@@ -158,8 +158,8 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Transferencias', ruta: '/admin/operaciones/transferencias' },
       { nombre: 'Vencimientos', ruta: '/admin/operaciones/vencimientos' },
       { nombre: 'Recartelado', ruta: '/admin/operaciones/recartelado' },
-      { nombre: 'Inventarios', ruta: '/admin/operaciones/inventarios' },
       { nombre: 'Control por zonas', ruta: '/admin/operaciones/control-zonas' },
+      // Reemplaza a «Inventarios» (v0.77). La ruta vieja redirige acá.
       { nombre: 'Conteos por zona', ruta: '/admin/operaciones/conteos' },
       { nombre: 'Alertas', ruta: '/admin/operaciones/alertas' },
       { nombre: 'Análisis', ruta: '/admin/operaciones/analisis' },
@@ -185,7 +185,7 @@ export const SUBAPPS: SubAppManifest[] = [
       ] },
       { id: 'venc-cargar', nombre: 'Cargar vencimiento', icono: 'CalendarX', destino: '/admin/operaciones/vencimientos', modulo: 'operaciones', accion: 'crear', primary: true },
       { id: 'reponer', nombre: 'Reponer góndola', icono: 'Boxes', destino: '/admin/operaciones/reposicion', modulo: 'operaciones', accion: 'ver', primary: true },
-      { id: 'inventario', nombre: 'Iniciar inventario', icono: 'ClipboardCheck', destino: '/admin/operaciones/inventarios', modulo: 'operaciones', accion: 'crear', primary: true },
+      { id: 'inventario', nombre: 'Contar una zona', icono: 'ClipboardCheck', destino: '/admin/operaciones/conteos', modulo: 'operaciones', accion: 'crear', primary: true },
       { id: 'recartelado', nombre: 'Recartelado del día', icono: 'Tag', destino: '/admin/operaciones/recartelado', modulo: 'operaciones', accion: 'ver', primary: true },
       { id: 'conteo-zona', nombre: 'Conteo por zona', icono: 'ClipboardList', destino: '/admin/operaciones/control-zonas', modulo: 'operaciones', accion: 'crear' },
       { id: 'irregularidad', nombre: 'Reportar irregularidad', icono: 'AlertTriangle', destino: '/admin/operaciones/irregularidades', modulo: 'operaciones', accion: 'ver' },

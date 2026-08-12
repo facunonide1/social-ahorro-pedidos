@@ -51,7 +51,7 @@ export default async function OperacionesDashboard() {
     { label: 'Stock e inventario', href: '/admin/operaciones/stock', icon: Boxes, descripcion: 'Semáforo + kárdex' },
     { label: 'Vencimientos', href: '/admin/operaciones/vencimientos', icon: CalendarClock },
     { label: 'Transferencias', href: '/admin/operaciones/transferencias', icon: ArrowRightLeft },
-    { label: 'Inventarios', href: '/admin/operaciones/inventarios', icon: ClipboardCheck },
+    { label: 'Conteos por zona', href: '/admin/operaciones/conteos', icon: ClipboardCheck },
     { label: 'Alertas', href: '/admin/operaciones/alertas', icon: Bell },
     { label: 'Análisis', href: '/admin/operaciones/analisis', icon: TrendingUp, descripcion: 'Más vendidos · dinero dormido' },
     { label: 'Reposición', href: '/admin/operaciones/reposicion', icon: PackageX },

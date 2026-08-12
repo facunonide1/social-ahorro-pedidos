@@ -693,30 +693,9 @@ export type TransferenciaSucursal = {
   created_at: string
 }
 
-export type EstadoInventario = 'en_curso' | 'cerrado'
-
-export type InventarioFisico = {
-  id: string
-  sucursal_id: string
-  fecha_inventario: string
-  estado: EstadoInventario
-  responsable_id: string | null
-  total_items_contados: number
-  diferencias_detectadas: number
-  observaciones: string | null
-  created_at: string
-  closed_at: string | null
-}
-
-export type InventarioItem = {
-  id: string
-  inventario_id: string
-  producto_id: string
-  stock_sistema: number
-  stock_contado: number | null
-  diferencia: number | null
-  motivo_diferencia: string | null
-}
+// InventarioFisico / InventarioItem / EstadoInventario se sacaron en v0.77.
+// Sus tablas quedaron como zz_deprecated_* (migración 0109): el motor de conteo
+// es `cnt_*`, y sus tipos viven en lib/conteo/.
 
 export type EstadoDevolucionProveedor =
   | 'registrada'
