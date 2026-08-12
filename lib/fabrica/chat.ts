@@ -173,6 +173,25 @@ ${
       })
       .join(' · ') || 'ninguno'
   }
+  automatizaciones (corren SOLAS: cron, trigger o evento. Son las únicas acciones
+  que se pueden apagar por declaración. APAGARLAS NO DESHACE lo que ya hicieron,
+  y eso hay que decirlo SIEMPRE antes de proponer apagar una):
+${
+    (m.agentes ?? [])
+      .flatMap((a) => a.acciones)
+      .filter((c) => c.automatizacion)
+      .map((c) => {
+        const t = c.automatizacion!
+        return (
+          `    ${c.clave} = "${c.titulo}" [${c.participacion}] · ${t.donde_corre} (${t.disparo})` +
+          `${t.agendada === false ? ' · NO ESTÁ AGENDADA: hoy no corre' : ''}` +
+          `${t.activa === false ? ' · APAGADA en este proyecto' : ''}` +
+          `\n      al apagarla: ${t.al_apagar}` +
+          (t.tambien_manual ? `\n      TAMBIÉN A MANO, y apagarla NO lo apaga: ${t.tambien_manual}` : '')
+        )
+      })
+      .join('\n') || '    ninguna'
+  }
   hechos (NO son configurables: el circuito existe o no existe, no hay perilla).
   Un CONDICIONADO depende de cómo está armado este negocio y puede dejar de ser
   cierto en otro, así que no lo presentes como una garantía de la pieza:

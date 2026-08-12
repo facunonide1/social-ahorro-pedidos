@@ -1,6 +1,6 @@
 # El alcance de la fábrica
 
-Estado al cierre de v0.74. Qué gobierna el lector hoy, qué se declara y no se
+Estado al cierre de v0.75. Qué gobierna el lector hoy, qué se declara y no se
 lee, y qué falta. El contrato de parámetros quedó cerrado en v0.73 y su recuento
 sigue abajo sin cambios.
 
@@ -8,88 +8,125 @@ sigue abajo sin cambios.
 
 ## La cifra
 
-> **Presentación en 2 de 10 pools (17 pantallas) · 4 parámetros de 48 · 1 automatización de 11**
+> **Presentación en 2 de 10 pools (17 pantallas) · 4 parámetros de 48 · 4 automatizaciones de 15**
 
 Se calcula, no se escribe, y no se redondea para arriba. Vive en
-`/fabrica/[slug]/estado`. El aspecto nuevo entra con su propio denominador: 11
-automatizaciones declaradas, 1 gobernada de verdad.
+`/fabrica/[slug]/estado`.
 
-**Gobernada quiere decir cableada.** Declarar el contrato no alcanza: la
-automatización tiene que preguntarle a la fábrica antes de correr. Hoy sólo
-`stock.recalcular_rotacion` lo hace, y es la única que cuenta.
+Las 4 automatizaciones son **las cuatro de Stock**: la primera vez que la fábrica
+gobierna un dominio entero de un pool y no una muestra.
 
 ---
 
-## Qué gobierna el lector
+## Estado por aspecto
 
-| Aspecto | Desde | Alcance |
-|---|---|---|
-| **Presentación y navegación** | v0.62 | El título de cada pantalla y si aparece en el menú |
-| **Parámetros** | v0.68 | Los ponderados inocuo u operativo, sin brecha y sin conflicto de fuente |
-| **Automatizaciones** | v0.74 | Si corre o no corre |
+### Presentación y navegación — desde v0.62
 
-La lista vive en `ASPECTOS_QUE_GOBIERNA` (`lib/fabrica/lector.ts`) y el chat la
-lee de ahí: no hay una segunda lista escrita a mano que se pueda desactualizar.
+17 pantallas gobernadas sobre los 2 pools con el lector prendido. Los otros 8
+declaran sus pantallas y nadie las lee.
 
-### Qué se declara y el lector NO lee
+**Falta:** prender los 8 pools apagados.
 
-- **Los permisos** — quién ve qué se resuelve en el código y en los intocables
-  de Configuración.
-- **Las acciones que alguien dispara y la autonomía del asistente** — un título
-  mal se ve raro; una acción mal hace algo que nadie firmó.
-- **Los parámetros sensibles** — 18 de 31, la mayoría del contrato.
+### Parámetros — desde v0.68
+
+4 gobernados de 48. El denominador se compone 17 hechos + 31 configurables; de
+los 31, **18 son sensibles y el lector no los devuelve** — uno mal leído afloja
+un control o mueve plata.
+
+**Falta:** los 6 no gobernables (declarados y sin cablear), los 3 con brecha
+—que son trabajo de Social Ahorro— y la decisión de fondo sobre los sensibles.
+
+### Automatizaciones — desde v0.74, dominio completo en v0.75
+
+| | Cuántas |
+|---|---|
+| **Declaradas** | 15 |
+| **Cableadas** — el código le pregunta a la fábrica | 15 |
+| **Gobernadas** — cableada Y con el lector prendido | 4 |
+| Con brecha declarada | 2 |
+| Agendadas y con ruta | 14 |
+| Con ruta y sin agendar | 1 |
+
+**Cableada no es gobernada, y confundirlas hace decir 15 de 15.** Con el lector
+del pool apagado el código pregunta, la fábrica no contesta y la automatización
+corre igual. Son dos columnas distintas en el estado, a propósito.
+
+**Falta:** prender los pools de las otras 11.
 
 ---
 
-## El recuento de automatizaciones, 11 de 54
+## El recuento de automatizaciones, 15 de 58
 
-De las 54 acciones que declaran los manifiestos, **43 no son automatizaciones**:
-alguien las dispara. Es la pregunta 6 aplicada al aspecto nuevo apenas se creó
-—¿la categoría existe?— y la respuesta fue que el 80% de lo que la comparte no
-pertenece a ella.
+De las 58 acciones que declaran los manifiestos, **43 no son automatizaciones**:
+alguien las dispara. Es la pregunta 6 aplicada al aspecto apenas se creó.
 
-| | Cuántas | Qué significa |
-|---|---|---|
-| **Agendadas y con ruta** | 10 | Lo más cerca que se llega sin datos de ejecución |
-| **Con ruta y sin agendar** | 1 | `tareas.generar_recurrencias`: existe y no está en `vercel.json`. No corre |
-| **Sin ruta** | 0 | |
-| **Con brecha declarada** | 2 | El código no hace lo que la declaración dice |
-| **Gobernadas (cableadas)** | 1 | `stock.recalcular_rotacion` |
-| **Crons que corren y nadie declara** | 7 | Software que existe y la fábrica no conoce |
+En v0.75 se relevaron los 7 crons que corrían sin que ningún pool los declarara:
+
+- **4 se declararon** — métricas del día, reporte semanal (Inteligencia), gastos
+  fijos (Finanzas) y controles de zona (Stock).
+- **3 no**, y decirlo es la respuesta correcta: `calcular-objetivos` es del
+  sector **personas** y los dos de comunicación del sector **comunicacion**, y
+  ninguno de los dos está declarado. Meterlos en el pool que más se les parezca
+  dejaría un manifiesto diciendo que un pool se hace cargo de tablas que no son
+  suyas.
 
 **Ninguna se declara "verificada".** Que el archivo exista y el cron esté
 agendado no dice que Vercel lo haya disparado, ni que haya terminado, ni que
-haya hecho lo declarado. Es la pregunta 7 aplicada a la verificación misma:
-comprobar el archivo y llamarlo verificado sería medir algo cierto al lado de lo
-que hace falta.
+haya hecho lo declarado. Lo que sí se puede desde v0.75 es comparar el `agendada`
+declarado contra `vercel.json`: da **0 desincronizadas**. Eso tampoco es que corra.
 
 ### Apagar no es deshacer
 
-El contrato de automatización obliga a declarar `al_apagar`. Sin ese campo,
-"apagala" se lee como "que no haya pasado", y alguien apagaría una campaña
-creyendo que la des-envía. Lo que ya se envió, se calculó o se creó queda.
+El contrato obliga a declarar `al_apagar`. Sin ese campo, "apagala" se lee como
+"que no haya pasado", y alguien apagaría una campaña creyendo que la des-envía.
 
-Por eso una automatización **nunca cae en carril verde**, ni con el interruptor
-abierto: apagar siempre pide firma, y el costo que se firma dice qué queda hecho.
+Desde v0.75 hay un segundo campo por el mismo motivo: **`tambien_manual`**. Los
+gastos fijos tienen un GET para el cron y un POST para tesorería; apagar la
+automatización apaga el cron y no apaga el botón. Sin decirlo, "apagala" volvía a
+leerse como "que no pase" por otra puerta.
+
+Una automatización **nunca cae en carril verde**, ni con el interruptor abierto.
+
+### Lo que se gobierna es la automatización, no la acción
+
+Todas las guardas van en la rama del cron, nunca en el cuerpo compartido con un
+POST manual. En v0.74 la única cableada tenía la guarda adentro de `run()`, así
+que apagarla apagaba también el botón de una persona: eso es gobernar una acción,
+y no es lo declarado ni lo que la fábrica puede hacer hoy.
 
 ---
 
 ## El contrato de parámetros, 48 = 17 + 31
 
-Cerrado en v0.73. Sin cambios en v0.74.
+Cerrado en v0.73. Sin cambios.
 
 | | Cuántos | Qué significa |
 |---|---|---|
 | **Hechos permanentes** | 12 | La pieza lo hace siempre que esté instalada |
-| **Hechos condicionados** | 5 | Depende de cómo está armado ESTE negocio; no viaja con la pieza |
+| **Hechos condicionados** | 5 | Depende de cómo está armado ESTE negocio |
 | **Con brecha** | 3 | Declarados, el código no los implementa |
-| **Sensibles** | 18 | El lector no los devuelve: uno mal leído afloja un control o mueve plata |
-| **No gobernables** | 6 | Declarados con su contrato; la variable de entorno sigue mandando |
-| **Gobernados** | 4 | Y los cuatro con cableado completo y verificado |
+| **Sensibles** | 18 | El lector no los devuelve |
+| **No gobernables** | 6 | Declarados; la variable de entorno sigue mandando |
+| **Gobernados** | 4 | Con cableado completo y verificado |
 
-Todos clasificados, todos con consumo declarado o excluido con motivo, 0
-conflictos de fuente, 0 consumidores sin verificar, consumidor y símbolo
-separados, verificación acotada a la función y no al archivo.
+---
+
+## Artefactos de prueba — desde v0.75
+
+Todo lo que escribe un script de prueba nace marcado, y las lecturas que
+alimentan indicadores lo excluyen. Dos veces hubo que limpiar con SQL a mano lo
+que generaron las propias pruebas, y la segunda vez esa basura **bloqueó un
+cambio real** por la regla de dos rechazos con la misma huella.
+
+- La marca va **al crear**, no al terminar: las corridas que ensucian son las que
+  se mueren a la mitad.
+- En producción no se ven; **adentro de una prueba sí** — un test que no puede
+  ver lo que escribió no verifica nada.
+- La deduplicación de propuestas es la única que filtra siempre: ensuciar un
+  número es una cosa y bloquear una decisión es otra.
+- Arrastre de v0.75: **74 artefactos viejos** sin marcar, 73 borrados. El que
+  quedó es el override que gobierna Stock hoy, escrito por la restauración de una
+  prueba: una fila vigente no se borra aunque haya nacido de una prueba.
 
 ---
 
@@ -99,57 +136,67 @@ En orden, y sin estimaciones de tiempo.
 
 ### 1 · Aspectos que el lector no gobierna
 
-Quedan dos, y son los dos peligrosos: **permisos** y **acciones del asistente**.
-También los **parámetros sensibles**, 18 de 31. Mientras no se lean, la fábrica
-gobierna la mitad chica de lo que declara.
+Quedan los dos peligrosos: **permisos** y **acciones del asistente**. Y los
+**parámetros sensibles**, 18 de 31.
 
-Automatizaciones era el tercero y se cerró en v0.74 justamente por eso: es
-reversible, ya tenía niveles de participación declarados desde v0.59, y el daño
-de equivocarse es acotado y visible.
+- **Permisos** — quién ve qué. Choca con los intocables de Configuración.
+- **Acciones del asistente** — un título mal se ve raro; una acción mal hace algo
+  que nadie firmó.
 
-### 2 · Cablear lo declarado
+### 2 · Los 8 pools apagados
 
-- **10 automatizaciones** declaradas con contrato y sin cablear.
-- **6 parámetros no gobernables**: la variable de entorno sigue mandando.
+Es lo que más mueve la cifra hoy: 11 automatizaciones ya cableadas y 8 pools de
+pantallas esperan sólo eso. Requiere verificación en sombra antes de prender, que
+ya está construida.
 
-En los dos casos el trabajo está medido: cada uno tiene su lugar de consumo
-identificado. Declarar no es gobernar, y el estado los cuenta separados para que
-la diferencia no se pierda.
+### 3 · Los 6 sectores sin declarar
 
-### 3 · Brechas que son trabajo de Social Ahorro
+`personas`, `comunicacion`, `compliance`, `pedidos`, `cuponera` y lo que quede
+sin clasificar. Son software que existe y la fábrica no conoce — y ahora se sabe
+que ahí adentro corren 3 crons que nadie declara.
 
-- **2 automatizaciones con brecha**, la del CRM entre ellas: `correr_automatizaciones`
-  guarda como enviado sin confirmación y el nivel declarado dice `prepara`.
-- **3 parámetros con brecha**.
+### 4 · Brechas, que son trabajo de Social Ahorro
 
-No es deuda del contrato: es construcción, y la hace Social Ahorro. La fábrica
-lo declara y lo muestra; no lo arregla.
+2 automatizaciones y 3 parámetros. La fábrica las declara y las muestra; no las
+arregla.
 
-### 4 · Pools apagados
+### 5 · Moldes y dirección visual
 
-8 de 10. Cada uno prendido suma sus pantallas, sus parámetros y sus
-automatizaciones a lo que gobierna de verdad. Requiere verificación en sombra
-antes de prender, que ya está construida.
+No hay ninguno. Es lo único de esta lista que cambia qué clase de herramienta es
+esto: permitiría que la fábrica *genere* en vez de sólo gobernar.
 
-### 5 · Sectores sin declarar
+---
 
-6 del censo, más los 7 crons que corren y ningún pool declara.
+## Qué del formato no alcanzó para un dominio entero
 
-### 6 · Moldes y dirección visual
+Gobernar una automatización de muestra y gobernarlas todas no pidieron lo mismo:
 
-No hay ninguno. Es lo que permitiría que la fábrica *genere* en vez de sólo
-gobernar — y es la única de las seis que cambia qué clase de herramienta es esto.
+- **El contrato no decía por dónde más entra lo mismo.** Apareció con los gastos
+  fijos: `tambien_manual`, en 2.2.0.
+- **Dos automatizaciones pueden compartir una ruta**, y el formato no tiene cómo
+  decirlo: se deduce de que `donde_corre` se repita. Alertas de stock y avisos de
+  vencimiento viven en el mismo cron y se gobiernan por separado.
+- **El manifiesto no se compara con su versión anterior.** Uno que pierde todas
+  sus automatizaciones valida igual, y el lector contesta "no sé nada de eso"
+  por cada una. Desde v0.75 queda registrado; impedirlo necesita que el escritor
+  mire la versión previa, no sólo el esquema.
+- **El formato no expresa relaciones entre parámetros**, que sigue abierto de
+  v0.73.
 
 ---
 
 ## Las siete preguntas de control
 
-Viven en [INDICADORES.md](INDICADORES.md). Se contestan por escrito antes de que
-un indicador nuevo entre, y la séptima salió de que una verificación midiera
-algo cierto pero al lado.
+Viven en [INDICADORES.md](INDICADORES.md).
 
 **Y la regla que las ordena a todas:** cada categoría nueva del formato nace con
 errores de clasificación. La pregunta 6 encontró 5 de 17 hechos mal clasificados
-en la categoría creada una sesión antes, y en v0.74 encontró que 43 de 54
-acciones no pertenecían a la categoría que las contenía. Se aplica apenas se
-crea algo, no seis sesiones después.
+en la categoría creada una sesión antes; en v0.74, que 43 de 54 acciones no
+pertenecían a la categoría que las contenía; y en v0.75, que 3 de 7 crons no
+pertenecen a ningún pool declarado.
+
+**Y la que salió de v0.74 y volvió a aparecer en v0.75:** dos listas que hay que
+mover juntas son un error esperando. En v0.75 se borró una —el mapa de rutas del
+relevamiento, que repetía el `donde_corre` del contrato— y quedaron dos, las dos
+verificadas contra la realidad en vez de contra la memoria: el cableado contra el
+código de cada ruta, y el `agendada` declarado contra `vercel.json`.

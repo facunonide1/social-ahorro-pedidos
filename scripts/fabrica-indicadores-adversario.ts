@@ -32,6 +32,8 @@ import { cambiarEstadoLector } from '../lib/fabrica/flag'
 import { camposQueCambian } from '../lib/fabrica/procedencia'
 import { obtenerDefinicion, parametroGobernante } from '../lib/fabrica/lector'
 import { automatizacionActiva, parametro } from '../lib/os/definicion'
+import { campoDelEvento } from '../lib/fabrica/corte'
+import { estadoDeLaFabrica, laCifra } from '../lib/fabrica/estado'
 import { procedenciaDe } from '../lib/fabrica/procedencia'
 import { resolver, validarOverrides } from '../lib/fabrica/overrides'
 import { salud } from '../lib/fabrica/propuestas'
@@ -422,7 +424,61 @@ async function main() {
     )
   }
 
-  /* ── 13 · la cola de construcción vacía ───────────────────────────── */
+  /* ── 13 · EL DOMINIO ENTERO ───────────────────────────────────────── */
+  console.log('\nDOMINIO DE AUTOMATIZACIONES')
+  {
+    const est = await estadoDeLaFabrica(PROYECTO_SOCIAL_AHORRO)
+    const sum = (f: (p: (typeof est.pools)[number]) => number) => est.pools.reduce((a, p) => a + f(p), 0)
+    const total = sum((p) => p.automatizaciones.total)
+    const cableadas = sum((p) => p.automatizaciones.cableadas)
+    const gobernadas = sum((p) => p.automatizaciones.gobernadas)
+
+    // CON EL MÁXIMO: cableadas son las 15, y si gobernadas dijera lo mismo el
+    // indicador estaría contando pools apagados como si gobernara.
+    caso(
+      'cableadas y gobernadas no son el mismo número',
+      cableadas === total && gobernadas < cableadas,
+      `${cableadas} cableadas de ${total} · ${gobernadas} gobernadas: la diferencia son los pools apagados`,
+    )
+    // CON CERO: ningún pool apagado aporta gobernadas.
+    caso(
+      'un pool con el lector apagado aporta 0 gobernadas',
+      est.pools.filter((p) => p.lector !== 'prendido').every((p) => p.automatizaciones.gobernadas === 0),
+      'el código pregunta y la fábrica no contesta: eso no es gobernar',
+    )
+    // Y el pool prendido las aporta TODAS: sin esto, lo de arriba sería cierto
+    // con un indicador que devuelve cero siempre.
+    const prendido = est.pools.find((p) => p.lector === 'prendido' && p.automatizaciones.total > 0)
+    caso(
+      'y el pool prendido las aporta todas',
+      !!prendido && prendido.automatizaciones.gobernadas === prendido.automatizaciones.total,
+      `${prendido?.clave}: ${prendido?.automatizaciones.gobernadas} de ${prendido?.automatizaciones.total} — el dominio completo`,
+    )
+
+    // La cifra no puede decir más de lo que gobierna.
+    const cifra = laCifra(est.pools)
+    caso(
+      'la cifra dice las gobernadas, no las cableadas',
+      cifra.includes(`${gobernadas} automatización(es) de ${total}`),
+      cifra,
+    )
+
+    // El registro de la ausencia: el aspecto tiene que estar en el corte por
+    // campo, o sus eventos caen al corte del pool (hallazgo 12).
+    caso(
+      'un evento de automatización tiene campo propio para el corte',
+      campoDelEvento({ aspecto: 'automatizaciones', detalle: { automatizacion: 'x' } }) ===
+        'automatizaciones.x.activa',
+      'sin esto, arreglar una borra las alarmas de las otras',
+    )
+    caso(
+      'y uno sin clave no inventa un campo',
+      campoDelEvento({ aspecto: 'automatizaciones', detalle: {} }) === null,
+      'cae al corte del pool, que es lo correcto cuando no se sabe de cuál es',
+    )
+  }
+
+  /* ── 14 · la cola de construcción vacía ───────────────────────────── */
   console.log('\nCOLA DE CONSTRUCCIÓN')
   const cola = await colaDeConstruccion({ conAdmin: true })
   caso(

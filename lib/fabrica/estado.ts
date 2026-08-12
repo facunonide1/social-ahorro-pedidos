@@ -260,13 +260,26 @@ export const LO_QUE_NO_SE_PUEDE_AFIRMAR: Limite[] = [
     porque:
       'Se puede comprobar que el cron esté agendado en vercel.json y que su ruta exista. Que Vercel lo haya disparado, que haya terminado y que haya hecho lo declarado, no: eso necesita datos de ejecución y hoy no los hay. Por eso ninguna se declara "verificada", sólo "agendada y con ruta".',
     paraPoder:
-      'Registrar cada corrida —cuándo empezó, cuándo terminó, qué hizo— y leer eso en vez del archivo.',
+      'Registrar cada corrida —cuándo empezó, cuándo terminó, qué hizo— y leer eso en vez del archivo. Lo que sí se puede desde v0.75 es comparar el `agendada` declarado contra vercel.json: da 0 desincronizadas, y eso tampoco es que corra.',
   },
   {
     que: 'Que apagar una automatización alcance para que no pase nada.',
     porque:
       'Apagarla evita lo que fuera a hacer de acá en adelante. Lo que ya hizo queda, y el manifiesto obliga a declarar qué: campañas enviadas que le llegaron a un cliente, avisos leídos, tareas creadas.',
     paraPoder: 'Nada: es así por naturaleza. Lo que se puede es decirlo antes de firmar, y se dice.',
+  },
+  {
+    que: 'Que una automatización cableada esté gobernada.',
+    porque:
+      'Cablear es que el código pregunte; gobernar es que la fábrica conteste. Con el lector del pool apagado el código pregunta, no recibe respuesta y la automatización corre igual. Hoy hay 15 cableadas y 4 gobernadas, y el estado las cuenta separadas justamente por esto.',
+    paraPoder: 'Prender el lector del pool, con la verificación en sombra que ya está construida.',
+  },
+  {
+    que: 'Que una automatización declarada siga estando en la declaración mañana.',
+    porque:
+      'Un manifiesto puede validar y haber perdido sus automatizaciones —basta con renombrar una clave— y entonces el lector contesta "no sé nada de eso" y todo corre por el código. Desde v0.75 queda registrado, pero registrado no es impedido: el aviso aparece después de que pasó.',
+    paraPoder:
+      'Que el manifiesto nuevo se compare con el anterior al publicar y una automatización que desaparece tenga que declararse como baja. Hoy el escritor valida el manifiesto contra el esquema, no contra su propia versión anterior.',
   },
   {
     que: 'Que un lugar verificado por ANCLA siga verificado mañana.',
