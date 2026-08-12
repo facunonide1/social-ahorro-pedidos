@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * son de cualquier perecedero; una zona es un pedazo del depósito.
  */
 export const MANIFIESTO_STOCK: Manifiesto = {
-  formato: '2.1.0',
+  formato: '2.2.0',
   pool: 'stock',
   nombre: 'Stock',
   categoria: 'generico',
@@ -128,6 +128,10 @@ export const MANIFIESTO_STOCK: Manifiesto = {
         },
         { clave: 'recalcular_rotacion', titulo: 'Recalcular la rotación', participacion: 'hace_y_avisa', reversible: true, motivo: 'Es un cálculo sobre ventas. No cambia stock ni precios.',
           automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/metricas-stock", agendada: true, al_apagar: "La rotación calculada queda con el último valor. Apagarla la congela." },
+        },
+        // Relevada en v0.75. Crea trabajo para gente, igual que la agenda del día.
+        { clave: 'generar_controles_de_zona', titulo: 'Armar las recorridas del día', participacion: 'hace_y_avisa', reversible: true, motivo: 'Crea las recorridas cuyo día de control cae hoy, a partir de una configuración que hizo una persona. Una recorrida de más se descarta.',
+          automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/controles-zona", agendada: true, al_apagar: "Las recorridas ya generadas quedan y se pueden hacer. Apagarla deja el día sin recorridas: nadie las va a echar de menos hasta que falte el control." },
         },
         { clave: 'proponer_reposicion', titulo: 'Proponer qué reponer', participacion: 'sugiere', motivo: 'De acá sale una orden de compra. La decide una persona.' },
         { clave: 'detectar_irregularidades', titulo: 'Señalar lo que no cierra', participacion: 'sugiere', motivo: 'Marca la diferencia; explicarla es de quien estuvo ahí.' },

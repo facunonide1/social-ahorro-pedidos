@@ -493,6 +493,18 @@ export interface ContratoDeAutomatizacion {
    * falso para toda automatización que ya corrió una vez.
    */
   al_apagar: string
+  /**
+   * La OTRA puerta: qué persona puede disparar lo mismo a mano, si existe.
+   *
+   * Apareció relevando los crons huérfanos: `/api/cron/gastos-fijos` tiene un
+   * GET para el cron y un POST para tesorería. Apagar la automatización apaga
+   * el cron y NO apaga el botón, así que sin este campo "apagala" volvía a leerse
+   * como "que no pase" — el mismo error que `al_apagar` existe para evitar, por
+   * otra puerta.
+   *
+   * Ausente = no se relevó otra puerta. No es lo mismo que "no hay".
+   */
+  tambien_manual?: string
 }
 
 export interface AccionDeAgente {

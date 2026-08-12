@@ -15,7 +15,7 @@ import type { Manifiesto } from './tipos'
  * ejecutar antes de commitear sin credenciales de nada.
  */
 
-export const FORMATO_ACTUAL = '2.1.0'
+export const FORMATO_ACTUAL = '2.2.0'
 
 export interface Problema {
   campo: string
@@ -303,6 +303,15 @@ export function validarManifiesto(m: Manifiesto): Problema[] {
           err(
             `agentes.${ag.clave}.${acc.clave}`,
             'corre sola, compromete a un tercero y está en hace_y_avisa: ese nivel exige reversibilidad y no comprometer a nadie de afuera',
+          )
+        }
+        // Desde 2.2.0. Una segunda puerta manual cambia lo que significa apagar,
+        // así que declararla vacía es peor que no declararla: dice "se relevó" y
+        // no dice qué se encontró.
+        if (auto.tambien_manual !== undefined && !auto.tambien_manual.trim()) {
+          err(
+            `agentes.${ag.clave}.${acc.clave}`,
+            'tambien_manual vacío: si hay otra puerta hay que decir cuál, y si no hay, se omite el campo',
           )
         }
         if (auto.agendada === false && acc.participacion === 'hace_y_avisa') {

@@ -22,7 +22,7 @@ import type { Manifiesto } from '../tipos'
  * cualquier negocio que mueva plata.
  */
 export const MANIFIESTO_FINANZAS: Manifiesto = {
-  formato: '2.1.0',
+  formato: '2.2.0',
   pool: 'finanzas',
   nombre: 'Finanzas',
   categoria: 'generico',
@@ -184,6 +184,13 @@ export const MANIFIESTO_FINANZAS: Manifiesto = {
         { clave: 'detectar_descuadre', titulo: 'Marcar cierres que no cierran', participacion: 'sugiere', motivo: 'Un descuadre puede ser un error de conteo o algo peor. La conclusión no la saca el agente.' },
         { clave: 'avisar_vencimientos', titulo: 'Avisar lo que vence', participacion: 'informa', reversible: false, compromete_tercero: false, motivo: 'Aviso al equipo con lo que se viene. No sale del sistema ni compromete un pago.' },
         { clave: 'proponer_conciliacion', titulo: 'Proponer qué línea del banco es qué movimiento', participacion: 'sugiere', motivo: 'Conciliar mal deja dos veces el mismo pago o esconde uno que falta.' },
+        // Relevada en v0.75. Toca plata y ADEMÁS tiene una puerta manual: es la
+        // que obligó a agregar `tambien_manual` al contrato.
+        { clave: 'generar_gastos_fijos', titulo: 'Generar los gastos fijos del mes', participacion: 'prepara', toca_dinero: true, reversible: true, motivo: 'Deja las obligaciones del mes armadas en estado pendiente, con su monto y su vencimiento. No paga ninguna: eso lo hace una persona, y por eso es `prepara` y no `hace_y_avisa` aunque corra sola.',
+          automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/gastos-fijos", agendada: true,
+            al_apagar: "Las instancias del mes ya generadas quedan: son obligaciones a pagar, no un cálculo que se recalcula. Apagarla evita las del mes que viene.",
+            tambien_manual: "El POST de la misma ruta, para super_admin, gerencia o tesorería. Apagar la automatización apaga el cron y NO apaga ese botón: quien lo apriete las genera igual." },
+        },
         {
           clave: 'ejecutar_pago',
           titulo: 'Pagar',

@@ -8,12 +8,23 @@
  * Corre SOLA. Un cron, un trigger, un evento. Si alguien tiene que apretar algo
  * para que pase, es una acción y no una automatización — y el manifiesto las
  * declara todas juntas en `agentes[].acciones[]`, así que hay que separarlas
- * acá. Es la pregunta 6 aplicada al aspecto nuevo: ¿la categoría existe?
+ * acá. Es la pregunta 6 aplicada al aspecto: ¿la categoría existe?
+ *
+ * ── DE DÓNDE SALE LA RUTA (v0.75) ───────────────────────────────────────────
+ *
+ * Del contrato: `automatizacion.donde_corre`. Hasta v0.74 este script tenía su
+ * propio MAPA de clave → ruta, escrito a mano al lado del contrato que ya decía
+ * lo mismo. Dos listas que hay que mover juntas son un error esperando, y en
+ * v0.74 ese error apareció dos veces por su cuenta. Se borró el MAPA.
+ *
+ * Y tener una sola lista habilita una verificación que antes era imposible:
+ * comparar `agendada` —lo que el contrato DICE— contra vercel.json —lo que
+ * PASA—. Con dos listas, el script sólo podía contradecirse a sí mismo.
  *
  * ── QUÉ SE PUEDE VERIFICAR, Y QUÉ NO ────────────────────────────────────────
  *
- * SE PUEDE: que el cron esté agendado en vercel.json, que su ruta exista, y qué
- * módulos importa.
+ * SE PUEDE: que el cron esté agendado en vercel.json, que su ruta exista, y que
+ * lo declarado en `agendada` coincida con eso.
  *
  * NO SE PUEDE, y es la pregunta 7 aplicada a esta verificación: que la
  * automatización CORRA. Que el archivo exista no dice que Vercel la haya
@@ -22,13 +33,14 @@
  * hace falta.
  *
  * Lo más cerca que se llega sin datos de ejecución es: agendada + ruta
- * existente + módulos coherentes con lo declarado. Se dice así, no "verificada".
+ * existente. Se dice así, no "verificada".
  *
  * OBSERVA Y NO AFIRMA: lee archivos y no escribe en ninguna parte.
  */
 import { existsSync, readFileSync } from 'node:fs'
 
 import { MANIFIESTOS } from '../lib/fabrica/manifiestos'
+import type { ContratoDeAutomatizacion } from '../lib/fabrica/tipos'
 
 interface Cron {
   path: string
@@ -40,36 +52,25 @@ function cronsAgendados(): Cron[] {
   return j.crons ?? []
 }
 
-/**
- * Qué automatización REAL corresponde a cada acción declarada.
- *
- * Escrito leyendo las rutas, una por una — no de memoria: van cinco casos de
- * dependencias mal escritas que estuvieron verdes por escribirlas de memoria.
- * Una acción que no está acá es, o una acción de usuario, o una automatización
- * que nadie mapeó todavía; el script distingue las dos con `esAutomatizacion`.
- */
-const MAPA: Record<string, { ruta: string; nota?: string }> = {
-  'inteligencia.armar_resumen_diario': { ruta: '/api/ai/resumen-diario' },
-  'inteligencia.auditar_acciones': { ruta: '/api/cron/nora-auditor' },
-  'tareas.generar_agenda_dia': { ruta: '/api/cron/generar-agenda' },
-  'tareas.generar_recurrencias': { ruta: '/api/cron/recurrencias' },
-  'tareas.marcar_vencidas': { ruta: '/api/cron/marcar-vencidas' },
-  'tareas.escalar_trabadas': { ruta: '/api/cron/escalamiento' },
-  'tareas.evaluar_triggers': { ruta: '/api/cron/check-triggers' },
-  'stock.recalcular_alertas': { ruta: '/api/cron/alertas-stock' },
-  'stock.recalcular_rotacion': { ruta: '/api/cron/metricas-stock' },
-  'stock.avisar_vencimientos': {
-    ruta: '/api/cron/alertas-stock',
-    nota: 'No tiene cron propio: el aviso de vencimientos sale del mismo cron de alertas de stock.',
-  },
-  'clientes.correr_automatizaciones': { ruta: '/api/cron/correr-automatizaciones' },
-}
-
-/** Las que corren solas. El resto son acciones que alguien dispara. */
-const ES_AUTOMATIZACION = new Set(Object.keys(MAPA))
-
 function rutaDeArchivo(ruta: string): string {
   return `app${ruta}/route.ts`
+}
+
+/**
+ * Lo que corre sin estar declarado en ningún pool, y por qué no se declara.
+ *
+ * Un cron acá no es un olvido: es software cuyo sector no existe todavía en la
+ * fábrica. Declararlo en el pool que más se le parezca sería forzarlo, y el
+ * manifiesto quedaría diciendo que un pool se hace cargo de tablas que no son
+ * suyas. Se deja afuera con el motivo escrito.
+ */
+const SIN_POOL: Record<string, string> = {
+  '/api/cron/calcular-objetivos':
+    'Recalcula los objetivos de cada empleado (empleados_objetivos). El sector personas no está declarado: ninguna de sus tablas tiene dueño.',
+  '/api/cron/comunicacion-recordatorios':
+    'Postea recordatorios en los canales internos (recordatorios_programados, mensajes). El sector comunicacion no está declarado.',
+  '/api/cron/comunicacion-resumen':
+    'Resume los chats del día y calcula el clima por punto (clima_chats). El sector comunicacion no está declarado.',
 }
 
 function main() {
@@ -81,7 +82,10 @@ function main() {
   const conRuta: string[] = []
   const sinAgendar: string[] = []
   const sinRuta: string[] = []
-  const conBrecha: { clave: string; nivel: string; brecha: string; tercero: boolean }[] = []
+  const conBrecha: string[] = []
+  /** El contrato dice una cosa de `agendada` y vercel.json dice otra. */
+  const desincronizadas: string[] = []
+  const rutasDeclaradas = new Set<string>()
 
   console.log('\n═══ AUTOMATIZACIONES DECLARADAS ═══\n')
 
@@ -89,16 +93,17 @@ function main() {
     const m = e.manifiesto
     for (const a of m.agentes ?? []) {
       for (const c of a.acciones ?? []) {
-        const clave = `${m.pool}.${c.clave}`
-        if (!ES_AUTOMATIZACION.has(clave)) {
+        const auto = c.automatizacion as ContratoDeAutomatizacion | undefined
+        if (!auto) {
           acciones++
           continue
         }
         declaradas++
-        const mapa = MAPA[clave]
-        const archivo = rutaDeArchivo(mapa.ruta)
+        const clave = `${m.pool}.${c.clave}`
+        const archivo = rutaDeArchivo(auto.donde_corre)
         const existe = existsSync(archivo)
-        const agendada = agendadas.has(mapa.ruta)
+        const agendada = agendadas.has(auto.donde_corre)
+        rutasDeclaradas.add(auto.donde_corre)
 
         const estado = !existe
           ? '✗ LA RUTA NO EXISTE'
@@ -109,24 +114,27 @@ function main() {
         else if (!agendada) sinAgendar.push(clave)
         else conRuta.push(clave)
 
+        // Lo declarado contra lo que pasa. Sólo es posible porque la ruta sale
+        // del mismo contrato que el `agendada`.
+        if (auto.agendada !== undefined && auto.agendada !== agendada) {
+          desincronizadas.push(
+            `${clave}: declara agendada=${auto.agendada} y vercel.json dice ${agendada}`,
+          )
+        }
+
         const marcas =
           (c.compromete_tercero ? 'TERCERO ' : '') +
           (c.toca_dinero ? 'DINERO ' : '') +
           (c.reversible === false ? 'IRREVERSIBLE' : '')
         console.log(`${clave}`)
-        console.log(`  ${mapa.ruta}  ${estado}`)
+        console.log(`  ${auto.donde_corre}  ${estado}`)
         console.log(
           `  nivel declarado: ${c.participacion}${marcas ? ` · ${marcas}` : ''}` +
-            (agendada ? ` · ${crons.find((x) => x.path === mapa.ruta)?.schedule}` : ''),
+            (agendada ? ` · ${crons.find((x) => x.path === auto.donde_corre)?.schedule}` : ''),
         )
-        if (mapa.nota) console.log(`  ${mapa.nota}`)
+        if (auto.tambien_manual) console.log(`  TAMBIÉN A MANO: ${auto.tambien_manual}`)
         if (c.brecha) {
-          conBrecha.push({
-            clave,
-            nivel: c.participacion,
-            brecha: c.brecha,
-            tercero: c.compromete_tercero === true,
-          })
+          conBrecha.push(clave)
           console.log(`  BRECHA: ${c.brecha}`)
         }
         console.log('')
@@ -135,13 +143,14 @@ function main() {
   }
 
   /* ── Crons que corren y ningún pool declara ─────────────────────────── */
-  const mapeadas = new Set(Object.values(MAPA).map((x) => x.ruta))
-  const huerfanos = crons.filter((c) => !mapeadas.has(c.path))
+  const huerfanos = crons.filter((c) => !rutasDeclaradas.has(c.path))
 
   console.log('═══ CRONS QUE CORREN Y NADIE DECLARA ═══\n')
+  if (huerfanos.length === 0) console.log('  ninguno\n')
   for (const c of huerfanos) {
-    const archivo = rutaDeArchivo(c.path)
-    console.log(`  ${c.path.padEnd(42)} ${c.schedule.padEnd(14)} ${existsSync(archivo) ? '' : '✗ sin ruta'}`)
+    const motivo = SIN_POOL[c.path]
+    console.log(`  ${c.path.padEnd(40)} ${c.schedule.padEnd(13)} ${existsSync(rutaDeArchivo(c.path)) ? '' : '✗ sin ruta'}`)
+    console.log(`    ${motivo ?? '⚠ SIN MOTIVO ESCRITO: o se declara, o se dice por qué no.'}`)
   }
 
   console.log('\n═══ EL RECUENTO ═══')
@@ -150,12 +159,15 @@ function main() {
   console.log(`    agendadas y con ruta:   ${conRuta.length}`)
   console.log(`    con ruta y SIN agendar: ${sinAgendar.length}${sinAgendar.length ? ` — ${sinAgendar.join(', ')}` : ''}`)
   console.log(`    sin ruta:               ${sinRuta.length}${sinRuta.length ? ` — ${sinRuta.join(', ')}` : ''}`)
-  console.log(`    con brecha declarada:   ${conBrecha.length}`)
+  console.log(`    con brecha declarada:   ${conBrecha.length}${conBrecha.length ? ` — ${conBrecha.join(', ')}` : ''}`)
+  console.log(`  contrato desincronizado con vercel.json: ${desincronizadas.length}`)
+  for (const d of desincronizadas) console.log(`    ✗ ${d}`)
   console.log(`  crons que corren y nadie declara: ${huerfanos.length}`)
+  console.log(`    con motivo escrito: ${huerfanos.filter((c) => SIN_POOL[c.path]).length}`)
   console.log(
     '\nNINGUNA SE DECLARA "VERIFICADA". Que el archivo exista y el cron esté\n' +
       'agendado no dice que haya corrido, ni que haya terminado, ni que haya hecho\n' +
-      'lo declarado. Eso hace falta datos de ejecución, y hoy no los hay.\n',
+      'lo declarado. Eso necesita datos de ejecución, y hoy no los hay.\n',
   )
 }
 

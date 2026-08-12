@@ -20,7 +20,7 @@ import type { Manifiesto } from '../tipos'
  * trabajo asignado con vencimiento y verificación. Existe igual en un taller.
  */
 export const MANIFIESTO_TAREAS: Manifiesto = {
-  formato: '2.1.0',
+  formato: '2.2.0',
   pool: 'tareas',
   nombre: 'Tareas',
   categoria: 'nucleo',

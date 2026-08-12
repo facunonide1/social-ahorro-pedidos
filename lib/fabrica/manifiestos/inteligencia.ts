@@ -19,7 +19,7 @@ import type { Manifiesto } from '../tipos'
  * Vocabulario NEUTRO: asistente, aviso, aprobación, registro de auditoría.
  */
 export const MANIFIESTO_INTELIGENCIA: Manifiesto = {
-  formato: '2.1.0',
+  formato: '2.2.0',
   pool: 'inteligencia',
   nombre: 'Inteligencia',
   categoria: 'nucleo',
@@ -95,6 +95,16 @@ export const MANIFIESTO_INTELIGENCIA: Manifiesto = {
         },
         { clave: 'publicar_aviso', titulo: 'Poner algo en el feed', participacion: 'informa', reversible: false, compromete_tercero: false, motivo: 'Es el buzón interno del equipo. Un aviso leído no se des-lee, y está bien: no compromete nada.' },
         { clave: 'priorizar_pendientes', titulo: 'Ordenar qué mirar primero', participacion: 'sugiere', motivo: 'Propone un orden. La agenda del día la decide una persona.' },
+        // Relevada en v0.75: corría agendada y sin declarar desde siempre.
+        { clave: 'calcular_metricas_del_dia', titulo: 'Calcular cómo salió el día', participacion: 'hace_y_avisa', reversible: true, motivo: 'Cuenta tareas de ayer y guarda el resultado. Es aritmética sobre lo que ya pasó: no decide ni avisa nada.',
+          automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/metricas-nightly", agendada: true, al_apagar: "Los días ya calculados quedan guardados. Pero mira SIEMPRE el día de ayer: el día que no corre no se recupera solo, y queda un agujero en la serie que después se lee como un día sin trabajo." },
+        },
+        // Escribe métricas de empleados en una tabla que ningún pool declara
+        // (sector personas). Se declara acá porque el resumen es de Inteligencia;
+        // el dueño de esa tabla lo define quien declare el sector.
+        { clave: 'armar_reporte_semanal', titulo: 'Armar el reporte de la semana', participacion: 'informa', reversible: false, compromete_tercero: false, motivo: 'Escribe la narrativa de la semana y se la notifica a la gerencia. Es hacia adentro del equipo: un reporte leído no se des-lee, y no compromete nada con nadie de afuera.',
+          automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/reporte-semanal", agendada: true, al_apagar: "Los reportes publicados y las notificaciones que ya salieron quedan: una notificación leída no se des-lee. Apagarla evita el de la semana que viene." },
+        },
         { clave: 'auditar_acciones', titulo: 'Registrar quién hizo qué', participacion: 'informa', reversible: false, compromete_tercero: false, motivo: 'Deja el registro. Es lo que permite reconstruir qué pasó cuando algo sale mal.',
           automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/nora-auditor", agendada: true, al_apagar: "Lo auditado hasta hoy queda registrado. Apagarla deja de auditar de acá en adelante, que es un agujero en la auditoría." },
         },

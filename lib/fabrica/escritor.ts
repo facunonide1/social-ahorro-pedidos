@@ -236,7 +236,12 @@ export function diffLegible(
         : `La automatización "${c.titulo}" deja de correr (${c.automatizacion.donde_corre}, ${c.automatizacion.disparo}).`,
       costo: ahoraActiva
         ? 'Vuelve a correr en su próximo disparo. Lo que no hizo mientras estuvo apagada NO se recupera solo.'
-        : `Deshacerlo la vuelve a prender. Pero APAGAR NO ES DESHACER: ${c.automatizacion.al_apagar}`,
+        : `Deshacerlo la vuelve a prender. Pero APAGAR NO ES DESHACER: ${c.automatizacion.al_apagar}` +
+          // La segunda puerta va en el costo y no en una nota: sin esto, apagar
+          // se firma creyendo que no va a pasar más, y una persona lo dispara igual.
+          (c.automatizacion.tambien_manual
+            ? ` Y NO APAGA LA PUERTA MANUAL: ${c.automatizacion.tambien_manual}`
+            : ''),
       // Apagar una automatización no se deshace sin pérdida: lo que dejó de
       // hacer mientras estaba apagada no se recupera prendiéndola.
       reversibleSinPerdida: false,

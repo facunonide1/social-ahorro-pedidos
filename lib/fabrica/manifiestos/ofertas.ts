@@ -16,7 +16,7 @@ import type { Manifiesto } from '../tipos'
  * existe igual en una ferretería.
  */
 export const MANIFIESTO_OFERTAS: Manifiesto = {
-  formato: '2.1.0',
+  formato: '2.2.0',
   pool: 'ofertas',
   nombre: 'Ofertas',
   categoria: 'generico',
