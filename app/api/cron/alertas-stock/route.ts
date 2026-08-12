@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
 import type { AdminRole } from '@/lib/types/admin'
+import { automatizacionActiva } from '@/lib/os/definicion'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -15,7 +16,16 @@ const LEAD_DAYS = 3 // lead time de reposición (config futura)
  */
 export async function GET(req: NextRequest) {
   if (!isCronRequest(req)) return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
-  return run()
+  // DOS automatizaciones declaradas comparten esta ruta: recalcular las alertas
+  // de stock y avisar los vencimientos. Se preguntan por separado porque son dos
+  // decisiones distintas, y apagar una no tiene por qué apagar la otra.
+  //
+  // La pregunta va en el GET y no en run(): el POST de abajo es una persona
+  // apretando un botón, y gobernar eso sería gobernar una acción.
+  return run(
+    await automatizacionActiva('stock', 'recalcular_alertas', true),
+    await automatizacionActiva('stock', 'avisar_vencimientos', true),
+  )
 }
 export async function POST() {
   const sb = createClient()
@@ -23,10 +33,10 @@ export async function POST() {
   if (!user) return NextResponse.json({ error: 'no autenticado' }, { status: 401 })
   const { data: me } = await sb.from('users_admin').select('rol, activo').eq('id', user.id).maybeSingle<{ rol: AdminRole; activo: boolean }>()
   if (!me || !me.activo || !['super_admin', 'gerente'].includes(me.rol)) return NextResponse.json({ error: 'requiere super_admin/gerente' }, { status: 403 })
-  return run()
+  return run(true, true)
 }
 
-async function run() {
+async function run(conAlertas: boolean, conVencimientos: boolean) {
   const adm = createAdminClient()
   const ahora = Date.now()
   const en = (d: number) => new Date(ahora + d * 86_400_000).toISOString().slice(0, 10)
@@ -49,7 +59,7 @@ async function run() {
   const out: Alerta[] = []
 
   // Stock / rotación
-  for (const s of (stock ?? []) as any[]) {
+  for (const s of (conAlertas ? ((stock ?? []) as any[]) : [])) {
     const cant = Number(s.cantidad), min = Number(s.stock_minimo), max = s.stock_maximo == null ? null : Number(s.stock_maximo)
     const gondola = Number(s.cantidad_gondola ?? 0), deposito = Number(s.cantidad_deposito ?? 0)
     const r = rotMap.get(`${s.producto_id}|${s.sucursal_id}`)
@@ -76,7 +86,7 @@ async function run() {
 
   // Vencimientos por lote
   const v15 = en(15), v30 = en(30), v60 = en(60), v90 = en(90)
-  for (const l of (lotes ?? []) as any[]) {
+  for (const l of (conVencimientos ? ((lotes ?? []) as any[]) : [])) {
     const f = l.fecha_vencimiento
     if (!f || f > v90) continue
     const tipo = f <= v15 ? 'vencimiento_15' : f <= v30 ? 'vencimiento_30' : f <= v60 ? 'vencimiento_60' : 'vencimiento_90'
@@ -88,6 +98,7 @@ async function run() {
   // Ventana de devolución por cerrar (OS-3): ≤7 días para devolver a la droguería.
   // Solo vencimientos manuales con proveedor+ventana (los lotes no tienen proveedor).
   try {
+    if (!conVencimientos) throw new Error('vencimientos apagados')
     const [{ data: vencs }, { data: provs }, { data: rubros }] = await Promise.all([
       adm.from('vencimientos').select('producto_id, sucursal_id, sku, proveedor_id, fecha_vencimiento, cantidad, productos_catalogo(nombre, rubro)')
         .eq('estado', 'vigente').eq('es_demo', false).not('proveedor_id', 'is', null),
@@ -110,8 +121,19 @@ async function run() {
     }
   } catch { /* la alerta de ventana no bloquea el cron */ }
 
-  // Regenerar activas no-demo
-  await adm.from('alertas_stock').delete().eq('estado', 'activa').eq('es_demo', false)
+  // Regenerar activas no-demo, SÓLO de los tipos que esta corrida vuelve a
+  // calcular.
+  //
+  // Antes borraba todas. Con dos automatizaciones gobernables por separado eso
+  // era destructivo: apagar los avisos de vencimiento borraba los que ya
+  // estaban, y apagar no deshace lo hecho. Con las dos prendidas el conjunto
+  // borrado es el mismo que antes.
+  const TIPOS_STOCK = ['stock_critico', 'reponer_gondola', 'quiebre_proyectado', 'sobrestock', 'stock_fantasma', 'sin_rotacion']
+  const TIPOS_VENCIMIENTO = ['vencimiento_15', 'vencimiento_30', 'vencimiento_60', 'vencimiento_90', 'ventana_devolucion_por_cerrar']
+  const aRegenerar = [...(conAlertas ? TIPOS_STOCK : []), ...(conVencimientos ? TIPOS_VENCIMIENTO : [])]
+  if (aRegenerar.length > 0) {
+    await adm.from('alertas_stock').delete().eq('estado', 'activa').eq('es_demo', false).in('tipo', aRegenerar)
+  }
   if (out.length > 0) {
     await adm.from('alertas_stock').insert(out.map((a) => ({ ...a, estado: 'activa' })))
   }
@@ -126,5 +148,11 @@ async function run() {
     }
   }
 
-  return NextResponse.json({ ok: true, fecha: hoy, alertas: out.length, fantasmas: fantasmas.length })
+  return NextResponse.json({
+    ok: true,
+    fecha: hoy,
+    alertas: out.length,
+    fantasmas: fantasmas.length,
+    ...(conAlertas && conVencimientos ? {} : { omitidas: { alertas: !conAlertas, vencimientos: !conVencimientos } }),
+  })
 }

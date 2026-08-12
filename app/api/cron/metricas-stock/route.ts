@@ -16,6 +16,16 @@ export const runtime = 'nodejs'
  */
 export async function GET(req: NextRequest) {
   if (!isCronRequest(req)) return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
+  // La declaración de la fábrica puede apagarla. Fallback `true`: lo que hace el
+  // código. Un cron que corre de más se nota; uno que no corre, no.
+  //
+  // EN EL GET Y NO EN run(): en v0.74 estaba adentro de run(), que es el mismo
+  // que llama el POST manual de super_admin. O sea que apagar la automatización
+  // apagaba también el botón de una persona, y eso es gobernar una acción — que
+  // no es lo que se declaró ni lo que la fábrica puede hacer hoy.
+  if (!(await automatizacionActiva('stock', 'recalcular_rotacion', true))) {
+    return NextResponse.json({ ok: true, omitida: 'la declaración la tiene apagada' })
+  }
   return run()
 }
 export async function POST() {
@@ -31,13 +41,6 @@ export async function POST() {
 }
 
 async function run() {
-  // Puede venir de la declaración de la fábrica. Si el lector está apagado o
-  // algo falla, devuelve `true`: la automatización corre como venía corriendo.
-  // Un cron que corre de más se nota; uno que no corre, no.
-  const activa = await automatizacionActiva('stock', 'recalcular_rotacion', true)
-  if (!activa) {
-    return NextResponse.json({ ok: true, omitida: 'la declaración la tiene apagada' })
-  }
 
   const adm = createAdminClient()
   const ahora = Date.now()

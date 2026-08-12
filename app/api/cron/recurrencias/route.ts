@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
 import type { RecurrenciaPatron, TareaRecurrencia } from '@/lib/types/tareas'
+import { automatizacionActiva } from '@/lib/os/definicion'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -18,6 +19,11 @@ export const runtime = 'nodejs'
 export async function GET(req: NextRequest) {
   if (!isCronRequest(req))
     return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
+  // La declaración de la fábrica puede apagarla. Fallback `true`: lo que hace el
+  // código. Un cron que corre de más se nota; uno que no corre, no.
+  if (!(await automatizacionActiva('tareas', 'generar_recurrencias', true))) {
+    return NextResponse.json({ ok: true, omitida: 'la declaración la tiene apagada' })
+  }
 
   const sb = createAdminClient()
   const now = new Date()

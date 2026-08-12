@@ -33,7 +33,34 @@ import { versionActual } from './versiones'
  * varias tiene que salir de una verificación contra el código, como los
  * parámetros — una lista a mano que crece es una lista que miente.
  */
-const CABLEADAS = new Set(['stock.recalcular_rotacion'])
+/**
+ * Las que efectivamente le preguntan a la fábrica antes de correr.
+ *
+ * Declarar el contrato no alcanza: una automatización declarada y sin cablear
+ * se apaga en el Taller y sigue corriendo igual. Por eso el estado las cuenta
+ * separadas.
+ *
+ * ESTA LISTA Y EL CÓDIGO SON DOS LISTAS. La verifica
+ * `scripts/fabrica-relevar-automatizaciones.ts` contra las rutas reales: si
+ * alguien cablea una y no la agrega acá, o al revés, el relevamiento lo dice.
+ */
+export const CABLEADAS = new Set([
+  'stock.recalcular_alertas',
+  'stock.avisar_vencimientos',
+  'stock.recalcular_rotacion',
+  'stock.generar_controles_de_zona',
+  'inteligencia.armar_resumen_diario',
+  'inteligencia.calcular_metricas_del_dia',
+  'inteligencia.armar_reporte_semanal',
+  'inteligencia.auditar_acciones',
+  'tareas.generar_agenda_dia',
+  'tareas.generar_recurrencias',
+  'tareas.marcar_vencidas',
+  'tareas.escalar_trabadas',
+  'tareas.evaluar_triggers',
+  'clientes.correr_automatizaciones',
+  'finanzas.generar_gastos_fijos',
+])
 
 export interface EstadoDePool {
   clave: string
@@ -69,7 +96,15 @@ export interface EstadoDePool {
    * Las que corren solas. `gobernadas` cuenta las que además están CABLEADAS:
    * declarar el contrato no alcanza, igual que con los parámetros.
    */
-  automatizaciones: { total: number; gobernadas: number; conBrecha: number; sinAgendar: number }
+  automatizaciones: {
+    total: number
+    /** El código le pregunta a la fábrica antes de correr. */
+    cableadas: number
+    /** Cableada Y con el lector prendido: recién ahí la declaración manda. */
+    gobernadas: number
+    conBrecha: number
+    sinAgendar: number
+  }
   /** Overrides de este proyecto sobre la pieza. */
   overrides: number
   defectosAbiertos: number
@@ -126,10 +161,15 @@ export async function estadoDeLaFabrica(proyectoId: string): Promise<{
         const todas = (m?.agentes ?? []).flatMap((a) => a.acciones).filter((c) => c.automatizacion)
         return {
           total: todas.length,
-          // Cableada = el código le pregunta a la fábrica. Hoy se sabe por una
-          // lista corta y explícita; cuando sean muchas, tendrá que salir de la
-          // verificación como los parámetros.
-          gobernadas: todas.filter((c) => CABLEADAS.has(`${e.clave}.${c.clave}`)).length,
+          // CABLEADA no es GOBERNADA, y confundirlas hace decir "15 de 15"
+          // cuando once de esas quince viven en pools con el lector apagado:
+          // el código pregunta, la fábrica no contesta, y la automatización
+          // corre igual. Cablear es condición necesaria y no suficiente.
+          cableadas: todas.filter((c) => CABLEADAS.has(`${e.clave}.${c.clave}`)).length,
+          gobernadas:
+            e.lector === 'prendido'
+              ? todas.filter((c) => CABLEADAS.has(`${e.clave}.${c.clave}`)).length
+              : 0,
           conBrecha: todas.filter((c) => c.brecha).length,
           sinAgendar: todas.filter((c) => c.automatizacion?.agendada === false).length,
         }

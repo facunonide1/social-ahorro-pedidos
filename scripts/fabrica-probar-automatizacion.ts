@@ -12,6 +12,9 @@
  * Deja la automatización como estaba. Sale 1 si algún paso falla.
  */
 import { aplicar, listarPropuestas, proponer, revertirPropuesta } from '../lib/fabrica/propuestas'
+import { carrilDeCampo } from '../lib/fabrica/carriles'
+import { diffLegible } from '../lib/fabrica/escritor'
+import { resolver } from '../lib/fabrica/overrides'
 import { automatizacionActiva } from '../lib/os/definicion'
 import { createAdminClient } from '../lib/supabase/server'
 import { estadoDelLector, PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
@@ -128,6 +131,49 @@ async function main() {
       `    ${h.decididoAt.slice(0, 16).replace('T', ' ')} ${h.esReversion ? '[revert]' : '        '} ${JSON.stringify(h.valorAnterior)} → ${JSON.stringify(h.valorNuevo)}`,
     )
   }
+
+  /* ── C.4 · LA DE PESO ALTO ────────────────────────────────────────── */
+  //
+  // `clientes.correr_automatizaciones` es la única cableada que compromete algo
+  // con alguien de afuera: manda campañas a clientes reales. Su pool está
+  // APAGADO, así que se puede verificar todo menos el efecto: con el lector
+  // apagado, apagarla en el Taller no cambia lo que hace el cron. Se dice.
+  const vC = (await versionActual('clientes'))!
+  const accC = (vC.manifiesto.agentes ?? [])
+    .flatMap((a) => a.acciones)
+    .find((c) => c.clave === 'correr_automatizaciones')!
+
+  const carril = carrilDeCampo({
+    campo: 'automatizaciones.correr_automatizaciones',
+    nivel: 'instalacion',
+    delPool: vC.manifiesto,
+    valor: false,
+    // Con el interruptor ABIERTO: si igual no cae en verde, no es por el flag.
+    verdeHabilitado: () => true,
+  })
+  paso(8, carril.carril === 'amarillo', `no cae en verde ni con el interruptor abierto: ${carril.carril}`)
+
+  const { manifiesto: apagada } = resolver(vC.manifiesto, {
+    automatizaciones: { correr_automatizaciones: false },
+  })
+  const diff = diffLegible(vC.manifiesto, apagada, { gobernando: false, personasConAcceso: 0 })
+  const dice = diff.find((d) => d.texto.includes('deja de correr'))
+  paso(
+    9,
+    !!dice && dice.costo.includes('APAGAR NO ES DESHACER') && dice.costo.includes('NO se pueden traer de vuelta'),
+    'el costo dice qué NO se deshace',
+  )
+  console.log(`    ${dice?.costo}`)
+
+  paso(
+    10,
+    accC.compromete_tercero === true && accC.participacion === 'prepara' && !!accC.brecha,
+    `compromete_tercero=${accC.compromete_tercero} · nivel ${accC.participacion} · brecha declarada: ${accC.brecha ? 'sí' : 'NO'}`,
+  )
+  console.log(
+    '    NO se prueba el efecto: el pool clientes está apagado, así que apagarla\n' +
+      '    en el Taller no cambia lo que hace el cron. Eso necesita prender el pool.',
+  )
 
   const nuevas = (await listarPropuestas(PROYECTO_SOCIAL_AHORRO, { conAdmin: true })).filter(
     (x) => x.campos.some((c) => c.startsWith('automatizaciones.')),

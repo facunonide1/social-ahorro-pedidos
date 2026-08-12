@@ -72,7 +72,7 @@ export default async function EstadoPage({ params }: { params: { slug: string } 
             [
               'Automatizaciones',
               `${sumar((p) => p.automatizaciones.gobernadas)} de ${sumar((p) => p.automatizaciones.total)}`,
-              `gobernadas (cableadas, no sólo declaradas) · ${sumar((p) => p.automatizaciones.conBrecha)} con brecha · ${sumar((p) => p.automatizaciones.sinAgendar)} sin agendar`,
+              `gobernadas · ${sumar((p) => p.automatizaciones.cableadas)} cableadas (el código pregunta) · ${sumar((p) => p.automatizaciones.conBrecha)} con brecha · ${sumar((p) => p.automatizaciones.sinAgendar)} sin agendar`,
             ],
             [
               'Problemas abiertos',

@@ -39,6 +39,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs'
 
+import { CABLEADAS } from '../lib/fabrica/estado'
 import { MANIFIESTOS } from '../lib/fabrica/manifiestos'
 import type { ContratoDeAutomatizacion } from '../lib/fabrica/tipos'
 
@@ -83,6 +84,8 @@ function main() {
   const sinAgendar: string[] = []
   const sinRuta: string[] = []
   const conBrecha: string[] = []
+  /** El código pregunta y la lista no lo sabe, o al revés. */
+  const cableadoDesincronizado: string[] = []
   /** El contrato dice una cosa de `agendada` y vercel.json dice otra. */
   const desincronizadas: string[] = []
   const rutasDeclaradas = new Set<string>()
@@ -133,6 +136,20 @@ function main() {
             (agendada ? ` · ${crons.find((x) => x.path === auto.donde_corre)?.schedule}` : ''),
         )
         if (auto.tambien_manual) console.log(`  TAMBIÉN A MANO: ${auto.tambien_manual}`)
+
+        // Las dos listas: la que cuenta el estado y lo que hace el código.
+        // Se compara buscando la llamada exacta, con el pool y la clave, no
+        // sólo el nombre de la función: un archivo que le pregunta a la fábrica
+        // por OTRA automatización daría verde sobre lo que no miró.
+        const llamada = `automatizacionActiva('${m.pool}', '${c.clave}'`
+        const preguntaEnElCodigo = existe && readFileSync(archivo, 'utf8').includes(llamada)
+        const enLaLista = CABLEADAS.has(clave)
+        if (preguntaEnElCodigo !== enLaLista) {
+          cableadoDesincronizado.push(
+            `${clave}: el código ${preguntaEnElCodigo ? 'SÍ' : 'NO'} pregunta y la lista dice que ${enLaLista ? 'sí' : 'no'}`,
+          )
+        }
+        console.log(`  cableada: ${preguntaEnElCodigo ? 'sí' : 'NO — se apaga en el Taller y corre igual'}`)
         if (c.brecha) {
           conBrecha.push(clave)
           console.log(`  BRECHA: ${c.brecha}`)
@@ -160,6 +177,9 @@ function main() {
   console.log(`    con ruta y SIN agendar: ${sinAgendar.length}${sinAgendar.length ? ` — ${sinAgendar.join(', ')}` : ''}`)
   console.log(`    sin ruta:               ${sinRuta.length}${sinRuta.length ? ` — ${sinRuta.join(', ')}` : ''}`)
   console.log(`    con brecha declarada:   ${conBrecha.length}${conBrecha.length ? ` — ${conBrecha.join(', ')}` : ''}`)
+  console.log(`  cableadas de verdad: ${[...CABLEADAS].length} en la lista del estado`)
+  console.log(`  cableado desincronizado con el código: ${cableadoDesincronizado.length}`)
+  for (const d of cableadoDesincronizado) console.log(`    ✗ ${d}`)
   console.log(`  contrato desincronizado con vercel.json: ${desincronizadas.length}`)
   for (const d of desincronizadas) console.log(`    ✗ ${d}`)
   console.log(`  crons que corren y nadie declara: ${huerfanos.length}`)

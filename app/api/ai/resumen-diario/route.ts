@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { hasAnthropicKey } from '@/lib/ai/client'
 import { generarResumenDiario } from '@/lib/ai/resumen-diario'
 import { SUMMARY_MODEL } from '@/lib/ai/config'
+import { automatizacionActiva } from '@/lib/os/definicion'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -51,6 +52,12 @@ export async function GET(req: NextRequest) {
   const sb = createClient()
 
   if (isCronRequest(req)) {
+    // La declaración de la fábrica puede apagarla. Va SÓLO en la rama del cron:
+    // más abajo el mismo GET devuelve el resumen guardado a una persona, y eso
+    // es una lectura, no la automatización.
+    if (!(await automatizacionActiva('inteligencia', 'armar_resumen_diario', true))) {
+      return NextResponse.json({ ok: true, omitida: 'la declaración la tiene apagada' })
+    }
     if (!hasAnthropicKey())
       return NextResponse.json({ error: 'sin_anthropic_key' }, { status: 503 })
     try {
