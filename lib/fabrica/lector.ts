@@ -24,7 +24,7 @@ import type { Manifiesto } from './tipos'
  * usa para el arranque en frío de un proyecto nuevo. Quien manda es la fila.
  *
  * QUÉ LEE HOY: presentación y navegación. Títulos de pantalla, nada más.
- * QUÉ NO LEE: permisos, acciones ejecutables, automatizaciones. Si el lector
+ * QUÉ NO LEE: permisos, acciones que alguien dispara. Si el lector
  * se equivoca en un título, se ve raro. Si se equivoca en un permiso, alguien
  * ve lo que no debe. Eso espera al escritor, que es lo que permitiría
  * revertir.
@@ -104,12 +104,17 @@ export const ASPECTOS_QUE_GOBIERNA: { aspecto: Aspecto; que: string; desde: stri
     que: 'los parámetros ponderados inocuo u operativo, sin brecha y sin conflicto de fuente',
     desde: 'v0.68',
   },
+  {
+    aspecto: 'automatizaciones',
+    que: 'si una automatización corre o no corre — apagarla no deshace lo que ya hizo',
+    desde: 'v0.74',
+  },
 ]
 
 /** Lo que se declara y el lector NO lee. Tan importante como lo de arriba. */
 export const ASPECTOS_QUE_NO_GOBIERNA: { que: string; porque: string }[] = [
   { que: 'los permisos', porque: 'quién ve qué se resuelve en el código y en los intocables de Configuración' },
-  { que: 'las acciones y la autonomía del asistente', porque: 'un título mal se ve raro; una acción mal hace algo que nadie firmó' },
+  { que: 'las acciones que alguien dispara y la autonomía del asistente', porque: 'un título mal se ve raro; una acción mal hace algo que nadie firmó' },
   { que: 'los parámetros sensibles', porque: 'uno mal leído afloja un control o mueve plata' },
 ]
 

@@ -1,17 +1,82 @@
-# El contrato de parámetros — CERRADO
+# El alcance de la fábrica
 
-Estado al cierre de v0.73. Este documento dice qué quedó terminado y qué sigue.
+Estado al cierre de v0.74. Qué gobierna el lector hoy, qué se declara y no se
+lee, y qué falta. El contrato de parámetros quedó cerrado en v0.73 y su recuento
+sigue abajo sin cambios.
 
 ---
 
 ## La cifra
 
-> **Presentación en 2 de 10 pools (17 pantallas) · 4 parámetros de 48**
+> **Presentación en 2 de 10 pools (17 pantallas) · 4 parámetros de 48 · 1 automatización de 11**
 
 Se calcula, no se escribe, y no se redondea para arriba. Vive en
-`/fabrica/[slug]/estado`.
+`/fabrica/[slug]/estado`. El aspecto nuevo entra con su propio denominador: 11
+automatizaciones declaradas, 1 gobernada de verdad.
 
-## El recuento, 48 = 17 + 31
+**Gobernada quiere decir cableada.** Declarar el contrato no alcanza: la
+automatización tiene que preguntarle a la fábrica antes de correr. Hoy sólo
+`stock.recalcular_rotacion` lo hace, y es la única que cuenta.
+
+---
+
+## Qué gobierna el lector
+
+| Aspecto | Desde | Alcance |
+|---|---|---|
+| **Presentación y navegación** | v0.62 | El título de cada pantalla y si aparece en el menú |
+| **Parámetros** | v0.68 | Los ponderados inocuo u operativo, sin brecha y sin conflicto de fuente |
+| **Automatizaciones** | v0.74 | Si corre o no corre |
+
+La lista vive en `ASPECTOS_QUE_GOBIERNA` (`lib/fabrica/lector.ts`) y el chat la
+lee de ahí: no hay una segunda lista escrita a mano que se pueda desactualizar.
+
+### Qué se declara y el lector NO lee
+
+- **Los permisos** — quién ve qué se resuelve en el código y en los intocables
+  de Configuración.
+- **Las acciones que alguien dispara y la autonomía del asistente** — un título
+  mal se ve raro; una acción mal hace algo que nadie firmó.
+- **Los parámetros sensibles** — 18 de 31, la mayoría del contrato.
+
+---
+
+## El recuento de automatizaciones, 11 de 54
+
+De las 54 acciones que declaran los manifiestos, **43 no son automatizaciones**:
+alguien las dispara. Es la pregunta 6 aplicada al aspecto nuevo apenas se creó
+—¿la categoría existe?— y la respuesta fue que el 80% de lo que la comparte no
+pertenece a ella.
+
+| | Cuántas | Qué significa |
+|---|---|---|
+| **Agendadas y con ruta** | 10 | Lo más cerca que se llega sin datos de ejecución |
+| **Con ruta y sin agendar** | 1 | `tareas.generar_recurrencias`: existe y no está en `vercel.json`. No corre |
+| **Sin ruta** | 0 | |
+| **Con brecha declarada** | 2 | El código no hace lo que la declaración dice |
+| **Gobernadas (cableadas)** | 1 | `stock.recalcular_rotacion` |
+| **Crons que corren y nadie declara** | 7 | Software que existe y la fábrica no conoce |
+
+**Ninguna se declara "verificada".** Que el archivo exista y el cron esté
+agendado no dice que Vercel lo haya disparado, ni que haya terminado, ni que
+haya hecho lo declarado. Es la pregunta 7 aplicada a la verificación misma:
+comprobar el archivo y llamarlo verificado sería medir algo cierto al lado de lo
+que hace falta.
+
+### Apagar no es deshacer
+
+El contrato de automatización obliga a declarar `al_apagar`. Sin ese campo,
+"apagala" se lee como "que no haya pasado", y alguien apagaría una campaña
+creyendo que la des-envía. Lo que ya se envió, se calculó o se creó queda.
+
+Por eso una automatización **nunca cae en carril verde**, ni con el interruptor
+abierto: apagar siempre pide firma, y el costo que se firma dice qué queda hecho.
+
+---
+
+## El contrato de parámetros, 48 = 17 + 31
+
+Cerrado en v0.73. Sin cambios en v0.74.
 
 | | Cuántos | Qué significa |
 |---|---|---|
@@ -22,70 +87,58 @@ Se calcula, no se escribe, y no se redondea para arriba. Vive en
 | **No gobernables** | 6 | Declarados con su contrato; la variable de entorno sigue mandando |
 | **Gobernados** | 4 | Y los cuatro con cableado completo y verificado |
 
-El denominador creció de 38 a 48 mientras el numerador iba de 3 a 4. Así tiene
-que ser: declarar lo que existía sin declarar empeora la proporción y mejora el
-dato.
+Todos clasificados, todos con consumo declarado o excluido con motivo, 0
+conflictos de fuente, 0 consumidores sin verificar, consumidor y símbolo
+separados, verificación acotada a la función y no al archivo.
 
 ---
 
-## Qué quedó cerrado
-
-- **Todos clasificados.** Ningún parámetro sin decir si es hecho, configuración
-  o brecha. El validador rechaza uno que no lo diga.
-- **Todos con consumo declarado o excluido con motivo.** El relevamiento reporta
-  tres estados y el tercero —ni declarado ni excluido— está en **0**.
-- **Ninguna fuente doble sin resolver.** 0 conflictos.
-- **Ningún consumidor sin verificar.** 27 verificados fuerte, 1 por ancla
-  (declarado débil), 0 inexistentes, 0 ambiguos.
-- **Consumidor y símbolo separados**, y el validador no deja confundirlos.
-- **Verificación acotada a la función**, no al archivo.
-
-## Qué queda abierto, y es poco
-
-- **6 no gobernables**: declarados y sin cablear. Cablearlos es trabajo medido —
-  cada uno tiene sus lugares de consumo con consumidor y símbolo.
-- **1 ancla débil**: el badge del dock es una arrow anónima y no tiene nombre
-  que anclar. Se cuenta aparte de las verificaciones fuertes.
-- **3 con brecha**: el código no los implementa. No es deuda del contrato: es
-  trabajo de construcción.
-- **El formato no expresa relaciones entre parámetros.** `alerta_suba_pct` y
-  `alerta_exceso_pct` son dos filtros de la misma alerta y el manifiesto no
-  tiene cómo decirlo. Se avisa en el impacto, que es un parche, no el campo.
-
----
-
-## Lo que sigue ya no es contrato: es alcance
+## Lo que falta
 
 En orden, y sin estimaciones de tiempo.
 
 ### 1 · Aspectos que el lector no gobierna
 
-Hoy gobierna presentación, navegación y parámetros. No gobierna:
-
-- **permisos** — quién ve qué. Choca con los intocables de Configuración.
-- **acciones y autonomía del asistente** — un título mal se ve raro; una acción
-  mal hace algo que nadie firmó.
-- **automatizaciones**.
-- **parámetros sensibles** — 18 de 31, la mayoría del contrato.
-
-Es el que más superficie abre: mientras los sensibles no se lean, la fábrica
+Quedan dos, y son los dos peligrosos: **permisos** y **acciones del asistente**.
+También los **parámetros sensibles**, 18 de 31. Mientras no se lean, la fábrica
 gobierna la mitad chica de lo que declara.
 
-### 2 · Pools apagados
+Automatizaciones era el tercero y se cerró en v0.74 justamente por eso: es
+reversible, ya tenía niveles de participación declarados desde v0.59, y el daño
+de equivocarse es acotado y visible.
 
-8 de 10. Cada uno prendido suma sus pantallas y sus parámetros a lo que gobierna
-de verdad. Requiere verificación en sombra antes de prender, que ya está
-construida.
+### 2 · Cablear lo declarado
 
-### 3 · Sectores sin declarar
+- **10 automatizaciones** declaradas con contrato y sin cablear.
+- **6 parámetros no gobernables**: la variable de entorno sigue mandando.
 
-6 del censo. Son software que existe y la fábrica no conoce.
+En los dos casos el trabajo está medido: cada uno tiene su lugar de consumo
+identificado. Declarar no es gobernar, y el estado los cuenta separados para que
+la diferencia no se pierda.
 
-### 4 · Moldes y dirección visual
+### 3 · Brechas que son trabajo de Social Ahorro
+
+- **2 automatizaciones con brecha**, la del CRM entre ellas: `correr_automatizaciones`
+  guarda como enviado sin confirmación y el nivel declarado dice `prepara`.
+- **3 parámetros con brecha**.
+
+No es deuda del contrato: es construcción, y la hace Social Ahorro. La fábrica
+lo declara y lo muestra; no lo arregla.
+
+### 4 · Pools apagados
+
+8 de 10. Cada uno prendido suma sus pantallas, sus parámetros y sus
+automatizaciones a lo que gobierna de verdad. Requiere verificación en sombra
+antes de prender, que ya está construida.
+
+### 5 · Sectores sin declarar
+
+6 del censo, más los 7 crons que corren y ningún pool declara.
+
+### 6 · Moldes y dirección visual
 
 No hay ninguno. Es lo que permitiría que la fábrica *genere* en vez de sólo
-gobernar — y es la única de las cuatro que cambia qué clase de herramienta es
-esto.
+gobernar — y es la única de las seis que cambia qué clase de herramienta es esto.
 
 ---
 
@@ -97,5 +150,6 @@ algo cierto pero al lado.
 
 **Y la regla que las ordena a todas:** cada categoría nueva del formato nace con
 errores de clasificación. La pregunta 6 encontró 5 de 17 hechos mal clasificados
-en la categoría creada una sesión antes. Se aplica apenas se crea algo, no seis
-sesiones después.
+en la categoría creada una sesión antes, y en v0.74 encontró que 43 de 54
+acciones no pertenecían a la categoría que las contenía. Se aplica apenas se
+crea algo, no seis sesiones después.

@@ -31,7 +31,7 @@ import { estadoDelLector, PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
 import { cambiarEstadoLector } from '../lib/fabrica/flag'
 import { camposQueCambian } from '../lib/fabrica/procedencia'
 import { obtenerDefinicion, parametroGobernante } from '../lib/fabrica/lector'
-import { parametro } from '../lib/os/definicion'
+import { automatizacionActiva, parametro } from '../lib/os/definicion'
 import { procedenciaDe } from '../lib/fabrica/procedencia'
 import { resolver, validarOverrides } from '../lib/fabrica/overrides'
 import { salud } from '../lib/fabrica/propuestas'
@@ -374,7 +374,55 @@ async function main() {
     )
   }
 
-  /* ── 12 · la cola de construcción vacía ───────────────────────────── */
+  /* ── 12 · AUTOMATIZACIONES ────────────────────────────────────────── */
+  console.log('\nAUTOMATIZACIONES')
+  {
+    // El fallback tiene que devolver el valor del CÓDIGO, no `false`: lo que no
+    // pasa no deja rastro, así que ante la duda la automatización corre.
+    caso(
+      'un pool inexistente devuelve el valor del código, no false',
+      (await automatizacionActiva('pool-que-no-existe', 'x', true)) === true,
+      'ante cualquier duda, corre como venía corriendo',
+    )
+    caso(
+      'y con el código en false devuelve false (si no, lo de arriba sería ciego)',
+      (await automatizacionActiva('pool-que-no-existe', 'x', false)) === false,
+      'el fallback es el valor del código, no un true fijo',
+    )
+    // Una automatización NUNCA es candidata a verde, ni con el interruptor.
+    const v = await versionActual('stock')
+    const verde = carrilDeCampo({
+      campo: 'automatizaciones.recalcular_rotacion',
+      nivel: 'instalacion',
+      delPool: v!.manifiesto,
+      valor: false,
+      verdeHabilitado: () => true,
+    })
+    caso(
+      'apagar una automatización nunca cae en verde, ni con el interruptor abierto',
+      verde.carril === 'amarillo',
+      `carril=${verde.carril} — ${verde.motivo.slice(0, 80)}`,
+    )
+    // Prender desde una instalación algo que la pieza declara apagado: rechazo.
+    const conApagada = JSON.parse(JSON.stringify(v!.manifiesto))
+    const acc = conApagada.agentes.flatMap((a: { acciones: unknown[] }) => a.acciones).find(
+      (c: { clave: string }) => c.clave === 'recalcular_rotacion',
+    )
+    acc.automatizacion.activa = false
+    const rechazo = validarOverrides(conApagada, { automatizaciones: { recalcular_rotacion: true } })
+    caso(
+      'prender lo que la pieza declara apagado se rechaza',
+      rechazo.length > 0,
+      rechazo[0]?.motivo.slice(0, 90) ?? 'lo aceptó (mal)',
+    )
+    caso(
+      'y apagarlo se acepta (si no, el rechazo de arriba sería un no a todo)',
+      validarOverrides(v!.manifiesto, { automatizaciones: { recalcular_rotacion: false } }).length === 0,
+      'apagar es ser más conservador que la pieza: siempre se puede',
+    )
+  }
+
+  /* ── 13 · la cola de construcción vacía ───────────────────────────── */
   console.log('\nCOLA DE CONSTRUCCIÓN')
   const cola = await colaDeConstruccion({ conAdmin: true })
   caso(

@@ -26,6 +26,15 @@ import { versionActual } from './versiones'
  * que verificó se lee como si lo hubiera verificado todo.
  */
 
+/**
+ * Las automatizaciones que el código efectivamente le pregunta a la fábrica.
+ *
+ * Es una lista corta y a mano A PROPÓSITO, y se dice: hoy es UNA. Cuando sean
+ * varias tiene que salir de una verificación contra el código, como los
+ * parámetros — una lista a mano que crece es una lista que miente.
+ */
+const CABLEADAS = new Set(['stock.recalcular_rotacion'])
+
 export interface EstadoDePool {
   clave: string
   nombre: string
@@ -56,6 +65,11 @@ export interface EstadoDePool {
    * juntos diría que la pieza garantiza más de lo que garantiza.
    */
   hechos: { permanentes: number; condicionados: number }
+  /**
+   * Las que corren solas. `gobernadas` cuenta las que además están CABLEADAS:
+   * declarar el contrato no alcanza, igual que con los parámetros.
+   */
+  automatizaciones: { total: number; gobernadas: number; conBrecha: number; sinAgendar: number }
   /** Overrides de este proyecto sobre la pieza. */
   overrides: number
   defectosAbiertos: number
@@ -108,6 +122,18 @@ export async function estadoDeLaFabrica(proyectoId: string): Promise<{
         conBrecha: r.conBrecha,
         sensibles: (m?.configurable ?? []).filter((c) => c.peso === 'sensible').length,
       },
+      automatizaciones: (() => {
+        const todas = (m?.agentes ?? []).flatMap((a) => a.acciones).filter((c) => c.automatizacion)
+        return {
+          total: todas.length,
+          // Cableada = el código le pregunta a la fábrica. Hoy se sabe por una
+          // lista corta y explícita; cuando sean muchas, tendrá que salir de la
+          // verificación como los parámetros.
+          gobernadas: todas.filter((c) => CABLEADAS.has(`${e.clave}.${c.clave}`)).length,
+          conBrecha: todas.filter((c) => c.brecha).length,
+          sinAgendar: todas.filter((c) => c.automatizacion?.agendada === false).length,
+        }
+      })(),
       hechos: {
         permanentes: (m?.hechos ?? []).filter((h) => h.tipo !== 'condicionado').length,
         condicionados: (m?.hechos ?? []).filter((h) => h.tipo === 'condicionado').length,
@@ -148,9 +174,12 @@ export function laCifra(pools: EstadoDePool[]): string {
     (a, p) => a + p.parametros.total + p.hechos.permanentes + p.hechos.condicionados,
     0,
   )
+  const autos = pools.reduce((a, p) => a + p.automatizaciones.total, 0)
+  const autosGob = pools.reduce((a, p) => a + p.automatizaciones.gobernadas, 0)
   return (
     `Presentación en ${prendidos.length} de ${pools.length} pools ` +
-    `(${pantallas} pantallas) · ${gobernados} parámetros de ${parametros}`
+    `(${pantallas} pantallas) · ${gobernados} parámetros de ${parametros} · ` +
+    `${autosGob} automatización(es) de ${autos}`
   )
 }
 

@@ -70,6 +70,11 @@ export default async function EstadoPage({ params }: { params: { slug: string } 
               `${sumar((p) => p.parametros.sensibles)} sensibles fuera del lector · ${sumar((p) => p.parametros.conBrecha)} con brecha · ${sumar((p) => p.hechos.permanentes)} hechos permanentes + ${sumar((p) => p.hechos.condicionados)} condicionados (no son parámetros)`,
             ],
             [
+              'Automatizaciones',
+              `${sumar((p) => p.automatizaciones.gobernadas)} de ${sumar((p) => p.automatizaciones.total)}`,
+              `gobernadas (cableadas, no sólo declaradas) · ${sumar((p) => p.automatizaciones.conBrecha)} con brecha · ${sumar((p) => p.automatizaciones.sinAgendar)} sin agendar`,
+            ],
+            [
               'Problemas abiertos',
               `${sumar((p) => p.diferencias + p.defectosAbiertos + p.parametros.conflictos + p.parametros.parciales)}`,
               `${sumar((p) => p.diferencias)} diferencias · ${sumar((p) => p.defectosAbiertos)} defectos de pieza · ${sumar((p) => p.parametros.conflictos)} conflictos de fuente · ${sumar((p) => p.parametros.parciales)} cableados a medias`,
@@ -156,6 +161,14 @@ export default async function EstadoPage({ params }: { params: { slug: string } 
                     ) : (
                       <ul className="space-y-0.5">
                         {p.diferencias > 0 && <li>{p.diferencias} diferencia(s) con el código</li>}
+                        {p.automatizaciones.conBrecha > 0 && (
+                          <li className="text-amber-600">
+                            {p.automatizaciones.conBrecha} automatización(es) con brecha
+                          </li>
+                        )}
+                        {p.automatizaciones.sinAgendar > 0 && (
+                          <li>{p.automatizaciones.sinAgendar} declarada(s) y sin agendar: no corren</li>
+                        )}
                         {p.fallbacks > 0 && <li>{p.fallbacks} caída(s) al código</li>}
                         {p.defectosAbiertos > 0 && <li>{p.defectosAbiertos} defecto(s) de pieza</li>}
                         {p.parametros.conflictos > 0 && (
