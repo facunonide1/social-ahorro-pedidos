@@ -115,6 +115,7 @@ export const MANIFIESTO_TAREAS: Manifiesto = {
         },
         { clave: 'generar_recurrencias', titulo: 'Generar el trabajo que se repite', participacion: 'hace_y_avisa', reversible: true, motivo: 'Ejecuta una regla explícita, no una decisión propia.',
           automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/recurrencias", agendada: false, al_apagar: "Las tareas recurrentes ya creadas quedan." },
+          brecha: "Declarada `hace_y_avisa` —o sea que lo hace sola— y NO está agendada: /api/cron/recurrencias existe y no figura en vercel.json. Hoy no corre nadie. El nivel se mantiene porque describe lo que la acción DEBE hacer; lo que falta es agendarla o decidir que no va.",
         },
         { clave: 'marcar_vencidas', titulo: 'Marcar lo que se pasó de fecha', participacion: 'hace_y_avisa', reversible: true, motivo: 'Cambia un estado calculable a partir de la hora. No decide nada.',
           automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/marcar-vencidas", agendada: true, al_apagar: "Lo marcado vencido queda marcado. Apagarla deja tareas vencidas sin marcar." },

@@ -128,6 +128,7 @@ export const MANIFIESTO_CLIENTES: Manifiesto = {
           // no sobre la pieza. Otro proyecto puede instalar Clientes con el paso
           // de confirmación puesto. Vive en los overrides de la instalación.,
           automatizacion: { corre_sola: true, disparo: 'cron', donde_corre: "/api/cron/correr-automatizaciones", agendada: true, al_apagar: "Las campañas ya enviadas NO se pueden traer de vuelta: le llegaron a un cliente. Apagarla evita las siguientes y nada más." },
+          brecha: "El código NO cumple `prepara`. /api/cron/correr-automatizaciones llama a correrAutomatizaciones, que inserta la campaña con estado 'enviada' e inserta los envíos con estado 'enviado' y enviado_at: le llega a un cliente sin que nadie confirme. Relevado de nuevo en v0.74, no asumido: la brecha está abierta desde v0.60. El nivel declarado se mantiene en `prepara` porque es el que corresponde —compromete a un tercero y es irreversible—; bajarlo a hace_y_avisa para que un validador dé verde sería bendecir lo que hay.",
         },
         {
           clave: 'eliminar_cliente',

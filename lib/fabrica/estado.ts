@@ -187,6 +187,19 @@ export const LO_QUE_NO_SE_PUEDE_AFIRMAR: Limite[] = [
     paraPoder: 'Un detector que entienda el código en vez de buscar texto. Hoy hay uno que busca identificadores exactos dentro del cuerpo de la función declarada, y lo dice.',
   },
   {
+    que: 'Que una automatización CORRA.',
+    porque:
+      'Se puede comprobar que el cron esté agendado en vercel.json y que su ruta exista. Que Vercel lo haya disparado, que haya terminado y que haya hecho lo declarado, no: eso necesita datos de ejecución y hoy no los hay. Por eso ninguna se declara "verificada", sólo "agendada y con ruta".',
+    paraPoder:
+      'Registrar cada corrida —cuándo empezó, cuándo terminó, qué hizo— y leer eso en vez del archivo.',
+  },
+  {
+    que: 'Que apagar una automatización alcance para que no pase nada.',
+    porque:
+      'Apagarla evita lo que fuera a hacer de acá en adelante. Lo que ya hizo queda, y el manifiesto obliga a declarar qué: campañas enviadas que le llegaron a un cliente, avisos leídos, tareas creadas.',
+    paraPoder: 'Nada: es así por naturaleza. Lo que se puede es decirlo antes de firmar, y se dice.',
+  },
+  {
     que: 'Que un lugar verificado por ANCLA siga verificado mañana.',
     porque:
       'Un ancla es un fragmento de código en el manifiesto: sobrevive a un cambio de valor, no a un reformateo. Hoy hay 1, y se cuenta aparte de las verificaciones fuertes en vez de sumarse.',
