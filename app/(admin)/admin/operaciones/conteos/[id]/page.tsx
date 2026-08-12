@@ -104,7 +104,8 @@ export default async function ConteoPage({ params }: { params: { id: string } })
       <Card className="space-y-2 p-4">
         <p className="text-base leading-relaxed">
           Contaste <b>{conteo.total_items ?? 0}</b> items.{' '}
-          <b>{conteo.items_coinciden ?? 0}</b> coinciden.{' '}
+          <b>{conteo.items_coinciden ?? 0}</b>{' '}
+          {conteo.items_coinciden === 1 ? 'coincide' : 'coinciden'}.{' '}
           <b>{conteo.items_diferencia ?? 0}</b>{' '}
           {conteo.items_diferencia === 1 ? 'tiene diferencia' : 'tienen diferencia'}
           {Number(conteo.valor_diferencia ?? 0) !== 0
