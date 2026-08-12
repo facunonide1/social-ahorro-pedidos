@@ -17,6 +17,10 @@ import { createAdminClient } from '../lib/supabase/server'
 import { estadoDelLector, PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
 import { historialDeCampo, procedenciaDe } from '../lib/fabrica/procedencia'
 import { versionActual } from '../lib/fabrica/versiones'
+import { abrirPrueba, cerrarPrueba } from './fabrica-marco-de-prueba'
+
+// Antes de la primera escritura: lo que se escriba antes nace sin marca.
+abrirPrueba()
 
 const POOL = 'stock'
 const CLAVE = 'recalcular_rotacion'
@@ -129,6 +133,7 @@ async function main() {
     (x) => x.campos.some((c) => c.startsWith('automatizaciones.')),
   )
   console.log(`\npropuestas de automatización en el historial: ${nuevas.length}`)
+  await cerrarPrueba()
   console.log('')
   process.exit(fallo ? 1 : 0)
 }

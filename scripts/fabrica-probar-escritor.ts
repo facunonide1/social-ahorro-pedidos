@@ -22,6 +22,10 @@ import { historial, versionActual } from '../lib/fabrica/versiones'
 import { tituloDePantalla } from '../lib/os/definicion'
 import { tituloGobernante } from '../lib/fabrica/lector'
 import { PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
+import { abrirPrueba, cerrarPrueba } from './fabrica-marco-de-prueba'
+
+// Antes de la primera escritura: lo que se escriba antes nace sin marca.
+abrirPrueba()
 
 const POOL = process.argv[2] ?? 'documentos'
 const RUTA = '/admin/finanzas/documentos/revision/[id]'
@@ -146,6 +150,7 @@ async function main() {
     )
   }
 
+  await cerrarPrueba()
   console.log('')
   process.exit(fallo ? 1 : 0)
 }

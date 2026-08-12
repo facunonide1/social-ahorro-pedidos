@@ -18,6 +18,7 @@ import { listarPropuestas, proponer } from './propuestas'
 import { overridesActuales, resolver, type Overrides } from './overrides'
 import { versionActual } from './versiones'
 import type { Manifiesto } from './tipos'
+import { enPrueba } from './prueba'
 
 /**
  * EL CHAT DE LA FÁBRICA.
@@ -452,6 +453,7 @@ async function registrar(args: {
         propuesta_id: args.r.propuestaId ?? null,
         carril: args.r.carril ?? null,
         negativa: args.r.negativa?.motivo ?? null,
+        es_prueba: enPrueba(),
       })
       .select('id')
       .single()

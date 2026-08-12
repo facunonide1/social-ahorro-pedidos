@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import type { Manifiesto } from './tipos'
 import type { Overrides } from './overrides'
+import { artefactosVisibles, enPrueba } from './prueba'
 
 /**
  * LA PROCEDENCIA DE CADA VALOR DECLARADO.
@@ -116,6 +117,7 @@ export async function registrarProcedencia(args: {
       propuesta_id: args.propuestaId ?? null,
       es_reversion: args.esReversion ?? false,
       decidido_por: args.autorId,
+      es_prueba: enPrueba(),
       ...(args.decididoAt ? { decidido_at: args.decididoAt } : {}),
     }))
     const { error } = await adm.from('fab_procedencia').insert(filas)
@@ -255,6 +257,7 @@ export async function procedenciaDe(
       .select('*')
       .eq('pool_id', poolId)
       .or(`proyecto_id.eq.${proyectoId},proyecto_id.is.null`)
+      .in('es_prueba', artefactosVisibles())
       .order('decidido_at', { ascending: true })
       .limit(2000)
 
@@ -290,7 +293,12 @@ export async function historialDeCampo(
     const poolId = (pool as { id: string } | null)?.id
     if (!poolId) return []
 
-    let q = adm.from('fab_procedencia').select('*').eq('pool_id', poolId).eq('campo', campo)
+    let q = adm
+      .from('fab_procedencia')
+      .select('*')
+      .eq('pool_id', poolId)
+      .eq('campo', campo)
+      .in('es_prueba', artefactosVisibles())
     if (proyectoId) q = q.or(`proyecto_id.eq.${proyectoId},proyecto_id.is.null`)
     const { data } = await q.order('decidido_at', { ascending: false }).limit(50)
     return ((data ?? []) as unknown as Fila[]).map(aProcedencia)
@@ -316,6 +324,7 @@ export async function camposConHistoriaDificil(
       .select('campo, es_reversion, pool:fab_pools(clave)')
       .eq('proyecto_id', proyectoId)
       .eq('es_reversion', true)
+      .in('es_prueba', artefactosVisibles())
       .limit(500)
 
     const cuenta = new Map<string, { campo: string; poolClave: string; reversiones: number }>()

@@ -10,6 +10,10 @@ import { aplicar, listarPropuestas, proponer, revertirPropuesta } from '../lib/f
 import { tituloGobernante } from '../lib/fabrica/lector'
 import { versionActual } from '../lib/fabrica/versiones'
 import { PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
+import { abrirPrueba, cerrarPrueba } from './fabrica-marco-de-prueba'
+
+// Antes de la primera escritura: lo que se escriba antes nace sin marca.
+abrirPrueba()
 
 const POOL = 'documentos'
 const RUTA = '/admin/finanzas/documentos/lote'
@@ -99,6 +103,7 @@ async function main() {
   paso(7, ok7, `carril ${prohibida?.carril} · estado ${registrada?.estado}`)
   console.log(`    motivo: ${registrada?.carrilMotivo}`)
 
+  await cerrarPrueba()
   console.log('')
   process.exit(fallo ? 1 : 0)
 }

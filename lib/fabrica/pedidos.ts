@@ -1,5 +1,6 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import type { EstadoPedido, QueFalta } from './pedidos-etiquetas'
+import { enPrueba } from './prueba'
 
 /**
  * LOS PEDIDOS DE CONSTRUCCIÓN.
@@ -134,6 +135,7 @@ export async function anotarPedido(args: {
       se_parece_a: args.seParece?.trim() || null,
       turno_id: args.turnoId ?? null,
       creado_por: args.autorId,
+      es_prueba: enPrueba(),
     })
     .select(SELECT)
     .single()

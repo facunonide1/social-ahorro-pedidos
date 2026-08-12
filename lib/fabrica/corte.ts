@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server'
+import { artefactosVisibles } from './prueba'
 
 /**
  * EL CORTE, POR CAMPO.
@@ -79,6 +80,7 @@ export async function cortesPorCampo(clave: string): Promise<Map<string, string>
       .select('campo, decidido_at')
       .eq('pool_id', poolId)
       .eq('nivel', 'pool')
+      .in('es_prueba', artefactosVisibles())
       .order('decidido_at', { ascending: true })
       .limit(5000)
 

@@ -9,6 +9,7 @@ import { PROYECTO_SOCIAL_AHORRO } from './flag'
 import type { EstadoLector } from './lector-estados'
 import { esGobernable, fueraDeContrato } from './tipos'
 import type { Manifiesto } from './tipos'
+import { enPrueba } from './prueba'
 
 /**
  * EL LECTOR.
@@ -281,6 +282,7 @@ async function registrar(
       aspecto,
       motivo,
       detalle,
+      es_prueba: enPrueba(),
     })
   } catch {
     // Silencio deliberado.

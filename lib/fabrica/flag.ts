@@ -3,6 +3,7 @@ import { corteDe } from './cobertura-lector'
 import { cortesPorCampo, diferenciasAbiertas, SIN_CORTE } from './corte'
 import { ESTADOS_LECTOR } from './lector-estados'
 import type { EstadoLector } from './lector-estados'
+import { artefactosVisibles, enPrueba } from './prueba'
 
 /**
  * El interruptor del lector, por pool.
@@ -69,11 +70,13 @@ export async function estadoDelLector(
     sb
       .from('fab_lector_eventos')
       .select('pool_clave, tipo, aspecto, detalle, ocurrido_at')
-      .eq('proyecto_id', proyectoId),
+      .eq('proyecto_id', proyectoId)
+      .in('es_prueba', artefactosVisibles()),
     sb
       .from('fab_lector_cambios')
       .select('pool_clave, desde, hasta, cambiado_at, cambiado_por, panico')
       .eq('proyecto_id', proyectoId)
+      .in('es_prueba', artefactosVisibles())
       .order('cambiado_at', { ascending: false }),
   ])
 
@@ -230,6 +233,7 @@ export async function cambiarEstadoLector(args: {
     hasta: args.hasta,
     panico: false,
     motivo: args.motivo ?? null,
+    es_prueba: enPrueba(),
     cambiado_por: args.usuarioId,
   })
 

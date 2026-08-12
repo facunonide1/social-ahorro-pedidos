@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server'
+import { artefactosVisibles, enPrueba } from './prueba'
 
 /**
  * LOS DEFECTOS DE LA PIEZA.
@@ -107,6 +108,7 @@ export async function anotarDefecto(args: {
       detectado_por: args.detectadoPor,
       evidencia: args.evidencia ?? null,
       en_que_proyectos: args.enQueProyectos ?? [],
+      es_prueba: enPrueba(),
     })
     .select('id')
     .single()
@@ -143,7 +145,7 @@ export async function defectos(
   opciones: { soloAbiertos?: boolean } = {},
 ): Promise<DefectoPieza[]> {
   const adm = createAdminClient()
-  let q = adm.from('fab_defectos_pieza').select(SELECT)
+  let q = adm.from('fab_defectos_pieza').select(SELECT).in('es_prueba', artefactosVisibles())
   if (opciones.soloAbiertos) q = q.eq('estado', 'abierto')
   const { data } = await q.order('detectado_at', { ascending: true }).limit(500)
   return ((data ?? []) as unknown as Fila[]).map(aDefecto)

@@ -3,6 +3,7 @@ import { obtenerDefinicion } from './lector'
 import { overridesActuales, resolver } from './overrides'
 import { versionActual } from './versiones'
 import { PROYECTO_SOCIAL_AHORRO } from './flag'
+import { artefactosVisibles, enPrueba } from './prueba'
 
 /**
  * VERIFICACIÓN PROVOCADA.
@@ -153,6 +154,7 @@ export async function verificarPool(args: {
     diferencias: resultado.diferencias,
     detalle: resultado.pantallas as unknown as Record<string, unknown>[],
     corrida_por: args.autorId ?? null,
+    es_prueba: enPrueba(),
   })
 
   return resultado
@@ -182,6 +184,7 @@ export async function ultimasVerificaciones(proyectoId: string): Promise<Map<str
     .from('fab_verificaciones')
     .select('pool_clave, corrida_at, diferencias, pantallas_declaradas, pantallas_verificadas, origen')
     .eq('proyecto_id', proyectoId)
+    .in('es_prueba', artefactosVisibles())
     .order('corrida_at', { ascending: false })
 
   const out = new Map<string, UltimaVerificacion>()

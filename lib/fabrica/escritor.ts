@@ -15,6 +15,7 @@ import {
   type RechazoOverride,
 } from './overrides'
 import type { Manifiesto, PantallaDeclarada, ParametroConfigurable } from './tipos'
+import { enPrueba } from './prueba'
 
 /**
  * EL ESCRITOR.
@@ -482,6 +483,7 @@ export async function escribirVersion(args: {
     p_motivo: args.motivo.trim(),
     p_autor: args.autorId,
     p_revierte_a: args.revierteA ?? null,
+    p_prueba: enPrueba(),
   })
 
   if (error || !data) {
@@ -629,6 +631,7 @@ export async function escribirOverride(args: {
     p_motivo: args.motivo.trim(),
     p_autor: args.autorId,
     p_revierte_a: args.revierteA ?? null,
+    p_prueba: enPrueba(),
   })
   if (error) return { ok: false, error: 'No se pudo guardar. No se cambió nada.' }
 

@@ -18,6 +18,10 @@ import { estadoDelLector, PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
 import { overridesActuales } from '../lib/fabrica/overrides'
 import { parametro } from '../lib/os/definicion'
 import { versionActual } from '../lib/fabrica/versiones'
+import { abrirPrueba, cerrarPrueba } from './fabrica-marco-de-prueba'
+
+// Antes de la primera escritura: lo que se escriba antes nace sin marca.
+abrirPrueba()
 
 const POOL = 'stock'
 const CLAVE = 'dias_aviso_vencimiento'
@@ -144,6 +148,7 @@ async function main() {
     .gte('ocurrido_at', corte)
   console.log(`eventos provocados por la prueba, borrados: ${count ?? 0}`)
 
+  await cerrarPrueba()
   console.log('')
   process.exit(fallo ? 1 : 0)
 }

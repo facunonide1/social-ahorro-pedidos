@@ -20,6 +20,10 @@ import { aplicar, listarPropuestas, proponer, revertirPropuesta } from '../lib/f
 import { createAdminClient } from '../lib/supabase/server'
 import { parametro } from '../lib/os/definicion'
 import { PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
+import { abrirPrueba, cerrarPrueba } from './fabrica-marco-de-prueba'
+
+// Antes de la primera escritura: lo que se escriba antes nace sin marca.
+abrirPrueba()
 
 const POOL = 'stock'
 const CLAVE = 'dias_aviso_vencimiento'
@@ -115,6 +119,7 @@ async function main() {
   console.log(`\nInterruptores de carril verde habilitados al terminar: ${count ?? 0} (tiene que ser 0)`)
   if ((count ?? 0) !== 0) fallo = true
 
+  await cerrarPrueba()
   console.log('')
   process.exit(fallo ? 1 : 0)
 }

@@ -15,6 +15,10 @@ import { escribirOverride, escribirVersion } from '../lib/fabrica/escritor'
 import { overridesActuales, resolver } from '../lib/fabrica/overrides'
 import { versionActual } from '../lib/fabrica/versiones'
 import { PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
+import { abrirPrueba, cerrarPrueba } from './fabrica-marco-de-prueba'
+
+// Antes de la primera escritura: lo que se escriba antes nace sin marca.
+abrirPrueba()
 
 const POOL = 'documentos'
 const RUTA = '/admin/finanzas/documentos'
@@ -164,6 +168,7 @@ async function main() {
     `proyecto de prueba borrado · Social Ahorro intacto: ${count} instalaciones y sigue diciendo "Documentos a pagar"`,
   )
 
+  await cerrarPrueba()
   console.log('')
   process.exit(fallo ? 1 : 0)
 }

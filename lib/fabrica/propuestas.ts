@@ -17,6 +17,7 @@ import {
 import { efectoDe } from './efecto'
 import { overridesActuales, resolver, type Overrides } from './overrides'
 import { versionActual } from './versiones'
+import { artefactosVisibles, enPrueba } from './prueba'
 
 /**
  * LA COLA DEL TALLER.
@@ -194,11 +195,16 @@ export async function proponer(args: {
 
   // Una propuesta rechazada dos veces no se vuelve a proponer: insistir con lo
   // que ya se dijo que no es la forma más rápida de que dejen de leerse.
+  // Filtra SIEMPRE, también dentro de una prueba, y es el único lugar que lo
+  // hace: en v0.74 dos propuestas rechazadas por corridas que fallaron
+  // bloquearon el cambio real por esta misma regla. Un artefacto de prueba
+  // puede ensuciar un número; que además bloquee una decisión es otra cosa.
   const { data: previas } = await adm
     .from('fab_propuestas')
     .select('id, estado, veces_rechazada')
     .eq('proyecto_id', args.proyectoId)
     .eq('huella', huella)
+    .eq('es_prueba', false)
   const rechazos = ((previas ?? []) as { estado: string }[]).filter((p) => p.estado === 'rechazada').length
   if (rechazos >= 2) {
     return { ok: false, yaRechazada: true, error: 'Este cambio ya se rechazó dos veces. No se vuelve a proponer.' }
@@ -263,6 +269,7 @@ export async function proponer(args: {
       carril_motivo: veredicto.motivo,
       que_cambia: queCambia as unknown as Record<string, unknown>[],
       porque: args.porque.trim(),
+      es_prueba: enPrueba(),
       afecta: { pantallas: queCambia.length, personas, pools: [args.clave] },
       costo_revertir: costoDe(queCambia, gobernando),
       // El rojo entra como rechazado de entrada: el Taller no lo propone, pero
@@ -514,6 +521,7 @@ export async function listarPropuestas(
     .from('fab_propuestas')
     .select('*')
     .eq('proyecto_id', proyectoId)
+    .in('es_prueba', artefactosVisibles())
     .order('creada_at', { ascending: false })
     .limit(200)
   return ((data ?? []) as unknown as Fila[]).map(aPropuesta)

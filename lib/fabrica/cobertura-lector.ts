@@ -2,6 +2,7 @@ import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { cortesPorCampo, diferenciasAbiertas } from './corte'
 import { versionActual } from './versiones'
 import { overridesActuales } from './overrides'
+import { artefactosVisibles } from './prueba'
 
 /**
  * QUE EL CERO NO MIENTA.
@@ -79,7 +80,8 @@ export async function coberturaDe(
       .select('tipo, aspecto, detalle, ocurrido_at')
       .eq('proyecto_id', proyectoId)
       .eq('pool_clave', clave)
-      .eq('tipo', 'diferencia'),
+      .eq('tipo', 'diferencia')
+      .in('es_prueba', artefactosVisibles()),
   ])
 
   // Sólo cuentan las consultas posteriores al último cambio: una pantalla que

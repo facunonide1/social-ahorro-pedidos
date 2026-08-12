@@ -15,6 +15,10 @@ import { PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
 // Se MIRA con `tituloGobernante`, que no compara ni registra: pasar un literal
 // inventado como 'FALLBACK' lo dejaba en el log como una diferencia real.
 import { tituloGobernante } from '../lib/fabrica/lector'
+import { abrirPrueba, cerrarPrueba } from './fabrica-marco-de-prueba'
+
+// Antes de la primera escritura: lo que se escriba antes nace sin marca.
+abrirPrueba()
 
 // Los pasos 1 a 5 van sobre STOCK y no sobre documentos a propósito: en
 // documentos ya hubo propuestas de título aplicadas y revertidas por las
@@ -160,6 +164,7 @@ async function main() {
   if (!seRegistraron) fallo = true
   console.log(`\n${seRegistraron ? '✓' : '✗'} el registro de conversaciones guardó los turnos`)
 
+  await cerrarPrueba()
   console.log('')
   process.exit(fallo ? 1 : 0)
 }

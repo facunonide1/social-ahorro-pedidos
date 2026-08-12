@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { traerProyecto } from '@/lib/fabrica/datos'
+import { artefactosVisibles } from '@/lib/fabrica/prueba'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Actividad' }
@@ -24,12 +25,14 @@ export default async function ActividadPage({ params }: { params: { slug: string
     sb
       .from('fab_pool_versiones')
       .select('numero, notas_cambio, created_at, created_by, revierte_a, es_actual, pool:fab_pools!inner(clave, nombre)')
+      .in('es_prueba', artefactosVisibles())
       .order('created_at', { ascending: false })
       .limit(60),
     sb
       .from('fab_lector_cambios')
       .select('pool_clave, desde, hasta, panico, motivo, cambiado_at, cambiado_por')
       .eq('proyecto_id', proyecto.id)
+      .in('es_prueba', artefactosVisibles())
       .order('cambiado_at', { ascending: false })
       .limit(60),
     sb

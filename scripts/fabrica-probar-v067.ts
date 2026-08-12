@@ -19,6 +19,10 @@ import { overridesActuales } from '../lib/fabrica/overrides'
 // inventado como 'FALLBACK' lo dejaba en el log como una diferencia real.
 import { tituloGobernante } from '../lib/fabrica/lector'
 import { versionActual } from '../lib/fabrica/versiones'
+import { abrirPrueba, cerrarPrueba } from './fabrica-marco-de-prueba'
+
+// Antes de la primera escritura: lo que se escriba antes nace sin marca.
+abrirPrueba()
 
 const AUTOR = '5bf8468f-c6a2-4231-8bcb-3c943777bf03'
 const POOL = 'stock'
@@ -174,6 +178,7 @@ async function main() {
     console.log('el pedido de prueba se borró de la cola')
   }
 
+  await cerrarPrueba()
   console.log('')
   process.exit(fallo ? 1 : 0)
 }

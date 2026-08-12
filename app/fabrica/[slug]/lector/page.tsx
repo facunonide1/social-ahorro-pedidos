@@ -14,6 +14,7 @@ import {
 import { ESTADOS_LECTOR, ETIQUETA_LECTOR, EXPLICACION_LECTOR } from '@/lib/fabrica/lector-estados'
 import { informePreparacion } from '@/lib/fabrica/preparacion'
 import { traerProyecto } from '@/lib/fabrica/datos'
+import { artefactosVisibles } from '@/lib/fabrica/prueba'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Preparación del lector' }
@@ -41,6 +42,7 @@ export default async function LectorPage({ params }: { params: { slug: string } 
     .from('fab_lector_eventos')
     .select('pool_clave, tipo, aspecto, motivo, detalle, ocurrido_at')
     .eq('proyecto_id', proyecto.id)
+    .in('es_prueba', artefactosVisibles())
     .order('ocurrido_at', { ascending: false })
     .limit(50)
   const filas = (eventos ?? []) as {

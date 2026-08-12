@@ -21,6 +21,10 @@ import { estadoDelLector, PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
 import { porQueNo, type MotivoNegativa } from '../lib/fabrica/negativas'
 import { overridesActuales, resolver } from '../lib/fabrica/overrides'
 import { versionActual } from '../lib/fabrica/versiones'
+import { abrirPrueba, cerrarPrueba } from './fabrica-marco-de-prueba'
+
+// Antes de la primera escritura: lo que se escriba antes nace sin marca.
+abrirPrueba()
 
 const AUTOR = '5bf8468f-c6a2-4231-8bcb-3c943777bf03'
 
@@ -120,6 +124,7 @@ async function main() {
     afirmar(!r.propuestaId, 'no dejó ninguna propuesta en la cola')
   }
 
+  await cerrarPrueba()
   console.log('')
   process.exit(fallo ? 1 : 0)
 }

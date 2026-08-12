@@ -19,6 +19,10 @@ import { historialDeCampo, procedenciaDe } from '../lib/fabrica/procedencia'
 import { parametro } from '../lib/os/definicion'
 import { parametroGobernante } from '../lib/fabrica/lector'
 import { PROYECTO_SOCIAL_AHORRO } from '../lib/fabrica/flag'
+import { abrirPrueba, cerrarPrueba } from './fabrica-marco-de-prueba'
+
+// Antes de la primera escritura: lo que se escriba antes nace sin marca.
+abrirPrueba()
 
 const POOL = 'stock'
 const CLAVE = 'dias_aviso_vencimiento'
@@ -173,6 +177,7 @@ async function main() {
     (x) => !antes.some((a) => a.id === x.id),
   )
   console.log(`\npropuestas creadas por la prueba: ${nuevas.length} (quedan en el historial del Taller)`)
+  await cerrarPrueba()
   console.log('')
   process.exit(fallo ? 1 : 0)
 }
