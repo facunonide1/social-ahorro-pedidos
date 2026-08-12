@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -59,13 +60,15 @@ const SIN_COLUMNA = '__ninguna__'
 export default function ImportarClient({
   puntos,
   listas,
+  puntoPorDefecto,
 }: {
   puntos: Punto[]
   listas: Lista[]
+  puntoPorDefecto?: string | null
 }) {
   const router = useRouter()
   const [zona, setZona] = useState('')
-  const [puntoId, setPuntoId] = useState<string>(SIN_COLUMNA)
+  const [puntoId, setPuntoId] = useState<string>(puntoPorDefecto ?? SIN_COLUMNA)
   const [listaId, setListaId] = useState<string>(SIN_COLUMNA)
   const [headers, setHeaders] = useState<string[]>([])
   const [filas, setFilas] = useState<string[][]>([])
@@ -75,6 +78,7 @@ export default function ImportarClient({
     unidad: SIN_COLUMNA,
     orden: SIN_COLUMNA,
   })
+  const [pegado, setPegado] = useState('')
   const [previa, setPrevia] = useState<Previa | null>(null)
   const [cargando, setCargando] = useState(false)
 
@@ -104,7 +108,37 @@ export default function ImportarClient({
     }
   }
 
+  /**
+   * Lo pegado, leído como filas.
+   *
+   * Existe porque el archivo es una barrera para el caso que más va a pasar al
+   * principio: quince productos de una góndola, anotados en el teléfono o
+   * copiados de una planilla abierta. Pedir un .xlsx para eso es pedir que
+   * alguien abra Excel, guarde y suba — tres pasos antes del primero.
+   *
+   * Una línea por item. Si la línea trae tabulación, coma o punto y coma, lo de
+   * antes es el SKU y lo de después la descripción; si no trae ninguno, la
+   * línea entera es la descripción y el item queda sin SKU — que se cuenta
+   * igual, sólo que al cerrar no va a tener contra qué compararse.
+   */
+  function filasPegadas() {
+    return pegado
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l !== '')
+      .map((linea, i) => {
+        const m = linea.match(/^([^\t,;]+)[\t,;]\s*(.+)$/)
+        return {
+          sku: m ? m[1].trim() : null,
+          descripcion: m ? m[2].trim() : linea,
+          unidad: null,
+          orden: i + 1,
+        }
+      })
+  }
+
   function armarFilas() {
+    if (headers.length === 0 && pegado.trim() !== '') return filasPegadas()
     const idx = (col: string) => (col === SIN_COLUMNA ? -1 : headers.indexOf(col))
     const iSku = idx(mapa.sku)
     const iDesc = idx(mapa.descripcion)
@@ -154,8 +188,9 @@ export default function ImportarClient({
     }
   }
 
-  const puedeVerPrevia =
-    filas.length > 0 && mapa.descripcion !== SIN_COLUMNA && (listaId !== SIN_COLUMNA || zona.trim() !== '')
+  const hayItems =
+    (filas.length > 0 && mapa.descripcion !== SIN_COLUMNA) || filasPegadas().length > 0
+  const puedeVerPrevia = hayItems && (listaId !== SIN_COLUMNA || zona.trim() !== '')
 
   return (
     <div className="space-y-4">
@@ -192,7 +227,7 @@ export default function ImportarClient({
                 <Select value={puntoId} onValueChange={setPuntoId}>
                   <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={SIN_COLUMNA}>Sin punto (vale para todos)</SelectItem>
+                    <SelectItem value={SIN_COLUMNA}>Sin punto (lo pone quien cuente)</SelectItem>
                     {puntos.map((p) => (
                       <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
                     ))}
@@ -217,6 +252,25 @@ export default function ImportarClient({
             no el del catálogo.
           </p>
         </div>
+
+        {headers.length === 0 ? (
+          <div className="space-y-1.5">
+            <Label htmlFor="pegado">…o pegá la lista acá</Label>
+            <Textarea
+              id="pegado"
+              value={pegado}
+              onChange={(e) => setPegado(e.target.value)}
+              rows={6}
+              placeholder={'DEMO-0001, Paracetamol 500 x20\nDEMO-0002, Ibuprofeno 400 x10\nCrema de manos (sin SKU)'}
+              className="font-mono text-xs"
+            />
+            <p className="text-xs text-muted-foreground">
+              Una línea por item, en el orden en que se recorre la góndola. Si la línea
+              trae coma o tabulación, lo de antes es el SKU. Sin SKU también entra: se
+              cuenta igual, pero al cerrar no va a tener con qué compararse.
+            </p>
+          </div>
+        ) : null}
 
         {headers.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-4">

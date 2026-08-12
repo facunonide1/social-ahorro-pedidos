@@ -7,7 +7,7 @@ import ImportarClient from '../importar-client'
 export const dynamic = 'force-dynamic'
 
 export default async function ImportarListaPage() {
-  await requireAdminHubAccess({
+  const perfil = await requireAdminHubAccess({
     allowedRoles: ['super_admin', 'gerente', 'administrativo', 'comprador'],
   })
   const sb = createClient()
@@ -25,6 +25,10 @@ export default async function ImportarListaPage() {
       <ImportarClient
         puntos={(puntos ?? []) as { id: string; nombre: string }[]}
         listas={(listas ?? []) as { id: string; zona: string }[]}
+        // El punto de quien importa, precargado. Una lista sin punto obliga a
+        // que lo tenga el usuario que cuenta, y si tampoco lo tiene el conteo
+        // no puede empezar: mejor que venga puesto y se cambie a mano.
+        puntoPorDefecto={perfil.sucursal_id ?? null}
       />
     </div>
   )
