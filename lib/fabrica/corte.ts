@@ -54,9 +54,16 @@ export function campoDelEvento(evento: {
   aspecto: string | null
   detalle: unknown
 }): string | null {
-  const d = (evento.detalle ?? {}) as { ruta?: string; clave?: string }
+  const d = (evento.detalle ?? {}) as { ruta?: string; clave?: string; automatizacion?: string }
   if (evento.aspecto === 'pantallas' && d.ruta) return `pantallas.${d.ruta}.titulo`
   if (evento.aspecto === 'parametros' && d.clave) return `configurable.${d.clave}`
+  // Desde v0.75. Sin esta línea los eventos de automatización caían al corte del
+  // POOL, que es el hallazgo 12: arreglar una automatización borraba las alarmas
+  // de las otras tres. El nombre del campo es el mismo que usa la procedencia,
+  // porque es el mismo campo.
+  if (evento.aspecto === 'automatizaciones' && d.automatizacion) {
+    return `automatizaciones.${d.automatizacion}.activa`
+  }
   return null
 }
 

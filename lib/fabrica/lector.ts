@@ -290,6 +290,27 @@ async function registrar(
 }
 
 /**
+ * El código preguntó por una automatización que la declaración no conoce.
+ *
+ * Nunca es normal: o el manifiesto perdió lo que declaraba, o alguien renombró
+ * una clave y quedó la vieja en el código. En los dos casos la automatización
+ * corre por el valor del código y NADIE SE ENTERA — que es la peor forma de
+ * fallar de este aspecto, porque lo que corre de más se nota y lo que se
+ * gobierna de menos no.
+ *
+ * Se registra con el mismo dedupe que el resto: una vez por pool y por clave.
+ */
+export async function registrarAutomatizacionAusente(pool: string, clave: string): Promise<void> {
+  await registrar(
+    pool,
+    'fallback',
+    'automatizaciones',
+    'La declaración vigente no dice nada de esta automatización, y el código le pregunta.',
+    { automatizacion: clave },
+  )
+}
+
+/**
  * El contrato del lector.
  *
  * Orden de resolución:

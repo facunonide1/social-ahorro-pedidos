@@ -2,6 +2,7 @@ import {
   compararEnSombra,
   compararParametroEnSombra,
   obtenerDefinicion,
+  registrarAutomatizacionAusente,
 } from '@/lib/fabrica/lector'
 
 /**
@@ -142,7 +143,13 @@ export async function automatizacionActiva(
     const def = await obtenerDefinicion(pool, 'automatizaciones')
     if (!def || def.aspecto !== 'automatizaciones') return enCodigo
     const declarada = def.activas[clave]
-    if (typeof declarada !== 'boolean') return enCodigo
+    if (typeof declarada !== 'boolean') {
+      // El lector contestó y no sabe de esta automatización. Se usa el código —
+      // la garantía no cambia — pero queda constancia: un fallback mudo en este
+      // aspecto es indistinguible de que todo ande bien.
+      void registrarAutomatizacionAusente(pool, clave)
+      return enCodigo
+    }
     return declarada
   } catch {
     return enCodigo

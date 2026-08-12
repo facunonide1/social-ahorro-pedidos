@@ -276,6 +276,16 @@ export function validarManifiesto(m: Manifiesto): Problema[] {
   }
 
   /* ── Agentes ───────────────────────────────────────────────────────── */
+  // `agentes` ausente es legítimo: Configuración no tiene ninguno. Pero
+  // `agentes: null` no es ausente, es roto — y el `?? []` de abajo lo trataba
+  // como "no tiene", así que un manifiesto amputado validaba y gobernaba
+  // declarando cero automatizaciones donde había cuatro.
+  if (m.agentes !== undefined && m.agentes !== null && !Array.isArray(m.agentes)) {
+    err('agentes', 'no es una lista: un manifiesto roto no puede gobernar')
+  }
+  if (m.agentes === null) {
+    err('agentes', 'es null. Ausente es "no tiene agentes"; null es un manifiesto roto')
+  }
   for (const ag of m.agentes ?? []) {
     if (!ag.trabajo) err(`agentes.${ag.clave}`, 'sin trabajo declarado en lenguaje de negocio')
     if (ag.acciones.length === 0) err(`agentes.${ag.clave}`, 'un agente sin acciones no hace nada')
