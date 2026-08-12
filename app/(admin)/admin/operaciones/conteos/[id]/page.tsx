@@ -50,7 +50,7 @@ export default async function ConteoPage({ params }: { params: { id: string } })
   if (!conteo) redirect('/admin/operaciones/conteos')
   if (conteo.estado !== 'cerrado') redirect(`/admin/operaciones/conteos/${params.id}/contar`)
 
-  const [{ data: lista }, { data: renglones }] = await Promise.all([
+  const [{ data: lista }, { data: renglones }, { data: tareas }] = await Promise.all([
     sb.from('cnt_listas').select('zona').eq('id', conteo.lista_id).maybeSingle<{ zona: string }>(),
     sb
       .from('cnt_renglones')
@@ -58,6 +58,13 @@ export default async function ConteoPage({ params }: { params: { id: string } })
         'cantidad_contada, cantidad_esperada, diferencia, valor_diferencia, salteado, motivo_salteo, nota, cnt_lista_items(sku, descripcion)',
       )
       .eq('conteo_id', params.id),
+    // Las tareas se leen de la base, no del resultado que devolvió el cierre:
+    // así la pantalla dice lo que HAY, no lo que se pidió que hubiera.
+    sb
+      .from('tareas')
+      .select('id, titulo, estado, tipos_tareas(codigo)')
+      .eq('entidad_relacionada', 'conteo')
+      .eq('entidad_id', params.id),
   ])
 
   type Fila = {
@@ -125,6 +132,34 @@ export default async function ConteoPage({ params }: { params: { id: string } })
           </Alert>
         ) : null}
       </Card>
+
+      <section className="space-y-2">
+        <h2 className="text-sm font-semibold tracking-tight">Qué se abrió con esto</h2>
+        {(tareas ?? []).length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Ninguna tarea: o no hubo diferencias que superaran el umbral, o el conteo se
+            cerró antes de que existieran estas tareas.
+          </p>
+        ) : (
+          <div className="divide-y rounded-lg border">
+            {((tareas ?? []) as unknown as {
+              id: string
+              titulo: string
+              estado: string
+              tipos_tareas: { codigo: string } | null
+            }[]).map((t) => (
+              <div key={t.id} className="flex items-center justify-between gap-3 p-3 text-sm">
+                <span className="min-w-0 truncate">{t.titulo}</span>
+                <Badge variant="outline">{t.estado}</Badge>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">
+          NORA no ajusta stock: la corrección se hace en el sistema que manda, y que esté
+          hecha lo confirma quien la hizo cerrando la tarea. Acá no se cierra solo.
+        </p>
+      </section>
 
       <ResultadoClient
         zona={lista?.zona ?? 'zona'}

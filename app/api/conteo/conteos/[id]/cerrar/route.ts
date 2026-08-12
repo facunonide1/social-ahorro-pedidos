@@ -21,7 +21,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   const { data: visible } = await sb.from('cnt_conteos').select('id').eq('id', params.id).maybeSingle()
   if (!visible) return NextResponse.json({ error: 'no existe o no lo podés ver' }, { status: 404 })
 
-  const r = await cerrarConteo(params.id)
+  const r = await cerrarConteo(params.id, user.id)
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: 400 })
-  return NextResponse.json({ ok: true, resultado: r.resultado })
+  return NextResponse.json({ ok: true, resultado: r.resultado, consecuencias: r.consecuencias })
 }

@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server'
 
+import { aplicarConsecuencias, type Consecuencias } from './consecuencias'
 import { resolverEsperado, type Ambito } from './esperado'
 
 /**
@@ -44,7 +45,8 @@ export interface Resultado {
 
 export async function cerrarConteo(
   conteoId: string,
-): Promise<{ ok: true; resultado: Resultado } | { ok: false; error: string }> {
+  autorId: string | null = null,
+): Promise<{ ok: true; resultado: Resultado; consecuencias: Consecuencias } | { ok: false; error: string }> {
   const adm = createAdminClient()
 
   const { data: conteo } = await adm
@@ -151,20 +153,25 @@ export async function cerrarConteo(
       .eq('lista_item_id', r.listaItemId)
   }
 
-  return {
-    ok: true,
-    resultado: {
-      conteoId,
-      zona: lista?.zona ?? 'zona',
-      puntoId: conteo.punto_id,
-      total: renglones.length,
-      coinciden,
-      conDiferencia: conDiferencia.length,
-      sinComparar,
-      valorDiferencia,
-      // Ordenado por lo que cuesta, no por SKU: quien lee esto tiene que ver
-      // primero lo que más pesa.
-      renglones: [...renglones].sort((a, b) => Math.abs(b.valor) - Math.abs(a.valor)),
-    },
+  const resultado: Resultado = {
+    conteoId,
+    zona: lista?.zona ?? 'zona',
+    puntoId: conteo.punto_id,
+    total: renglones.length,
+    coinciden,
+    conDiferencia: conDiferencia.length,
+    sinComparar,
+    valorDiferencia,
+    // Ordenado por lo que cuesta, no por SKU: quien lee esto tiene que ver
+    // primero lo que más pesa.
+    renglones: [...renglones].sort((a, b) => Math.abs(b.valor) - Math.abs(a.valor)),
   }
+
+  /* ── 3 · las consecuencias ────────────────────────────────────────────── */
+  // Van después de que el conteo esté cerrado y las esperadas escritas. Si
+  // fallara la creación de una tarea, el conteo ya quedó bien cerrado: se puede
+  // volver a pedir la tarea, no se puede volver a contar la góndola.
+  const consecuencias = await aplicarConsecuencias(resultado, autorId)
+
+  return { ok: true, resultado, consecuencias }
 }
