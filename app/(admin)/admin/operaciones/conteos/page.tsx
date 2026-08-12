@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ClipboardList, Upload } from 'lucide-react'
+import { ClipboardList, History, Upload } from 'lucide-react'
 
 import { PageHeader } from '@/components/shared/page-header'
 import { Badge } from '@/components/ui/badge'
@@ -62,12 +62,20 @@ export default async function ConteosPage() {
         title={titulo}
         description="Se cuenta sin ver lo que el sistema espera. Las diferencias aparecen recién al cerrar."
         actions={
-          <Button asChild size="sm">
-            <Link href="/admin/operaciones/conteos/importar">
-              <Upload className="mr-2 size-4" />
-              Importar una lista
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link href="/admin/operaciones/conteos/historial">
+                <History className="mr-2 size-4" />
+                Historial
+              </Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href="/admin/operaciones/conteos/importar">
+                <Upload className="mr-2 size-4" />
+                Importar una lista
+              </Link>
+            </Button>
+          </div>
         }
       />
 
