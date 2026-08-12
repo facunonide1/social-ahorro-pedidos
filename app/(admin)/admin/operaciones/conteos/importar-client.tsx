@@ -1,0 +1,342 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Loader2, Upload } from 'lucide-react'
+import { toast } from 'sonner'
+
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { parseSpreadsheet } from '@/lib/utils/export-excel'
+
+type Punto = { id: string; nombre: string }
+type Lista = { id: string; zona: string }
+
+type ItemPrevisto = {
+  sku: string | null
+  descripcion: string
+  unidad: string | null
+  orden: number
+  estado: 'con_catalogo' | 'sin_catalogo' | 'sin_sku' | 'repetido'
+  novedad?: 'nuevo' | 'existente'
+}
+type Previa = {
+  items: ItemPrevisto[]
+  total: number
+  conCatalogo: number
+  sinCatalogo: number
+  sinSku: number
+  repetidos: number
+  reimportacion?: {
+    zona: string
+    nuevos: number
+    existentes: number
+    desaparecidos: { id: string; sku: string | null; descripcion: string }[]
+    conteosPrevios: number
+  }
+}
+
+const SIN_COLUMNA = '__ninguna__'
+
+/**
+ * Importar una lista de conteo desde una planilla.
+ *
+ * La planilla se lee en el navegador y al servidor van las filas ya mapeadas.
+ * Es el mismo camino que usa el resto del sistema para importar, y evita subir
+ * un archivo entero para descubrir que la columna del SKU se llamaba distinto.
+ */
+export default function ImportarClient({
+  puntos,
+  listas,
+}: {
+  puntos: Punto[]
+  listas: Lista[]
+}) {
+  const router = useRouter()
+  const [zona, setZona] = useState('')
+  const [puntoId, setPuntoId] = useState<string>(SIN_COLUMNA)
+  const [listaId, setListaId] = useState<string>(SIN_COLUMNA)
+  const [headers, setHeaders] = useState<string[]>([])
+  const [filas, setFilas] = useState<string[][]>([])
+  const [mapa, setMapa] = useState<{ sku: string; descripcion: string; unidad: string; orden: string }>({
+    sku: SIN_COLUMNA,
+    descripcion: SIN_COLUMNA,
+    unidad: SIN_COLUMNA,
+    orden: SIN_COLUMNA,
+  })
+  const [previa, setPrevia] = useState<Previa | null>(null)
+  const [cargando, setCargando] = useState(false)
+
+  /** Adivina el mapeo por el nombre de la columna. Se puede corregir a mano. */
+  function adivinar(hs: string[]) {
+    const buscar = (...claves: string[]) =>
+      hs.find((h) => claves.some((c) => h.toLowerCase().replace(/\s+/g, '').includes(c))) ?? SIN_COLUMNA
+    return {
+      sku: buscar('sku', 'codigo', 'código'),
+      descripcion: buscar('descrip', 'detalle', 'producto', 'nombre'),
+      unidad: buscar('unidad', 'medida'),
+      orden: buscar('orden', 'posicion', 'posición'),
+    }
+  }
+
+  async function elegirArchivo(file: File | null) {
+    if (!file) return
+    setPrevia(null)
+    try {
+      const { headers: hs, rows } = await parseSpreadsheet(file)
+      setHeaders(hs)
+      setFilas(rows)
+      setMapa(adivinar(hs))
+      toast.success(`${rows.length} fila(s) leídas de la planilla`)
+    } catch {
+      toast.error('No pudimos leer la planilla. ¿Es un .xlsx o .csv?')
+    }
+  }
+
+  function armarFilas() {
+    const idx = (col: string) => (col === SIN_COLUMNA ? -1 : headers.indexOf(col))
+    const iSku = idx(mapa.sku)
+    const iDesc = idx(mapa.descripcion)
+    const iUni = idx(mapa.unidad)
+    const iOrd = idx(mapa.orden)
+    return filas.map((r, i) => ({
+      sku: iSku >= 0 ? (r[iSku] ?? null) : null,
+      descripcion: iDesc >= 0 ? (r[iDesc] ?? '') : '',
+      unidad: iUni >= 0 ? (r[iUni] ?? null) : null,
+      orden: iOrd >= 0 && r[iOrd] && !Number.isNaN(Number(r[iOrd])) ? Number(r[iOrd]) : i + 1,
+    }))
+  }
+
+  async function llamar(confirmar: boolean) {
+    setCargando(true)
+    try {
+      const res = await fetch('/api/conteo/listas/importar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          zona,
+          puntoId: puntoId === SIN_COLUMNA ? null : puntoId,
+          listaId: listaId === SIN_COLUMNA ? null : listaId,
+          filas: armarFilas(),
+          confirmar,
+        }),
+      })
+      const j = await res.json()
+      if (!res.ok) {
+        toast.error(j.error ?? 'No se pudo importar')
+        return
+      }
+      if (confirmar) {
+        toast.success(
+          `Lista guardada: ${j.creados} item(s) nuevo(s)` +
+            (j.marcados ? ` · ${j.marcados} marcado(s) como que ya no están` : ''),
+        )
+        router.push('/admin/operaciones/conteos')
+        router.refresh()
+      } else {
+        setPrevia(j.previa)
+      }
+    } catch {
+      toast.error('No se pudo importar. Probá de nuevo.')
+    } finally {
+      setCargando(false)
+    }
+  }
+
+  const puedeVerPrevia =
+    filas.length > 0 && mapa.descripcion !== SIN_COLUMNA && (listaId !== SIN_COLUMNA || zona.trim() !== '')
+
+  return (
+    <div className="space-y-4">
+      <Card className="space-y-4 p-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label>¿Es una zona nueva o una que ya existe?</Label>
+            <Select value={listaId} onValueChange={setListaId}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SIN_COLUMNA}>Zona nueva</SelectItem>
+                {listas.map((l) => (
+                  <SelectItem key={l.id} value={l.id}>
+                    Reimportar «{l.zona}»
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {listaId === SIN_COLUMNA ? (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="zona">Nombre de la zona</Label>
+                <Input
+                  id="zona"
+                  value={zona}
+                  onChange={(e) => setZona(e.target.value)}
+                  placeholder="Perfumería góndola 3"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Punto</Label>
+                <Select value={puntoId} onValueChange={setPuntoId}>
+                  <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SIN_COLUMNA}>Sin punto (vale para todos)</SelectItem>
+                    {puntos.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="archivo">La planilla</Label>
+          <Input
+            id="archivo"
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            onChange={(e) => elegirArchivo(e.target.files?.[0] ?? null)}
+          />
+          <p className="text-xs text-muted-foreground">
+            Alcanza con SKU y descripción. Si trae una columna de orden, ese es el
+            orden en que se va a contar — y el orden es el recorrido de la góndola,
+            no el del catálogo.
+          </p>
+        </div>
+
+        {headers.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-4">
+            {(['sku', 'descripcion', 'unidad', 'orden'] as const).map((campo) => (
+              <div key={campo} className="space-y-1.5">
+                <Label className="capitalize">{campo}</Label>
+                <Select
+                  value={mapa[campo]}
+                  onValueChange={(v) => setMapa((m) => ({ ...m, [campo]: v }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SIN_COLUMNA}>— sin columna —</SelectItem>
+                    {headers.map((h) => (
+                      <SelectItem key={h} value={h}>{h}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <Button onClick={() => llamar(false)} disabled={!puedeVerPrevia || cargando}>
+          {cargando ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Upload className="mr-2 size-4" />}
+          Ver qué va a pasar
+        </Button>
+      </Card>
+
+      {previa ? (
+        <Card className="space-y-4 p-4">
+          <div className="flex flex-wrap gap-2 text-sm">
+            <Badge variant="outline">{previa.total} items</Badge>
+            <Badge variant="secondary">{previa.conCatalogo} con producto del catálogo</Badge>
+            {previa.sinCatalogo > 0 ? (
+              <Badge variant="outline" className="border-amber-500 text-amber-700">
+                {previa.sinCatalogo} sin producto del catálogo
+              </Badge>
+            ) : null}
+            {previa.sinSku > 0 ? <Badge variant="outline">{previa.sinSku} sin SKU</Badge> : null}
+            {previa.repetidos > 0 ? (
+              <Badge variant="destructive">{previa.repetidos} repetidos (no entran)</Badge>
+            ) : null}
+          </div>
+
+          {previa.sinCatalogo > 0 || previa.sinSku > 0 ? (
+            <Alert>
+              <AlertDescription className="text-sm">
+                Los que no matchean el catálogo <b>entran igual en la lista</b> y se
+                cuentan igual. Lo que no se hace es crear productos nuevos: el SKU es
+                global y un producto se crea a propósito, no subiendo una planilla.
+                {previa.sinSku > 0
+                  ? ' Los que vienen sin SKU no van a poder compararse contra el stock del sistema al cerrar.'
+                  : ''}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          {previa.reimportacion ? (
+            <Alert>
+              <AlertDescription className="text-sm">
+                Reimportando «{previa.reimportacion.zona}»: {previa.reimportacion.nuevos} nuevo(s),{' '}
+                {previa.reimportacion.existentes} que ya estaban
+                {previa.reimportacion.desaparecidos.length > 0 ? (
+                  <>
+                    , y {previa.reimportacion.desaparecidos.length} que ya no vienen en la
+                    planilla — se marcan como que no están, <b>no se borran</b>: la zona
+                    tiene {previa.reimportacion.conteosPrevios} conteo(s) hechos y borrarlos
+                    se llevaría puesto el historial.
+                  </>
+                ) : (
+                  '.'
+                )}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          <div className="max-h-80 overflow-auto rounded-md border">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-muted/60">
+                <tr className="text-left">
+                  <th className="p-2 font-medium">#</th>
+                  <th className="p-2 font-medium">SKU</th>
+                  <th className="p-2 font-medium">Descripción</th>
+                  <th className="p-2 font-medium">Catálogo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {previa.items.slice(0, 300).map((it, i) => (
+                  <tr key={`${it.sku ?? 'x'}-${i}`} className="border-t">
+                    <td className="p-2 text-muted-foreground">{it.orden}</td>
+                    <td className="p-2 font-mono text-xs">{it.sku ?? '—'}</td>
+                    <td className="p-2">{it.descripcion}</td>
+                    <td className="p-2">
+                      {it.estado === 'con_catalogo' ? (
+                        <span className="text-emerald-700">sí</span>
+                      ) : it.estado === 'repetido' ? (
+                        <span className="text-destructive">repetido</span>
+                      ) : (
+                        <span className="text-amber-700">no</span>
+                      )}
+                      {it.novedad === 'nuevo' ? ' · nuevo' : ''}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {previa.items.length > 300 ? (
+            <p className="text-xs text-muted-foreground">
+              Se muestran los primeros 300 de {previa.items.length}. Se van a guardar todos.
+            </p>
+          ) : null}
+
+          <Button onClick={() => llamar(true)} disabled={cargando}>
+            {cargando ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+            Guardar la lista
+          </Button>
+        </Card>
+      ) : null}
+    </div>
+  )
+}
