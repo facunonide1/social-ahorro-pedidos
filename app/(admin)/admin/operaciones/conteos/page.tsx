@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ClipboardList, History, Upload } from 'lucide-react'
 
 import { PageHeader } from '@/components/shared/page-header'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -26,9 +27,19 @@ type Lista = {
 export default async function ConteosPage() {
   const titulo = await tituloDePantalla('stock', '/admin/operaciones/conteos', 'Conteos por zona')
 
-  await requireAdminHubAccess({
+  const perfil = await requireAdminHubAccess({
     allowedRoles: ['super_admin', 'gerente', 'administrativo', 'sucursal', 'comprador'],
   })
+
+  /**
+   * ¿Esta persona puede contar, y armar listas?
+   *
+   * Se dice ACÁ, antes de que lo intente. Un permiso que aparece cuando alguien
+   * ya pegó quince líneas y apretó guardar se lee como que el sistema está roto.
+   */
+  const PUEDEN_ARMAR: typeof perfil.rol[] = ['super_admin', 'gerente', 'administrativo', 'comprador']
+  const puedeArmar = PUEDEN_ARMAR.includes(perfil.rol)
+  const sinPunto = perfil.sucursal_id === null
   const sb = createClient()
 
   const [{ data: listas }, { data: conteos }] = await Promise.all([
@@ -80,6 +91,27 @@ export default async function ConteosPage() {
           </div>
         }
       />
+
+      {!puedeArmar || sinPunto ? (
+        <Alert>
+          <AlertDescription className="space-y-1 text-sm">
+            {!puedeArmar ? (
+              <p>
+                Con tu rol ({perfil.rol}) podés <b>contar</b> las zonas que estén
+                cargadas, pero no importar listas nuevas. Eso lo hace gerencia,
+                administración o compras.
+              </p>
+            ) : null}
+            {sinPunto ? (
+              <p>
+                Tu usuario no tiene un punto asignado. Podés contar cualquier zona que
+                tenga punto propio —todas las nuevas lo tienen— pero al importar vas a
+                tener que elegir el punto a mano: no hay uno para precargarte.
+              </p>
+            ) : null}
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {filas.length === 0 ? (
         <Card className="p-6 text-center">
