@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { tituloDePantalla } from '@/lib/os/definicion'
+import type { Ambito } from '@/lib/conteo/ambito'
 
 import ListasClient from './listas-client'
 
@@ -18,6 +19,7 @@ type Lista = {
   zona: string
   descripcion: string | null
   punto_id: string | null
+  ambito: Ambito
   sucursales: { nombre: string | null } | null
 }
 
@@ -32,7 +34,7 @@ export default async function ConteosPage() {
   const [{ data: listas }, { data: conteos }] = await Promise.all([
     sb
       .from('cnt_listas')
-      .select('id, zona, descripcion, punto_id, sucursales(nombre)')
+      .select('id, zona, descripcion, punto_id, ambito, sucursales(nombre)')
       .eq('activa', true)
       .order('zona'),
     sb
@@ -93,6 +95,7 @@ export default async function ConteosPage() {
             zona: l.zona,
             descripcion: l.descripcion,
             punto: l.sucursales?.nombre ?? null,
+            ambito: l.ambito,
             items: conteosPorLista.get(l.id) ?? 0,
           }))}
         />

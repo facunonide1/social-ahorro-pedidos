@@ -1,5 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 
+import type { Ambito } from './esperado'
+
 /**
  * IMPORTAR UNA LISTA DE CONTEO DESDE UNA PLANILLA.
  *
@@ -175,6 +177,15 @@ export async function aplicar(args: {
   zona: string
   puntoId: string | null
   descripcion: string | null
+  /**
+   * Contra qué se va a comparar lo contado. NO tiene default a propósito.
+   *
+   * Un default invisible acá produce faltantes sistemáticos: una góndola
+   * comparada contra el total del punto marca como faltante todo lo que está
+   * en el depósito, a tres metros. Alguien iría a buscar mercadería que nunca
+   * se perdió. Por eso el tipo lo exige y la ruta lo valida.
+   */
+  ambito: Ambito
   filas: FilaImportada[]
   listaId?: string | null
   autorId: string
@@ -191,6 +202,7 @@ export async function aplicar(args: {
       .insert({
         zona: args.zona.trim(),
         punto_id: args.puntoId,
+        ambito: args.ambito,
         descripcion: args.descripcion?.trim() || null,
         created_by: args.autorId,
       })

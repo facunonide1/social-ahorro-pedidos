@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
 import { aplicar, previsualizar, type FilaImportada } from '@/lib/conteo/importar'
+import { AMBITOS, type Ambito } from '@/lib/conteo/esperado'
 import { createClient } from '@/lib/supabase/server'
 import type { AdminRole } from '@/lib/types/admin'
 
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
     zona?: string
     puntoId?: string | null
     descripcion?: string | null
+    ambito?: string
     filas?: FilaImportada[]
     listaId?: string | null
     confirmar?: boolean
@@ -68,10 +70,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Falta el nombre de la zona.' }, { status: 400 })
   }
 
+  // El ámbito no tiene default. Si el servidor asumiera 'total', una góndola
+  // contada contra el total del punto marcaría como faltante todo lo que está
+  // en el depósito — y nadie sabría por qué.
+  const ambito = body.ambito
+  if (!body.listaId && !AMBITOS.includes(ambito as Ambito)) {
+    return NextResponse.json(
+      { error: 'Falta decir contra qué se compara: góndola, depósito o el total del punto.' },
+      { status: 400 },
+    )
+  }
+
   const r = await aplicar({
     zona: String(body.zona ?? '').trim(),
     puntoId: body.puntoId ?? null,
     descripcion: body.descripcion ?? null,
+    ambito: ambito as Ambito,
     filas,
     listaId: body.listaId ?? null,
     autorId: user.id,

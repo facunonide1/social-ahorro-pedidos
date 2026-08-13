@@ -3,6 +3,7 @@
 import { Download } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { AMBITO_TEXTO, type Ambito } from '@/lib/conteo/ambito'
 import { exportExcel } from '@/lib/utils/export-excel'
 
 export type FilaResultado = {
@@ -21,7 +22,15 @@ const pesos = (n: number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
 
 /** El detalle, ordenado por monto. Y el .xlsx con SKU (regla de oro 6). */
-export default function ResultadoClient({ zona, filas }: { zona: string; filas: FilaResultado[] }) {
+export default function ResultadoClient({
+  zona,
+  ambito,
+  filas,
+}: {
+  zona: string
+  ambito: Ambito
+  filas: FilaResultado[]
+}) {
   return (
     <section className="space-y-2">
       <div className="flex items-center justify-between">
@@ -33,6 +42,11 @@ export default function ResultadoClient({ zona, filas }: { zona: string; filas: 
             exportExcel(
               `conteo-${zona.toLowerCase().replace(/\s+/g, '-')}`,
               filas.map((f) => ({
+                Zona: zona,
+                // Va en CADA fila y no en el nombre del archivo: quien recibe la
+                // tarea de corrección abre el Excel, no lee cómo se llama, y sin
+                // esto no sabe si el faltante es contra góndola o contra el total.
+                'Comparado contra': AMBITO_TEXTO[ambito].corto,
                 SKU: f.sku ?? '',
                 Descripción: f.descripcion,
                 Contada: f.contada ?? '',

@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { AMBITO_TEXTO, type Ambito } from '@/lib/conteo/ambito'
 import { exportExcel } from '@/lib/utils/export-excel'
 
 type Lista = {
@@ -14,6 +15,7 @@ type Lista = {
   zona: string
   descripcion: string | null
   punto: string | null
+  ambito: Ambito
   items: number
 }
 
@@ -79,6 +81,12 @@ export default function ListasClient({ listas }: { listas: Lista[] }) {
             <p className="font-medium">{l.zona}</p>
             <p className="text-xs text-muted-foreground">
               {l.items} item(s){l.punto ? ` · ${l.punto}` : ' · todos los puntos'}
+            </p>
+            {/* Contra qué se compara. Va en la tarjeta y no escondido en la
+                ficha: es lo que decide si un faltante es real. */}
+            <p className="mt-1 text-xs">
+              <span className="text-muted-foreground">se compara contra:</span>{' '}
+              {AMBITO_TEXTO[l.ambito].corto}
             </p>
             {l.descripcion ? (
               <p className="mt-1 text-xs text-muted-foreground">{l.descripcion}</p>

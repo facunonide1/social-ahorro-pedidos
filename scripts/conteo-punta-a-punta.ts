@@ -78,6 +78,9 @@ async function main() {
     zona: 'ZZ prueba punta a punta',
     puntoId: punto,
     descripcion: 'se borra al terminar',
+    // Los tres ámbitos los prueba `conteo-probar-ambitos.ts`. Acá va `total`
+    // porque las cantidades del catálogo de prueba se comparan contra el total.
+    ambito: 'total',
     filas,
     autorId: AUTOR,
   })

@@ -1,5 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 
+import type { Ambito } from './ambito'
+
 /**
  * LO QUE EL SISTEMA ESPERABA, RESUELTO AL CERRAR Y NUNCA ANTES.
  *
@@ -24,7 +26,8 @@ import { createAdminClient } from '@/lib/supabase/server'
  * error de cuentas.
  */
 
-export type Ambito = 'total' | 'gondola' | 'deposito'
+export type { Ambito } from './ambito'
+export { AMBITOS, AMBITO_TEXTO } from './ambito'
 
 export interface Esperado {
   /** null = no se puede saber: sin SKU, sin producto del catálogo, o sin fila de stock. */

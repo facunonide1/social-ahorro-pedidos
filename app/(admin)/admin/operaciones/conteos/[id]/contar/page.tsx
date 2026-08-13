@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
+import type { Ambito } from '@/lib/conteo/ambito'
 
 import ContarClient from './contar-client'
 
@@ -31,7 +32,11 @@ export default async function ContarPage({ params }: { params: { id: string } })
   }
 
   const [{ data: lista }, { data: items }, { data: renglones }] = await Promise.all([
-    sb.from('cnt_listas').select('zona').eq('id', conteo.lista_id).maybeSingle<{ zona: string }>(),
+    sb
+      .from('cnt_listas')
+      .select('zona, ambito')
+      .eq('id', conteo.lista_id)
+      .maybeSingle<{ zona: string; ambito: Ambito }>(),
     sb
       .from('cnt_lista_items')
       .select('id, sku, descripcion, unidad, orden')
@@ -58,6 +63,7 @@ export default async function ContarPage({ params }: { params: { id: string } })
     <ContarClient
       conteoId={params.id}
       zona={lista?.zona ?? 'zona'}
+      ambito={lista?.ambito ?? 'total'}
       items={((items ?? []) as {
         id: string
         sku: string | null

@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { AMBITO_TEXTO, type Ambito } from '@/lib/conteo/ambito'
 
 type Item = {
   id: string
@@ -44,10 +45,12 @@ type Item = {
 export default function ContarClient({
   conteoId,
   zona,
+  ambito,
   items: itemsIniciales,
 }: {
   conteoId: string
   zona: string
+  ambito: Ambito
   items: Item[]
 }) {
   const router = useRouter()
@@ -163,7 +166,9 @@ export default function ContarClient({
   return (
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col gap-3 p-4">
       <header className="space-y-1">
-        <p className="text-xs text-muted-foreground">{zona}</p>
+        <p className="text-xs text-muted-foreground">
+          {zona} · contás {AMBITO_TEXTO[ambito].corto}
+        </p>
         <div className="flex items-center justify-between">
           <p className="text-sm font-medium">
             {listos} de {items.length} contados
@@ -271,6 +276,11 @@ export default function ContarClient({
             para que lo que contaste sea lo que viste.
           </p>
         )}
+        {/* Contra qué se va a comparar, dicho ANTES de cerrar: si contaste la
+            góndola y esto dice «todo el punto», todavía estás a tiempo. */}
+        <p className="text-xs text-muted-foreground">
+          {AMBITO_TEXTO[ambito].consecuencia}
+        </p>
         <Button className="w-full" size="lg" onClick={cerrar} disabled={faltan > 0 || cerrando}>
           {cerrando ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
           Cerrar la zona y ver las diferencias

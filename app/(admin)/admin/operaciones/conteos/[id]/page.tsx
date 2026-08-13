@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
+import { AMBITO_TEXTO, type Ambito } from '@/lib/conteo/ambito'
 
 import ResultadoClient from './resultado-client'
 
@@ -51,7 +52,11 @@ export default async function ConteoPage({ params }: { params: { id: string } })
   if (conteo.estado !== 'cerrado') redirect(`/admin/operaciones/conteos/${params.id}/contar`)
 
   const [{ data: lista }, { data: renglones }, { data: tareas }] = await Promise.all([
-    sb.from('cnt_listas').select('zona').eq('id', conteo.lista_id).maybeSingle<{ zona: string }>(),
+    sb
+      .from('cnt_listas')
+      .select('zona, ambito')
+      .eq('id', conteo.lista_id)
+      .maybeSingle<{ zona: string; ambito: Ambito }>(),
     sb
       .from('cnt_renglones')
       .select(
@@ -81,6 +86,7 @@ export default async function ConteoPage({ params }: { params: { id: string } })
     (a, b) => Math.abs(Number(b.valor_diferencia ?? 0)) - Math.abs(Number(a.valor_diferencia ?? 0)),
   )
 
+  const ambito: Ambito = lista?.ambito ?? 'total'
   const conDif = filas.filter((f) => f.diferencia !== null && Number(f.diferencia) !== 0)
   const sinComparar = filas.filter((f) => f.diferencia === null)
   const mayor = conDif[0]
@@ -120,6 +126,13 @@ export default async function ConteoPage({ params }: { params: { id: string } })
               {Number(mayor.cantidad_esperada ?? 0)}.
             </>
           ) : null}
+        </p>
+
+        {/* CONTRA QUÉ SE MIDIÓ. Es lo primero que hay que saber para leer un
+            faltante: los mismos items contados igual dan tres números distintos
+            según el ámbito, y sin esta línea nadie sabe cuál está mirando. */}
+        <p className="text-sm text-muted-foreground">
+          Contaste <b>{AMBITO_TEXTO[ambito].corto}</b>. {AMBITO_TEXTO[ambito].consecuencia}
         </p>
 
         {sinComparar.length > 0 ? (
@@ -164,6 +177,7 @@ export default async function ConteoPage({ params }: { params: { id: string } })
 
       <ResultadoClient
         zona={lista?.zona ?? 'zona'}
+        ambito={ambito}
         filas={filas.map((f) => ({
           sku: f.cnt_lista_items?.sku ?? null,
           descripcion: f.cnt_lista_items?.descripcion ?? '',

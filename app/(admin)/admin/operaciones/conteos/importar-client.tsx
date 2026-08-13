@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { AMBITOS, AMBITO_TEXTO, type Ambito } from '@/lib/conteo/ambito'
 import { parseSpreadsheet } from '@/lib/utils/export-excel'
 
 type Punto = { id: string; nombre: string }
@@ -78,6 +79,11 @@ export default function ImportarClient({
     unidad: SIN_COLUMNA,
     orden: SIN_COLUMNA,
   })
+  // SIN DEFAULT. Arranca vacío y el botón no se habilita hasta que se elija:
+  // si acá dijera 'total' de entrada, una góndola contada contra el total del
+  // punto marcaría como faltante todo lo que está en el depósito, y nadie
+  // sabría que eligió algo.
+  const [ambito, setAmbito] = useState<Ambito | ''>('')
   const [pegado, setPegado] = useState('')
   const [previa, setPrevia] = useState<Previa | null>(null)
   const [cargando, setCargando] = useState(false)
@@ -160,6 +166,7 @@ export default function ImportarClient({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           zona,
+          ambito: ambito || undefined,
           puntoId: puntoId === SIN_COLUMNA ? null : puntoId,
           listaId: listaId === SIN_COLUMNA ? null : listaId,
           filas: armarFilas(),
@@ -190,7 +197,8 @@ export default function ImportarClient({
 
   const hayItems =
     (filas.length > 0 && mapa.descripcion !== SIN_COLUMNA) || filasPegadas().length > 0
-  const puedeVerPrevia = hayItems && (listaId !== SIN_COLUMNA || zona.trim() !== '')
+  const esNueva = listaId === SIN_COLUMNA
+  const puedeVerPrevia = hayItems && (!esNueva || (zona.trim() !== '' && ambito !== ''))
 
   return (
     <div className="space-y-4">
@@ -237,6 +245,34 @@ export default function ImportarClient({
             </>
           ) : null}
         </div>
+
+        {listaId === SIN_COLUMNA ? (
+          <div className="space-y-1.5">
+            <Label>¿Contra qué se compara lo que se cuente?</Label>
+            <Select value={ambito} onValueChange={(v) => setAmbito(v as Ambito)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Elegí una — no hay opción por defecto" />
+              </SelectTrigger>
+              <SelectContent>
+                {AMBITOS.map((a) => (
+                  <SelectItem key={a} value={a}>
+                    {AMBITO_TEXTO[a].titulo}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {ambito ? (
+              <p className="text-xs text-muted-foreground">{AMBITO_TEXTO[ambito].consecuencia}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Acá el stock está separado entre góndola y depósito. Si contás una
+                góndola y comparás contra el total del punto,{' '}
+                <b>todo lo que está en el depósito va a aparecer como faltante</b> — y
+                alguien va a salir a buscar mercadería que nunca se perdió.
+              </p>
+            )}
+          </div>
+        ) : null}
 
         <div className="space-y-1.5">
           <Label htmlFor="archivo">La planilla</Label>
