@@ -187,6 +187,12 @@ export default function ImportarClient({
         router.refresh()
       } else {
         setPrevia(j.previa)
+        // La previa se arma abajo del fold: sin esto, el botón se deshabilita un
+        // instante, la pantalla no se mueve, y se lee como que no pasó nada.
+        // Se espera al pintado para que el nodo exista cuando se lo busca.
+        requestAnimationFrame(() => {
+          document.getElementById('previa')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        })
       }
     } catch {
       toast.error('No se pudo importar. Probá de nuevo.')
@@ -198,12 +204,21 @@ export default function ImportarClient({
   const hayItems =
     (filas.length > 0 && mapa.descripcion !== SIN_COLUMNA) || filasPegadas().length > 0
   const esNueva = listaId === SIN_COLUMNA
-  const puedeVerPrevia = hayItems && (!esNueva || (zona.trim() !== '' && ambito !== ''))
+  const puedeVerPrevia =
+    hayItems && (!esNueva || (zona.trim() !== '' && ambito !== '' && puntoId !== SIN_COLUMNA))
 
   return (
     <div className="space-y-4">
       <Card className="space-y-4 p-4">
         <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5 sm:col-span-2">
+            <p className="rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+              El punto que manda en un conteo es <b>el que elijas acá abajo</b>, no el
+              selector de sucursal de la barra de arriba. Ese cambia lo que ves en el
+              resto de Operaciones y no toca la lista.
+            </p>
+          </div>
+
           <div className="space-y-1.5">
             <Label>¿Es una zona nueva o una que ya existe?</Label>
             <Select value={listaId} onValueChange={setListaId}>
@@ -229,18 +244,32 @@ export default function ImportarClient({
                   onChange={(e) => setZona(e.target.value)}
                   placeholder="Perfumería góndola 3"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Una zona es un tramo que una persona recorre de una vez.{' '}
+                  <b>Entre 15 y 40 items</b> es lo que entra en veinte minutos sin
+                  cansarse. Una góndola entera de 120 se abandona por la mitad: si es
+                  grande, partila en dos zonas.
+                </p>
               </div>
               <div className="space-y-1.5">
-                <Label>Punto</Label>
+                <Label>¿En qué punto está esta zona?</Label>
                 <Select value={puntoId} onValueChange={setPuntoId}>
-                  <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Elegí el punto" />
+                  </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={SIN_COLUMNA}>Sin punto (lo pone quien cuente)</SelectItem>
                     {puntos.map((p) => (
                       <SelectItem key={p.id} value={p.id}>{p.nombre}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {puntoId === SIN_COLUMNA ? (
+                  <p className="text-xs text-muted-foreground">
+                    Hace falta: el stock se guarda por punto, así que{' '}
+                    <b>una lista sin punto no se puede contar</b> — al empezar el conteo
+                    no habría contra qué comparar y se traba ahí.
+                  </p>
+                ) : null}
               </div>
             </>
           ) : null}
@@ -273,6 +302,20 @@ export default function ImportarClient({
             )}
           </div>
         ) : null}
+
+        <div className="space-y-2 rounded-md border border-dashed p-3">
+          <p className="text-sm font-medium">Antes de cargar la lista, dos cosas</p>
+          <p className="text-xs text-muted-foreground">
+            <b>El orden es el del recorrido, no el del catálogo.</b> Quien cuenta camina
+            la góndola y va tachando: si la lista sigue ese orden, el conteo dura veinte
+            minutos; si sigue el orden del catálogo, hay que ir y volver por cada item.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            <b>Los items sin SKU entran, pero no se comparan.</b> Se cuentan igual y
+            quedan registrados; al cerrar van a decir «no se pudo comparar», porque sin
+            SKU no hay stock del sistema contra qué medirlos.
+          </p>
+        </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="archivo">La planilla</Label>
@@ -337,7 +380,7 @@ export default function ImportarClient({
       </Card>
 
       {previa ? (
-        <Card className="space-y-4 p-4">
+        <Card id="previa" className="space-y-4 p-4 scroll-mt-4">
           <div className="flex flex-wrap gap-2 text-sm">
             <Badge variant="outline">{previa.total} items</Badge>
             <Badge variant="secondary">{previa.conCatalogo} con producto del catálogo</Badge>
