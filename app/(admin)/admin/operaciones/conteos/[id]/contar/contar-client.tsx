@@ -70,6 +70,30 @@ export default function ContarClient({
   const listos = useMemo(() => items.filter((x) => x.cantidad !== null || x.salteado).length, [items])
   const faltan = items.length - listos
 
+  /** Los tres estados posibles de un item, dichos con todas las letras. */
+  const estadoDelItem = !item
+    ? ''
+    : item.salteado
+      ? `salteado: ${item.motivoSalteo ?? 'sin motivo'}`
+      : item.cantidad === null
+        ? 'sin contar'
+        : item.cantidad === 0
+          ? 'contado: no había ninguna'
+          : `contado: ${item.cantidad}`
+
+  /**
+   * Hay algo tipeado que no coincide con lo guardado.
+   *
+   * «Anterior» y «Siguiente» no guardan a propósito —moverse no es confirmar—
+   * así que sin este aviso alguien escribe un número, pasa al siguiente y lo
+   * pierde sin enterarse.
+   */
+  const sinGuardar =
+    !!item &&
+    !item.salteado &&
+    valor.trim() !== '' &&
+    valor.trim() !== (item.cantidad === null ? '' : String(item.cantidad))
+
   useEffect(() => {
     if (!item) return
     setValor(item.cantidad === null ? '' : String(item.cantidad))
@@ -193,13 +217,33 @@ export default function ContarClient({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="cant">¿Cuántas hay?</Label>
+          <div className="flex items-baseline justify-between">
+            <Label htmlFor="cant">¿Cuántas hay?</Label>
+            {/* CERO CONTADO NO ES LO MISMO QUE SIN CONTAR, y volviendo a un
+                item no había forma de saber en cuál de los dos estaba. Un cero
+                contado es un dato —se buscó y no había—; un hueco es que nadie
+                lo miró. */}
+            <span className="text-xs text-muted-foreground">{estadoDelItem}</span>
+          </div>
           <Input
             id="cant"
             type="number"
             inputMode="decimal"
+            // Sin esto no se puede tipear un negativo con el teclado del
+            // teléfono, y el spinner tampoco baja de cero.
+            min={0}
             autoFocus
             value={valor}
+            // EL ARREGLO DEL 77.
+            //
+            // Al volver a un item ya contado, el valor viene precargado y el
+            // cursor queda al final: tipear 7 sobre un 7 daba 77. Y un faltante
+            // inventado se descubre, pero un 77 entra como cierto — nadie duda
+            // de un número que alguien escribió.
+            //
+            // Seleccionando al enfocar, tipear REEMPLAZA. Para corregir un
+            // dígito suelto todavía se puede tocar de nuevo y mover el cursor.
+            onFocus={(e) => e.currentTarget.select()}
             onChange={(e) => setValor(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') confirmar()
@@ -208,6 +252,13 @@ export default function ContarClient({
             placeholder="0"
           />
         </div>
+
+        {sinGuardar ? (
+          <p className="text-xs font-medium text-amber-600">
+            Todavía no lo guardaste: tocá «Listo». Si pasás al siguiente sin
+            guardar, este número se pierde.
+          </p>
+        ) : null}
 
         <div className="space-y-1.5">
           <Label htmlFor="nota" className="text-xs">
@@ -243,7 +294,7 @@ export default function ContarClient({
           </Button>
           <Button variant="outline" size="lg" onClick={saltear} disabled={guardando}>
             <SkipForward className="mr-2 size-4" />
-            {pidiendoMotivo ? 'Saltear' : 'Saltear'}
+            {pidiendoMotivo ? 'Confirmar' : 'Saltear'}
           </Button>
         </div>
       </Card>
