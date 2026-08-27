@@ -12,8 +12,21 @@ type Adm = any
 const hoyISO = () => new Date().toISOString().slice(0, 10)
 const isoMenos = (d: number) => new Date(Date.now() - d * 86400000).toISOString().slice(0, 10)
 
-/** Clientes objetivo de una automatización (banda estrecha = no spamear). */
+/**
+ * Clientes objetivo de una automatización (banda estrecha = no spamear).
+ *
+ * NUNCA devuelve clientes de demostración. Los 150 que hay cargados tienen
+ * direcciones `demoN@mail.com`, y `mail.com` es un proveedor de correo que
+ * existe: esas casillas pueden tener dueño. El día que alguien active una
+ * automatización, el envío sale de verdad. Un cliente inventado no recibe
+ * nada — el filtro va acá, en el único lugar por el que pasan los tres
+ * disparadores y los que se agreguen después (v0.81).
+ */
 async function objetivo(adm: Adm, auto: any): Promise<any[]> {
+  return (await objetivoCrudo(adm, auto)).filter((c) => !c.es_demo)
+}
+
+async function objetivoCrudo(adm: Adm, auto: any): Promise<any[]> {
   const cfg = auto.config ?? {}
   if (auto.trigger === 'cumpleanos') {
     const { data } = await adm.from('clientes').select('id, nombre, email, cuponera_user_id, fecha_nacimiento, es_demo').eq('activo', true).not('fecha_nacimiento', 'is', null).limit(5000)

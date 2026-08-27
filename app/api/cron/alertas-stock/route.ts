@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
 import type { AdminRole } from '@/lib/types/admin'
 import { automatizacionActiva } from '@/lib/os/definicion'
+import { puedeCalcular } from '@/lib/demo/guarda-calculo'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -22,6 +23,13 @@ export async function GET(req: NextRequest) {
   //
   // La pregunta va en el GET y no en run(): el POST de abajo es una persona
   // apretando un botón, y gobernar eso sería gobernar una acción.
+
+  // Y aunque esté encendida, no calcula sobre datos de demostración: el número
+  // que produce se GUARDA, y un histórico falso no se nota después (v0.81).
+  // La condición se evalúa acá y no en run(): el POST de abajo es una persona
+  // apretando un botón, y eso ya es una decisión tomada.
+  const g = await puedeCalcular('alertas-stock')
+  if (!g.puede) return NextResponse.json({ ok: true, omitida: g.motivo })
   return run(
     await automatizacionActiva('stock', 'recalcular_alertas', true),
     await automatizacionActiva('stock', 'avisar_vencimientos', true),
