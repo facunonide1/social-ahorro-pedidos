@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Bell, BellRing, CheckCheck } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/client'
+import { sinDemoCliente } from '@/lib/demo/cliente'
 import { cn } from '@/lib/utils'
 import type { AdminRole, NotificacionPrioridad, NotificacionTipo } from '@/lib/types/admin'
 
@@ -73,6 +74,11 @@ export function NotificationsBell({
       )
       .order('created_at', { ascending: false })
       .limit(30)
+
+    // La campana vive en el marco de TODAS las pantallas, así que es la
+    // superficie donde un dato de demostración se ve aunque no lo busques.
+    // Respeta el mismo interruptor que el panel (v0.81).
+    if (sinDemoCliente()) query = query.eq('es_demo', false)
 
     if (adminRole) {
       query = query.or(`user_id.eq.${userId},rol_destinatario.eq.${adminRole}`)

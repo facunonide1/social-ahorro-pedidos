@@ -45,6 +45,7 @@ async function getKpis(): Promise<Kpis> {
   const ahora = new Date().toISOString()
   const { sucursalId, esTodas } = getSucursalActiva()
   const scope = <T,>(q: T): T => (esTodas || !sucursalId ? q : (q as any).eq('sucursal_id', sucursalId))
+  const real = <T,>(q: T): T => (sinDemo() ? (q as any).eq('es_demo', false) : q)
 
   const [ordersRes, empRes, tareasRes, stockRes] = await Promise.all([
     adm.from('orders').select('total').gte('created_at', inicioHoy),
@@ -54,7 +55,7 @@ async function getKpis(): Promise<Kpis> {
       .select('id', { count: 'exact', head: true })
       .lt('fecha_vencimiento', ahora)
       .in('estado', ['pendiente', 'asignada', 'en_progreso', 'en_verificacion'])),
-    scope(adm.from('stock_items').select('cantidad, stock_minimo').gt('stock_minimo', 0).limit(5000)),
+    real(scope(adm.from('stock_items').select('cantidad, stock_minimo').gt('stock_minimo', 0).limit(5000))),
   ])
 
   const ordenes = (ordersRes.data ?? []) as { total: number | null }[]
@@ -163,6 +164,7 @@ async function getLoUrgente(rol: AdminRole, custom: PermisosCustom | null): Prom
       const desde30 = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date(Date.now() - 30 * 86_400_000))
       let cq = adm.from('arqueos_caja').select('cajero_nombre').eq('estado', 'observada').gte('fecha', desde30).limit(1000)
       if (!esTodas && sucursalId) cq = cq.eq('sucursal_id', sucursalId)
+      if (sinDemo()) cq = cq.eq('es_demo', false)
       const { data: obs } = await cq
       const m = new Map<string, number>()
       for (const a of (obs ?? []) as any[]) if (a.cajero_nombre) m.set(a.cajero_nombre, (m.get(a.cajero_nombre) ?? 0) + 1)

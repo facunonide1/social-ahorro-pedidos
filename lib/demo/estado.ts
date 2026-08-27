@@ -2,6 +2,8 @@ import { cookies } from 'next/headers'
 
 import { createAdminClient } from '@/lib/supabase/server'
 
+import { COOKIE_SIN_DEMO } from './estado-nombre'
+
 /**
  * CUÁNTO DE LO QUE SE MUESTRA ES DE DEMOSTRACIÓN.
  *
@@ -26,7 +28,7 @@ import { createAdminClient } from '@/lib/supabase/server'
  * apaga.
  */
 
-export const COOKIE_SIN_DEMO = 'nora_sin_demo'
+export { COOKIE_SIN_DEMO }
 
 /** ¿Está puesto el interruptor de «ver sin demostración»? */
 export function sinDemo(): boolean {

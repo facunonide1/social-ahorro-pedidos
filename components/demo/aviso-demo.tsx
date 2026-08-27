@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { COOKIE_SIN_DEMO } from '@/lib/demo/estado-nombre'
 
 /**
  * EL AVISO DE QUE LO QUE SE ESTÁ MIRANDO ES INVENTADO.
@@ -29,7 +30,7 @@ export function AvisoDemo({
   function alternar() {
     // La cookie es la lente. Un año de vida para que no se apague sola en el
     // medio de una revisión.
-    document.cookie = `nora_sin_demo=${sinDemo ? '' : '1'}; path=/; max-age=${sinDemo ? 0 : 31536000}`
+    document.cookie = `${COOKIE_SIN_DEMO}=${sinDemo ? '' : '1'}; path=/; max-age=${sinDemo ? 0 : 31536000}`
     empezar(() => router.refresh())
   }
 
