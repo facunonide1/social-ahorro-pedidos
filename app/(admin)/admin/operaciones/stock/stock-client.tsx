@@ -159,7 +159,7 @@ function DetalleSheet({ producto, sucursales, canEdit, onClose }: { producto: Pr
   const [lotes, setLotes] = useState<any[]>([])
   const [movs, setMovs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [ajuste, setAjuste] = useState<{ suc: string; delta: string; motivo: string } | null>(null)
+  const [ajuste, setAjuste] = useState<{ suc: string; cantidadReal: string; motivo: string } | null>(null)
   const [repo, setRepo] = useState<{ suc: string; cantidad: string } | null>(null)
   const [busy, setBusy] = useState(false)
   const sucName = (id: string) => sucursales.find((s) => s.id === id)?.nombre ?? id.slice(0, 6)
@@ -187,16 +187,23 @@ function DetalleSheet({ producto, sucursales, canEdit, onClose }: { producto: Pr
     } catch (e: any) { toast.error(e?.message ?? 'Error') } finally { setBusy(false) }
   }
 
-  async function guardarAjuste() {
+  /**
+   * Pide la corrección; NO ajusta.
+   *
+   * Se pregunta CUÁNTAS HAY, no cuánto sumar o restar. Pedir un delta obliga a
+   * hacer la cuenta mentalmente frente a la góndola, y esa cuenta es de donde
+   * salen los errores.
+   */
+  async function pedirCorreccion() {
     if (!ajuste) return
-    const delta = Number(ajuste.delta)
-    if (!Number.isFinite(delta) || delta === 0) { toast.error('Ingresá una cantidad ≠ 0 (negativa para restar).'); return }
-    if (ajuste.motivo.trim().length < 3) { toast.error('El motivo es obligatorio.'); return }
+    const cantidadReal = Number(ajuste.cantidadReal)
+    if (!Number.isFinite(cantidadReal) || cantidadReal < 0) { toast.error('Poné cuántas unidades hay de verdad.'); return }
+    if (ajuste.motivo.trim().length < 3) { toast.error('El motivo es obligatorio: es lo que va a leer quien corrija.'); return }
     setBusy(true)
     try {
-      const r = await fetch('/api/inventario/ajuste', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ producto_id: producto.id, sucursal_id: ajuste.suc, delta, motivo: ajuste.motivo.trim() }) })
+      const r = await fetch('/api/inventario/ajuste', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ producto_id: producto.id, sucursal_id: ajuste.suc, cantidad_real: cantidadReal, motivo: ajuste.motivo.trim() }) })
       const j = await r.json(); if (!r.ok) throw new Error(j?.error)
-      toast.success('Ajuste registrado.'); setAjuste(null); onClose(); router.refresh()
+      toast.success('Pedido de corrección creado. El stock lo corrige una persona en SIFACO.'); setAjuste(null); onClose(); router.refresh()
     } catch (e: any) { toast.error(e?.message ?? 'Error') } finally { setBusy(false) }
   }
 
@@ -221,7 +228,7 @@ function DetalleSheet({ producto, sucursales, canEdit, onClose }: { producto: Pr
                 <span className="flex items-center gap-2">
                   <span className={cn('tabular-nums', v.c)}>{x?.cantidad ?? 0}</span>
                   {canEdit && s.usaDeposito && dep > 0 && <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px] text-primary" onClick={() => setRepo({ suc: s.id, cantidad: '' })}>Reponer</Button>}
-                  {canEdit && <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => setAjuste({ suc: s.id, delta: '', motivo: '' })}>Ajustar</Button>}
+                  {canEdit && <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => setAjuste({ suc: s.id, cantidadReal: '', motivo: '' })}>Corregir</Button>}
                 </span>
               </div>
             )})}
@@ -238,10 +245,14 @@ function DetalleSheet({ producto, sucursales, canEdit, onClose }: { producto: Pr
 
           {ajuste && (
             <div className="rounded-md border border-primary/40 bg-nora-bg p-3 space-y-2">
-              <div className="text-xs font-medium">Ajustar stock · {sucName(ajuste.suc)}</div>
-              <Input type="number" placeholder="Delta (ej. -3 resta, 5 suma)" value={ajuste.delta} onChange={(e) => setAjuste({ ...ajuste, delta: e.target.value })} />
+              <div className="text-xs font-medium">Pedir corrección · {sucName(ajuste.suc)}</div>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                NORA no cambia el stock: el stock lo manda SIFACO. Esto crea una tarea
+                para que una persona lo corrija allá.
+              </p>
+              <Input type="number" min={0} placeholder="¿Cuántas unidades hay de verdad?" value={ajuste.cantidadReal} onChange={(e) => setAjuste({ ...ajuste, cantidadReal: e.target.value })} />
               <Textarea rows={2} placeholder="Motivo (obligatorio)" value={ajuste.motivo} onChange={(e) => setAjuste({ ...ajuste, motivo: e.target.value })} />
-              <div className="flex gap-2"><Button size="sm" disabled={busy} onClick={guardarAjuste}>{busy ? 'Guardando…' : 'Registrar ajuste'}</Button><Button size="sm" variant="ghost" onClick={() => setAjuste(null)}>Cancelar</Button></div>
+              <div className="flex gap-2"><Button size="sm" disabled={busy} onClick={pedirCorreccion}>{busy ? 'Creando el pedido…' : 'Pedir la corrección'}</Button><Button size="sm" variant="ghost" onClick={() => setAjuste(null)}>Cancelar</Button></div>
             </div>
           )}
 
