@@ -21,6 +21,8 @@ import { SucursalesLive } from './sucursales-live'
 import { OsAccionesRapidas } from './os-acciones-rapidas'
 import { OsSubAppsGrid } from './os-subapps-grid'
 import { OsLoUrgente, type UrgenteItem } from './os-lo-urgente'
+import { AvisoDemo } from '@/components/demo/aviso-demo'
+import { contarDemo, sinDemo } from '@/lib/demo/estado'
 import { puede, type PermisosCustom } from '@/lib/types/permisos'
 
 export const dynamic = 'force-dynamic'
@@ -92,16 +94,20 @@ async function getResumenGerencial(): Promise<ResumenGerencial> {
   const mesActual = new Date().toISOString().slice(0, 7)
   const { sucursalId, esTodas } = getSucursalActiva()
   const scope = <T,>(q: T, col = 'sucursal_id'): T => (esTodas || !sucursalId ? q : (q as any).eq(col, sucursalId))
+  // Mismo criterio que en «lo urgente»: los indicadores no mezclan sembrado con
+  // real. `orders`, `gastos_operativos` y `cuentas_bancarias` no tienen marca
+  // porque nunca se sembraron: lo que hay ahí es real o no hay nada.
+  const real = <T,>(q: T): T => (sinDemo() ? (q as any).eq('es_demo', false) : q)
 
   const [ventasRes, gastosRes, cuentasRes, faltRes, ocRes, ofeActRes, ofePendRes, urgRes] = await Promise.all([
     adm.from('orders').select('total, status').gte('created_at', d30),
     scope(adm.from('gastos_operativos').select('monto').eq('periodo', mesActual)),
     adm.from('cuentas_bancarias_con_saldo').select('moneda, saldo_actual, activa'),
-    scope(adm.from('avisos_faltante').select('id', { count: 'exact', head: true }).eq('estado', 'nuevo')),
-    scope(adm.from('ordenes_compra').select('id', { count: 'exact', head: true }).in('estado', OC_ABIERTAS), 'sucursal_compradora_id'),
-    adm.from('ofertas').select('id', { count: 'exact', head: true }).eq('estado', 'activa'),
-    adm.from('ofertas').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente_aprobacion'),
-    adm.from('mensajes').select('id', { count: 'exact', head: true }).eq('es_urgente', true).gte('created_at', new Date(Date.now() - 7 * 86_400_000).toISOString()),
+    real(scope(adm.from('avisos_faltante').select('id', { count: 'exact', head: true }).eq('estado', 'nuevo'))),
+    real(scope(adm.from('ordenes_compra').select('id', { count: 'exact', head: true }).in('estado', OC_ABIERTAS), 'sucursal_compradora_id')),
+    real(adm.from('ofertas').select('id', { count: 'exact', head: true }).eq('estado', 'activa')),
+    real(adm.from('ofertas').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente_aprobacion')),
+    real(adm.from('mensajes').select('id', { count: 'exact', head: true }).eq('es_urgente', true).gte('created_at', new Date(Date.now() - 7 * 86_400_000).toISOString())),
   ])
 
   const ventasMes = ((ventasRes.data ?? []) as any[])
@@ -127,15 +133,19 @@ async function getLoUrgente(rol: AdminRole, custom: PermisosCustom | null): Prom
   const en30 = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date(Date.now() + 30 * 86_400_000))
   const { sucursalId, esTodas } = getSucursalActiva()
   const scope = <T,>(q: T): T => (esTodas || !sucursalId ? q : (q as any).eq('sucursal_id', sucursalId))
+  // Con el interruptor puesto, lo sembrado no cuenta. Va como los demás
+  // filtros —envolviendo la consulta— y no restando después: un número que se
+  // corrige al final es un número que en algún renglón ya se mostró mal.
+  const real = <T,>(q: T): T => (sinDemo() ? (q as any).eq('es_demo', false) : q)
   const ve = (m: Parameters<typeof puede>[2]) => rol === 'super_admin' || puede(rol, custom, m, 'ver')
 
   const nulo = Promise.resolve({ count: 0 } as any)
   const [tv, vp, dv, fn, na, rc] = await Promise.all([
-    ve('tareas') ? scope(adm.from('tareas').select('id', { count: 'exact', head: true }).lt('fecha_vencimiento', ahora).in('estado', ['pendiente', 'asignada', 'reclamada', 'en_progreso', 'en_verificacion'])) : nulo,
-    ve('operaciones') ? scope(adm.from('vencimientos').select('id', { count: 'exact', head: true }).eq('estado', 'vigente').lte('fecha_vencimiento', en30)) : nulo,
-    ve('finanzas') ? scope(adm.from('facturas_proveedor').select('id', { count: 'exact', head: true }).lt('fecha_vencimiento', hoy).in('estado', ['pendiente_aprobacion', 'aprobada', 'programada_pago', 'pagada_parcial', 'vencida'])) : nulo,
-    ve('compras') ? scope(adm.from('avisos_faltante').select('id', { count: 'exact', head: true }).eq('estado', 'nuevo')) : nulo,
-    ve('ia') ? adm.from('nora_avisos').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente') : nulo,
+    ve('tareas') ? real(scope(adm.from('tareas').select('id', { count: 'exact', head: true }).lt('fecha_vencimiento', ahora).in('estado', ['pendiente', 'asignada', 'reclamada', 'en_progreso', 'en_verificacion']))) : nulo,
+    ve('operaciones') ? real(scope(adm.from('vencimientos').select('id', { count: 'exact', head: true }).eq('estado', 'vigente').lte('fecha_vencimiento', en30))) : nulo,
+    ve('finanzas') ? real(scope(adm.from('facturas_proveedor').select('id', { count: 'exact', head: true }).lt('fecha_vencimiento', hoy).in('estado', ['pendiente_aprobacion', 'aprobada', 'programada_pago', 'pagada_parcial', 'vencida']))) : nulo,
+    ve('compras') ? real(scope(adm.from('avisos_faltante').select('id', { count: 'exact', head: true }).eq('estado', 'nuevo'))) : nulo,
+    ve('ia') ? real(adm.from('nora_avisos').select('id', { count: 'exact', head: true }).eq('estado', 'pendiente')) : nulo,
     ve('compras') ? adm.from('devoluciones_proveedor').select('id', { count: 'exact', head: true }).eq('estado', 'enviada').not('proximo_recordatorio_at', 'is', null).lte('proximo_recordatorio_at', ahora) : nulo,
   ])
 
@@ -215,10 +225,12 @@ export default async function MissionControlPage() {
     month: 'long',
   })
 
-  const [kpis, gerencial, urgente] = await Promise.all([
+  const verSinDemo = sinDemo()
+  const [kpis, gerencial, urgente, demo] = await Promise.all([
     esTransversal ? getKpis() : Promise.resolve(null),
     esTransversal ? getResumenGerencial() : Promise.resolve(null),
     getLoUrgente(profile.rol, custom),
+    contarDemo(),
   ])
 
   return (
@@ -236,7 +248,10 @@ export default async function MissionControlPage() {
         </p>
       </header>
 
-      <NoraBriefingCard />
+      {/* Antes que cualquier número: qué parte de lo que sigue es inventado. */}
+      <AvisoDemo conceptos={demo.porConcepto} total={demo.total} sinDemo={verSinDemo} />
+
+      {verSinDemo ? null : <NoraBriefingCard />}
 
       {/* Zona 2 · Acciones rápidas (por rol) */}
       <OsAccionesRapidas />
