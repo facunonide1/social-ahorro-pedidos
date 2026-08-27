@@ -9,18 +9,51 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /**
- * Cron daily 6am — genera tareas desde tareas_recurrencias activas.
+ * DEPRECADO — 27-ago-2026, v0.81. Lo reemplaza /api/cron/generar-agenda.
  *
- * Para cada recurrencia con proxima_ejecucion <= now():
- *   1. Inserta una tarea según la plantilla del tipo.
- *   2. Calcula la siguiente fecha de ejecución según el patrón.
- *   3. Actualiza ultima_ejecucion + proxima_ejecucion.
+ * ── QUÉ HACÍA ───────────────────────────────────────────────────────────────
+ *
+ * Lo mismo: leer `tareas_recurrencias` activas e insertar las tareas que tocan.
+ * Nunca corrió: no estaba agendado en vercel.json, y aunque lo hubiera estado,
+ * el middleware mandaba todos los crons a /login hasta v0.80.
+ *
+ * ── POR QUÉ SE VA ÉSTE Y NO EL OTRO ─────────────────────────────────────────
+ *
+ * No es por antigüedad. `generar-agenda` cubre tres cosas que éste no:
+ *
+ *   1. Es idempotente: no crea una tarea si ya existe una de esa recurrencia
+ *      creada hoy. Éste se apoya en `proxima_ejecucion`, así que dos corridas
+ *      el mismo día —o una fecha mal escrita— duplican.
+ *   2. Respeta `asignacion_tipo` y `turno_id`. Éste asigna sin mirarlos, y las
+ *      cuatro recurrencias cargadas son `pool_sucursal`.
+ *   3. Contempla `dias_semana` y `dia_mes` para los patrones semanal y mensual.
+ *
+ * Lo único que este archivo hacía y el otro no es desactivar una recurrencia
+ * cuando pasó su `fecha_fin`. Se verificó contra los datos: ninguna ruta y
+ * ninguna pantalla escribe `fecha_fin`, así que no había nada que desactivar.
+ * La columna queda anotada como residuo en el reporte de v0.81.
+ *
+ * ── POR QUÉ NO SE BORRA ─────────────────────────────────────────────────────
+ *
+ * Mismo procedimiento que 0083 y 0109, que funcionó las dos veces: se desactiva
+ * y se deja escrito el borrado. Si algo lo llamaba y no lo detectamos, falla de
+ * forma visible —410 con el motivo— en vez de silenciosamente.
+ *
+ * BORRAR ESTE ARCHIVO DESPUÉS DEL 25-nov-2026 (90 días), si nadie lo reclamó.
+ * No queda nada más que sacar: no está en vercel.json ni lo importa nadie.
  */
 export async function GET(req: NextRequest) {
   if (!isCronRequest(req))
     return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
-  // La declaración de la fábrica puede apagarla. Fallback `true`: lo que hace el
-  // código. Un cron que corre de más se nota; uno que no corre, no.
+
+  return NextResponse.json({
+    error: 'deprecado',
+    detalle: 'Este generador de recurrencias fue reemplazado por /api/cron/generar-agenda el 27-ago-2026. Genera las mismas tareas, sin duplicar y respetando el turno. Si algo estaba llamando a esta ruta, hay que apuntarlo allá.',
+  }, { status: 410 })
+}
+
+/** El cuerpo viejo, inalcanzable. Se va con el archivo el 25-nov-2026. */
+async function _corridaVieja(req: NextRequest) {
   if (!(await automatizacionActiva('tareas', 'generar_recurrencias', true))) {
     return NextResponse.json({ ok: true, omitida: 'la declaración la tiene apagada' })
   }
