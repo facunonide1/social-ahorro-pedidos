@@ -45,6 +45,13 @@ export async function middleware(request: NextRequest) {
   const isBootstrap  = pathname === '/bootstrap' || pathname.startsWith('/api/admin/bootstrap')
   // Brief público al community manager (OS-6b · O-07): se abre por token, sin login.
   const isBriefPublico = pathname.startsWith('/brief/') || pathname === '/api/ofertas/brief'
+  // Las tareas programadas (v0.80). Vercel las invoca sin sesión: sin esta
+  // excepción el middleware las mandaba a /login y ninguna llegaba a correr.
+  // Dieciséis automatizaciones declaradas, cero ejecuciones, y el panel
+  // prometiendo una agenda que nadie podía generar. No es un agujero: cada una
+  // de estas rutas verifica el secreto por su cuenta antes de tocar nada — acá
+  // el middleware sólo estorbaba.
+  const isCron = pathname.startsWith('/api/cron/') || pathname === '/api/ai/resumen-diario'
   const isLogin = pathname === '/login'
 
   // Copia las cookies ya seteadas por supabase al redirect
@@ -57,7 +64,7 @@ export async function middleware(request: NextRequest) {
     return res
   }
 
-  if (isApiSync || isWooWebhook || isBootstrap || isBriefPublico) return supabaseResponse
+  if (isApiSync || isWooWebhook || isBootstrap || isBriefPublico || isCron) return supabaseResponse
   if (isLogin) {
     // Si hay user pero la URL trae ?error=..., permito mostrar login
     // (ej: el server redirigió acá por "sin_permiso" y el form se va a
