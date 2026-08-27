@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
+import { puedeCalcular } from '@/lib/demo/guarda-calculo'
 import type { ObjetivoEmpleado } from '@/lib/types/empleados'
 
 export const dynamic = 'force-dynamic'
@@ -15,6 +16,12 @@ export const runtime = 'nodejs'
 export async function GET(req: NextRequest) {
   if (!isCronRequest(req))
     return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
+
+  // No califica a nadie con tareas de demostración en el medio: el score se
+  // GUARDA por período, y calificar a alguien por trabajo que no hizo no se
+  // deshace mirándolo (v0.81).
+  const g = await puedeCalcular('calcular-objetivos')
+  if (!g.puede) return NextResponse.json({ ok: true, omitida: g.motivo })
 
   const sb = createAdminClient()
   const { data: objetivos, error } = await sb

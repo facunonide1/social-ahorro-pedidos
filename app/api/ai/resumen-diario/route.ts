@@ -5,6 +5,7 @@ import { hasAnthropicKey } from '@/lib/ai/client'
 import { generarResumenDiario } from '@/lib/ai/resumen-diario'
 import { SUMMARY_MODEL } from '@/lib/ai/config'
 import { automatizacionActiva } from '@/lib/os/definicion'
+import { puedeCalcular } from '@/lib/demo/guarda-calculo'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -58,6 +59,11 @@ export async function GET(req: NextRequest) {
     if (!(await automatizacionActiva('inteligencia', 'armar_resumen_diario', true))) {
       return NextResponse.json({ ok: true, omitida: 'la declaración la tiene apagada' })
     }
+    // El prompt le dice a Claude «estas son las métricas reales del ERP» y el
+    // markdown queda archivado por fecha. Sobre datos de demostración eso es un
+    // relato ejecutivo falso, escrito con seguridad y guardado (v0.81).
+    const g = await puedeCalcular('resumen-diario')
+    if (!g.puede) return NextResponse.json({ ok: true, omitida: g.motivo })
     if (!hasAnthropicKey())
       return NextResponse.json({ error: 'sin_anthropic_key' }, { status: 503 })
     try {
