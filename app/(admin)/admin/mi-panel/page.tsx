@@ -121,7 +121,7 @@ export default async function MiPanelPage({
     <>
       <PageHeader
         title={`Hola, ${nombreCorto}`}
-        description="NORA te dejó listo el panel del día"
+        description="Tus tareas de hoy y cómo venís con tus objetivos"
         breadcrumbs={[{ label: 'Equipo' }, { label: 'Mi panel' }]}
         tabs={TABS.map((t) => ({
           label: TAB_LABELS[t],

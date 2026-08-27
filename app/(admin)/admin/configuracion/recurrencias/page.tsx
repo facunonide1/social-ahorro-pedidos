@@ -27,7 +27,7 @@ export default async function RecurrenciasPage() {
     <>
       <PageHeader
         title="Recurrencias"
-        description="Plantillas que generan tareas automáticamente cada día/semana/mes."
+        description="Plantillas que generan tareas solas. El generador pasa todas las mañanas a las 8 y crea las que tocan ese día."
         breadcrumbs={[{ label: 'Administración' }, { label: 'Recurrencias' }]}
         actions={profile.rol === 'super_admin' ? <RegenerarAgendaButton /> : undefined}
       />
