@@ -21,7 +21,10 @@ type Tab = 'mi_dia' | 'pool' | 'mi_sucursal' | 'tablero' | 'todas'
 const TABS: Tab[] = ['mi_dia', 'pool', 'mi_sucursal', 'tablero', 'todas']
 const TAB_LABELS: Record<Tab, string> = {
   mi_dia: 'Mi día',
-  pool: 'Pool de mi turno',
+  // "de mi turno" era mentira: la consulta de abajo filtra por la sucursal
+  // activa y no mira empleado_turnos en ningún momento. Con cero turnos
+  // asignados, nadie habría entendido por qué el pool le muestra cosas.
+  pool: 'Pool de mi sucursal',
   mi_sucursal: 'Mi sucursal',
   tablero: 'Tablero',
   todas: 'Todas',
@@ -145,7 +148,7 @@ export default async function TareasBandejaPage({
     <>
       <PageHeader
         title="Tareas"
-        description="Tu agenda del día, el pool de tu turno y las tareas de tu sucursal."
+        description="Tu día, las tareas sin dueño que podés tomar y todo lo de tu sucursal."
         breadcrumbs={[{ label: 'Operación' }, { label: 'Tareas' }]}
         tabs={tabsVisibles.map((t) => ({
           label: TAB_LABELS[t],

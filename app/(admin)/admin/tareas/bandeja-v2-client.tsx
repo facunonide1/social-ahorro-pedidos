@@ -109,7 +109,7 @@ export function BandejaV2Client({
       )}
 
       {filtradas.length === 0 ? (
-        <EmptyTab tab={tab} />
+        <EmptyTab tab={tab} huboAlgoHoy={progresoDia.total > 0} />
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {filtradas.map((t) => (
@@ -228,10 +228,15 @@ function countdown(fv: string | null): { label: string; color: string } | null {
   return { label: `Vence en ${label}`, color }
 }
 
-function EmptyTab({ tab }: { tab: string }) {
+// `huboAlgoHoy` separa dos vacíos que se ven iguales y no lo son: terminaste
+// todo lo del día, o no te tocó nada. Felicitar a alguien por un día limpio que
+// nunca tuvo una tarea es la misma mentira chica que esta versión vino a sacar.
+function EmptyTab({ tab, huboAlgoHoy }: { tab: string; huboAlgoHoy: boolean }) {
   const msg: Record<string, { icon: React.ReactNode; title: string; sub: string }> = {
-    mi_dia: { icon: <CheckCircle2 className="size-7 text-emerald-500" />, title: 'Día limpio', sub: 'No tenés tareas pendientes hoy. Buen trabajo.' },
-    pool: { icon: <Hand className="size-7 text-muted-foreground" />, title: 'Pool vacío', sub: 'No hay tareas sin reclamar en tu turno.' },
+    mi_dia: huboAlgoHoy
+      ? { icon: <CheckCircle2 className="size-7 text-emerald-500" />, title: 'Día limpio', sub: 'No tenés tareas pendientes hoy. Buen trabajo.' }
+      : { icon: <ListChecks className="size-7 text-muted-foreground" />, title: 'Sin tareas hoy', sub: 'No te asignaron ninguna. Podés crear una con «Nueva tarea» o tomar alguna del pool.' },
+    pool: { icon: <Hand className="size-7 text-muted-foreground" />, title: 'Pool vacío', sub: 'No hay tareas sin dueño en tu sucursal.' },
     mi_sucursal: { icon: <ListChecks className="size-7 text-muted-foreground" />, title: 'Sin tareas', sub: 'No hay tareas activas en tu sucursal.' },
     todas: { icon: <ListChecks className="size-7 text-muted-foreground" />, title: 'Sin tareas', sub: 'No hay tareas activas.' },
   }
