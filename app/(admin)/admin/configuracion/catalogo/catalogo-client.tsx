@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Plus, Pencil, Upload, Search, Package, Pill, Snowflake, FileWarning } from 'lucide-react'
+import { Plus, Pencil, Upload, Download, Search, Package, Pill, Snowflake, FileWarning, ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { createClient } from '@/lib/supabase/client'
@@ -15,6 +15,7 @@ import {
   type VademecumData,
 } from '@/lib/types/catalogo'
 import { formatARS } from '@/lib/utils/format'
+import { exportExcel } from '@/lib/utils/export-excel'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -121,6 +122,33 @@ export function CatalogoClient({
         </FilterSelect>
 
         <div className="ml-auto flex gap-2">
+          {/*
+            Regla de oro 6: toda pantalla con productos exporta .xlsx con SKU.
+            El catálogo no exportaba nada, que es justamente donde más falta
+            hace: Facundo arma los archivos de pedidos y de ofertas desde acá y
+            los necesita con el código de barras, no sólo con el SKU.
+            El nivel de control va en su propia columna: un archivo de productos
+            que no distingue un estupefaciente de un jabón se trata como una
+            lista de jabones.
+          */}
+          <Button variant="outline" size="sm" disabled={!filtrados.length}
+            onClick={() => exportExcel('catalogo', filtrados.map((p) => ({
+              SKU: p.sku,
+              'Código de barras': p.codigo_barras ?? '',
+              Producto: p.nombre,
+              Presentación: p.presentacion ?? '',
+              Categoría: PRODUCTO_CATEGORIA_LABELS[p.categoria],
+              Laboratorio: p.laboratorio ?? '',
+              Droga: p.droga_principal ?? '',
+              'Precio sugerido': p.precio_sugerido ?? '',
+              'Costo promedio': p.precio_costo_promedio ?? '',
+              'Requiere receta': p.requiere_receta ? 'Sí' : '',
+              Refrigerado: p.es_refrigerado ? 'Sí' : '',
+              Controlado: p.es_controlado ? (p.lista_controlado ?? 'Sí') : '',
+            })))}>
+            <Download className="size-4" />
+            Exportar
+          </Button>
           <Button asChild variant="outline" size="sm">
             <Link href="/admin/configuracion/catalogo/importar">
               <Upload className="size-4" />
@@ -161,6 +189,16 @@ export function CatalogoClient({
                       {p.nombre}
                       {p.requiere_receta && <Pill className="size-3 text-amber-500" aria-label="Requiere receta" />}
                       {p.es_refrigerado && <Snowflake className="size-3 text-sky-500" aria-label="Refrigerado" />}
+                      {/*
+                        El nivel, no un sí/no: un estupefaciente y una venta
+                        vigilada no se controlan igual (regla de oro 9).
+                      */}
+                      {p.es_controlado && (
+                        <Badge variant="outline" className="gap-1 border-rose-500/40 text-[10px] font-normal text-rose-600 dark:text-rose-400">
+                          <ShieldAlert className="size-3" />
+                          {p.lista_controlado ?? 'controlado'}
+                        </Badge>
+                      )}
                     </div>
                     {p.presentacion && (
                       <div className="text-xs text-muted-foreground">{p.presentacion}</div>

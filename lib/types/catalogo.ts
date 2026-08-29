@@ -46,6 +46,18 @@ export type ProductoCatalogo = {
   requiere_receta: boolean
   es_psicotropico: boolean
   es_refrigerado: boolean
+  /**
+   * Control legal (regla de oro 9). `es_controlado` dice que el producto exige
+   * un circuito distinto; `lista_controlado` dice CUÁL — un estupefaciente y una
+   * venta vigilada no se controlan igual, y un booleano los mezcla.
+   *
+   * Las dos columnas existen en la base desde antes; el tipo no las tenía, así
+   * que ninguna pantalla las podía mostrar aunque el dato estuviera.
+   */
+  es_controlado: boolean
+  lista_controlado: string | null
+  bloqueado_recall: boolean
+  rubro: string | null
   foto_url: string | null
   vademecum_data: Record<string, unknown>
   precio_sugerido: number | null
