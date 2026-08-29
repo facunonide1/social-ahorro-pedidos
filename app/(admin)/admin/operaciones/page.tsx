@@ -1,4 +1,4 @@
-import { Boxes, AlertTriangle, CalendarClock, Bell, ArrowRightLeft, ClipboardCheck, TrendingUp, Upload, PackageX } from 'lucide-react'
+import { Boxes, AlertTriangle, CalendarClock, Bell, ArrowRightLeft, ClipboardCheck, TrendingUp, Upload, PackageX, FileSpreadsheet } from 'lucide-react'
 
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
@@ -56,6 +56,9 @@ export default async function OperacionesDashboard() {
     { label: 'Análisis', href: '/admin/operaciones/analisis', icon: TrendingUp, descripcion: 'Más vendidos · dinero dormido' },
     { label: 'Reposición', href: '/admin/operaciones/reposicion', icon: PackageX },
     { label: 'Importaciones', href: '/admin/operaciones/importaciones', icon: Upload },
+    // Distinta de la de arriba: aquélla es el Excel diario por sucursal, ésta
+    // es el maestro completo de productos, de donde sale el catálogo.
+    { label: 'Maestro de SIFACO', href: '/admin/operaciones/sifaco', icon: FileSpreadsheet, descripcion: 'El archivo completo de productos' },
   ]
 
   const nora = quiebres > 0
