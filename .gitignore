@@ -32,3 +32,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Exportaciones de SIFACO: el maestro completo con precios y costos.
+# Se leen del disco, no se versionan — son 18 MB por copia y quedarian para
+# siempre en el historial. La imagen del archivo que importa vive en Storage,
+# con su hash, que es donde tiene que estar (v0.83).
+data/sifaco/

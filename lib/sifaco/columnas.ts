@@ -10,7 +10,21 @@
  * antes de poder compararlo es apoyar el mapa en lo que estamos arreglando.
  */
 
-export const FILA_PRIMER_DATO = 2
+/**
+ * Los datos empiezan después del encabezado, y NO en la fila 2.
+ *
+ * El relevamiento decía que la fila 1 era un encabezado de reporte
+ * («*** 28/08/26 ***», código 9999999). En el .xls original estaba; en el CSV
+ * convertido no está: la fila 1 ya es un producto real («+50 compx30», código
+ * 9948773). Con la constante en 2 se perdían dos productos sin que nadie se
+ * enterara — el archivo tiene 46.035 y habría cargado 46.033.
+ *
+ * Entonces se salta sólo el encabezado, y la fila de reporte —si viene— la
+ * descarta `esFilaDeEncabezado`, que mira el contenido en vez de la posición.
+ * Un número de fila es una suposición sobre el archivo; el contenido es el
+ * archivo.
+ */
+export const FILA_PRIMER_DATO = 1
 
 /** Índice → nombre del campo. El orden es el del archivo. */
 export const MAESTRO: Record<number, string> = {
