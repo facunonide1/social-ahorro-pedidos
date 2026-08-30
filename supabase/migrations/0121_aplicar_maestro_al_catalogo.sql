@@ -1,0 +1,28 @@
+-- 0121 · Aplicar el maestro al catálogo (v0.83)
+--
+-- ── TRES DECISIONES QUE NO SON OBVIAS ──────────────────────────────────────
+--
+-- 1 · LOS CÓDIGOS DE BARRAS VAN APARTE. El maestro trae dos por producto y
+--     tabla3e hasta cuatro. Como columnas se quedan cortos en el quinto, y
+--     Facundo los necesita para armar los archivos de pedidos y de ofertas.
+--     Una tabla, una fila por código.
+--
+-- 2 · EL STOCK NO VA A stock_items. Va a `producto_stock_sifaco`, que es un
+--     espejo de lo que DECLARA SIFACO, con `sucursal_id` nulo para el total.
+--     Cuando llegue tabla3e completo, la apertura por sucursal son filas
+--     nuevas y no columnas nuevas: no hay que rehacer nada (B.6). Y sobre todo
+--     no es stock_items, porque NORA no ajusta stock (regla de oro 1).
+--
+-- 3 · LOS CÓDIGOS REPETIDOS NO SE APLICAN. En el archivo del 28-ago hay 13
+--     códigos con dos filas cada uno, y son PRODUCTOS DISTINTOS: el 271403 es
+--     una tetina Chicco de $1.544 y una vacuna VERORAB de $81.470. Elegir uno
+--     corrompe al otro en silencio. Se omiten los 26 renglones y se reportan;
+--     la corrección se hace en SIFACO, que es la autoridad.
+--
+-- ── EL FRENO LEGAL ─────────────────────────────────────────────────────────
+--
+-- Si aparece un nivel de control sin declarar, la función LANZA y no aplica
+-- nada. Un producto controlado que entra al catálogo como común es peor que un
+-- producto que no entra (regla de oro 9). Ya sirvió una vez: el archivo trajo
+-- tres niveles que el relevamiento no tenía.
+-- (cuerpo aplicado por MCP: ver 0121b para la version vigente)
