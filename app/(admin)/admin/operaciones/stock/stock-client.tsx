@@ -37,7 +37,15 @@ function sem(x?: { cantidad: number; min: number; max: number | null }) {
   return { c: 'text-emerald-600 dark:text-emerald-400', t: String(x.cantidad) }
 }
 
-export function StockClient({ productos, sucursales, kpis, rol, mostrados, truncado }: { productos: ProductoRow[]; sucursales: SucursalLite[]; kpis: Kpis; rol: string; mostrados: number; truncado: boolean }) {
+export interface StockSifaco {
+  /** `true` cuando el selector esta en «todas las sucursales». */
+  esTotal: boolean
+  unidades: number
+  /** SIFACO todavia no exporto la apertura por sucursal. */
+  sinApertura: boolean
+}
+
+export function StockClient({ productos, sucursales, kpis, rol, mostrados, truncado, stockSifaco }: { productos: ProductoRow[]; sucursales: SucursalLite[]; kpis: Kpis; rol: string; mostrados: number; truncado: boolean; stockSifaco: StockSifaco }) {
   const [tab, setTab] = useState<'productos' | 'kardex'>('productos')
   return (
     <div className="space-y-4">
@@ -52,12 +60,12 @@ export function StockClient({ productos, sucursales, kpis, rol, mostrados, trunc
           <Button asChild variant="outline" size="sm"><Link href="/admin/operaciones/importaciones"><Upload className="size-4" /> Importar</Link></Button>
         </div>
       </div>
-      {tab === 'productos' ? <Productos productos={productos} sucursales={sucursales} kpis={kpis} mostrados={mostrados} truncado={truncado} canEdit={['super_admin','gerente','comprador','administrativo'].includes(rol)} /> : <Kardex sucursales={sucursales} />}
+      {tab === 'productos' ? <Productos productos={productos} sucursales={sucursales} kpis={kpis} mostrados={mostrados} truncado={truncado} stockSifaco={stockSifaco} canEdit={['super_admin','gerente','comprador','administrativo'].includes(rol)} /> : <Kardex sucursales={sucursales} />}
     </div>
   )
 }
 
-function Productos({ productos, sucursales, kpis, canEdit, mostrados, truncado }: { productos: ProductoRow[]; sucursales: SucursalLite[]; kpis: Kpis; canEdit: boolean; mostrados: number; truncado: boolean }) {
+function Productos({ productos, sucursales, kpis, canEdit, mostrados, truncado, stockSifaco }: { productos: ProductoRow[]; sucursales: SucursalLite[]; kpis: Kpis; canEdit: boolean; mostrados: number; truncado: boolean; stockSifaco: StockSifaco }) {
   const [q, setQ] = useState('')
   const [cat, setCat] = useState(ALL)
   const [lab, setLab] = useState(ALL)
@@ -114,6 +122,30 @@ function Productos({ productos, sucursales, kpis, canEdit, mostrados, truncado }
         ))}
       </div>
 
+      {/*
+        El stock por sucursal no existe todavia: SIFACO exporto el maestro con
+        el TOTAL y la apertura viene en otro archivo que no llego. Se dice
+        arriba de los numeros y no al pie: un aviso debajo del numero llega
+        cuando la persona ya saco su conclusion (v0.85).
+      */}
+      {stockSifaco.sinApertura && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
+          {stockSifaco.esTotal ? (
+            <>
+              <b>{stockSifaco.unidades.toLocaleString('es-AR')} unidades</b> es el stock TOTAL que
+              declara SIFACO, sin abrir por sucursal. La columna de cada sucursal esta vacia porque
+              el archivo con la apertura todavia no llego — no porque no haya stock.
+            </>
+          ) : (
+            <>
+              <b>Esta sucursal no tiene stock cargado.</b> SIFACO exporto el maestro con el total y
+              la apertura por sucursal viene en otro archivo que todavia no llego. Para ver el total,
+              cambia el selector a «todas las sucursales». No se reparte el total entre las cuatro:
+              seria un numero inventado.
+            </>
+          )}
+        </div>
+      )}
       <div className="text-xs text-muted-foreground">{rows.length} de {mostrados} productos {truncado && <span className="text-amber-600 dark:text-amber-400">(la pantalla trae los primeros {mostrados.toLocaleString('es-AR')} de {kpis.productos.toLocaleString('es-AR')} — usá el buscador)</span>} · <span className="text-emerald-600 dark:text-emerald-400">ok</span> · <span className="text-amber-600 dark:text-amber-400">bajo mínimo</span> · <span className="text-rose-600 dark:text-rose-400">crítico/sin stock</span> · <span className="text-violet-600 dark:text-violet-400">sobrestock</span></div>
 
       {productos.length === 0 ? (

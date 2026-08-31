@@ -93,7 +93,25 @@ export default async function StockPage() {
     }
   })
 
-  const valorStock = productos.reduce((a, p) => a + p.total * p.costo, 0)
+  // ── DE DONDE SALE EL STOCK (v0.85) ────────────────────────────────────────
+  //
+  // `stock_items` tiene 480 filas y las 480 son de demostracion: los 46.009
+  // productos reales no tienen ni una. Por eso esta pantalla mostraba $0.
+  //
+  // El stock real que declara SIFACO esta en `producto_stock_sifaco`, con
+  // `sucursal_id` NULO: es un TOTAL, sin apertura por sucursal, porque el
+  // archivo tabla3e completo todavia no llego.
+  //
+  // La decision: el total se muestra SOLO en "todas las sucursales". En una
+  // sucursal puntual no se muestra nada, y se dice por que. Repartir el total
+  // entre las cuatro seria inventar un dato que despues alguien usa para
+  // decidir un pedido.
+  const { data: totalSifaco } = await sb.rpc('catalogo_valor_de_stock')
+  const valorSifaco = Number((totalSifaco as any)?.[0]?.valor_costo ?? 0)
+  const unidadesSifaco = Number((totalSifaco as any)?.[0]?.unidades ?? 0)
+
+  const valorStockItems = productos.reduce((a, p) => a + p.total * p.costo, 0)
+  const valorStock = esTodas ? valorSifaco : valorStockItems
   const criticos = productos.filter((p) => p.critico).length
 
   return (
@@ -116,6 +134,7 @@ export default async function StockPage() {
           kpis={{ productos: totalProductos ?? productos.length, valorStock, criticos, porVencer: porVencer.size }}
           mostrados={productos.length}
           truncado={truncado}
+          stockSifaco={{ esTotal: esTodas, unidades: unidadesSifaco, sinApertura: true }}
           rol={profile.rol}
         />
       </div>

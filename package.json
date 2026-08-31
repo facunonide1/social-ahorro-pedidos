@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "next build",
+    "build": "npm run auditar:cortes && next build",
     "start": "next start -p 3001",
-    "lint": "next lint"
+    "lint": "next lint",
+    "auditar:cortes": "node scripts/auditar-cortes.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",
