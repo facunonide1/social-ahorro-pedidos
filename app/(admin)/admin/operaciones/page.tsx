@@ -75,6 +75,7 @@ export default async function OperacionesDashboard() {
     // Distinta de la de arriba: aquélla es el Excel diario por sucursal, ésta
     // es el maestro completo de productos, de donde sale el catálogo.
     { label: 'Maestro de SIFACO', href: '/admin/operaciones/sifaco', icon: FileSpreadsheet, descripcion: 'El archivo completo de productos' },
+    { label: 'Lo que está roto', href: '/admin/operaciones/anomalias', icon: AlertTriangle, descripcion: 'Descuentos, duplicados y costos que faltan' },
   ]
 
   // NORA no afirma sobre lo que no puede saber. Si no hay stock por sucursal,

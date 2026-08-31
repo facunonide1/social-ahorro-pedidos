@@ -1,0 +1,6 @@
+-- 0133_verificaciones_previas (v0.84/v0.85)
+--
+-- El cuerpo de esta función se aplicó vía MCP y vive en la base. Para verlo:
+--   select pg_get_functiondef(p.oid) from pg_proc p
+--     join pg_namespace n on n.oid = p.pronamespace
+--    where n.nspname = 'public' and p.proname = 'verificaciones_previas';

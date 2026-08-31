@@ -1,0 +1,12 @@
+-- 0137_ofertas_x_rotacion (v0.84)
+--
+-- Aplicada vía MCP. El DDL vigente vive en la base:
+--   select pg_get_functiondef(p.oid) from pg_proc p join pg_namespace n
+--     on n.oid = p.pronamespace where n.nspname='public' and p.proname='...';
+--   select pg_get_viewdef('public....'::regclass, true);
+--
+-- EL CRUCE QUE MÁS VALOR TIENE. Una oferta sobre un producto que ya se vende
+-- solo es margen regalado; sobre uno dormido es exactamente para lo que sirve
+-- una oferta. Los cortes salen de los percentiles de los propios datos, no de
+-- un umbral inventado — un «más de 10 por mes» diría más de nosotros que del
+-- negocio.

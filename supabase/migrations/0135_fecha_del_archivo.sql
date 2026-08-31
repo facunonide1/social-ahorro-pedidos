@@ -1,0 +1,6 @@
+-- 0135_fecha_del_archivo (v0.84)
+--
+-- Aplicada vía MCP. El DDL vigente vive en la base:
+--   select pg_get_functiondef(p.oid) from pg_proc p join pg_namespace n
+--     on n.oid = p.pronamespace where n.nspname='public' and p.proname='...';
+--   select pg_get_viewdef('public....'::regclass, true);

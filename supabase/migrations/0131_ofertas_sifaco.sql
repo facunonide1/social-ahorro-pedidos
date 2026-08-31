@@ -1,0 +1,24 @@
+-- 0131_ofertas_sifaco (v0.84)
+--
+-- Aplicada vía MCP. El DDL vigente vive en la base:
+--   select pg_get_functiondef(p.oid) from pg_proc p join pg_namespace n
+--     on n.oid = p.pronamespace where n.nspname='public' and p.proname='...';
+--   select pg_get_viewdef('public....'::regclass, true);
+--
+-- LAS SEIS FORMAS DE DESCUENTO y LA CONDICIÓN DE VENTA, como dato.
+--
+-- `tip_o1` dice CÓMO se aplica el descuento, y son seis formas, no una:
+--   %  5.583 directo · '' 690 sin tipo · 2 167 segunda unidad
+--   $     18 pesos   · 3    4 tercera  · 6   1 SIFACO no documenta qué es
+--
+-- Un `2` con valor 50 NO es 50%: es 50% en la segunda unidad, o sea 25%
+-- efectivo llevando dos. Si los 190 casos de 2, 3 y $ entran como descuento
+-- directo, el margen calculado queda mal justo ahí — y las alertas de bajo
+-- costo, que es lo que uno quiere que funcione, también.
+--
+-- El `6` NO se interpreta: el descuento efectivo queda en null. null es «no lo
+-- sé»; 0 sería «no hay descuento».
+--
+-- `vl` es la condición de venta y es MÁS GRANULAR que el psi del maestro: es la
+-- que decide qué se puede ofrecer por un canal abierto (regla de oro 9). Lo que
+-- no está declarado va con canal_abierto = false: ante la duda, no se ofrece.

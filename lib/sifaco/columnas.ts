@@ -104,6 +104,15 @@ export function fechaSifaco(valor: unknown): string | null {
   const t = String(valor).trim()
   if (VACIOS.has(t) || !t.replace(/[\s\-/]/g, '')) return null
 
+  // ISO, que es como vienen los CSV ya convertidos. Faltaba: el `\d{1,2}` de
+  // abajo no puede matchear «2026», asi que 2026-08-24 caia al `Number(t)`,
+  // daba NaN y devolvia null. Las 329 ofertas con fecha de fin entraban todas
+  // como «sin vencimiento» — el archivo tenia el dato y nosotros lo perdiamos.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
+    const a = Number(t.slice(0, 4))
+    return a >= 1990 && a <= 2100 ? t : null
+  }
+
   // dd/mm/yy o dd/mm/yyyy
   const m = t.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/)
   if (m) {

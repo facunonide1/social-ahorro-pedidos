@@ -1,0 +1,14 @@
+-- 0126_anomalias_conciliar (v0.84/v0.85)
+--
+-- El cuerpo de esta función se aplicó vía MCP y vive en la base. Para verlo:
+--   select pg_get_functiondef(p.oid) from pg_proc p
+--     join pg_namespace n on n.oid = p.pronamespace
+--    where n.nspname = 'public' and p.proname = 'anomalias_conciliar';
+--
+-- Es la parte que hace que el seguimiento sirva. Cuatro casos:
+--   sigue abierta  → se refresca la evidencia
+--   REAPARECIÓ     → alguien la marcó resuelta y el archivo siguiente la trae
+--                    igual. No se arregló. Se dice.
+--   nueva          → no estaba nunca
+--   se cerró sola  → ya no aparece. NORA no lo da por hecho porque alguien lo
+--                    dijo, sino porque el archivo siguiente ya no la trae.

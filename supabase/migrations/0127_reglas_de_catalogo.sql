@@ -1,0 +1,12 @@
+-- 0127_reglas_de_catalogo (v0.84/v0.85)
+--
+-- El cuerpo de esta función se aplicó vía MCP y vive en la base. Para verlo:
+--   select pg_get_functiondef(p.oid) from pg_proc p
+--     join pg_namespace n on n.oid = p.pronamespace
+--    where n.nspname = 'public' and p.proname = 'reglas_de_catalogo';
+--
+-- Sin costo cargado · precio de lista bajo costo · producto duplicado.
+-- El criterio para elegir cuál duplicado se queda está ESCRITO en la evidencia:
+-- el que más vendió en los meses cerrados; si empatan, el de más stock. Los
+-- AMBIGUOS —venden las dos y las dos tienen stock— se marcan y NO se resuelven
+-- solos: ahí no sobra una, hay una decisión, y la toma una persona.
