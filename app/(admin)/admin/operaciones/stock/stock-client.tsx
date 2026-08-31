@@ -37,7 +37,7 @@ function sem(x?: { cantidad: number; min: number; max: number | null }) {
   return { c: 'text-emerald-600 dark:text-emerald-400', t: String(x.cantidad) }
 }
 
-export function StockClient({ productos, sucursales, kpis, rol }: { productos: ProductoRow[]; sucursales: SucursalLite[]; kpis: Kpis; rol: string }) {
+export function StockClient({ productos, sucursales, kpis, rol, mostrados, truncado }: { productos: ProductoRow[]; sucursales: SucursalLite[]; kpis: Kpis; rol: string; mostrados: number; truncado: boolean }) {
   const [tab, setTab] = useState<'productos' | 'kardex'>('productos')
   return (
     <div className="space-y-4">
@@ -52,12 +52,12 @@ export function StockClient({ productos, sucursales, kpis, rol }: { productos: P
           <Button asChild variant="outline" size="sm"><Link href="/admin/operaciones/importaciones"><Upload className="size-4" /> Importar</Link></Button>
         </div>
       </div>
-      {tab === 'productos' ? <Productos productos={productos} sucursales={sucursales} kpis={kpis} canEdit={['super_admin','gerente','comprador','administrativo'].includes(rol)} /> : <Kardex sucursales={sucursales} />}
+      {tab === 'productos' ? <Productos productos={productos} sucursales={sucursales} kpis={kpis} mostrados={mostrados} truncado={truncado} canEdit={['super_admin','gerente','comprador','administrativo'].includes(rol)} /> : <Kardex sucursales={sucursales} />}
     </div>
   )
 }
 
-function Productos({ productos, sucursales, kpis, canEdit }: { productos: ProductoRow[]; sucursales: SucursalLite[]; kpis: Kpis; canEdit: boolean }) {
+function Productos({ productos, sucursales, kpis, canEdit, mostrados, truncado }: { productos: ProductoRow[]; sucursales: SucursalLite[]; kpis: Kpis; canEdit: boolean; mostrados: number; truncado: boolean }) {
   const [q, setQ] = useState('')
   const [cat, setCat] = useState(ALL)
   const [lab, setLab] = useState(ALL)
@@ -114,7 +114,7 @@ function Productos({ productos, sucursales, kpis, canEdit }: { productos: Produc
         ))}
       </div>
 
-      <div className="text-xs text-muted-foreground">{rows.length} de {productos.length} productos · <span className="text-emerald-600 dark:text-emerald-400">ok</span> · <span className="text-amber-600 dark:text-amber-400">bajo mínimo</span> · <span className="text-rose-600 dark:text-rose-400">crítico/sin stock</span> · <span className="text-violet-600 dark:text-violet-400">sobrestock</span></div>
+      <div className="text-xs text-muted-foreground">{rows.length} de {mostrados} productos {truncado && <span className="text-amber-600 dark:text-amber-400">(la pantalla trae los primeros {mostrados.toLocaleString('es-AR')} de {kpis.productos.toLocaleString('es-AR')} — usá el buscador)</span>} · <span className="text-emerald-600 dark:text-emerald-400">ok</span> · <span className="text-amber-600 dark:text-amber-400">bajo mínimo</span> · <span className="text-rose-600 dark:text-rose-400">crítico/sin stock</span> · <span className="text-violet-600 dark:text-violet-400">sobrestock</span></div>
 
       {productos.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-16 text-center">

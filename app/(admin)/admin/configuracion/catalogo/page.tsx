@@ -1,5 +1,6 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
+import { paginar } from '@/lib/supabase/paginar'
 import type { ProductoCatalogo } from '@/lib/types/catalogo'
 import { PageHeader } from '@/components/shared/page-header'
 
@@ -12,13 +13,31 @@ export default async function CatalogoPage() {
   await requireAdminHubAccess({ allowedRoles: ['super_admin'] })
 
   const sb = createClient()
-  const { data, error } = await sb
-    .from('productos_catalogo')
-    .select('*')
-    .order('nombre', { ascending: true })
-    .limit(1000)
 
-  const productos = (data ?? []) as ProductoCatalogo[]
+  // El total se cuenta EN LA BASE. Contar `data.length` era contar lo que entro
+  // en memoria: con `limit(1000)` sobre 46.129 productos, la pantalla decia
+  // "1000 de 1000" y no habia forma de notar que faltaban 45.129.
+  const { count: total } = await sb
+    .from('productos_catalogo').select('id', { count: 'exact', head: true })
+
+  // TOPE de pantalla, dicho arriba de la tabla. Mandar 46.000 productos al
+  // navegador no es una lista: es una descarga.
+  const TOPE = 3000
+  let error: { message: string } | null = null
+  let filas: ProductoCatalogo[] = []
+  let truncado = false
+  try {
+    const r = await paginar<ProductoCatalogo>(
+      sb.from('productos_catalogo').select('*').order('nombre', { ascending: true }),
+      { maximo: TOPE },
+    )
+    filas = r.filas
+    truncado = r.truncado
+  } catch (e: any) {
+    error = { message: e?.message ?? 'error' }
+  }
+
+  const productos = filas
   const laboratorios = Array.from(
     new Set(productos.map((p) => p.laboratorio).filter(Boolean) as string[]),
   ).sort()
@@ -34,6 +53,8 @@ export default async function CatalogoPage() {
         <CatalogoClient
           productos={productos}
           laboratorios={laboratorios}
+          total={total ?? productos.length}
+          truncado={truncado}
           loadError={error?.message ?? null}
         />
       </div>

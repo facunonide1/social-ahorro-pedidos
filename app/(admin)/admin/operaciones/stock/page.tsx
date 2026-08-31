@@ -1,11 +1,15 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
+import { paginar } from '@/lib/supabase/paginar'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { tituloDePantalla } from '@/lib/os/definicion'
 import { AccesoCentroDatos } from '@/components/centro-datos/acceso-centro-datos'
 
 import { StockClient, type ProductoRow, type SucursalLite } from './stock-client'
+
+const COLUMNAS_PRODUCTO =
+  'id, sku, codigo_barras, nombre, laboratorio, categoria, precio_costo_promedio, precio_sugerido, es_controlado, lista_controlado, bloqueado_recall'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Stock' }
@@ -26,9 +30,27 @@ export default async function StockPage() {
   let lotesQ = sb.from('lotes_productos').select('producto_id').gt('cantidad_actual', 0).lte('fecha_vencimiento', en30d)
   if (!esTodas && sucursalId) { stockQ = stockQ.eq('sucursal_id', sucursalId); rotQ = rotQ.eq('sucursal_id', sucursalId); lotesQ = lotesQ.eq('sucursal_id', sucursalId) }
 
-  const [{ data: prods }, { data: stock }, { data: rot }, { data: sucs }, { data: lotesVenc }] =
+  // El total REAL, contado en la base. Antes la pantalla decia "1000 de 1000
+  // productos" con 46.009 cargados: `limit(5000)` no sube el techo de 1000 de
+  // PostgREST, devuelve mil y no avisa. Contar `prods.length` era contar lo que
+  // habia entrado en memoria, no lo que hay.
+  const { count: totalProductos } = await sb
+    .from('productos_catalogo').select('id', { count: 'exact', head: true })
+    .eq('es_demo', false).eq('activo', true)
+
+  // TOPE: 5.000 y dicho en pantalla. No es el numero esperado, es hasta donde
+  // traemos antes de asumir que la pantalla no da para mas. Con 46.009
+  // productos, mandarlos todos al navegador no es una tabla: es una descarga.
+  const TOPE_PANTALLA = 5000
+
+  const [{ filas: prods, truncado }, { data: stock }, { data: rot }, { data: sucs }, { data: lotesVenc }] =
     await Promise.all([
-      sb.from('productos_catalogo').select('id, sku, codigo_barras, nombre, laboratorio, categoria, precio_costo_promedio, precio_sugerido, es_controlado, lista_controlado, bloqueado_recall').eq('activo', true).order('nombre').limit(5000),
+      paginar<any>(
+        sb.from('productos_catalogo')
+          .select(COLUMNAS_PRODUCTO)
+          .eq('es_demo', false).eq('activo', true).order('nombre'),
+        { maximo: TOPE_PANTALLA },
+      ),
       stockQ,
       rotQ,
       sb.from('sucursales').select('id, nombre, codigo, usa_deposito').eq('activa', true).order('nombre'),
@@ -91,7 +113,9 @@ export default async function StockPage() {
         <StockClient
           productos={productos}
           sucursales={sucursales}
-          kpis={{ productos: productos.length, valorStock, criticos, porVencer: porVencer.size }}
+          kpis={{ productos: totalProductos ?? productos.length, valorStock, criticos, porVencer: porVencer.size }}
+          mostrados={productos.length}
+          truncado={truncado}
           rol={profile.rol}
         />
       </div>

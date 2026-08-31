@@ -42,10 +42,16 @@ const ALL = '__all__'
 export function CatalogoClient({
   productos,
   laboratorios,
+  total,
+  truncado,
   loadError,
 }: {
   productos: ProductoCatalogo[]
   laboratorios: string[]
+  /** El total contado EN LA BASE, no el largo del array que llego. */
+  total: number
+  /** `true` si se llego al tope de pantalla y hay mas que no se trajeron. */
+  truncado: boolean
   loadError: string | null
 }) {
   const [q, setQ] = useState('')
@@ -163,7 +169,13 @@ export function CatalogoClient({
       </div>
 
       <div className="text-xs text-muted-foreground">
-        {filtrados.length} de {productos.length} productos
+        {filtrados.length.toLocaleString('es-AR')} de {productos.length.toLocaleString('es-AR')} productos
+        {truncado && (
+          <span className="text-amber-600 dark:text-amber-400">
+            {' '}— la pantalla trae los primeros {productos.length.toLocaleString('es-AR')} de{' '}
+            {total.toLocaleString('es-AR')}. Buscá por nombre, SKU o código de barras.
+          </span>
+        )}
       </div>
 
       {productos.length === 0 ? (
