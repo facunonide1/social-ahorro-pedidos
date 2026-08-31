@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
 import type { AdminRole } from '@/lib/types/admin'
 
+import { catalogoCompleto } from '@/lib/catalogo/indice'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
@@ -39,10 +40,10 @@ async function run(userId: string | null) {
   const yaCubiertos = new Set<string>()
   for (const o of (yaProp ?? []) as any[]) for (const p of (o.productos_ids ?? [])) yaCubiertos.add(p)
 
-  const [{ data: lotes }, { data: rot }, { data: prods }] = await Promise.all([
+  const [{ data: lotes }, { data: rot }, prods] = await Promise.all([
     adm.from('lotes_productos').select('producto_id, fecha_vencimiento, cantidad_actual').gt('cantidad_actual', 0).lte('fecha_vencimiento', en45).gte('fecha_vencimiento', hoy).order('fecha_vencimiento').limit(200),
     adm.from('producto_rotacion').select('producto_id, venta_diaria_prom_30d, clasificacion_abc').limit(20000),
-    adm.from('productos_catalogo').select('id, nombre, sku, categoria, precio_sugerido, precio_costo_promedio').eq('activo', true).limit(20000),
+    catalogoCompleto(adm),
   ])
   const prodMap = new Map(((prods ?? []) as any[]).map((p) => [p.id, p]))
   const ventaMap = new Map(((rot ?? []) as any[]).map((r) => [r.producto_id, Number(r.venta_diaria_prom_30d ?? 0)]))

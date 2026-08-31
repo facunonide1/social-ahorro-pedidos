@@ -7,6 +7,7 @@ import { getSucursalActiva } from '@/lib/sucursal/server'
 import { VentasFinasCard } from '@/components/centro-datos/ventas-finas-card'
 import { FaltantesClient, type FaltanteGrupo, type ProductoLite, type SucLite } from './faltantes-client'
 
+import { paginarProductos } from '@/lib/catalogo/indice'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Avisos de faltantes' }
 
@@ -24,7 +25,7 @@ export default async function FaltantesPage({ searchParams }: { searchParams: { 
 
   const [{ data: avisos }, { data: prods }, { data: sucs }] = await Promise.all([
     q,
-    sb.from('productos_catalogo').select('id, sku, nombre').eq('activo', true).order('nombre').limit(5000),
+    paginarProductos(sb, 'id, sku, nombre'),
     sb.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
   ])
 

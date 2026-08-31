@@ -12,6 +12,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { finalizarVencidas } from '@/lib/ofertas/al-finalizar'
 import { OfertasClient, type OfertaRow, type ProdLite, type CampLite, type SucLite, type Prefill } from './ofertas-client'
 
+import { paginarProductos } from '@/lib/catalogo/indice'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Ofertas' }
 
@@ -27,7 +28,7 @@ export default async function OfertasPage({ searchParams }: { searchParams: { sk
   const [{ data: ofertas }, { data: confs }, { data: prods }, { data: camps }, { data: sucs }] = await Promise.all([
     sb.from('ofertas').select('id, codigo, nombre, tipo, valor, productos_ids, rubro, canales, vigencia_tipo, fecha_inicio, fecha_fin, origen, estado, propuesta_por, publicada_cuponera, version, metricas, created_at').order('created_at', { ascending: false }).limit(1000),
     sb.from('ofertas_confirmaciones').select('oferta_id, version_confirmada'),
-    sb.from('productos_catalogo').select('id, sku, nombre, codigo_barras, precio_sugerido, precio_costo_promedio').eq('activo', true).order('nombre').limit(5000),
+    paginarProductos(sb, 'id, sku, nombre, codigo_barras, precio_sugerido, precio_costo_promedio'),
     sb.from('campanias').select('id, nombre, estado').order('created_at', { ascending: false }).limit(200),
     sb.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
   ])

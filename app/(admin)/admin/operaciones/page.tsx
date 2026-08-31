@@ -27,16 +27,18 @@ export default async function OperacionesDashboard() {
   let alertasQ = sb.from('alertas_stock').select('id', { count: 'exact', head: true }).eq('estado', 'activa')
   if (!esTodas && sucursalId) { itemsQ = itemsQ.eq('sucursal_id', sucursalId); lotesQ = lotesQ.eq('sucursal_id', sucursalId); alertasQ = alertasQ.eq('sucursal_id', sucursalId) }
 
-  const [{ data: items }, { data: prods }, { data: lotes }, { count: alertas }] = await Promise.all([
+  const [{ data: items }, { data: valor }, { data: lotes }, { count: alertas }] = await Promise.all([
     itemsQ,
-    sb.from('productos_catalogo').select('id, precio_costo_promedio').limit(20000),
+    // El valor de stock se suma EN LA BASE. Antes se traian 46.129 productos
+    // para armar un Map de costos y PostgREST devolvia mil: el total salia
+    // calculado sobre el 2% del catalogo, sin ninguna senal (v0.85).
+    sb.rpc('catalogo_valor_de_stock'),
     lotesQ,
     alertasQ,
   ])
 
-  const costo = new Map(((prods ?? []) as any[]).map((p) => [p.id, Number(p.precio_costo_promedio ?? 0)]))
   const its = (items ?? []) as any[]
-  const valorStock = its.reduce((a, s) => a + Number(s.cantidad) * (costo.get(s.producto_id) ?? 0), 0)
+  const valorStock = Number((valor as any)?.[0]?.valor_costo ?? 0)
   const quiebres = its.filter((s) => Number(s.stock_minimo) > 0 && Number(s.cantidad) <= Number(s.stock_minimo)).length
   const porVencer = (lotes ?? []).length
 

@@ -11,6 +11,8 @@
  * Se inserta un movimiento FIRMADO (cantidad=delta); el trigger deriva stock_items.
  */
 
+import { catalogoCompleto } from '@/lib/catalogo/indice'
+
 export type FilaImport = {
   fila: number
   sku?: string | null
@@ -60,11 +62,9 @@ export async function analizarImportStock(
   sucursalId: string,
   filas: FilaImport[],
 ): Promise<ItemAnalizado[]> {
-  const { data: cat } = await adm
-    .from('productos_catalogo')
-    .select('id, sku, codigo_barras, nombre')
-    .eq('activo', true)
-    .limit(20000)
+  // `limit(20000)` traia MIL de 46.009: el importador reconocia el 2% del
+  // catalogo y el resto entraba como "producto nuevo" (v0.85).
+  const cat = await catalogoCompleto(adm)
   const catalogo = (cat ?? []) as Catalogo[]
 
   const porSku = new Map<string, Catalogo>()

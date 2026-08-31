@@ -7,6 +7,7 @@ import { gateDocumentos } from '@/lib/documentos/permisos'
 import { urlFirmada } from '@/lib/documentos/subida'
 import { RevisionClient } from './revision-client'
 
+import { paginarProductos } from '@/lib/catalogo/indice'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Revisar documento' }
 
@@ -61,7 +62,7 @@ export default async function RevisionPage({
     urlFirmada(adm, ext.archivo_path),
     adm.from('proveedores').select('id, razon_social, cuit').eq('activo', true).order('razon_social').limit(2000),
     adm.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
-    adm.from('productos_catalogo').select('id, sku, nombre').eq('activo', true).order('nombre').limit(5000),
+    paginarProductos(adm, 'id, sku, nombre'),
   ])
 
   return (

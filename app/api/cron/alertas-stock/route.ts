@@ -5,6 +5,7 @@ import { isCronRequest } from '@/lib/cron/auth'
 import type { AdminRole } from '@/lib/types/admin'
 import { automatizacionActiva } from '@/lib/os/definicion'
 import { puedeCalcular } from '@/lib/demo/guarda-calculo'
+import { catalogoCompleto } from '@/lib/catalogo/indice'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -50,11 +51,11 @@ async function run(conAlertas: boolean, conVencimientos: boolean) {
   const en = (d: number) => new Date(ahora + d * 86_400_000).toISOString().slice(0, 10)
   const hoy = new Date().toISOString().slice(0, 10)
 
-  const [{ data: stock }, { data: rot }, { data: lotes }, { data: prods }, { data: sucs }] = await Promise.all([
+  const [{ data: stock }, { data: rot }, { data: lotes }, prods, { data: sucs }] = await Promise.all([
     adm.from('stock_items').select('producto_id, sucursal_id, cantidad, cantidad_gondola, cantidad_deposito, stock_minimo, stock_maximo'),
     adm.from('producto_rotacion').select('producto_id, sucursal_id, venta_diaria_prom_30d, dias_stock_restante, ultima_venta'),
     adm.from('lotes_productos').select('id, producto_id, sucursal_id, numero_lote, fecha_vencimiento, cantidad_actual').gt('cantidad_actual', 0),
-    adm.from('productos_catalogo').select('id, nombre, sku').eq('activo', true),
+    catalogoCompleto(adm),
     adm.from('sucursales').select('id, nombre').eq('activa', true),
   ])
   const prodMap = new Map(((prods ?? []) as any[]).map((p) => [p.id, p]))

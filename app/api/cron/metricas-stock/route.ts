@@ -5,6 +5,7 @@ import { isCronRequest } from '@/lib/cron/auth'
 import { automatizacionActiva } from '@/lib/os/definicion'
 import { puedeCalcular } from '@/lib/demo/guarda-calculo'
 import type { AdminRole } from '@/lib/types/admin'
+import { catalogoCompleto } from '@/lib/catalogo/indice'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -56,10 +57,10 @@ async function run() {
   const d7 = new Date(ahora - 7 * 86_400_000).toISOString()
   const hoy = new Date().toISOString().slice(0, 10)
 
-  const [{ data: ventas }, { data: stock }, { data: prods }] = await Promise.all([
+  const [{ data: ventas }, { data: stock }, prods] = await Promise.all([
     adm.from('movimientos_stock').select('producto_id, sucursal_id, cantidad, fecha').eq('tipo', 'venta').gte('fecha', d30),
     adm.from('stock_items').select('producto_id, sucursal_id, cantidad'),
-    adm.from('productos_catalogo').select('id, precio_sugerido, precio_costo_promedio').eq('activo', true),
+    catalogoCompleto(adm),
   ])
 
   const precio = new Map<string, number>(((prods ?? []) as any[]).map((p) => [p.id, Number(p.precio_sugerido ?? p.precio_costo_promedio ?? 0)]))

@@ -4,6 +4,8 @@
  * SKU→EAN→nombre contra productos_catalogo.
  */
 
+import { catalogoCompleto } from '@/lib/catalogo/indice'
+
 export type FilaVenc = {
   fila: number
   sku?: string | null
@@ -49,8 +51,8 @@ export function normFecha(s?: string | null): string | null {
 }
 
 export async function analizarVencimientos(adm: any, filas: FilaVenc[]): Promise<ItemVencAnalizado[]> {
-  const { data: cat } = await adm.from('productos_catalogo').select('id, sku, codigo_barras, nombre').eq('activo', true).limit(20000)
-  const catalogo = (cat ?? []) as any[]
+  // Igual que en el import de stock: `limit(20000)` devolvia mil.
+  const catalogo = await catalogoCompleto(adm)
   const porSku = new Map<string, any>(), porEan = new Map<string, any>(), porNombre = new Map<string, any>()
   for (const c of catalogo) {
     if (c.sku) porSku.set(c.sku.trim().toLowerCase(), c)

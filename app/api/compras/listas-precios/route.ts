@@ -4,6 +4,7 @@ import { normalizarLote } from '@/lib/documentos/normalizar'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { AdminRole } from '@/lib/types/admin'
 
+import { catalogoCompleto } from '@/lib/catalogo/indice'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
@@ -30,8 +31,8 @@ async function buildMatcher(adm: ReturnType<typeof createAdminClient>, proveedor
   // Los alias se leen del motor de documentos (doc_items_alias), acotados AL
   // PROVEEDOR de la lista: cada droguería escribe el mismo producto distinto,
   // así que un alias global aprende mal y contamina el match de los demás.
-  const [{ data: cat }, { data: apr }] = await Promise.all([
-    adm.from('productos_catalogo').select('id, sku, codigo_barras, nombre').eq('activo', true).limit(20000),
+  const [cat, { data: apr }] = await Promise.all([
+    catalogoCompleto(adm),
     adm.from('doc_items_alias').select('descripcion_norm, item_id').eq('tercero_id', proveedorId).eq('activo', true).limit(20000),
   ])
   const porSku = new Map<string, string>(); const porEan = new Map<string, string>(); const porNombre = new Map<string, string>()

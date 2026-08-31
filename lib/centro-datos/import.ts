@@ -12,6 +12,8 @@ import type {
   Anomalia, CampoSistema, OpcionesPerfil, ResumenImport, TipoPerfilDatos,
 } from '@/lib/types/centro-datos'
 
+import { catalogoCompleto } from '@/lib/catalogo/indice'
+import { paginar } from '@/lib/supabase/paginar'
 type Adm = any
 
 export type FilaCruda = Record<string, string>
@@ -123,11 +125,10 @@ export type Matcher = {
 }
 
 export async function buildMatcher(adm: Adm): Promise<{ matcher: Matcher; catalogo: Catalogo[] }> {
-  const { data } = await adm
-    .from('productos_catalogo')
-    .select('id, sku, codigo_barras, nombre, precio_sugerido')
-    .eq('activo', true).limit(50000)
-  const catalogo = (data ?? []) as Catalogo[]
+  // `limit(50000)` daba MIL. El matcher de importaciones conocia el 2% del
+  // catalogo: todo lo demas entraba como "sin match" y se daba de alta de nuevo,
+  // que es como se fabrican los duplicados que despues hay que limpiar (v0.85).
+  const catalogo = (await catalogoCompleto(adm)) as unknown as Catalogo[]
   const porSku = new Map<string, Catalogo>()
   const porEan = new Map<string, Catalogo>()
   const porNombre = new Map<string, Catalogo>()
@@ -588,9 +589,14 @@ async function aplicarVentas(adm: Adm, a: any): Promise<number> {
   const { filas, sucursalId, fecha, jobId, snapshot, sinMatch, matcher, esDemo } = a
   if (!sucursalId || !fecha) throw new Error('ventas: sucursal y fecha requeridas')
   // snapshot de las ventas previas de ese día+sucursal (para rollback)
-  const { data: prev } = await adm.from('ventas_diarias')
-    .select('id, sku, cantidad, monto, producto_id, descripcion')
-    .eq('sucursal_id', sucursalId).eq('fecha', fecha)
+  // Es el respaldo para poder revertir. Cortado en mil, la reversion queda a
+  // medias y nadie se entera hasta que los numeros del dia no cierran.
+  const { filas: prev } = await paginar<any>(
+    adm.from('ventas_diarias')
+      .select('id, sku, cantidad, monto, producto_id, descripcion')
+      .eq('sucursal_id', sucursalId).eq('fecha', fecha).order('id'),
+    { maximo: 200_000 },
+  )
   for (const p of (prev ?? []) as any[]) {
     snapshot.push({ tabla: 'ventas_diarias', pk: { fecha, sucursal_id: sucursalId, sku: p.sku }, datos_previos: p })
   }

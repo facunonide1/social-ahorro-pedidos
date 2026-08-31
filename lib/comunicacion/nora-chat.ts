@@ -7,6 +7,8 @@
  * Reutilizable: se puede extender con más intenciones (deuda, ventas, etc.).
  */
 
+import { catalogoCompleto } from '@/lib/catalogo/indice'
+
 type Adm = any
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "")
 
@@ -23,7 +25,7 @@ export async function responderNora(adm: Adm, contenido: string, canalId: string
   // intención stock: buscar un producto del catálogo nombrado en el texto
   const esStock = /\bstock\b|cu[aá]nto hay|cuantas? quedan|existencias?/i.test(texto) || true
   if (esStock) {
-    const { data: prods } = await adm.from('productos_catalogo').select('id, nombre, sku').eq('activo', true).limit(20000)
+    const prods = await catalogoCompleto(adm)
     const palabras = t.split(/[^a-z0-9]+/).filter((w: string) => w.length >= 4)
     const match = ((prods ?? []) as any[]).find((p) => {
       const n = norm(p.nombre)

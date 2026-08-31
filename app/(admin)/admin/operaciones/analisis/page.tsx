@@ -7,6 +7,7 @@ import { VentasFinasCard } from '@/components/centro-datos/ventas-finas-card'
 
 import { AnalisisClient, type VendidoRow, type DormidoRow } from './analisis-client'
 
+import { paginarProductos } from '@/lib/catalogo/indice'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Análisis de ventas' }
 
@@ -24,7 +25,7 @@ export default async function AnalisisPage() {
 
   const [{ data: ventas }, { data: prods }, { data: stock }, { data: rot }, { data: sucs }] = await Promise.all([
     scope(sb.from('movimientos_stock').select('producto_id, sucursal_id, cantidad, fecha').eq('tipo', 'venta').gte('fecha', d90).limit(50000)),
-    sb.from('productos_catalogo').select('id, sku, nombre, categoria, laboratorio, precio_sugerido, precio_costo_promedio').eq('activo', true),
+    paginarProductos(sb, 'id, sku, nombre, categoria, laboratorio, precio_sugerido, precio_costo_promedio'),
     scope(sb.from('stock_items').select('producto_id, sucursal_id, cantidad')),
     scope(sb.from('producto_rotacion').select('producto_id, sucursal_id, ultima_venta, clasificacion_abc, dias_stock_restante')),
     sb.from('sucursales').select('id, nombre, codigo').eq('activa', true).order('nombre'),

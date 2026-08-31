@@ -6,6 +6,8 @@ import {
   TENANT_ACTUAL,
 } from '@/lib/documentos/config'
 
+import { catalogoCompleto } from '@/lib/catalogo/indice'
+
 type Adm = any
 
 export type Candidato = {
@@ -168,13 +170,10 @@ type Catalogo = {
 
 /** El catálogo entero normalizado por la MISMA función que los alias. */
 async function cargarCatalogo(adm: Adm): Promise<Catalogo> {
-  const { data } = await adm
-    .from('productos_catalogo')
-    .select('id, sku, nombre')
-    .eq('activo', true)
-    .limit(20000)
-
-  const filas = (data ?? []) as any[]
+  // `limit(20000)` traia MIL. El matcher conocia el 2% del catalogo y contestaba
+  // "sin match" para el resto — que se lee como "el proveedor mando cosas que no
+  // tenemos" y manda a alguien a dar de alta productos que ya existian (v0.85).
+  const filas = await catalogoCompleto(adm)
   const { data: norms } = await adm.rpc('doc_normalizar_lote', { txts: filas.map((p) => p.nombre ?? '') })
   const arr: string[] = Array.isArray(norms) ? norms : filas.map(() => '')
 

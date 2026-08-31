@@ -6,6 +6,7 @@
  */
 import type { QueryDefinicion, ColumnaExport, OpcionesPerfil } from '@/lib/types/centro-datos'
 
+import { paginar } from '@/lib/supabase/paginar'
 type Adm = any
 
 /** Registro normalizado: campos del sistema disponibles para exportar. */
@@ -45,10 +46,13 @@ export async function obtenerRegistros(adm: Adm, def: QueryDefinicion): Promise<
   const f = def.filtros ?? {}
 
   if (def.entidad === 'productos') {
-    let q = adm.from('productos_catalogo').select('sku, nombre, precio_sugerido, rubro, laboratorio, activo').limit(50000)
+    // `limit(50000)` exportaba MIL de 46.009 y el .xlsx salia completo a la
+    // vista. La regla de oro 6 dice que toda pantalla con productos exporta con
+    // SKU; una exportacion cortada la cumple de mentira (v0.85).
+    let q = adm.from('productos_catalogo').select('sku, nombre, precio_sugerido, rubro, laboratorio, activo')
     if (f.solo_activos !== false) q = q.eq('activo', true)
     if (f.rubro) q = q.eq('rubro', f.rubro)
-    const { data } = await q
+    const { filas: data } = await paginar<any>(q.order('sku'), { maximo: 200_000 })
     let regs: Registro[] = ((data ?? []) as any[]).map((p) => ({
       sku: p.sku, nombre: p.nombre, precio: p.precio_sugerido, rubro: p.rubro, laboratorio: p.laboratorio, estado: p.activo ? 'A' : 'B',
     }))
@@ -97,9 +101,9 @@ export async function obtenerRegistros(adm: Adm, def: QueryDefinicion): Promise<
 
   if (def.entidad === 'ventas') {
     const desde = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
-    let q = adm.from('ventas_diarias').select('sku, descripcion, cantidad, monto, sucursal_id').gte('fecha', desde).limit(50000)
+    let q = adm.from('ventas_diarias').select('sku, descripcion, cantidad, monto, sucursal_id').gte('fecha', desde)
     if (f.sucursal_id) q = q.eq('sucursal_id', f.sucursal_id)
-    const { data } = await q
+    const { filas: data } = await paginar<any>(q.order('sku'), { maximo: 500_000 })
     return ((data ?? []) as any[]).map((v) => ({ sku: v.sku, nombre: v.descripcion, cantidad: v.cantidad, monto: v.monto }))
   }
 
@@ -108,8 +112,14 @@ export async function obtenerRegistros(adm: Adm, def: QueryDefinicion): Promise<
 
 async function filtrarSinVenta(adm: Adm, regs: Registro[], dias: number): Promise<Registro[]> {
   const desde = new Date(Date.now() - dias * 86400000).toISOString().slice(0, 10)
-  const { data } = await adm.from('ventas_diarias').select('sku').gte('fecha', desde).limit(100000)
-  const conVenta = new Set(((data ?? []) as any[]).map((v) => v.sku))
+  // Esto define QUE PRODUCTO NO SE VENDE. Cortado en mil, marcaba como
+  // "sin venta" a productos que si vendieron: el peor de los cortes, porque el
+  // resultado se usa para dar de baja.
+  const { filas } = await paginar<{ sku: string }>(
+    adm.from('ventas_diarias').select('sku').gte('fecha', desde).order('sku'),
+    { maximo: 500_000 },
+  )
+  const conVenta = new Set(filas.map((v) => v.sku))
   return regs.filter((r) => r.sku && !conVenta.has(r.sku))
 }
 

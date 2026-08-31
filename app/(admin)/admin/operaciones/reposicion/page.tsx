@@ -6,6 +6,7 @@ import { tituloDePantalla } from '@/lib/os/definicion'
 
 import { ReposicionClient, type RepoRow } from './reposicion-client'
 
+import { paginarProductos } from '@/lib/catalogo/indice'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Reposición' }
 
@@ -23,7 +24,7 @@ export default async function ReposicionPage() {
   const [{ data: rot }, { data: stock }, { data: prods }, { data: sucs }, { data: lotes }] = await Promise.all([
     scope(sb.from('producto_rotacion').select('producto_id, sucursal_id, venta_diaria_prom_30d, dias_stock_restante')),
     scope(sb.from('stock_items').select('producto_id, sucursal_id, cantidad, stock_maximo')),
-    sb.from('productos_catalogo').select('id, sku, nombre, laboratorio, precio_costo_promedio, droguerias_preferidas').eq('activo', true),
+    paginarProductos(sb, 'id, sku, nombre, laboratorio, precio_costo_promedio, droguerias_preferidas'),
     sb.from('sucursales').select('id, nombre, codigo').eq('activa', true).order('nombre'),
     scope(sb.from('lotes_productos').select('producto_id, sucursal_id, fecha_vencimiento').eq('es_demo', false).gt('cantidad_actual', 0).not('fecha_vencimiento', 'is', null).lte('fecha_vencimiento', venceISO)),
   ])
