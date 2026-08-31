@@ -3,6 +3,7 @@ import { Boxes, AlertTriangle, CalendarClock, Bell, ArrowRightLeft, ClipboardChe
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
+import { estadoDelStock, contarQuiebres } from '@/lib/stock/fuente'
 import { formatARS } from '@/lib/utils/format'
 import { SectorDashboard, type SectorKpi, type SectorAcceso } from '@/components/dashboard/sector-dashboard'
 import { AccionesSubApp } from '@/components/os/acciones-subapp'
@@ -22,29 +23,42 @@ export default async function OperacionesDashboard() {
   const en30 = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10)
   const hoy = new Date().toISOString().slice(0, 10)
 
-  let itemsQ = sb.from('stock_items').select('producto_id, cantidad, stock_minimo').limit(20000)
-  let lotesQ = sb.from('lotes_productos').select('id', { count: 'exact', head: false }).gt('cantidad_actual', 0).lte('fecha_vencimiento', en30).gte('fecha_vencimiento', hoy).limit(5000)
-  let alertasQ = sb.from('alertas_stock').select('id', { count: 'exact', head: true }).eq('estado', 'activa')
-  if (!esTodas && sucursalId) { itemsQ = itemsQ.eq('sucursal_id', sucursalId); lotesQ = lotesQ.eq('sucursal_id', sucursalId); alertasQ = alertasQ.eq('sucursal_id', sucursalId) }
+  // ── UNA FUENTE POR NUMERO, Y DICHA ────────────────────────────────────────
+  //
+  // Este panel mezclaba dos fuentes de stock: sacaba el VALOR de
+  // producto_stock_sifaco —real— y los QUIEBRES de stock_items —480 filas, las
+  // 480 de demostracion—. Mostraba "$0 de stock" y "56 quiebres" al mismo
+  // tiempo, y NORA escribia un parrafo afirmando los 56.
+  //
+  // Los 56 existian como filas. El hecho no: no habia 56 productos en quiebre.
+  //
+  // Ahora los dos numeros salen del mismo lugar (lib/stock/fuente.ts), los
+  // quiebres se cuentan EN LA BASE y solo sobre stock real, y cuando no se
+  // pueden calcular devuelven null — que la pantalla muestra como "sin datos",
+  // no como cero (v0.85).
+  let lotesQ = sb.from('lotes_productos').select('id', { count: 'exact', head: true }).gt('cantidad_actual', 0).lte('fecha_vencimiento', en30).gte('fecha_vencimiento', hoy)
+  let alertasQ = sb.from('alertas_stock').select('id', { count: 'exact', head: true }).eq('estado', 'activa').eq('es_demo', false)
+  if (!esTodas && sucursalId) { lotesQ = lotesQ.eq('sucursal_id', sucursalId); alertasQ = alertasQ.eq('sucursal_id', sucursalId) }
 
-  const [{ data: items }, { data: valor }, { data: lotes }, { count: alertas }] = await Promise.all([
-    itemsQ,
-    // El valor de stock se suma EN LA BASE. Antes se traian 46.129 productos
-    // para armar un Map de costos y PostgREST devolvia mil: el total salia
-    // calculado sobre el 2% del catalogo, sin ninguna senal (v0.85).
-    sb.rpc('catalogo_valor_de_stock'),
+  const [estado, quiebres, { count: lotes }, { count: alertas }] = await Promise.all([
+    estadoDelStock(),
+    contarQuiebres(esTodas ? null : sucursalId),
     lotesQ,
     alertasQ,
   ])
 
-  const its = (items ?? []) as any[]
-  const valorStock = Number((valor as any)?.[0]?.valor_costo ?? 0)
-  const quiebres = its.filter((s) => Number(s.stock_minimo) > 0 && Number(s.cantidad) <= Number(s.stock_minimo)).length
-  const porVencer = (lotes ?? []).length
+  const valorStock = estado.sifaco.valorCosto
+  const porVencer = lotes ?? 0
 
   const kpis: SectorKpi[] = [
-    { label: 'Valor de stock', value: valorStock, format: 'currency', icon: Boxes, href: '/admin/operaciones/stock' },
-    { label: 'Quiebres / bajo mínimo', value: quiebres, icon: PackageX, variant: quiebres > 0 ? 'danger' : 'default', href: '/admin/operaciones/stock?filtro=critico' },
+    { label: 'Valor de stock', value: valorStock, format: 'currency', icon: Boxes, href: '/admin/operaciones/stock',
+      nota: 'Total que declara SIFACO, sin abrir por sucursal' },
+    // `quiebres` es null cuando no hay stock real por sucursal. Cero seria
+    // "lo mire y no hay"; null es "no lo puedo saber", y son cosas distintas.
+    { label: 'Quiebres / bajo mínimo', value: quiebres, icon: PackageX,
+      variant: (quiebres ?? 0) > 0 ? 'danger' : 'default',
+      href: '/admin/operaciones/stock?filtro=critico',
+      nota: quiebres === null ? estado.motivoSinDatos ?? 'sin stock por sucursal' : undefined },
     { label: 'Por vencer (30 días)', value: porVencer, icon: CalendarClock, variant: porVencer > 0 ? 'warning' : 'default', href: '/admin/operaciones/vencimientos' },
     { label: 'Alertas activas', value: alertas ?? 0, icon: Bell, variant: (alertas ?? 0) > 0 ? 'warning' : 'default', href: '/admin/operaciones/alertas' },
   ]
@@ -63,7 +77,12 @@ export default async function OperacionesDashboard() {
     { label: 'Maestro de SIFACO', href: '/admin/operaciones/sifaco', icon: FileSpreadsheet, descripcion: 'El archivo completo de productos' },
   ]
 
-  const nora = quiebres > 0
+  // NORA no afirma sobre lo que no puede saber. Si no hay stock por sucursal,
+  // lo dice — no dice "operacion al dia", que con datos de demostracion adentro
+  // es una afirmacion sobre nada.
+  const nora = quiebres === null
+    ? <p>No puedo hablar de quiebres todavía: <b>{estado.motivoSinDatos}</b> Lo que sí sé es que SIFACO declara <b>{estado.sifaco.unidades.toLocaleString('es-AR')} unidades</b> en {estado.sifaco.productosConStock.toLocaleString('es-AR')} productos, por <b>{formatARS(valorStock)}</b> a costo.</p>
+    : quiebres > 0
     ? <p>Hay <b>{quiebres}</b> productos en quiebre o bajo el mínimo. Revisá reposición para no perder ventas. {porVencer > 0 && <>Además <b>{porVencer}</b> lotes vencen en 30 días.</>}</p>
     : porVencer > 0
     ? <p><b>{porVencer}</b> lotes vencen en los próximos 30 días — planificá liquidación o devolución. Valor de stock actual: <b>{formatARS(valorStock)}</b>.</p>

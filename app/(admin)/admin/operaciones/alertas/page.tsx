@@ -6,6 +6,7 @@ import { tituloDePantalla } from '@/lib/os/definicion'
 
 import { AlertasClient, type AlertaRow } from './alertas-client'
 
+import { sinDemo } from '@/lib/demo/estado'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Alertas' }
 
@@ -18,7 +19,11 @@ export default async function AlertasPage() {
   const sb = createClient()
   const { sucursalId, esTodas } = getSucursalActiva()
 
+  // El lente de demostración (v0.81) llegaba sólo al panel de inicio y a la
+  // campana. El sector Operaciones mostraba datos inventados sin decirlo, y el
+  // panel llegó a afirmar «56 quiebres» sobre 480 filas de demostración (v0.85).
   let alertasQ = sb.from('alertas_stock').select('id, tipo, severidad, datos, producto_id, sucursal_id, created_at').eq('estado', 'activa').order('severidad').order('created_at', { ascending: false }).limit(500)
+  if (sinDemo()) alertasQ = alertasQ.eq('es_demo', false)
   if (!esTodas && sucursalId) alertasQ = alertasQ.eq('sucursal_id', sucursalId)
 
   const [{ data: alertas }, { data: sucs }] = await Promise.all([

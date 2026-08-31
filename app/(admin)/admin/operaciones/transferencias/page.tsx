@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/shared/page-header'
 import { tituloDePantalla } from '@/lib/os/definicion'
 import { TransferenciasClient, type TransferRow } from './transferencias-client'
 
+import { sinDemo } from '@/lib/demo/estado'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Transferencias' }
 
@@ -17,10 +18,14 @@ export default async function TransferenciasPage() {
   const adm = createAdminClient()
   const { sucursalId, esTodas } = getSucursalActiva()
 
+  // El lente de demostración (v0.81) llegaba sólo al panel de inicio y a la
+  // campana. El sector Operaciones mostraba datos inventados sin decirlo, y el
+  // panel llegó a afirmar «56 quiebres» sobre 480 filas de demostración (v0.85).
   let q = adm.from('transferencias_sucursal')
     .select('id, estado, sucursal_origen_id, sucursal_destino_id, fecha_solicitud, fecha_envio, fecha_recepcion, diferencia_detectada')
     .order('created_at', { ascending: false }).limit(120)
   if (!esTodas && sucursalId) q = q.or(`sucursal_origen_id.eq.${sucursalId},sucursal_destino_id.eq.${sucursalId}`)
+  if (sinDemo()) q = q.eq('es_demo', false)
 
   const [{ data }, { data: sucs }, { data: items }] = await Promise.all([
     q,

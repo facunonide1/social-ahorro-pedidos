@@ -16,6 +16,12 @@ export type SectorKpi = {
   variant?: 'default' | 'success' | 'warning' | 'danger'
   href?: string
   footer?: React.ReactNode
+  /**
+   * Por que este KPI no tiene numero. Se muestra EN LUGAR del valor, no debajo:
+   * un "0" con una nota al pie se lee como cero, y cero es una afirmacion.
+   * Con `nota` puesta y `value` en null, la tarjeta dice el motivo (v0.85).
+   */
+  nota?: string
 }
 
 export type SectorAcceso = {
@@ -68,6 +74,7 @@ export function SectorDashboard({
                 variant={k.variant}
                 href={k.href}
                 footer={k.footer}
+                nota={k.nota}
               />
             ))}
           </section>

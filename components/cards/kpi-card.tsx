@@ -62,6 +62,12 @@ export interface KpiCardProps
    */
   invertTrend?: boolean
   icon?: LucideIcon
+  /**
+   * Por que no hay numero. Reemplaza al valor, no lo acompaña: un "0" con una
+   * aclaracion al pie se lee como cero, y cero es una afirmacion. Si esto viene
+   * puesto, la tarjeta muestra el motivo en vez del numero (v0.85).
+   */
+  nota?: string
   href?: string
   loading?: boolean
   footer?: React.ReactNode
@@ -118,6 +124,7 @@ export function KpiCard({
   trend,
   invertTrend = false,
   icon: Icon,
+  nota,
   href,
   loading = false,
   footer,
@@ -140,9 +147,17 @@ export function KpiCard({
         )}
       </div>
 
-      <div className="text-2xl font-semibold tabular-nums leading-tight tracking-tight md:text-3xl">
-        {formatValue(value, format, formattedValue)}
-      </div>
+      {nota && (value === null || value === undefined) ? (
+        <div className="text-sm leading-snug text-muted-foreground">
+          <span className="block text-base font-semibold text-foreground">Sin datos todavía</span>
+          {nota}
+        </div>
+      ) : (
+        <div className="text-2xl font-semibold tabular-nums leading-tight tracking-tight md:text-3xl">
+          {formatValue(value, format, formattedValue)}
+          {nota && <span className="mt-1 block text-xs font-normal text-muted-foreground">{nota}</span>}
+        </div>
+      )}
 
       {trend && (
         <div

@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/shared/page-header'
 import { tituloDePantalla } from '@/lib/os/definicion'
 import { ControlZonasClient } from './control-zonas-client'
 
+import { sinDemo } from '@/lib/demo/estado'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Control por zonas' }
 
@@ -21,7 +22,12 @@ export default async function ControlZonasPage() {
   const scope = (q: any) => (!esTodas && sucursalId ? q.eq('sucursal_id', sucursalId) : q)
   const [{ data: zonas }, { data: controles }, { data: sucs }, users] = await Promise.all([
     scope(adm.from('zonas').select('*').eq('activa', true).order('nombre')),
-    scope(adm.from('controles_zona').select('*').order('created_at', { ascending: false }).limit(150)),
+    // El lente de demostración (v0.81) llegaba sólo al panel de inicio y a la
+    // campana. El sector Operaciones mostraba datos inventados sin decirlo, y el
+    // panel llegó a afirmar «56 quiebres» sobre 480 filas de demostración (v0.85).
+    (sinDemo()
+      ? scope(adm.from('controles_zona').select('*').eq('es_demo', false).order('created_at', { ascending: false }).limit(150))
+      : scope(adm.from('controles_zona').select('*').order('created_at', { ascending: false }).limit(150))),
     adm.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
     listAdminUsersLite(adm, { soloActivos: true }),
   ])
