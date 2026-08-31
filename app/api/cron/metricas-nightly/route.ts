@@ -6,6 +6,7 @@ import { metricasEmpleado, metricasSucursal, type TareaMetrica } from '@/lib/tar
 import { automatizacionActiva } from '@/lib/os/definicion'
 import { puedeCalcular } from '@/lib/demo/guarda-calculo'
 
+import { paginar } from '@/lib/supabase/paginar'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
@@ -42,12 +43,13 @@ async function run() {
   const fin = `${fechaAR}T23:59:59-03:00`
 
   // Tareas cuyo vencimiento fue ayer (la "agenda" de ayer)
-  const { data: rows } = await adm
-    .from('tareas')
+  const { filas: rows } = await paginar<any>(
+    adm.from('tareas')
     .select('responsable_id, reclamada_por, sucursal_id, estado, asignacion_tipo, fecha_vencimiento, fecha_completada, tiempo_resolucion_min, demora_min, sla_horas, rechazos_count, puntos_otorgados, turno_id, tipo:tipos_tareas(categoria)')
-    .gte('fecha_vencimiento', ini)
-    .lte('fecha_vencimiento', fin)
-    .limit(5000)
+      .gte('fecha_vencimiento', ini)
+      .lte('fecha_vencimiento', fin)
+      .order('fecha_vencimiento'),
+  )
 
   const tareas: TareaMetrica[] = ((rows ?? []) as any[]).map((r) => ({
     responsable_id: r.responsable_id,

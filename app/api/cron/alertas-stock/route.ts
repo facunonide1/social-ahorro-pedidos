@@ -7,6 +7,7 @@ import { automatizacionActiva } from '@/lib/os/definicion'
 import { puedeCalcular } from '@/lib/demo/guarda-calculo'
 import { catalogoCompleto } from '@/lib/catalogo/indice'
 
+import { paginar } from '@/lib/supabase/paginar'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
@@ -51,10 +52,12 @@ async function run(conAlertas: boolean, conVencimientos: boolean) {
   const en = (d: number) => new Date(ahora + d * 86_400_000).toISOString().slice(0, 10)
   const hoy = new Date().toISOString().slice(0, 10)
 
-  const [{ data: stock }, { data: rot }, { data: lotes }, prods, { data: sucs }] = await Promise.all([
-    adm.from('stock_items').select('producto_id, sucursal_id, cantidad, cantidad_gondola, cantidad_deposito, stock_minimo, stock_maximo'),
+  const [{ filas: stock }, { data: rot }, { filas: lotes }, prods, { data: sucs }] = await Promise.all([
+    // Paginado: el cron recorre TODO el stock para decidir que alertar. Si se
+    // corta en mil, deja de alertar sobre el resto y nadie se entera (v0.85).
+    paginar<any>(adm.from('stock_items').select('producto_id, sucursal_id, cantidad, cantidad_gondola, cantidad_deposito, stock_minimo, stock_maximo').order('producto_id')),
     adm.from('producto_rotacion').select('producto_id, sucursal_id, venta_diaria_prom_30d, dias_stock_restante, ultima_venta'),
-    adm.from('lotes_productos').select('id, producto_id, sucursal_id, numero_lote, fecha_vencimiento, cantidad_actual').gt('cantidad_actual', 0),
+    paginar<any>(adm.from('lotes_productos').select('id, producto_id, sucursal_id, numero_lote, fecha_vencimiento, cantidad_actual').gt('cantidad_actual', 0).order('id')),
     catalogoCompleto(adm),
     adm.from('sucursales').select('id, nombre').eq('activa', true),
   ])
@@ -108,9 +111,9 @@ async function run(conAlertas: boolean, conVencimientos: boolean) {
   // Solo vencimientos manuales con proveedor+ventana (los lotes no tienen proveedor).
   try {
     if (!conVencimientos) throw new Error('vencimientos apagados')
-    const [{ data: vencs }, { data: provs }, { data: rubros }] = await Promise.all([
-      adm.from('vencimientos').select('producto_id, sucursal_id, sku, proveedor_id, fecha_vencimiento, cantidad, productos_catalogo(nombre, rubro)')
-        .eq('estado', 'vigente').eq('es_demo', false).not('proveedor_id', 'is', null),
+    const [{ filas: vencs }, { data: provs }, { data: rubros }] = await Promise.all([
+      paginar<any>(adm.from('vencimientos').select('producto_id, sucursal_id, sku, proveedor_id, fecha_vencimiento, cantidad, productos_catalogo(nombre, rubro)')
+        .eq('estado', 'vigente').eq('es_demo', false).not('proveedor_id', 'is', null).order('fecha_vencimiento')),
       adm.from('proveedores').select('id, dias_ventana_devolucion'),
       adm.from('proveedor_devolucion_rubros').select('proveedor_id, rubro, dias_ventana'),
     ])

@@ -3,6 +3,8 @@
  * El cálculo vive en SQL (calcular_irregularidades_stock); acá están las consultas
  * de lectura + detección de patrones (control de robo) + cruce con caja.
  */
+import { paginar } from '@/lib/supabase/paginar'
+
 type Adm = any
 
 export type IrregularidadRow = {
@@ -198,12 +200,12 @@ export type PerdidasUnificadas = {
 export async function getPerdidasUnificadas(adm: Adm, f: { sucursalId: string | null; esTodas: boolean }): Promise<PerdidasUnificadas> {
   const scope = (q: any, col = 'sucursal_id') => (!f.esTodas && f.sucursalId ? q.eq(col, f.sucursalId) : q)
   const [irr, caja, zona, transf] = await Promise.all([
-    scope(adm.from('irregularidades_stock').select('valor_diferencia').eq('tipo', 'faltante')),
+    paginar<any>(scope(adm.from('irregularidades_stock').select('valor_diferencia').eq('tipo', 'faltante')).order('id')),
     scope(adm.from('arqueos_caja').select('diferencia_cierre').neq('diferencia_cierre', 0)),
     scope(adm.from('controles_zona').select('valor_diferencia').eq('estado', 'cerrado')),
     adm.from('transferencias_sucursal').select('id').eq('diferencia_detectada', true),
   ])
-  const stockFalt = ((irr.data ?? []) as any[]).reduce((a, r) => a + Math.abs(Number(r.valor_diferencia)), 0)
+  const stockFalt = ((irr.filas ?? []) as any[]).reduce((a, r) => a + Math.abs(Number(r.valor_diferencia)), 0)
   const cajaDif = ((caja.data ?? []) as any[]).reduce((a, r) => a + Math.abs(Number(r.diferencia_cierre)), 0)
   const zonaDif = ((zona.data ?? []) as any[]).reduce((a, r) => a + Math.abs(Number(r.valor_diferencia)), 0)
 
@@ -235,8 +237,7 @@ export async function getBajasVencido(adm: Adm, f: { sucursalId: string | null; 
   const desde = new Date(Date.now() - dias * 86400000).toISOString()
   let q = adm.from('movimientos_stock').select('sucursal_id, cantidad, costo_unitario, created_by, sucursales(nombre)').eq('tipo', 'baja_vencimiento').gte('fecha', desde)
   if (!f.esTodas && f.sucursalId) q = q.eq('sucursal_id', f.sucursalId)
-  const { data } = await q
-  const rows = (data ?? []) as any[]
+  const { filas: rows } = await paginar<any>(q.order('id'))
   if (!rows.length) return { persona: [], sucursal: [], total: 0 }
 
   // Nombres de quienes ejecutaron la baja.

@@ -7,6 +7,7 @@ import { puedeCalcular } from '@/lib/demo/guarda-calculo'
 import type { AdminRole } from '@/lib/types/admin'
 import { catalogoCompleto } from '@/lib/catalogo/indice'
 
+import { paginar } from '@/lib/supabase/paginar'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
@@ -57,9 +58,11 @@ async function run() {
   const d7 = new Date(ahora - 7 * 86_400_000).toISOString()
   const hoy = new Date().toISOString().slice(0, 10)
 
-  const [{ data: ventas }, { data: stock }, prods] = await Promise.all([
-    adm.from('movimientos_stock').select('producto_id, sucursal_id, cantidad, fecha').eq('tipo', 'venta').gte('fecha', d30),
-    adm.from('stock_items').select('producto_id, sucursal_id, cantidad'),
+  const [{ filas: ventas }, { filas: stock }, prods] = await Promise.all([
+    // La rotacion se calcula sobre TODOS los movimientos del periodo. Cortada
+    // en mil, el promedio sale por una fraccion y queda guardado (v0.85).
+    paginar<any>(adm.from('movimientos_stock').select('producto_id, sucursal_id, cantidad, fecha').eq('tipo', 'venta').gte('fecha', d30).order('producto_id')),
+    paginar<any>(adm.from('stock_items').select('producto_id, sucursal_id, cantidad').order('producto_id')),
     catalogoCompleto(adm),
   ])
 

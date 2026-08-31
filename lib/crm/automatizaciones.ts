@@ -8,6 +8,8 @@ import { sendEmail, hasEmailConfig } from '@/lib/email/resend'
 import { redactarPlantilla } from '@/lib/crm/nora-redactar'
 import type { MensajeCanal } from '@/lib/types/crm'
 
+import { paginar } from '@/lib/supabase/paginar'
+
 type Adm = any
 const hoyISO = () => new Date().toISOString().slice(0, 10)
 const isoMenos = (d: number) => new Date(Date.now() - d * 86400000).toISOString().slice(0, 10)
@@ -29,22 +31,22 @@ async function objetivo(adm: Adm, auto: any): Promise<any[]> {
 async function objetivoCrudo(adm: Adm, auto: any): Promise<any[]> {
   const cfg = auto.config ?? {}
   if (auto.trigger === 'cumpleanos') {
-    const { data } = await adm.from('clientes').select('id, nombre, email, cuponera_user_id, fecha_nacimiento, es_demo').eq('activo', true).not('fecha_nacimiento', 'is', null).limit(5000)
+    const { filas: data } = await paginar<any>(adm.from('clientes').select('id, nombre, email, cuponera_user_id, fecha_nacimiento, es_demo').eq('activo', true).not('fecha_nacimiento', 'is', null).order('id'))
     const hoy = new Date()
     return ((data ?? []) as any[]).filter((c) => { const f = new Date(c.fecha_nacimiento + 'T00:00:00'); return f.getMonth() === hoy.getMonth() && f.getDate() === hoy.getDate() })
   }
   if (auto.trigger === 'inactividad_30d') {
     const dias = Number(cfg.dias_inactividad ?? 30)
     // banda: cruzaron el umbral justo hoy (entre dias y dias+1)
-    const { data } = await adm.from('clientes').select('id, nombre, email, cuponera_user_id, es_demo')
-      .eq('activo', true).gte('ultima_compra', isoMenos(dias + 1)).lte('ultima_compra', isoMenos(dias)).limit(5000)
+    const { filas: data } = await paginar<any>(adm.from('clientes').select('id, nombre, email, cuponera_user_id, es_demo')
+      .eq('activo', true).gte('ultima_compra', isoMenos(dias + 1)).lte('ultima_compra', isoMenos(dias)).order('id'))
     return (data ?? []) as any[]
   }
   if (auto.trigger === 'recompra_cronico') {
     const antes = Number(cfg.dias_antes_recompra ?? 5)
     // ultima_compra + frecuencia - antes == hoy  →  ultima_compra == hoy - (frecuencia - antes)
-    const { data } = await adm.from('clientes').select('id, nombre, email, cuponera_user_id, ultima_compra, frecuencia_compra_dias, es_demo')
-      .eq('activo', true).not('frecuencia_compra_dias', 'is', null).not('ultima_compra', 'is', null).limit(5000)
+    const { filas: data } = await paginar<any>(adm.from('clientes').select('id, nombre, email, cuponera_user_id, ultima_compra, frecuencia_compra_dias, es_demo')
+      .eq('activo', true).not('frecuencia_compra_dias', 'is', null).not('ultima_compra', 'is', null).order('id'))
     const hoy = hoyISO()
     return ((data ?? []) as any[]).filter((c) => {
       const ciclo = Number(c.frecuencia_compra_dias) - antes

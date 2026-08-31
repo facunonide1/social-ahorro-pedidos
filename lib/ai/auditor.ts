@@ -8,6 +8,8 @@
 import { emitirAviso } from '@/lib/ai/nora'
 import { getRecomendaciones } from '@/lib/compras/recomendaciones'
 
+import { paginar } from '@/lib/supabase/paginar'
+
 type Adm = any
 const hoy = () => new Date().toISOString().slice(0, 10)
 const isoMenos = (d: number) => new Date(Date.now() - d * 86400000).toISOString().slice(0, 10)
@@ -18,9 +20,9 @@ export async function correrAuditor(adm: Adm): Promise<{ avisos: number }> {
 
   // 0) Irregularidades de stock pendientes (descuadres del cruce stock vs ventas)
   try {
-    const { data } = await adm.from('irregularidades_stock')
+    const { filas: data } = await paginar<any>(adm.from('irregularidades_stock')
       .select('sucursal_id, valor_diferencia, tipo, fecha, es_demo, sucursales(nombre)')
-      .eq('estado', 'pendiente').order('fecha', { ascending: false }).limit(2000)
+      .eq('estado', 'pendiente').order('fecha', { ascending: false }))
     const filas = (data ?? []) as any[]
     if (filas.length) {
       const porSuc = new Map<string, { suc: string; sucursal_id: string; n: number; valor: number; demo: boolean }>()
@@ -61,9 +63,9 @@ export async function correrAuditor(adm: Adm): Promise<{ avisos: number }> {
   // 0.c) Vencimientos urgentes (≤30 días) con plata en riesgo
   try {
     const en30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
-    const { data } = await adm.from('vencimientos')
+    const { filas: data } = await paginar<any>(adm.from('vencimientos')
       .select('cantidad, fecha_vencimiento, es_demo, productos_catalogo(precio_costo_promedio, precio_sugerido)')
-      .eq('estado', 'vigente').lte('fecha_vencimiento', en30).limit(2000)
+      .eq('estado', 'vigente').lte('fecha_vencimiento', en30).order('fecha_vencimiento'))
     const filas = (data ?? []) as any[]
     if (filas.length) {
       const valor = filas.reduce((a, v) => {

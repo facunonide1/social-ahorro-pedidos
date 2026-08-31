@@ -107,6 +107,9 @@ export function auditar() {
     const lineas = readFileSync(f, 'utf8').split('\n')
 
     lineas.forEach((linea, i) => {
+      // Un ejemplo dentro de un comentario no es una consulta. Ya marco
+      // lib/sucursal/server.ts, donde el `.from()` esta en el JSDoc.
+      if (/^\s*(\/\/|\*|\/\*)/.test(linea)) return
       const m = linea.match(/\.from\('([a-z_]+)'\)/)
       if (!m) return
       const tabla = m[1]

@@ -5,6 +5,7 @@ import { isCronRequest } from '@/lib/cron/auth'
 import type { AdminRole } from '@/lib/types/admin'
 import { automatizacionActiva } from '@/lib/os/definicion'
 
+import { paginar } from '@/lib/supabase/paginar'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
@@ -105,11 +106,16 @@ async function run() {
   )
 
   // Idempotencia: recurrencias que ya generaron tarea hoy
-  const { data: yaHoy } = await sb
-    .from('tareas')
-    .select('recurrencia_id')
-    .gte('created_at', inicioHoy)
-    .not('recurrencia_id', 'is', null)
+  // Es lo que hace idempotente al generador: si se corta, cree que no genero
+  // las de hoy y las vuelve a crear. Duplicar tareas es el unico error que este
+  // cron no puede cometer (v0.85).
+  const { filas: yaHoy } = await paginar<any>(
+    sb.from('tareas')
+      .select('recurrencia_id')
+      .gte('created_at', inicioHoy)
+      .not('recurrencia_id', 'is', null)
+      .order('recurrencia_id'),
+  )
   const generadas = new Set(
     ((yaHoy ?? []) as { recurrencia_id: string }[]).map((r) => r.recurrencia_id),
   )

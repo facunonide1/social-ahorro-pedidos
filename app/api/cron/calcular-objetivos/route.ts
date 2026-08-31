@@ -5,6 +5,8 @@ import { isCronRequest } from '@/lib/cron/auth'
 import { puedeCalcular } from '@/lib/demo/guarda-calculo'
 import type { ObjetivoEmpleado } from '@/lib/types/empleados'
 
+import { paginar } from '@/lib/supabase/paginar'
+
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
@@ -39,14 +41,15 @@ export async function GET(req: NextRequest) {
     const periodoEnd = periodoFin(o)
 
     // Tareas completadas del empleado en el período
-    const { data: tareas } = await sb
-      .from('tareas')
-      .select('estado, fecha_vencimiento, fecha_completada')
-      .eq('responsable_id', userId)
-      .eq('estado', 'completada')
-      .gte('fecha_completada', periodoStart.toISOString())
-      .lt('fecha_completada', periodoEnd.toISOString())
-    const completadas = (tareas ?? []) as any[]
+    const { filas: completadas } = await paginar<any>(
+      sb.from('tareas')
+        .select('estado, fecha_vencimiento, fecha_completada')
+        .eq('responsable_id', userId)
+        .eq('estado', 'completada')
+        .gte('fecha_completada', periodoStart.toISOString())
+        .lt('fecha_completada', periodoEnd.toISOString())
+        .order('fecha_completada'),
+    )
     const conVenc = completadas.filter(
       (t) => t.fecha_vencimiento && t.fecha_completada,
     )
@@ -57,9 +60,10 @@ export async function GET(req: NextRequest) {
     )
 
     // Verificaciones aprobadas (este user verificó)
-    const { data: verifs } = await sb
+    // Solo hace falta el numero: se cuenta EN LA BASE.
+    const { count: verifs } = await sb
       .from('tareas')
-      .select('id')
+      .select('id', { count: 'exact', head: true })
       .eq('verificador_id', userId)
       .eq('estado', 'completada')
       .gte('fecha_verificada', periodoStart.toISOString())
@@ -72,7 +76,7 @@ export async function GET(req: NextRequest) {
       else if (k.codigo === 'tareas_completadas_en_sla')
         actual = conVenc.length > 0 ? Math.round((enSla.length / conVenc.length) * 100) : 0
       else if (k.codigo === 'tareas_verificadas_aprobadas')
-        actual = verifs?.length ?? 0
+        actual = verifs ?? 0
       return { ...k, actual }
     })
 

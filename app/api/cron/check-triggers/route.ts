@@ -5,6 +5,8 @@ import { isCronRequest } from '@/lib/cron/auth'
 import type { TareaTriggerAuto, TriggerEvento } from '@/lib/types/tareas'
 import { automatizacionActiva } from '@/lib/os/definicion'
 
+import { paginar } from '@/lib/supabase/paginar'
+
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
@@ -178,13 +180,14 @@ async function detectarEventos(
     case 'stock_critico_detectado': {
       // PostgREST no compara columna vs columna; traemos los que tienen
       // mínimo definido y filtramos en memoria.
-      const { data } = await sb
-        .from('stock_sucursal')
+      const { filas: data } = await paginar<any>(
+        sb.from('stock_sucursal')
         .select(
           'id, producto_id, sucursal_id, cantidad_actual, stock_minimo, productos(nombre), sucursales(nombre)',
         )
         .gt('stock_minimo', 0)
-        .limit(500)
+        .order('id'),
+      )
       return (data ?? [])
         .filter(
           (s: any) => Number(s.cantidad_actual) <= Number(s.stock_minimo),
@@ -202,15 +205,16 @@ async function detectarEventos(
       const dias = Number((condiciones as any)?.dias_previos ?? 30)
       const limite = new Date()
       limite.setDate(limite.getDate() + dias)
-      const { data } = await sb
-        .from('lotes_productos')
+      const { filas: data } = await paginar<any>(
+        sb.from('lotes_productos')
         .select(
           'id, producto_id, sucursal_id, numero_lote, fecha_vencimiento, cantidad_actual, productos(nombre), sucursales(nombre)',
         )
         .lte('fecha_vencimiento', limite.toISOString().slice(0, 10))
         .gte('fecha_vencimiento', hoy)
         .gt('cantidad_actual', 0)
-        .limit(200)
+        .order('fecha_vencimiento'),
+      )
       return (data ?? []).map((l: any) => ({
         entidad_tipo: 'lote',
         entidad_id: l.id,
