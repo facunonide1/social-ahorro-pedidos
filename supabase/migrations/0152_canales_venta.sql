@@ -1,0 +1,16 @@
+-- 0152_canales_venta (v0.89) — aplicada vía MCP; el DDL vigente vive en la base.
+--
+-- EL CANAL COMO OBJETO, con vocabulario NEUTRO: «canal», no «woo». WooCommerce
+-- y Mercado Libre son dos casos del mismo concepto, y así escrito esta pieza es
+-- lo que el catálogo de la fábrica necesita como pool externo.
+--
+-- Se llama `canales_venta` y no `canales` porque `canales` YA EXISTE y es otra
+-- cosa: los canales de chat interno de Comunicación. Dos conceptos distintos,
+-- dos nombres distintos.
+--
+-- `sucursal_despacho_id` queda NULA a propósito: sin stock por sucursal no se
+-- puede saber de qué local sale un pedido, y adivinarlo sería inventar un dato
+-- que después alguien usa para decidir.
+--
+-- `configurado` en false mientras comisión, envío, impuesto y margen estén sin
+-- definir. Están en CERO, y cero no es lo mismo que «no aplica».

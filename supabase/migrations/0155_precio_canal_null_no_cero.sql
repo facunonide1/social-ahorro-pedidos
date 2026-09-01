@@ -1,0 +1,8 @@
+-- 0155_precio_canal_null_no_cero (v0.89) — aplicada vía MCP; el DDL vigente vive en la base.
+--
+-- `cubre_costo` devuelve NULL —no false— cuando falta el precio o el costo.
+--
+-- La primera versión devolvía false, y la pantalla decía que 2.349 productos
+-- publicados no cubrían el costo. Eran 18. Los otros 2.331 no tienen precio
+-- declarado en SIFACO: eso es «no lo puedo saber», no «no cubre». El mismo
+-- error que estas sesiones vinieron a sacar, cometido acá mismo.

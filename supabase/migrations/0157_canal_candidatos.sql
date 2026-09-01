@@ -1,0 +1,1 @@
+-- 0157_canal_candidatos (v0.89) — aplicada vía MCP; el DDL vigente vive en la base.

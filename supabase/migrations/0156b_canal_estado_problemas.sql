@@ -1,0 +1,1 @@
+-- 0156b_canal_estado_problemas (v0.89) — aplicada vía MCP; el DDL vigente vive en la base.

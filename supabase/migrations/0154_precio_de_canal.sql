@@ -1,0 +1,1 @@
+-- 0154_precio_de_canal (v0.89) — aplicada vía MCP; el DDL vigente vive en la base.

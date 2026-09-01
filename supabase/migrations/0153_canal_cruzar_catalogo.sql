@@ -1,0 +1,1 @@
+-- 0153_canal_cruzar_catalogo (v0.89) — aplicada vía MCP; el DDL vigente vive en la base.
