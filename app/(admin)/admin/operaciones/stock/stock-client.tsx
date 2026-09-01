@@ -26,7 +26,8 @@ export type ProductoRow = {
   controlado?: boolean; listaControlado?: string | null; recall?: boolean
   stockPorSuc: Record<string, { cantidad: number; gondola: number; deposito: number; min: number; max: number | null }>
 }
-type Kpis = { productos: number; valorStock: number; criticos: number; porVencer: number }
+// `null` en un KPI significa «no lo puedo saber», y es distinto de cero.
+type Kpis = { productos: number; valorStock: number | null; criticos: number | null; porVencer: number | null }
 const ALL = '__all__'
 
 function sem(x?: { cantidad: number; min: number; max: number | null }) {
@@ -41,11 +42,15 @@ export interface StockSifaco {
   /** `true` cuando el selector esta en «todas las sucursales». */
   esTotal: boolean
   unidades: number
+  productos: number
   /** SIFACO todavia no exporto la apertura por sucursal. */
   sinApertura: boolean
 }
 
-export function StockClient({ productos, sucursales, kpis, rol, mostrados, truncado, stockSifaco }: { productos: ProductoRow[]; sucursales: SucursalLite[]; kpis: Kpis; rol: string; mostrados: number; truncado: boolean; stockSifaco: StockSifaco }) {
+/** Por que un KPI no tiene numero. Reemplaza al valor, no lo acompaña. */
+export type NotasKpi = Partial<Record<'valorStock' | 'criticos' | 'porVencer', string>>
+
+export function StockClient({ productos, sucursales, kpis, rol, mostrados, truncado, stockSifaco, notas, laboratorios }: { productos: ProductoRow[]; sucursales: SucursalLite[]; kpis: Kpis; rol: string; mostrados: number; truncado: boolean; stockSifaco: StockSifaco; notas: NotasKpi; laboratorios: string[] }) {
   const [tab, setTab] = useState<'productos' | 'kardex'>('productos')
   return (
     <div className="space-y-4">
@@ -60,12 +65,12 @@ export function StockClient({ productos, sucursales, kpis, rol, mostrados, trunc
           <Button asChild variant="outline" size="sm"><Link href="/admin/operaciones/importaciones"><Upload className="size-4" /> Importar</Link></Button>
         </div>
       </div>
-      {tab === 'productos' ? <Productos productos={productos} sucursales={sucursales} kpis={kpis} mostrados={mostrados} truncado={truncado} stockSifaco={stockSifaco} canEdit={['super_admin','gerente','comprador','administrativo'].includes(rol)} /> : <Kardex sucursales={sucursales} />}
+      {tab === 'productos' ? <Productos productos={productos} sucursales={sucursales} kpis={kpis} mostrados={mostrados} truncado={truncado} stockSifaco={stockSifaco} notas={notas} laboratorios={laboratorios} canEdit={['super_admin','gerente','comprador','administrativo'].includes(rol)} /> : <Kardex sucursales={sucursales} />}
     </div>
   )
 }
 
-function Productos({ productos, sucursales, kpis, canEdit, mostrados, truncado, stockSifaco }: { productos: ProductoRow[]; sucursales: SucursalLite[]; kpis: Kpis; canEdit: boolean; mostrados: number; truncado: boolean; stockSifaco: StockSifaco }) {
+function Productos({ productos, sucursales, kpis, canEdit, mostrados, truncado, stockSifaco, notas, laboratorios }: { productos: ProductoRow[]; sucursales: SucursalLite[]; kpis: Kpis; canEdit: boolean; mostrados: number; truncado: boolean; stockSifaco: StockSifaco; notas: NotasKpi; laboratorios: string[] }) {
   const [q, setQ] = useState('')
   const [cat, setCat] = useState(ALL)
   const [lab, setLab] = useState(ALL)
@@ -73,7 +78,8 @@ function Productos({ productos, sucursales, kpis, canEdit, mostrados, truncado, 
   const [sel, setSel] = useState<ProductoRow | null>(null)
 
   const cats = useMemo(() => [...new Set(productos.map((p) => p.categoria).filter(Boolean) as string[])].sort(), [productos])
-  const labs = useMemo(() => [...new Set(productos.map((p) => p.laboratorio).filter(Boolean) as string[])].sort(), [productos])
+  // De la base, no de lo que llego a la pantalla (v0.86).
+  const labs = laboratorios
 
   const rows = useMemo(() => {
     const term = q.trim().toLowerCase()
@@ -101,9 +107,9 @@ function Productos({ productos, sucursales, kpis, canEdit, mostrados, truncado, 
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Productos activos" value={kpis.productos.toLocaleString('es-AR')} />
-        <Kpi label="Valor de stock (costo)" value={formatARS(kpis.valorStock)} />
-        <Kpi label="Críticos" value={String(kpis.criticos)} tone={kpis.criticos > 0 ? 'bad' : undefined} />
-        <Kpi label="Por vencer (30d)" value={String(kpis.porVencer)} tone={kpis.porVencer > 0 ? 'warn' : undefined} />
+        <Kpi label="Valor de stock (costo)" value={kpis.valorStock === null ? null : formatARS(kpis.valorStock)} nota={notas.valorStock} />
+        <Kpi label="Críticos" value={kpis.criticos === null ? null : String(kpis.criticos)} nota={notas.criticos} tone={(kpis.criticos ?? 0) > 0 ? 'bad' : undefined} />
+        <Kpi label="Por vencer (30d)" value={kpis.porVencer === null ? null : String(kpis.porVencer)} nota={notas.porVencer} tone={(kpis.porVencer ?? 0) > 0 ? 'warn' : undefined} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -132,7 +138,8 @@ function Productos({ productos, sucursales, kpis, canEdit, mostrados, truncado, 
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
           {stockSifaco.esTotal ? (
             <>
-              <b>{stockSifaco.unidades.toLocaleString('es-AR')} unidades</b> es el stock TOTAL que
+              <b>{stockSifaco.unidades.toLocaleString('es-AR')} unidades</b> en{' '}
+              <b>{stockSifaco.productos.toLocaleString('es-AR')} productos</b> es el stock TOTAL que
               declara SIFACO, sin abrir por sucursal. La columna de cada sucursal esta vacia porque
               el archivo con la apertura todavia no llego — no porque no haya stock.
             </>
@@ -358,8 +365,24 @@ function Kardex({ sucursales }: { sucursales: SucursalLite[] }) {
   )
 }
 
-function Kpi({ label, value, tone }: { label: string; value: string; tone?: 'warn' | 'bad' }) {
+/**
+ * Un KPI. Si viene `nota`, la nota REEMPLAZA al número — no lo acompaña.
+ *
+ * Una aclaración al pie de un cero se lee como cero: el ojo toma el número
+ * grande y sigue de largo. Si el dato no se puede saber, el lugar del número
+ * tiene que decir eso.
+ */
+function Kpi({ label, value, tone, nota }: { label: string; value: string | null; tone?: 'warn' | 'bad'; nota?: string }) {
   const c = tone === 'warn' ? 'text-amber-600 dark:text-amber-400' : tone === 'bad' ? 'text-destructive' : 'text-foreground'
+  if (value === null) {
+    return (
+      <div className="rounded-xl border bg-card p-4">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className="mt-1 text-sm font-semibold">Sin datos todavía</div>
+        {nota && <div className="mt-0.5 text-xs font-normal leading-snug text-muted-foreground">{nota}</div>}
+      </div>
+    )
+  }
   return <div className="rounded-xl border bg-card p-4"><div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div><div className={cn('mt-1 text-2xl font-semibold tabular-nums', c)}>{value}</div></div>
 }
 function FSelect({ value, onChange, ph, children }: { value: string; onChange: (v: string) => void; ph: string; children: React.ReactNode }) {

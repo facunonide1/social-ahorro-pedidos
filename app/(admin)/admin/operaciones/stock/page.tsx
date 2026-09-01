@@ -1,6 +1,7 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { paginar } from '@/lib/supabase/paginar'
+import { estadoDelStock } from '@/lib/stock/fuente'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { tituloDePantalla } from '@/lib/os/definicion'
@@ -106,13 +107,36 @@ export default async function StockPage() {
   // sucursal puntual no se muestra nada, y se dice por que. Repartir el total
   // entre las cuatro seria inventar un dato que despues alguien usa para
   // decidir un pedido.
+  const estado = await estadoDelStock()
+  // Los laboratorios salen de la base, no de los 5.000 que trae la pantalla:
+  // uno que aparezca recien en el producto 5.001 no figuraba en el filtro.
+  const { data: labsRows } = await sb
+    .from('catalogo_laboratorios').select('laboratorio').order('laboratorio')
   const { data: totalSifaco } = await sb.rpc('catalogo_valor_de_stock')
   const valorSifaco = Number((totalSifaco as any)?.[0]?.valor_costo ?? 0)
   const unidadesSifaco = Number((totalSifaco as any)?.[0]?.unidades ?? 0)
 
-  const valorStockItems = productos.reduce((a, p) => a + p.total * p.costo, 0)
-  const valorStock = esTodas ? valorSifaco : valorStockItems
-  const criticos = productos.filter((p) => p.critico).length
+  // ── LO QUE NO SE PUEDE SABER VA EN NULL, NO EN CERO ───────────────────────
+  //
+  // Cero es «lo mire y no hay». Null es «no lo puedo saber». Mostrar cero
+  // cuando es null es la misma mentira que un numero inventado, solo que mas
+  // dificil de detectar — nadie sospecha de un cero.
+  const hayStockPorSucursal = estado.hayPorSucursal
+
+  // Valor: el total de SIFACO cuando se miran las cuatro. En UNA sucursal no se
+  // puede: SIFACO no exporto la apertura. No es cero, es que no se sabe.
+  const valorStock = esTodas ? valorSifaco : (hayStockPorSucursal ? productos.reduce((a, p) => a + p.total * p.costo, 0) : null)
+
+  // Criticos: se calculan comparando cantidad contra minimo POR SUCURSAL. Sin
+  // apertura no hay con que compararlo, ni siquiera mirando las cuatro juntas.
+  const criticos = hayStockPorSucursal ? productos.filter((p) => p.critico).length : null
+
+  // Por vencer: no hay ni un lote cargado. Cero lotes por vencer suena a buena
+  // noticia y es que no hay vencimientos cargados.
+  const hayLotes = (lotesVenc ?? []).length > 0 || porVencer.size > 0
+  const { count: lotesTotales } = await sb
+    .from('lotes_productos').select('id', { count: 'exact', head: true })
+  const porVencerKpi = (lotesTotales ?? 0) > 0 ? porVencer.size : null
 
   return (
     <>
@@ -131,10 +155,16 @@ export default async function StockPage() {
         <StockClient
           productos={productos}
           sucursales={sucursales}
-          kpis={{ productos: totalProductos ?? productos.length, valorStock, criticos, porVencer: porVencer.size }}
+          kpis={{ productos: totalProductos ?? productos.length, valorStock, criticos, porVencer: porVencerKpi }}
+          laboratorios={((labsRows ?? []) as any[]).map((l) => l.laboratorio)}
+          notas={{
+            valorStock: valorStock === null ? 'SIFACO no exportó la apertura por sucursal: el total sólo se puede ver en «todas las sucursales».' : (esTodas ? 'total que declara SIFACO, sin abrir por sucursal' : undefined),
+            criticos: criticos === null ? 'Se calcula comparando cantidad contra mínimo por sucursal, y esa apertura todavía no llegó.' : undefined,
+            porVencer: porVencerKpi === null ? 'No hay ningún lote con vencimiento cargado: no es que no venza nada, es que no hay con qué mirarlo.' : undefined,
+          }}
           mostrados={productos.length}
           truncado={truncado}
-          stockSifaco={{ esTotal: esTodas, unidades: unidadesSifaco, sinApertura: true }}
+          stockSifaco={{ esTotal: esTodas, unidades: estado.sifaco.unidades, productos: estado.sifaco.productosConStock, sinApertura: !estado.hayPorSucursal }}
           rol={profile.rol}
         />
       </div>
