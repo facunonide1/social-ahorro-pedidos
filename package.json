@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "npm run auditar:cortes && npm run auditar:lente && npm run probar:permisos && next build",
+    "build": "npm run auditar:cortes && npm run auditar:rls && npm run auditar:lente && npm run probar:permisos && next build",
     "start": "next start -p 3001",
     "lint": "next lint",
     "auditar:cortes": "node scripts/auditar-cortes.mjs",
     "auditar:lente": "node scripts/auditar-lente.mjs",
-    "probar:permisos": "npx tsx scripts/probar-permisos-nora.ts"
+    "probar:permisos": "npx tsx scripts/probar-permisos-nora.ts",
+    "auditar:rls": "node scripts/auditar-rls.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",

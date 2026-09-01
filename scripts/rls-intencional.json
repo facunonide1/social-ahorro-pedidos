@@ -1,0 +1,12 @@
+{
+ "auth_trigger_errors": "bitacora de errores de trigger; se mira desde la consola de Supabase",
+ "backup_empleados_v26": "respaldo de una migracion vieja; no lo lee nadie",
+ "backup_movimientos_stock_v20": "respaldo de una migracion vieja; no lo lee nadie",
+ "backup_stock_items_v20": "respaldo de una migracion vieja; no lo lee nadie",
+ "backup_stock_sucursal_v20": "respaldo de una migracion vieja; no lo lee nadie",
+ "backup_users_admin_v26": "respaldo de una migracion vieja; no lo lee nadie",
+ "crons_calculo": "la guarda de los crons: la leen los crons con service_role",
+ "demo_origen_ref": "libreta de equivalencias que usa un trigger, no una pantalla",
+ "sifaco_maestro_staging": "pila de origen del importador: solo la escribe y lee el cargador con service_role",
+ "sifaco_mapeo_columnas": "mapeo de columnas del importador; nadie lo lee desde una pantalla"
+}
