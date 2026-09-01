@@ -71,6 +71,9 @@ export default async function OfertasPage({ searchParams }: { searchParams: { sk
             <Button asChild variant="outline" size="sm">
               <Link href="/admin/ofertas/sifaco">Ofertas de SIFACO</Link>
             </Button>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/ofertas/recomendaciones">Qué conviene hacer</Link>
+            </Button>
             <AccesoCentroDatos accion={{ tipo: 'exportar-ofertas' }} />
           </div>
         } />

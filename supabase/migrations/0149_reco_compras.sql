@@ -1,0 +1,1 @@
+-- 0149_reco_compras (v0.88) — aplicada vía MCP; el DDL vigente vive en la base.

@@ -1,0 +1,1 @@
+-- 0151_resumenes_recomendacion (v0.88) — aplicada vía MCP; el DDL vigente vive en la base.

@@ -1,0 +1,1 @@
+-- 0148_set_condicion_venta (v0.88) — aplicada vía MCP; el DDL vigente vive en la base.

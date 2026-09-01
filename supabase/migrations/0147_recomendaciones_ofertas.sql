@@ -1,0 +1,1 @@
+-- 0147_recomendaciones_ofertas (v0.88) — aplicada vía MCP; el DDL vigente vive en la base.

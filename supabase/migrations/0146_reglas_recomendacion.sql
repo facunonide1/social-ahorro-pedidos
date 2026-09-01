@@ -1,0 +1,13 @@
+-- 0146_reglas_recomendacion (v0.88) — aplicada vía MCP; el DDL vigente vive en la base.
+--
+-- Cada regla responde CUATRO preguntas antes de existir: qué decide, con qué
+-- evidencia, quién confirma, qué pasa si se equivoca. La que no puede
+-- responderlas no se construye.
+--
+-- Y las que hoy no se pueden correr quedan ESCRITAS Y APAGADAS, con el dato que
+-- les falta a la vista:
+--   · ofertas por vencimiento  → no hay UNA sola fecha de vencimiento cargada,
+--                                y es la mejor razón que existe para ofertar
+--   · ofertas por sucursal     → falta el tabla3e completo
+--   · a qué droguería conviene → no hay precios por proveedor: sólo se sabe a
+--                                quién se le compra MÁS, que no es lo mismo

@@ -1,0 +1,12 @@
+-- 0150_medir_ofertas (v0.88) — aplicada vía MCP; el DDL vigente vive en la base.
+--
+-- Si la oferta sirvió: ventas ANTES contra ventas DURANTE, medidas en MARGEN y
+-- no en unidades. Una oferta que duplica las unidades y baja el margen a la
+-- mitad no ganó nada.
+--
+-- Las que no se pueden medir se DECLARAN, no se estiman: 6.135 de 6.461 no
+-- tienen fecha de inicio.
+--
+-- ADVERTENCIA HONESTA: esto NO separa la estacionalidad. Un antigripal en junio
+-- vende más con o sin descuento, y con once meses cerrados no alcanza para
+-- comparar contra el mismo mes del año anterior.
