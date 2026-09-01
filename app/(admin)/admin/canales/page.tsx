@@ -36,6 +36,15 @@ export default async function CanalesPage() {
     { maximo: 500 },
   )
 
+  // Los que no cruzan contra el maestro van completos: son pocos y cada uno hay
+  // que buscarlo a mano en SIFACO. Ver docs/EL-MAESTRO-ESTA-INCOMPLETO.md.
+  const { filas: sinCruce } = await paginar<any>(
+    sb.from('canal_estado').select('sku, nombre_canal, estado, permalink, precio_publicado')
+      .eq('canal_id', 'woo').eq('problema', 'no_en_catalogo')
+      .order('sku'),
+    { maximo: 2000 },
+  )
+
   return (
     <>
       <PageHeader
@@ -50,6 +59,7 @@ export default async function CanalesPage() {
           publicados={publicados ?? 0}
           candidatos={candidatos ?? 0}
           ilegales={ilegales}
+          sinCruce={sinCruce}
         />
       </div>
     </>

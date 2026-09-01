@@ -34,15 +34,19 @@ const PROBLEMA: Record<string, { titulo: string; que_es: string; grave?: boolean
     que_es: 'SIFACO no declara precio o costo para estos productos. No es que estén mal: es que no hay con qué compararlos.',
   },
   no_en_catalogo: {
-    titulo: 'No están en el catálogo de NORA',
-    que_es: 'Publicados en la tienda con un SKU que el maestro de SIFACO no tiene.',
+    titulo: 'El maestro no tiene ese código',
+    que_es:
+      'El SKU de la tienda es un código de SIFACO válido, pero no aparece en el archivo del ' +
+      'maestro que se importó. Eso NO quiere decir que el producto no exista: quiere decir que ' +
+      'el archivo salió incompleto. Hay que verificarlos en SIFACO uno por uno.',
   },
 }
 
 export function CanalesClient({
-  canales, problemas, publicados, candidatos, ilegales,
+  canales, problemas, publicados, candidatos, ilegales, sinCruce,
 }: {
-  canales: any[]; problemas: any[]; publicados: number; candidatos: number; ilegales: any[]
+  canales: any[]; problemas: any[]; publicados: number; candidatos: number
+  ilegales: any[]; sinCruce: any[]
 }) {
   const n = (p: string) => Number(problemas.find((x) => x.problema === p)?.casos ?? 0)
   const woo = canales.find((c) => c.id === 'woo')
@@ -106,6 +110,21 @@ export function CanalesClient({
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">{info.que_es}</p>
+                {p.problema === 'no_en_catalogo' && sinCruce.length > 0 && (
+                  <div className="mt-2">
+                    <Button variant="outline" size="sm" className="gap-1"
+                      onClick={() => exportExcel('codigos-que-el-maestro-no-tiene', sinCruce.map((x) => ({
+                        'Código (SKU en la tienda)': x.sku,
+                        'Nombre en la tienda': x.nombre_canal,
+                        'Estado en la tienda': x.estado,
+                        'Precio publicado': x.precio_publicado ?? '',
+                        Link: x.permalink ?? '',
+                        'Qué hacer': 'Buscar el código en SIFACO. Si existe, el export del maestro salió incompleto.',
+                      })))}>
+                      <Download className="size-3.5" /> Exportar los {sinCruce.length}
+                    </Button>
+                  </div>
+                )}
               </div>
             )
           })}
