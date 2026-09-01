@@ -15,12 +15,30 @@ export default async function CompliancePage() {
   const { sucursalId, esTodas } = getSucursalActiva()
 
   const [recalls, papeles, traz] = await Promise.all([recallsActivos(adm), papelesEnAlerta(adm, 30), diasSinTrazabilidad(adm)])
+
+  // ── ¿HAY CON QUE MIRAR? ───────────────────────────────────────────────────
+  //
+  // Esta pantalla decia «Compliance en orden: sin recalls, papeles al dia y
+  // trazabilidad cargada» con CERO documentos, CERO recalls y CERO despachos
+  // cargados. Es terreno legal (regla de oro 9): decir que esta todo en orden
+  // cuando no hay nada contra que mirarlo es la afirmacion mas peligrosa del
+  // sistema — es la que hace que nadie vaya a revisar (v0.86).
+  const [{ count: nDocs }, { count: nRecalls }, { count: nDesp }] = await Promise.all([
+    adm.from('compliance_documentos').select('id', { count: 'exact', head: true }),
+    adm.from('compliance_recalls').select('id', { count: 'exact', head: true }),
+    adm.from('compliance_despachos').select('id', { count: 'exact', head: true }),
+  ])
+  const hayPapeles = (nDocs ?? 0) > 0
+  const hayRecalls = (nRecalls ?? 0) > 0
+  const hayDespachos = (nDesp ?? 0) > 0
+  const hayAlgo = hayPapeles || hayRecalls || hayDespachos
   const trazAtrasada = traz.filter((t) => t.dias >= 3)
   const peorTraz = traz.reduce((m, t) => Math.max(m, t.dias), 0)
   const score = !esTodas && sucursalId ? await scoreCompliance(adm, sucursalId) : null
 
   const kpis: SectorKpi[] = [
-    { label: 'Recalls activos', value: recalls, icon: ShieldAlert, variant: recalls > 0 ? 'danger' : 'default', href: '/admin/compliance/recalls' },
+    { label: 'Recalls activos', value: hayRecalls ? recalls : null, icon: ShieldAlert, variant: recalls > 0 ? 'danger' : 'default', href: '/admin/compliance/recalls',
+      nota: hayRecalls ? undefined : 'No hay ningún recall cargado: cero acá no quiere decir que no haya recalls, quiere decir que no se cargó ninguno.' },
     { label: 'Papeles por vencer', value: papeles.length, icon: FileBadge, variant: papeles.some((p) => p.dias < 0) ? 'danger' : papeles.length > 0 ? 'warning' : 'default', href: '/admin/compliance/papeles' },
     { label: 'Traz. atrasada (suc.)', value: trazAtrasada.length, icon: ClipboardCheck, variant: trazAtrasada.length > 0 ? 'warning' : 'default', href: '/admin/compliance/despachos' },
     ...(score != null ? [{ label: 'Score de compliance', value: score, icon: ShieldCheck, variant: (score >= 80 ? 'success' : score >= 50 ? 'warning' : 'danger') as any }] : []),
@@ -40,7 +58,9 @@ export default async function CompliancePage() {
     ? <p>⚠️ Papeles VENCIDOS: revisá {papeles.filter((p) => p.dias < 0).length} documento(s) de sucursal.</p>
     : trazAtrasada.length > 0
     ? <p>La trazabilidad ANMAT está atrasada en <b>{trazAtrasada.length}</b> sucursal(es) (peor: {peorTraz} días). Es tarea diaria con screenshot.</p>
-    : <p>Compliance en orden: sin recalls, papeles al día y trazabilidad cargada. El libro recetario sigue siendo el registro legal.</p>
+    : !hayAlgo
+    ? <p><b>No puedo decir si el compliance está en orden.</b> No hay ningún papel de habilitación, ningún recall ni ningún despacho de controlados cargado: no es que esté todo bien, es que no hay nada contra qué mirarlo. El libro recetario sigue siendo el registro legal, y esto no lo reemplaza.</p>
+    : <p>Sin recalls activos{hayPapeles ? ', papeles al día' : ''}{hayDespachos ? ' y trazabilidad cargada' : ''}.{!hayPapeles && ' No hay papeles cargados, así que sobre eso no puedo decir nada.'} El libro recetario sigue siendo el registro legal.</p>
 
   return (
     <SectorDashboard title="Compliance" descripcion="El escudo de la habilitación: controlados, trazabilidad, papeles, recalls y procedimientos."

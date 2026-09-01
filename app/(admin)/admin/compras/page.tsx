@@ -15,6 +15,7 @@ import { RecomendacionesComprasCard } from '@/components/compras/recomendaciones
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { cn } from '@/lib/utils'
 
+import { sinDemo } from '@/lib/demo/estado'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Compras' }
 
@@ -28,10 +29,13 @@ export default async function ComprasTablero({ searchParams }: { searchParams: {
   const { sucursalId, esTodas } = getSucursalActiva()
   const inicioMes = new Date().toISOString().slice(0, 7) + '-01'
 
+  // El lente de demostracion (v0.81). Sin esto la pantalla afirmaba sobre
+  // datos inventados sin decirlo en ningun lado (v0.86).
   let ocQ = sb.from('ordenes_compra').select('id, total_estimado, estado, rubro, created_at').limit(2000)
   if (rubro !== 'todos') ocQ = ocQ.eq('rubro', rubro)
   if (!esTodas && sucursalId) ocQ = ocQ.eq('sucursal_compradora_id', sucursalId)
   let afQ = sb.from('avisos_faltante').select('id, estado, rubro').eq('estado', 'nuevo').limit(2000)
+  if (sinDemo()) { ocQ = ocQ.eq('es_demo', false); afQ = afQ.eq('es_demo', false) }
   if (rubro !== 'todos') afQ = afQ.eq('rubro', rubro)
   if (!esTodas && sucursalId) afQ = afQ.eq('sucursal_id', sucursalId)
   let provQ = sb.from('proveedores').select('id, razon_social, rubros, score_actual, es_drogueria').eq('activo', true).order('razon_social').limit(500)

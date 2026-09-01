@@ -4,6 +4,7 @@ import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { HistoricoClient, type ArqueoRow, type DescuadreCajero, type PatronFranja, type CajaChicaReporte } from './historico-client'
 
+import { sinDemo } from '@/lib/demo/estado'
 function franjaDe(iso: string | null): 'mañana' | 'tarde' | 'noche' {
   if (!iso) return 'tarde'
   const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', hour12: false }).format(new Date(iso)))
@@ -19,9 +20,12 @@ export default async function HistoricoCajaPage() {
   const sb = createClient()
   const { sucursalId, esTodas } = getSucursalActiva()
 
+  // El lente de demostracion (v0.86): sin esto la pantalla afirmaba sobre
+  // datos inventados sin decirlo.
   let q = sb.from('arqueos_caja')
     .select('id, sucursal_id, fecha, cajero_id, cajero_nombre, inicio_caja, total_efectivo, total_mercadopago, total_tarjetas, total_declarado, total_sistema, diferencia_cierre, efectivo_a_general, captura_url, estado, observacion, conteo_confirmado_at, hora_cierre_sifaco, secuencia_alterada, carga_posterior, created_at, sucursales(nombre)')
     .order('fecha', { ascending: false }).limit(300)
+  if (sinDemo()) q = q.eq('es_demo', false)
   if (!esTodas && sucursalId) q = q.eq('sucursal_id', sucursalId)
   const { data: arqueos } = await q
 

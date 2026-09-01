@@ -8,6 +8,7 @@ import { VentasFinasCard } from '@/components/centro-datos/ventas-finas-card'
 import { FaltantesClient, type FaltanteGrupo, type ProductoLite, type SucLite } from './faltantes-client'
 
 import { paginarProductos } from '@/lib/catalogo/indice'
+import { sinDemo } from '@/lib/demo/estado'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Avisos de faltantes' }
 
@@ -17,9 +18,12 @@ export default async function FaltantesPage({ searchParams }: { searchParams: { 
   const rubro = parseRubro(searchParams.rubro)
   const { sucursalId, esTodas } = getSucursalActiva()
 
+  // El lente de demostracion (v0.86): sin esto la pantalla afirmaba sobre
+  // datos inventados sin decirlo.
   let q = sb.from('avisos_faltante')
     .select('id, producto_id, texto_libre, rubro, sucursal_id, cantidad_sugerida, estado, created_at, productos_catalogo(nombre, sku), sucursales(nombre)')
     .in('estado', ['nuevo', 'en_orden']).order('created_at', { ascending: false }).limit(1000)
+  if (sinDemo()) q = q.eq('es_demo', false)
   if (rubro !== 'todos') q = q.eq('rubro', rubro)
   if (!esTodas && sucursalId) q = q.eq('sucursal_id', sucursalId)
 

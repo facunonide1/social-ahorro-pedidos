@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/shared/page-header'
 
 import { CajaClient, type SucCajaConfig, type TurnoRow, type MovRow } from './caja-client'
 
+import { sinDemo } from '@/lib/demo/estado'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Caja' }
 
@@ -22,7 +23,10 @@ export default async function CajaPage() {
 
   // desglose por medio de pago: arqueos cerrados de los últimos 60 días (en scope)
   const desde60 = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10)
+  // El lente de demostracion (v0.81). Sin esto la pantalla afirmaba sobre
+  // datos inventados sin decirlo en ningun lado (v0.86).
   let arqQ = sb.from('arqueos_caja').select('total_efectivo, total_mercadopago, total_tarjetas, efectivo_a_general').neq('estado', 'abierta').gte('fecha', desde60)
+  if (sinDemo()) arqQ = arqQ.eq('es_demo', false)
   if (!esTodas && sucursalId) arqQ = arqQ.eq('sucursal_id', sucursalId)
 
   const [{ data: sucs }, { data: cfg }, { data: cajas }, { data: turnos }, { data: movs }, { data: arqs }] = await Promise.all([
