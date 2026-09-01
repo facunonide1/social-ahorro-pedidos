@@ -1,0 +1,1 @@
+-- 0162_excluir_no_productos (v0.90) — aplicada vía MCP; el DDL vigente vive en la base.

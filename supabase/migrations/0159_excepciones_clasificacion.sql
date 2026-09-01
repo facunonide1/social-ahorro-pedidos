@@ -1,0 +1,13 @@
+-- 0159_excepciones_clasificacion (v0.90) — aplicada vía MCP; el DDL vigente vive en la base.
+--
+-- La excepción a la regla 9, con sus condiciones. Terreno legal:
+--   · quién la autorizó, cuándo y por qué — el motivo es un CONSTRAINT, no una
+--     convención: mínimo 15 caracteres, para que no se cumpla el trámite con
+--     un espacio en blanco
+--   · temporal por diseño: se cierra sola cuando SIFACO corrige
+--   · ninguna se borra: se revoca y queda
+--   · el rol que autoriza es configurable y por defecto el más restrictivo
+--
+-- Y LA CONSTITUCIÓN, garantizada por un constraint y no por una convención:
+-- vl=3 y vl=4 NO admiten excepción. Ni con firma. Verificado intentando
+-- insertar una y comprobando que la base la rechaza.

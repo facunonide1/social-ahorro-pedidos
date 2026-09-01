@@ -1,0 +1,1 @@
+-- 0163_bloqueos_publicacion (v0.90) — aplicada vía MCP; el DDL vigente vive en la base.

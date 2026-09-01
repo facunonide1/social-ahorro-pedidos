@@ -1,0 +1,1 @@
+-- 0160_condicion_efectiva (v0.90) — aplicada vía MCP; el DDL vigente vive en la base.

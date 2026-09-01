@@ -1,0 +1,12 @@
+-- 0161_no_son_productos (v0.90) — aplicada vía MCP; el DDL vigente vive en la base.
+--
+-- Ocho filas del catálogo de SIFACO que NO son artículos: PAGO, GASTOS,
+-- ALQUILER, RETIRO, DELIVERY TK y ENVIO ZONA 1 a 6. Son conceptos internos que
+-- SIFACO guarda como si fueran productos.
+--
+-- Se MARCAN, no se borran: SIFACO los necesita para operar.
+--
+-- Aparecieron en las propuestas de oferta, donde llamaban la atención. El
+-- problema es dónde NO llamaban: NORA estaba recomendando comprar **695
+-- unidades de ENVIO ZONA 1, urgente**, porque lee los envíos cobrados como
+-- ventas de un producto con stock cero.

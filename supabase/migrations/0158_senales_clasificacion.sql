@@ -1,0 +1,9 @@
+-- 0158_senales_clasificacion (v0.90) — aplicada vía MCP; el DDL vigente vive en la base.
+--
+-- SEÑALES, NO AFIRMACIONES. NORA no sabe qué es venta libre: eso lo sabe el
+-- farmacéutico. Lo que sí puede es marcar que una clasificación merece una
+-- segunda mirada.
+--
+-- Los controlados (vl=3) y estupefacientes (vl=4) NO aparecen acá ni como
+-- señal: no tienen excepción posible, y ponerlos en una lista de «revisar» ya
+-- sería sugerir que la tienen.
