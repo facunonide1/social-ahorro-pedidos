@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getAnthropic, hasAnthropicKey } from '@/lib/ai/client'
 import { chatSystemPrompt } from '@/lib/ai/prompts'
 import {
-  AI_TOOL_DEFINITIONS,
+  toolsPara,
   TOOL_LABELS,
   runTool,
 } from '@/lib/ai/tools'
@@ -34,9 +34,9 @@ export async function POST(req: NextRequest) {
   // 403 "sin_permiso" para TODOS. Ver lib/admin-hub/auth.ts para el patrón correcto.
   const { data: profile, error: profileError } = await sb
     .from('users_admin')
-    .select('rol, activo')
+    .select('rol, activo, permisos_custom')
     .eq('id', user.id)
-    .maybeSingle<{ rol: string; activo: boolean }>()
+    .maybeSingle<{ rol: string; activo: boolean; permisos_custom: any }>()
   if (profileError || !profile?.activo)
     return NextResponse.json(
       { error: 'Tu usuario no tiene acceso al panel. Pedile a un administrador que lo active.' },
@@ -73,6 +73,10 @@ export async function POST(req: NextRequest) {
     nombre,
     ruta: body.ruta ?? null,
   })
+  // El catalogo del usuario. Se arma ANTES de abrir el stream: si algo falla
+  // aca, no llega nada al modelo.
+  const herramientas = toolsPara({ rol: profile.rol as any, permisosCustom: profile.permisos_custom ?? null })
+
   const anthropic = getAnthropic()
   const encoder = new TextEncoder()
 
@@ -93,7 +97,10 @@ export async function POST(req: NextRequest) {
             model: CHAT_MODEL,
             max_tokens: CHAT_MAX_TOKENS,
             system,
-            tools: AI_TOOL_DEFINITIONS,
+            // FILTRADAS POR QUIEN HABLA, antes del modelo. Antes iban las
+            // treinta para todos los roles: alguien de mostrador recibia en su
+            // catalogo el flujo de caja y las facturas a pagar (v0.86).
+            tools: herramientas,
             messages,
           })
 

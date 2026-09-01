@@ -1,6 +1,7 @@
 import type Anthropic from '@anthropic-ai/sdk'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+import { puedeUsar, type QuienHabla } from './permisos-tools'
 /**
  * Tools de la IA interna (F4.4). Cada tool tiene una definición que se
  * manda al modelo y una función `execute` que corre server-side contra
@@ -268,11 +269,36 @@ const getStockCritico: ToolDef = {
   },
   async execute(sb, input) {
     const limit = Math.min(Number(input.limit) || 25, 60)
+
+    // ── QUE NORA SEPA LO QUE NO SABE (v0.86) ────────────────────────────────
+    //
+    // Los quiebres se calculan comparando cantidad contra minimo POR SUCURSAL,
+    // y SIFACO no exporto esa apertura: `stock_items` tiene 480 filas y las 480
+    // son de demostracion. Devolver `cantidad: 0` seria decirle a NORA "mire y
+    // no hay", y NORA lo diria con toda confianza en una frase que nadie va a
+    // verificar. Un agente que miente es peor que una pantalla que miente.
+    //
+    // El mismo criterio que los KPI: null, no cero, y el motivo.
+    const { count: reales } = await sb
+      .from('stock_items').select('producto_id', { count: 'exact', head: true }).eq('es_demo', false)
+    if (!reales) {
+      return {
+        no_se_puede_saber: true,
+        cantidad: null,
+        motivo: 'No hay stock por sucursal cargado. SIFACO exporto el maestro con el TOTAL '
+          + '(134.343 unidades en 8.295 productos) y la apertura por sucursal viene en otro '
+          + 'archivo que todavia no llego. Sin esa apertura no se puede saber que esta bajo el '
+          + 'minimo: no es que no haya quiebres, es que no hay con que mirarlo.',
+        que_si_se_sabe: 'el stock total que declara SIFACO, con la sucursal en «todas»',
+      }
+    }
+
     const { data, error } = await sb
       .from('stock_items')
       .select(
         'cantidad, stock_minimo, productos_catalogo(nombre, categoria), sucursales(nombre)',
       )
+      .eq('es_demo', false)
       .gt('stock_minimo', 0)
       .order('cantidad', { ascending: true })
       .limit(300)
@@ -1211,9 +1237,27 @@ export const AI_TOOLS: Record<string, ToolDef> = {
   get_objetivos_empleado: getObjetivosEmpleado,
 }
 
+/**
+ * TODAS las definiciones. NO se le pasan al modelo tal cual: hay que filtrarlas
+ * por quien esta hablando con `toolsPara()`. Se deja exportada porque la usan
+ * las pruebas y el catalogo de capacidades.
+ */
 export const AI_TOOL_DEFINITIONS: Anthropic.Tool[] = Object.values(AI_TOOLS).map(
   (t) => t.definition,
 )
+
+/**
+ * Las definiciones que ESTE usuario puede usar.
+ *
+ * Es lo unico que sale por la red hacia Claude. Que el modelo "sepa" que no
+ * debe usar una herramienta no alcanza: la herramienta no tiene que estar en su
+ * catalogo (regla de oro 10, v0.86).
+ */
+export function toolsPara(quien: QuienHabla): Anthropic.Tool[] {
+  return Object.entries(AI_TOOLS)
+    .filter(([id]) => puedeUsar(id, quien))
+    .map(([, t]) => t.definition)
+}
 
 /** Etiquetas legibles para mostrar en la UI ("Consultando…"). */
 export const TOOL_LABELS: Record<string, string> = {
