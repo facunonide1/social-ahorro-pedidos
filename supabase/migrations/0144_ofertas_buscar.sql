@@ -1,0 +1,11 @@
+-- 0144_ofertas_buscar (v0.88)
+--
+-- Aplicada vía MCP; el DDL vigente vive en la base:
+--   select pg_get_viewdef('public.<vista>'::regclass, true);
+--   select pg_get_functiondef(p.oid) from pg_proc p join pg_namespace n
+--     on n.oid=p.pronamespace where n.nspname='public' and p.proname='<fn>';
+--
+-- La búsqueda y el CONTEO van en la base. 16.383 filas no se traen al navegador
+-- para filtrarlas ahí: se corta en mil sin avisar, y además no es una tabla, es
+-- una descarga. Ésta era una de las cuatro pantallas que v0.85 dejó marcadas
+-- como «hay que repensar».

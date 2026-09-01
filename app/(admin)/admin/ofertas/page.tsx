@@ -13,6 +13,7 @@ import { finalizarVencidas } from '@/lib/ofertas/al-finalizar'
 import { OfertasClient, type OfertaRow, type ProdLite, type CampLite, type SucLite, type Prefill } from './ofertas-client'
 
 import { paginarProductos } from '@/lib/catalogo/indice'
+import { Button } from '@/components/ui/button'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Ofertas' }
 
@@ -65,7 +66,14 @@ export default async function OfertasPage({ searchParams }: { searchParams: { sk
     <>
       <PageHeader title="Ofertas" description="Objeto vivo: se carga o la propone NORA → se aprueba → dispara tareas, publica y notifica al equipo."
         breadcrumbs={[{ label: 'Comercial' }, { label: 'Ofertas' }]}
-        actions={<AccesoCentroDatos accion={{ tipo: 'exportar-ofertas' }} />} />
+        actions={
+          <div className="flex gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/admin/ofertas/sifaco">Ofertas de SIFACO</Link>
+            </Button>
+            <AccesoCentroDatos accion={{ tipo: 'exportar-ofertas' }} />
+          </div>
+        } />
       <div className="space-y-5 p-4 md:p-6">
         <AccionesSubApp app="ofertas" />
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">

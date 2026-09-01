@@ -1,0 +1,14 @@
+-- 0143_ofertas_vista_trabajo (v0.88)
+--
+-- Aplicada vía MCP; el DDL vigente vive en la base:
+--   select pg_get_viewdef('public.<vista>'::regclass, true);
+--   select pg_get_functiondef(p.oid) from pg_proc p join pg_namespace n
+--     on n.oid=p.pronamespace where n.nspname='public' and p.proname='<fn>';
+--
+-- `ofertas_trabajo`: la oferta más todo lo que hace falta para decidir sobre
+-- ella. Descuento y FORMA (un 50 «en la segunda unidad» es 25% efectivo),
+-- precio con y sin, costo, margen que queda, stock, venta mensual, cuánto
+-- margen entrega POR MES, rotación, y por qué no es publicable cuando no lo es.
+--
+-- Las 309 que vencen el 1/1/2070 aparecen como `sin_fecha`, no como vigentes
+-- hasta 2070: es «nunca» escrito de la única forma que el sistema permitía.

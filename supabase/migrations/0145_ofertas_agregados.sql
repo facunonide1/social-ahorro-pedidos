@@ -1,0 +1,6 @@
+-- 0145_ofertas_agregados (v0.88)
+--
+-- Aplicada vía MCP; el DDL vigente vive en la base:
+--   select pg_get_viewdef('public.<vista>'::regclass, true);
+--   select pg_get_functiondef(p.oid) from pg_proc p join pg_namespace n
+--     on n.oid=p.pronamespace where n.nspname='public' and p.proname='<fn>';
