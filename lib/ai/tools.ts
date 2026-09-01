@@ -467,9 +467,14 @@ const getAnomalias: ToolDef = {
         .not('estado', 'in', '("pagada","anulada","rechazada")')
         .order('fecha_vencimiento', { ascending: true })
         .limit(20),
+      // SOLO STOCK REAL. Sin esto, el tablero listaba las 480 filas de
+      // demostracion y NORA las contaba como quiebres: le dijo al dueño
+      // "20 productos por debajo del minimo" nombrando productos inventados,
+      // en una frase que nadie iba a verificar (v0.87).
       sb
         .from('stock_items')
         .select('cantidad, stock_minimo, productos_catalogo(nombre), sucursales(nombre)')
+        .eq('es_demo', false)
         .gt('stock_minimo', 0)
         .order('cantidad', { ascending: true })
         .limit(200),
@@ -533,10 +538,18 @@ const getAnomalias: ToolDef = {
       chequesRechazados.length +
       impuestosVencidos.length
 
+    // Si no hay stock real por sucursal, el tablero NO dice "cero quiebres":
+    // dice que no lo puede saber. Cero se lee como buena noticia (v0.87).
+    const { count: stockReal } = await sb
+      .from('stock_items').select('producto_id', { count: 'exact', head: true }).eq('es_demo', false)
+
     return {
       total_alertas: totalAlertas,
       facturas_vencidas: facturasVencidas,
-      stock_critico: stockCritico,
+      stock_critico: stockReal ? stockCritico : null,
+      stock_critico_no_se_puede_saber: stockReal
+        ? undefined
+        : 'No hay stock por sucursal cargado: SIFACO exporto el TOTAL y la apertura viene en otro archivo. Sin eso no se puede saber que esta bajo el minimo — no es que no haya quiebres, es que no hay con que mirarlo.',
       vencimientos_15d: vencimientos,
       cheques_rechazados: chequesRechazados,
       impuestos_vencidos: impuestosVencidos,
