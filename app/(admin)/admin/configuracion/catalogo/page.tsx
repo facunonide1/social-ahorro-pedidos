@@ -1,47 +1,53 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
-import { paginar } from '@/lib/supabase/paginar'
-import type { ProductoCatalogo } from '@/lib/types/catalogo'
+import { paginaDelCatalogo } from '@/lib/catalogo/pagina'
 import { PageHeader } from '@/components/shared/page-header'
 
 import { CatalogoClient } from './catalogo-client'
-import { lente } from '@/lib/demo/lente'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Catálogo de productos' }
 
-export default async function CatalogoPage() {
+/**
+ * EL CATÁLOGO, BUSCADO EN LA BASE.
+ *
+ * Antes traía 3.000 productos de 46.129 y filtraba en el navegador: el que
+ * buscaba algo del producto 3.001 en adelante no lo encontraba nunca, y la
+ * pantalla no tenía cómo decirle que estaba mirando el 6%.
+ */
+export default async function CatalogoPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | undefined>
+}) {
   await requireAdminHubAccess({ allowedRoles: ['super_admin'] })
-
   const sb = createClient()
 
-  // El total se cuenta EN LA BASE. Contar `data.length` era contar lo que entro
-  // en memoria: con `limit(1000)` sobre 46.129 productos, la pantalla decia
-  // "1000 de 1000" y no habia forma de notar que faltaban 45.129.
-  const { count: total } = await lente(sb
-    .from('productos_catalogo').select('id', { count: 'exact', head: true }))
+  const bool = (v?: string) => (v === '1' ? true : v === '0' ? false : null)
 
-  // TOPE de pantalla, dicho arriba de la tabla. Mandar 46.000 productos al
-  // navegador no es una lista: es una descarga.
-  const TOPE = 3000
-  let error: { message: string } | null = null
-  let filas: ProductoCatalogo[] = []
-  let truncado = false
+  let error: string | null = null
+  let pagina
   try {
-    const r = await paginar<ProductoCatalogo>(
-      lente(sb.from('productos_catalogo').select('*').order('nombre', { ascending: true })),
-      { maximo: TOPE },
-    )
-    filas = r.filas
-    truncado = r.truncado
+    pagina = await paginaDelCatalogo(sb, {
+      q: searchParams.q,
+      categoria: searchParams.categoria,
+      laboratorio: searchParams.laboratorio,
+      condicion: searchParams.condicion,
+      conStock: bool(searchParams.con_stock),
+      conOferta: bool(searchParams.con_oferta),
+      soloControlados: bool(searchParams.controlados),
+      orden: (searchParams.orden as any) ?? 'nombre',
+      pagina: Number(searchParams.pagina) || 1,
+    })
   } catch (e: any) {
-    error = { message: e?.message ?? 'error' }
+    error = e?.message ?? 'error'
+    pagina = { filas: [], total: 0, pagina: 1, porPagina: 50, paginas: 1 }
   }
 
-  const productos = filas
-  const laboratorios = Array.from(
-    new Set(productos.map((p) => p.laboratorio).filter(Boolean) as string[]),
-  ).sort()
+  // Los laboratorios salen de su propia tabla: sacarlos de los productos de la
+  // página daría una lista distinta en cada página.
+  const { data: labs } = await sb
+    .from('catalogo_laboratorios').select('laboratorio').order('laboratorio').limit(1000)
 
   return (
     <>
@@ -52,11 +58,9 @@ export default async function CatalogoPage() {
       />
       <div className="p-4 md:p-6">
         <CatalogoClient
-          productos={productos}
-          laboratorios={laboratorios}
-          total={total ?? productos.length}
-          truncado={truncado}
-          loadError={error?.message ?? null}
+          pagina={pagina}
+          laboratorios={((labs ?? []) as any[]).map((l) => l.laboratorio).filter(Boolean)}
+          loadError={error}
         />
       </div>
     </>

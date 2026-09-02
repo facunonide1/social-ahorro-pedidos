@@ -1,6 +1,6 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
-import { paginar } from '@/lib/supabase/paginar'
+import { paginaDelCatalogo } from '@/lib/catalogo/pagina'
 import { estadoDelStock } from '@/lib/stock/fuente'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
@@ -15,7 +15,11 @@ const COLUMNAS_PRODUCTO =
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Stock' }
 
-export default async function StockPage() {
+export default async function StockPage({
+  searchParams,
+}: {
+  searchParams: Record<string, string | undefined>
+}) {
   // Puede venir de la declaración de la fábrica. Si el lector está apagado
   // o algo falla, devuelve este mismo texto: la pantalla no cambia.
   const tituloDeclarado = await tituloDePantalla('stock', '/admin/operaciones/stock', 'Stock')
@@ -31,32 +35,41 @@ export default async function StockPage() {
   let lotesQ = sb.from('lotes_productos').select('producto_id').gt('cantidad_actual', 0).lte('fecha_vencimiento', en30d)
   if (!esTodas && sucursalId) { stockQ = stockQ.eq('sucursal_id', sucursalId); rotQ = rotQ.eq('sucursal_id', sucursalId); lotesQ = lotesQ.eq('sucursal_id', sucursalId) }
 
-  // El total REAL, contado en la base. Antes la pantalla decia "1000 de 1000
-  // productos" con 46.009 cargados: `limit(5000)` no sube el techo de 1000 de
-  // PostgREST, devuelve mil y no avisa. Contar `prods.length` era contar lo que
-  // habia entrado en memoria, no lo que hay.
+  // ── LA BUSQUEDA PASA EN LA BASE ───────────────────────────────────────────
+  //
+  // Antes esta pantalla traia 5.000 de 46.009 productos y filtraba en el
+  // navegador: el que buscaba algo del producto 5.001 en adelante no lo
+  // encontraba nunca. Ahora el filtro y el orden pasan en la base y vuelven las
+  // 50 filas que se muestran, con el total al lado (`catalogo_pagina`).
+  const bool = (v?: string) => (v === '1' ? true : v === '0' ? false : null)
+  const pagina = await paginaDelCatalogo(sb, {
+    q: searchParams.q,
+    categoria: searchParams.categoria,
+    laboratorio: searchParams.laboratorio,
+    condicion: searchParams.condicion,
+    conStock: bool(searchParams.con_stock),
+    conOferta: bool(searchParams.con_oferta),
+    soloControlados: bool(searchParams.controlados),
+    orden: (searchParams.orden as any) ?? 'nombre',
+    pagina: Number(searchParams.pagina) || 1,
+  })
+
+  const idsPagina = pagina.filas.map((f) => f.id)
+
+  // El stock por sucursal, la rotacion y los lotes SOLO de los productos de la
+  // pagina: son 50, no 46.009.
+  if (idsPagina.length) {
+    stockQ = stockQ.in('producto_id', idsPagina).limit(500)
+    rotQ = rotQ.in('producto_id', idsPagina).limit(500)
+    lotesQ = lotesQ.in('producto_id', idsPagina).limit(500)
+  }
+
   const { count: totalProductos } = await sb
     .from('productos_catalogo').select('id', { count: 'exact', head: true })
     .eq('es_demo', false).eq('activo', true)
 
-  // TOPE: 5.000 y dicho en pantalla. No es el numero esperado, es hasta donde
-  // traemos antes de asumir que la pantalla no da para mas. Con 46.009
-  // productos, mandarlos todos al navegador no es una tabla: es una descarga.
-  const TOPE_PANTALLA = 5000
-
-  const [{ filas: prods, truncado }, { data: stock }, { data: rot }, { data: sucs }, { data: lotesVenc }] =
-    await Promise.all([
-      paginar<any>(
-        sb.from('productos_catalogo')
-          .select(COLUMNAS_PRODUCTO)
-          .eq('es_demo', false).eq('activo', true).order('nombre'),
-        { maximo: TOPE_PANTALLA },
-      ),
-      stockQ,
-      rotQ,
-      sb.from('sucursales').select('id, nombre, codigo, usa_deposito').eq('activa', true).order('nombre'),
-      lotesQ,
-    ])
+  const [{ data: stock }, { data: rot }, { data: sucs }, { data: lotesVenc }] =
+    await Promise.all([stockQ, rotQ, sb.from('sucursales').select('id, nombre, codigo, usa_deposito').eq('activa', true).order('nombre'), lotesQ])
 
   const sucursales = ((sucs ?? []) as any[]).map((s) => ({ id: s.id, nombre: s.nombre, codigo: s.codigo, usaDeposito: !!s.usa_deposito })) as SucursalLite[]
   const stockItems = (stock ?? []) as any[]
@@ -76,9 +89,12 @@ export default async function StockPage() {
     if (r.clasificacion_abc) abcByProd.set(r.producto_id, r.clasificacion_abc)
   }
 
-  const productos: ProductoRow[] = ((prods ?? []) as any[]).map((p) => {
+  const productos: ProductoRow[] = pagina.filas.map((p) => {
     const porSuc = stockByProd.get(p.id) ?? {}
-    const total = Object.values(porSuc).reduce((a, s) => a + s.cantidad, 0)
+    // `stock_items` (por sucursal) sigue siendo de demostracion; el numero real
+    // es el consolidado que declara SIFACO y viene en la fila de la pagina.
+    const totalSuc = Object.values(porSuc).reduce((a, s) => a + s.cantidad, 0)
+    const total = totalSuc > 0 ? totalSuc : Number(p.stock ?? 0)
     const totalGondola = Object.values(porSuc).reduce((a, s) => a + s.gondola, 0)
     const totalDeposito = Object.values(porSuc).reduce((a, s) => a + s.deposito, 0)
     const ventaDia = ventaByProd.get(p.id) ?? 0
@@ -88,7 +104,7 @@ export default async function StockPage() {
     return {
       id: p.id, sku: p.sku, ean: p.codigo_barras, nombre: p.nombre, laboratorio: p.laboratorio,
       categoria: p.categoria, costo, total, totalGondola, totalDeposito, ventaDia, cobertura, critico,
-      sinRotacion: ventaDia === 0, porVencer: porVencer.has(p.id), abc: abcByProd.get(p.id) ?? null,
+      sinRotacion: ventaDia === 0, porVencer: porVencer.has(p.id), abc: p.clasificacion_abc ?? abcByProd.get(p.id) ?? null,
       controlado: !!p.es_controlado, listaControlado: p.lista_controlado ?? null, recall: !!p.bloqueado_recall,
       stockPorSuc: porSuc,
     }
@@ -155,15 +171,14 @@ export default async function StockPage() {
         <StockClient
           productos={productos}
           sucursales={sucursales}
-          kpis={{ productos: totalProductos ?? productos.length, valorStock, criticos, porVencer: porVencerKpi }}
+          kpis={{ productos: totalProductos ?? 0, valorStock, criticos, porVencer: porVencerKpi }}
           laboratorios={((labsRows ?? []) as any[]).map((l) => l.laboratorio)}
           notas={{
             valorStock: valorStock === null ? 'SIFACO no exportó la apertura por sucursal: el total sólo se puede ver en «todas las sucursales».' : (esTodas ? 'total que declara SIFACO, sin abrir por sucursal' : undefined),
             criticos: criticos === null ? 'Se calcula comparando cantidad contra mínimo por sucursal, y esa apertura todavía no llegó.' : undefined,
             porVencer: porVencerKpi === null ? 'No hay ningún lote con vencimiento cargado: no es que no venza nada, es que no hay con qué mirarlo.' : undefined,
           }}
-          mostrados={productos.length}
-          truncado={truncado}
+          pagina={pagina}
           stockSifaco={{ esTotal: esTodas, unidades: estado.sifaco.unidades, productos: estado.sifaco.productosConStock, sinApertura: !estado.hayPorSucursal }}
           rol={profile.rol}
         />

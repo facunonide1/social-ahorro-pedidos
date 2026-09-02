@@ -7,7 +7,7 @@ import { VentasFinasCard } from '@/components/centro-datos/ventas-finas-card'
 
 import { AnalisisClient, type VendidoRow, type DormidoRow } from './analisis-client'
 
-import { paginarProductos } from '@/lib/catalogo/indice'
+import { productosPorId } from '@/lib/catalogo/pagina'
 import { sinDemo } from '@/lib/demo/estado'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Análisis de ventas' }
@@ -28,15 +28,21 @@ export default async function AnalisisPage() {
   const ahora = Date.now()
   const d90 = new Date(ahora - 90 * 86_400_000).toISOString()
 
-  const [{ data: ventas }, { data: prods }, { data: stock }, { data: rot }, { data: sucs }] = await Promise.all([
+  const [{ data: ventas }, { data: stock }, { data: rot }, { data: sucs }] = await Promise.all([
     real(scope(sb.from('movimientos_stock').select('producto_id, sucursal_id, cantidad, fecha').eq('tipo', 'venta').gte('fecha', d90).limit(50000))),
-    paginarProductos(sb, 'id, sku, nombre, categoria, laboratorio, precio_sugerido, precio_costo_promedio'),
     real(scope(sb.from('stock_items').select('producto_id, sucursal_id, cantidad'))),
     real(scope(sb.from('producto_rotacion').select('producto_id, sucursal_id, ultima_venta, clasificacion_abc, dias_stock_restante'))),
     sb.from('sucursales').select('id, nombre, codigo').eq('activa', true).order('nombre'),
   ])
 
-  const prodMap = new Map(((prods ?? []) as any[]).map((p) => [p.id, p]))
+  // Antes se traia el catalogo entero —46.009 filas— para poner el nombre al
+  // lado de un id. Los productos que aparecen en las ventas y en el stock son
+  // muchos menos: se piden esos.
+  const idsUsados = [
+    ...((ventas ?? []) as any[]).map((v) => v.producto_id),
+    ...((stock ?? []) as any[]).map((x) => x.producto_id),
+  ]
+  const prodMap = await productosPorId(sb, idsUsados)
   const dms = (n: number) => new Date(ahora - n * 86_400_000).toISOString()
   const d7 = dms(7), d30 = dms(30), d60 = dms(60)
 

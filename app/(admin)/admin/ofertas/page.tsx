@@ -12,7 +12,6 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { finalizarVencidas } from '@/lib/ofertas/al-finalizar'
 import { OfertasClient, type OfertaRow, type ProdLite, type CampLite, type SucLite, type Prefill } from './ofertas-client'
 
-import { paginarProductos } from '@/lib/catalogo/indice'
 import { Button } from '@/components/ui/button'
 import { lente } from '@/lib/demo/lente'
 export const dynamic = 'force-dynamic'
@@ -27,10 +26,9 @@ export default async function OfertasPage({ searchParams }: { searchParams: { sk
   // Lazy-check Hobby-safe: finaliza ofertas cuya fecha_fin ya pasó (dispara el cierre).
   try { await finalizarVencidas(createAdminClient(), profile.id) } catch { /* no bloquea la carga */ }
 
-  const [{ data: ofertas }, { data: confs }, { data: prods }, { data: camps }, { data: sucs }] = await Promise.all([
+  const [{ data: ofertas }, { data: confs }, { data: camps }, { data: sucs }] = await Promise.all([
     lente(sb.from('ofertas').select('id, codigo, nombre, tipo, valor, productos_ids, rubro, canales, vigencia_tipo, fecha_inicio, fecha_fin, origen, estado, propuesta_por, publicada_cuponera, version, metricas, created_at').order('created_at', { ascending: false }).limit(1000)),
     sb.from('ofertas_confirmaciones').select('oferta_id, version_confirmada'),
-    paginarProductos(sb, 'id, sku, nombre, codigo_barras, precio_sugerido, precio_costo_promedio'),
     sb.from('campanias').select('id, nombre, estado').order('created_at', { ascending: false }).limit(200),
     sb.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
   ])
@@ -52,15 +50,23 @@ export default async function OfertasPage({ searchParams }: { searchParams: { sk
     estado: o.estado, propuestaPor: o.propuesta_por, publicadaCuponera: o.publicada_cuponera, etiqueta: o.metricas?.etiqueta ?? null,
   }))
 
-  const prodLite: ProdLite[] = ((prods ?? []) as any[]).map((p) => ({ id: p.id, sku: p.sku, nombre: p.nombre, precio: Number(p.precio_sugerido ?? 0), costo: Number(p.precio_costo_promedio ?? 0), codigo_barras: p.codigo_barras }))
   const sucLite: SucLite[] = ((sucs ?? []) as any[]).map((s) => ({ id: s.id, nombre: s.nombre }))
 
   // Prefill desde el atajo de Vencimientos: ?sku=&desc= → abre CrearOferta prellenada (O-01/§5).
+  // Antes esta pantalla traia las 46.009 filas del catalogo para dos cosas:
+  // buscar UN producto por SKU y pasarle una lista al formulario que ya busca
+  // en el servidor por su cuenta. Ahora se pide ese producto y nada mas.
   let prefill: Prefill = null
-  const skuQ = (searchParams?.sku ?? '').trim().toLowerCase()
+  const skuQ = (searchParams?.sku ?? '').trim()
   if (skuQ) {
-    const p = prodLite.find((x) => (x.sku ?? '').toLowerCase() === skuQ)
-    if (p) prefill = { producto: p, desc: searchParams?.desc ? Number(searchParams.desc) : null }
+    const { data: p } = await sb.from('productos_catalogo')
+      .select('id, sku, nombre, codigo_barras, precio_sugerido, precio_costo_promedio')
+      .eq('sku', skuQ).maybeSingle()
+    if (p) prefill = {
+      producto: { id: p.id, sku: p.sku, nombre: p.nombre, codigo_barras: p.codigo_barras,
+                  precio: Number(p.precio_sugerido ?? 0), costo: Number(p.precio_costo_promedio ?? 0) },
+      desc: searchParams?.desc ? Number(searchParams.desc) : null,
+    }
   }
 
   return (
@@ -113,7 +119,6 @@ export default async function OfertasPage({ searchParams }: { searchParams: { sk
 
         <OfertasClient
           ofertas={ofertaRows} rol={profile.rol}
-          productos={prodLite}
           campanias={((camps ?? []) as any[]).map((c) => ({ id: c.id, nombre: c.nombre, estado: c.estado })) as CampLite[]}
           sucursales={sucLite} prefill={prefill}
         />

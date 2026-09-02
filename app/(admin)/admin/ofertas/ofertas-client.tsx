@@ -43,7 +43,7 @@ function porVencer(o: OfertaRow): boolean {
   return fin >= ahora && fin - ahora <= 48 * 3600 * 1000
 }
 
-export function OfertasClient({ ofertas, rol, productos, campanias, sucursales, prefill }: { ofertas: OfertaRow[]; rol: string; productos: ProdLite[]; campanias: CampLite[]; sucursales: SucLite[]; prefill?: Prefill }) {
+export function OfertasClient({ ofertas, rol, campanias, sucursales, prefill }: { ofertas: OfertaRow[]; rol: string; campanias: CampLite[]; sucursales: SucLite[]; prefill?: Prefill }) {
   const router = useRouter()
   const [tab, setTab] = useState<string>('activas')
   const [q, setQ] = useState('')
@@ -140,12 +140,14 @@ export function OfertasClient({ ofertas, rol, productos, campanias, sucursales, 
         </div>
       )}
 
-      {crear && <CrearOferta productos={productos} campanias={campanias} sucursales={sucursales} prefill={prefill ?? null} onClose={() => setCrear(false)} />}
+      {crear && <CrearOferta campanias={campanias} sucursales={sucursales} prefill={prefill ?? null} onClose={() => setCrear(false)} />}
     </div>
   )
 }
 
-function CrearOferta({ productos, campanias, sucursales, prefill, onClose }: { productos: ProdLite[]; campanias: CampLite[]; sucursales: SucLite[]; prefill: Prefill; onClose: () => void }) {
+// El buscador de productos de este formulario ya consulta al servidor
+// (/api/ofertas/buscar-producto). No necesita —ni recibe— el catalogo entero.
+function CrearOferta({ campanias, sucursales, prefill, onClose }: { campanias: CampLite[]; sucursales: SucLite[]; prefill: Prefill; onClose: () => void }) {
   const router = useRouter()
   const [f, setF] = useState({ nombre: prefill ? `Liquidación ${prefill.producto.nombre}` : '', tipo: 'porcentaje_descuento', valor: prefill?.desc != null ? String(prefill.desc) : '', nx: '', ny: '', rubro: 'farmacia', vigencia_tipo: 'con_fecha', fecha_inicio: '', fecha_fin: '', campania_id: '', limite_por_cliente: '', b2b: false, destacar_mostrador: false })
   const [canales, setCanales] = useState<string[]>(['cartel', 'cuponera'])

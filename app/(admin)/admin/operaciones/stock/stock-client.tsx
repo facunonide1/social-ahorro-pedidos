@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Search, Download, Upload, Package, Loader2, SlidersHorizontal, AlertTriangle } from 'lucide-react'
@@ -8,6 +9,8 @@ import { toast } from 'sonner'
 
 import { createClient } from '@/lib/supabase/client'
 import { exportExcel } from '@/lib/utils/export-excel'
+import type { PaginaCatalogo } from '@/lib/catalogo/pagina'
+import { FiltrosCatalogoUrl, Paginador } from '@/components/catalogo/filtros-url'
 import { formatARS } from '@/lib/utils/format'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -50,7 +53,7 @@ export interface StockSifaco {
 /** Por que un KPI no tiene numero. Reemplaza al valor, no lo acompaña. */
 export type NotasKpi = Partial<Record<'valorStock' | 'criticos' | 'porVencer', string>>
 
-export function StockClient({ productos, sucursales, kpis, rol, mostrados, truncado, stockSifaco, notas, laboratorios }: { productos: ProductoRow[]; sucursales: SucursalLite[]; kpis: Kpis; rol: string; mostrados: number; truncado: boolean; stockSifaco: StockSifaco; notas: NotasKpi; laboratorios: string[] }) {
+export function StockClient({ productos, sucursales, kpis, rol, pagina, stockSifaco, notas, laboratorios }: { productos: ProductoRow[]; sucursales: SucursalLite[]; kpis: Kpis; rol: string; pagina: PaginaCatalogo; stockSifaco: StockSifaco; notas: NotasKpi; laboratorios: string[] }) {
   const [tab, setTab] = useState<'productos' | 'kardex'>('productos')
   return (
     <div className="space-y-4">
@@ -65,42 +68,36 @@ export function StockClient({ productos, sucursales, kpis, rol, mostrados, trunc
           <Button asChild variant="outline" size="sm"><Link href="/admin/operaciones/importaciones"><Upload className="size-4" /> Importar</Link></Button>
         </div>
       </div>
-      {tab === 'productos' ? <Productos productos={productos} sucursales={sucursales} kpis={kpis} mostrados={mostrados} truncado={truncado} stockSifaco={stockSifaco} notas={notas} laboratorios={laboratorios} canEdit={['super_admin','gerente','comprador','administrativo'].includes(rol)} /> : <Kardex sucursales={sucursales} />}
+      {tab === 'productos' ? <Productos productos={productos} sucursales={sucursales} kpis={kpis} pagina={pagina} stockSifaco={stockSifaco} notas={notas} laboratorios={laboratorios} canEdit={['super_admin','gerente','comprador','administrativo'].includes(rol)} /> : <Kardex sucursales={sucursales} />}
     </div>
   )
 }
 
-function Productos({ productos, sucursales, kpis, canEdit, mostrados, truncado, stockSifaco, notas, laboratorios }: { productos: ProductoRow[]; sucursales: SucursalLite[]; kpis: Kpis; canEdit: boolean; mostrados: number; truncado: boolean; stockSifaco: StockSifaco; notas: NotasKpi; laboratorios: string[] }) {
-  const [q, setQ] = useState('')
-  const [cat, setCat] = useState(ALL)
-  const [lab, setLab] = useState(ALL)
-  const [chip, setChip] = useState<'todos' | 'criticos' | 'sin_stock' | 'sin_rotacion'>('todos')
+function Productos({ productos, sucursales, kpis, canEdit, pagina, stockSifaco, notas, laboratorios }: { productos: ProductoRow[]; sucursales: SucursalLite[]; kpis: Kpis; canEdit: boolean; pagina: PaginaCatalogo; stockSifaco: StockSifaco; notas: NotasKpi; laboratorios: string[] }) {
+  const params = useSearchParams()
   const [sel, setSel] = useState<ProductoRow | null>(null)
+  const [exportando, setExportando] = useState(false)
 
-  const cats = useMemo(() => [...new Set(productos.map((p) => p.categoria).filter(Boolean) as string[])].sort(), [productos])
-  // De la base, no de lo que llego a la pantalla (v0.86).
-  const labs = laboratorios
+  // Ya vienen filtradas de la base: el filtro viaja en la URL, no en useState.
+  // Filtrar acá sólo podía filtrar los 5.000 que se habían traído.
+  const rows = productos
 
-  const rows = useMemo(() => {
-    const term = q.trim().toLowerCase()
-    return productos.filter((p) => {
-      if (cat !== ALL && p.categoria !== cat) return false
-      if (lab !== ALL && p.laboratorio !== lab) return false
-      if (chip === 'criticos' && !p.critico) return false
-      if (chip === 'sin_stock' && p.total > 0) return false
-      if (chip === 'sin_rotacion' && !p.sinRotacion) return false
-      if (term && !`${p.nombre} ${p.sku ?? ''} ${p.ean ?? ''}`.toLowerCase().includes(term)) return false
-      return true
-    })
-  }, [productos, q, cat, lab, chip])
-
-  function exportar() {
-    exportExcel('stock', rows.map((p) => ({
-      SKU: p.sku ?? '', EAN: p.ean ?? '', Producto: p.nombre, Laboratorio: p.laboratorio ?? '', Categoria: p.categoria ?? '',
-      ...Object.fromEntries(sucursales.map((s) => [s.codigo || s.nombre, p.stockPorSuc[s.id]?.cantidad ?? 0])),
-      Gondola: p.totalGondola, Deposito: p.totalDeposito, Total: p.total,
-      'Venta/día': p.ventaDia, 'Cobertura (días)': p.cobertura ?? '', ABC: p.abc ?? '',
-    })), { sheet: 'Stock' })
+  /** Regla de oro 6: el .xlsx trae los que coinciden con el filtro, no la página. */
+  async function exportar() {
+    setExportando(true)
+    try {
+      const r = await fetch(`/api/catalogo/exportar?${params.toString()}`)
+      if (!r.ok) return
+      const j = await r.json()
+      exportExcel('stock', (j.filas as any[]).map((p) => ({
+        SKU: p.sku ?? '', EAN: p.codigo_barras ?? '', Producto: p.nombre,
+        Laboratorio: p.laboratorio ?? '', Categoria: p.categoria ?? '',
+        'Stock total SIFACO': p.stock ?? '', Reservado: p.reservado ?? 0, Disponible: p.disponible ?? '',
+        Costo: p.precio_costo_promedio ?? '', 'Precio sugerido': p.precio_sugerido ?? '',
+        'Ultima venta': p.ult_venta ?? '', ABC: p.clasificacion_abc ?? '',
+        Controlado: p.lista_controlado ?? '',
+      })))
+    } finally { setExportando(false) }
   }
 
   return (
@@ -113,19 +110,27 @@ function Productos({ productos, sucursales, kpis, canEdit, mostrados, truncado, 
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[200px] flex-1">
-          <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nombre, SKU o EAN…" className="h-9 pl-8" />
-        </div>
-        <FSelect value={cat} onChange={setCat} ph="Categoría">{cats.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</FSelect>
-        <FSelect value={lab} onChange={setLab} ph="Laboratorio">{labs.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}</FSelect>
-        <Button variant="outline" size="sm" onClick={exportar}><Download className="size-4" /> Excel</Button>
-      </div>
-
-      <div className="flex flex-wrap gap-1.5">
-        {([['todos', 'Todos'], ['criticos', 'Críticos'], ['sin_stock', 'Sin stock'], ['sin_rotacion', 'Sin rotación']] as const).map(([k, l]) => (
-          <button key={k} onClick={() => setChip(k)} className={cn('rounded-full border px-2.5 py-1 text-xs transition-colors', chip === k ? 'border-primary bg-primary text-primary-foreground' : 'border-border text-muted-foreground hover:bg-accent')}>{l}</button>
-        ))}
+        <FiltrosCatalogoUrl
+          placeholder="Buscar por nombre, SKU o EAN…"
+          selects={[
+            { clave: 'laboratorio', etiqueta: 'Laboratorio', opciones: laboratorios.map((l) => ({ valor: l, texto: l })) },
+            { clave: 'orden', etiqueta: 'Ordenar por', opciones: [
+              { valor: 'nombre', texto: 'Nombre' },
+              { valor: 'stock', texto: 'Más stock' },
+              { valor: 'precio', texto: 'Más caro' },
+              { valor: 'ult_venta', texto: 'Última venta' },
+            ] },
+          ]}
+          chips={[
+            { clave: 'con_stock', valor: '1', texto: 'Con stock' },
+            { clave: 'con_stock', valor: '0', texto: 'Sin stock' },
+            { clave: 'controlados', valor: '1', texto: 'Controlados' },
+            { clave: 'con_oferta', valor: '1', texto: 'Con oferta' },
+          ]}
+        />
+        <Button variant="outline" size="sm" disabled={exportando} onClick={exportar}>
+          <Download className="size-4" /> {exportando ? 'Exportando…' : 'Excel'}
+        </Button>
       </div>
 
       {/*
@@ -153,7 +158,9 @@ function Productos({ productos, sucursales, kpis, canEdit, mostrados, truncado, 
           )}
         </div>
       )}
-      <div className="text-xs text-muted-foreground">{rows.length} de {mostrados} productos {truncado && <span className="text-amber-600 dark:text-amber-400">(la pantalla trae los primeros {mostrados.toLocaleString('es-AR')} de {kpis.productos.toLocaleString('es-AR')} — usá el buscador)</span>} · <span className="text-emerald-600 dark:text-emerald-400">ok</span> · <span className="text-amber-600 dark:text-amber-400">bajo mínimo</span> · <span className="text-rose-600 dark:text-rose-400">crítico/sin stock</span> · <span className="text-violet-600 dark:text-violet-400">sobrestock</span></div>
+      <Paginador total={pagina.total} pagina={pagina.pagina} paginas={pagina.paginas}
+        porPagina={pagina.porPagina} mostrando={rows.length} />
+      <div className="text-xs text-muted-foreground"> <span className="text-emerald-600 dark:text-emerald-400">ok</span> · <span className="text-amber-600 dark:text-amber-400">bajo mínimo</span> · <span className="text-rose-600 dark:text-rose-400">crítico/sin stock</span> · <span className="text-violet-600 dark:text-violet-400">sobrestock</span></div>
 
       {productos.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-16 text-center">

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Plus, Pencil, Upload, Download, Search, Package, Pill, Snowflake, FileWarning, ShieldAlert } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -16,6 +16,8 @@ import {
 } from '@/lib/types/catalogo'
 import { formatARS } from '@/lib/utils/format'
 import { exportExcel } from '@/lib/utils/export-excel'
+import type { PaginaCatalogo } from '@/lib/catalogo/pagina'
+import { FiltrosCatalogoUrl, Paginador } from '@/components/catalogo/filtros-url'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -40,42 +42,68 @@ import {
 const ALL = '__all__'
 
 export function CatalogoClient({
-  productos,
+  pagina,
   laboratorios,
-  total,
-  truncado,
   loadError,
 }: {
-  productos: ProductoCatalogo[]
+  /** Una página del catálogo, ya filtrada y contada EN LA BASE. */
+  pagina: PaginaCatalogo
   laboratorios: string[]
-  /** El total contado EN LA BASE, no el largo del array que llego. */
-  total: number
-  /** `true` si se llego al tope de pantalla y hay mas que no se trajeron. */
-  truncado: boolean
   loadError: string | null
 }) {
-  const [q, setQ] = useState('')
-  const [cat, setCat] = useState<string>(ALL)
-  const [lab, setLab] = useState<string>(ALL)
-  const [receta, setReceta] = useState<string>(ALL)
-  const [psico, setPsico] = useState<string>(ALL)
+  const router = useRouter()
+  const params = useSearchParams()
   const [editing, setEditing] = useState<ProductoCatalogo | null>(null)
   const [creating, setCreating] = useState(false)
+  const [abriendo, setAbriendo] = useState<string | null>(null)
+  const [exportando, setExportando] = useState(false)
 
-  const filtrados = useMemo(() => {
-    const term = q.trim().toLowerCase()
-    return productos.filter((p) => {
-      if (cat !== ALL && p.categoria !== cat) return false
-      if (lab !== ALL && p.laboratorio !== lab) return false
-      if (receta !== ALL && String(p.requiere_receta) !== receta) return false
-      if (psico !== ALL && String(p.es_psicotropico) !== psico) return false
-      if (term) {
-        const hay = `${p.nombre} ${p.sku} ${p.codigo_barras ?? ''}`.toLowerCase()
-        if (!hay.includes(term)) return false
-      }
-      return true
-    })
-  }, [productos, q, cat, lab, receta, psico])
+  const productos = pagina.filas
+
+  /**
+   * La ficha completa se pide al abrirla, por id.
+   *
+   * La tabla muestra una página de 50: pedirle a la consulta de la lista todas
+   * las columnas que necesita el formulario sería traer de más para 50 filas y
+   * de menos para las 46.009 que no se ven.
+   */
+  async function abrirFicha(id: string) {
+    setAbriendo(id)
+    try {
+      const sb = createClient()
+      const { data, error } = await sb.from('productos_catalogo').select('*').eq('id', id).maybeSingle()
+      if (error || !data) { toast.error('No se pudo abrir el producto'); return }
+      setEditing(data as ProductoCatalogo)
+    } finally { setAbriendo(null) }
+  }
+
+  /**
+   * Regla de oro 6. El .xlsx trae TODO lo que coincide con el filtro, no las 50
+   * filas que se ven: exportar la página sería exportar la pantalla, no el
+   * catálogo.
+   */
+  async function exportar() {
+    setExportando(true)
+    try {
+      const r = await fetch(`/api/catalogo/exportar?${params.toString()}`)
+      if (!r.ok) { toast.error('No se pudo exportar'); return }
+      const j = await r.json()
+      exportExcel('catalogo', (j.filas as any[]).map((p) => ({
+        SKU: p.sku,
+        'Código de barras': p.codigo_barras ?? '',
+        Producto: p.nombre,
+        Categoría: p.categoria ?? '',
+        Laboratorio: p.laboratorio ?? '',
+        'Condición de venta': p.condicion_venta ?? '',
+        'Precio sugerido': p.precio_sugerido ?? '',
+        'Costo promedio': p.precio_costo_promedio ?? '',
+        Stock: p.stock ?? '',
+        Controlado: p.lista_controlado ?? '',
+        'Última venta': p.ult_venta ?? '',
+      })))
+      if (j.truncado) toast.warning(`Se exportaron ${j.filas.length} de ${j.total}: el archivo se cortó en 20.000.`)
+    } finally { setExportando(false) }
+  }
 
   if (loadError) {
     return (
@@ -93,92 +121,45 @@ export function CatalogoClient({
 
   return (
     <div className="space-y-4">
-      {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-[200px] flex-1">
-          <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por nombre, SKU o código de barras…"
-            className="h-9 pl-8"
-          />
-        </div>
-        <FilterSelect value={cat} onChange={setCat} placeholder="Categoría">
-          {PRODUCTO_CATEGORIAS.map((c) => (
-            <SelectItem key={c} value={c}>
-              {PRODUCTO_CATEGORIA_LABELS[c]}
-            </SelectItem>
-          ))}
-        </FilterSelect>
-        <FilterSelect value={lab} onChange={setLab} placeholder="Laboratorio">
-          {laboratorios.map((l) => (
-            <SelectItem key={l} value={l}>
-              {l}
-            </SelectItem>
-          ))}
-        </FilterSelect>
-        <FilterSelect value={receta} onChange={setReceta} placeholder="Receta">
-          <SelectItem value="true">Requiere receta</SelectItem>
-          <SelectItem value="false">Venta libre</SelectItem>
-        </FilterSelect>
-        <FilterSelect value={psico} onChange={setPsico} placeholder="Psicotrópico">
-          <SelectItem value="true">Psicotrópico</SelectItem>
-          <SelectItem value="false">No psicotrópico</SelectItem>
-        </FilterSelect>
-
+        <FiltrosCatalogoUrl
+          selects={[
+            { clave: 'categoria', etiqueta: 'Categoría',
+              opciones: PRODUCTO_CATEGORIAS.map((c) => ({ valor: c, texto: PRODUCTO_CATEGORIA_LABELS[c] })) },
+            { clave: 'laboratorio', etiqueta: 'Laboratorio',
+              opciones: laboratorios.map((l) => ({ valor: l, texto: l })) },
+            { clave: 'condicion', etiqueta: 'Condición de venta', opciones: [
+              { valor: 'venta_libre', texto: 'Venta libre' },
+              { valor: 'perfumeria_accesorios', texto: 'Perfumería / accesorios' },
+              { valor: 'requiere_receta', texto: 'Requiere receta' },
+              { valor: 'receta_archivada', texto: 'Receta archivada' },
+              { valor: 'estupefaciente_psico_ii', texto: 'Estupefaciente' },
+            ] },
+          ]}
+          chips={[
+            { clave: 'con_stock', valor: '1', texto: 'Con stock' },
+            { clave: 'controlados', valor: '1', texto: 'Controlados' },
+          ]}
+        />
         <div className="ml-auto flex gap-2">
-          {/*
-            Regla de oro 6: toda pantalla con productos exporta .xlsx con SKU.
-            El catálogo no exportaba nada, que es justamente donde más falta
-            hace: Facundo arma los archivos de pedidos y de ofertas desde acá y
-            los necesita con el código de barras, no sólo con el SKU.
-            El nivel de control va en su propia columna: un archivo de productos
-            que no distingue un estupefaciente de un jabón se trata como una
-            lista de jabones.
-          */}
-          <Button variant="outline" size="sm" disabled={!filtrados.length}
-            onClick={() => exportExcel('catalogo', filtrados.map((p) => ({
-              SKU: p.sku,
-              'Código de barras': p.codigo_barras ?? '',
-              Producto: p.nombre,
-              Presentación: p.presentacion ?? '',
-              Categoría: PRODUCTO_CATEGORIA_LABELS[p.categoria],
-              Laboratorio: p.laboratorio ?? '',
-              Droga: p.droga_principal ?? '',
-              'Precio sugerido': p.precio_sugerido ?? '',
-              'Costo promedio': p.precio_costo_promedio ?? '',
-              'Requiere receta': p.requiere_receta ? 'Sí' : '',
-              Refrigerado: p.es_refrigerado ? 'Sí' : '',
-              Controlado: p.es_controlado ? (p.lista_controlado ?? 'Sí') : '',
-            })))}>
-            <Download className="size-4" />
-            Exportar
+          <Button variant="outline" size="sm" disabled={exportando || pagina.total === 0} onClick={exportar}>
+            <Download className="size-4" /> {exportando ? 'Exportando…' : `Exportar los ${pagina.total.toLocaleString('es-AR')}`}
           </Button>
           <Button asChild variant="outline" size="sm">
             <Link href="/admin/configuracion/catalogo/importar">
-              <Upload className="size-4" />
-              Importar CSV
+              <Upload className="size-4" /> Importar CSV
             </Link>
           </Button>
           <Button size="sm" onClick={() => setCreating(true)}>
-            <Plus className="size-4" />
-            Nuevo producto
+            <Plus className="size-4" /> Nuevo producto
           </Button>
         </div>
       </div>
 
-      <div className="text-xs text-muted-foreground">
-        {filtrados.length.toLocaleString('es-AR')} de {productos.length.toLocaleString('es-AR')} productos
-        {truncado && (
-          <span className="text-amber-600 dark:text-amber-400">
-            {' '}— la pantalla trae los primeros {productos.length.toLocaleString('es-AR')} de{' '}
-            {total.toLocaleString('es-AR')}. Buscá por nombre, SKU o código de barras.
-          </span>
-        )}
-      </div>
+      <Paginador total={pagina.total} pagina={pagina.pagina} paginas={pagina.paginas}
+        porPagina={pagina.porPagina} mostrando={productos.length} />
 
-      {productos.length === 0 ? (
+      {pagina.total === 0 && !params.toString() ? (
         <EmptyState onCreate={() => setCreating(true)} />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">
@@ -187,24 +168,19 @@ export function CatalogoClient({
               <tr>
                 <th className="px-3 py-2 font-medium">Producto</th>
                 <th className="px-3 py-2 font-medium">SKU</th>
-                <th className="px-3 py-2 font-medium">Categoría</th>
+                <th className="px-3 py-2 font-medium">Condición</th>
                 <th className="px-3 py-2 font-medium">Laboratorio</th>
+                <th className="px-3 py-2 text-right font-medium">Stock</th>
                 <th className="px-3 py-2 text-right font-medium">P. sugerido</th>
                 <th className="px-3 py-2" />
               </tr>
             </thead>
             <tbody>
-              {filtrados.map((p) => (
+              {productos.map((p) => (
                 <tr key={p.id} className="border-t border-border">
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-1.5 font-medium">
                       {p.nombre}
-                      {p.requiere_receta && <Pill className="size-3 text-amber-500" aria-label="Requiere receta" />}
-                      {p.es_refrigerado && <Snowflake className="size-3 text-sky-500" aria-label="Refrigerado" />}
-                      {/*
-                        El nivel, no un sí/no: un estupefaciente y una venta
-                        vigilada no se controlan igual (regla de oro 9).
-                      */}
                       {p.es_controlado && (
                         <Badge variant="outline" className="gap-1 border-rose-500/40 text-[10px] font-normal text-rose-600 dark:text-rose-400">
                           <ShieldAlert className="size-3" />
@@ -212,31 +188,33 @@ export function CatalogoClient({
                         </Badge>
                       )}
                     </div>
-                    {p.presentacion && (
-                      <div className="text-xs text-muted-foreground">{p.presentacion}</div>
-                    )}
+                    {p.seccion && <div className="text-xs text-muted-foreground">sección {p.seccion}</div>}
                   </td>
                   <td className="px-3 py-2 font-mono text-xs">{p.sku}</td>
                   <td className="px-3 py-2">
-                    <Badge variant="secondary" className="font-normal">
-                      {PRODUCTO_CATEGORIA_LABELS[p.categoria]}
-                    </Badge>
+                    {p.condicion_venta
+                      ? <Badge variant={p.canal_abierto ? 'secondary' : 'destructive'} className="font-normal">{p.condicion_venta}</Badge>
+                      : <span className="text-xs text-muted-foreground">sin declarar</span>}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">{p.laboratorio || '—'}</td>
+                  {/* stock null es «SIFACO no lo declara»; 0 es «lo miré y no hay». */}
+                  <td className="px-3 py-2 text-right font-mono tabular-nums">
+                    {p.stock === null ? <span className="text-xs text-muted-foreground">sin dato</span> : p.stock.toLocaleString('es-AR')}
+                  </td>
                   <td className="px-3 py-2 text-right font-mono tabular-nums">
                     {p.precio_sugerido != null ? formatARS(p.precio_sugerido) : '—'}
                   </td>
                   <td className="px-3 py-2 text-right">
-                    <Button variant="ghost" size="sm" onClick={() => setEditing(p)}>
+                    <Button variant="ghost" size="sm" disabled={abriendo === p.id} onClick={() => abrirFicha(p.id)}>
                       <Pencil className="size-3.5" />
                     </Button>
                   </td>
                 </tr>
               ))}
-              {filtrados.length === 0 && (
+              {productos.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-3 py-8 text-center text-muted-foreground">
-                    Sin resultados para los filtros aplicados.
+                  <td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">
+                    Ningún producto coincide con estos filtros.
                   </td>
                 </tr>
               )}
