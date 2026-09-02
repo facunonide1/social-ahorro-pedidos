@@ -1,4 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
+
+import { buscarOCrearCliente } from '@/lib/pedidos/cliente'
+import { sucursalDeCanal } from '@/lib/pedidos/canales'
 import crypto from 'crypto'
 import { createAdminClient } from '@/lib/supabase/server'
 import type { WooOrder } from '@/lib/woo/client'
@@ -108,10 +111,22 @@ export async function POST(req: NextRequest) {
     customerId = created?.id ?? null
   }
 
+  // El cliente del CRM, deduplicado. `customers` se sigue escribiendo arriba
+  // para no romper el CRM de pedidos viejo, pero el cliente de verdad es este:
+  // el mismo que compra por WhatsApp y por mostrador (v0.91, bloque A.4).
+  const cliente = await buscarOCrearCliente(admin, { nombre: name, telefono: phone, email })
+
+  // La sucursal sale de la regla del canal, no del stock: el stock de NORA es el
+  // total de las cuatro sin apertura. Si nadie configuró la sucursal de despacho
+  // del canal, el pedido entra igual y queda en `pedidos_sin_sucursal`.
+  const sucursalId = await sucursalDeCanal(admin, 'woo')
+
   const wooCreated = o.date_created_gmt ? new Date(`${o.date_created_gmt}Z`).toISOString() : null
   const { error: insErr } = await admin.from('orders').insert({
     woo_order_id: o.id,
     origin: 'woo' as const,
+    sucursal_id: sucursalId,
+    cliente_id: cliente?.id ?? null,
     tipo_envio: pickTipoEnvio(o),
     fuera_de_horario: isFueraDeHorario(wooCreated, horaApertura, horaCierre),
     status: 'nuevo' as const,

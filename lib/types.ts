@@ -7,7 +7,12 @@ export type OrderStatus =
   | 'entregado'
   | 'cancelado'
 
-export type OrderOrigin = 'woo' | 'whatsapp' | 'telefono' | 'instagram' | 'otro'
+// PedidosYa y mostrador se agregaron en v0.91: los cuatro canales del negocio
+// entran por el mismo modelo. Las etiquetas y qué canal entra solo están en
+// lib/pedidos/canales.ts.
+export type OrderOrigin =
+  | 'woo' | 'whatsapp' | 'telefono' | 'instagram' | 'otro'
+  | 'pedidosya' | 'mostrador'
 
 export type TipoEnvio = 'express' | 'programado' | 'retiro'
 
@@ -99,6 +104,12 @@ export type OrderItem = {
 
 export type Order = {
   id: string
+  /** De qué sucursal sale. Regla de oro 8; se elige a mano o por regla de canal. */
+  sucursal_id?: string | null
+  /** El cliente del CRM (`clientes`), deduplicado por DNI / teléfono / mail. */
+  cliente_id?: string | null
+  /** El id del pedido EN el canal, para los que no son Woo. */
+  canal_externo_id?: string | null
   codigo: string
   woo_order_id: number | null
   manual_order_number: number | null
@@ -137,6 +148,8 @@ export const ORIGIN_LABELS: Record<OrderOrigin, string> = {
   telefono: 'Teléfono',
   instagram: 'Instagram',
   otro: 'Otro',
+  pedidosya: 'PedidosYa',
+  mostrador: 'Mostrador',
 }
 
 export const MANUAL_ORIGIN_PREFIX: Record<Exclude<OrderOrigin, 'woo'>, string> = {
@@ -144,6 +157,8 @@ export const MANUAL_ORIGIN_PREFIX: Record<Exclude<OrderOrigin, 'woo'>, string> =
   telefono: 'TEL',
   instagram: 'IG',
   otro: 'M',
+  pedidosya: 'PY',
+  mostrador: 'MOS',
 }
 
 export const TIPO_ENVIO_LABELS: Record<TipoEnvio, string> = {

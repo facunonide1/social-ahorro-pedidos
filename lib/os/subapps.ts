@@ -543,14 +543,25 @@ export const SUBAPPS: SubAppManifest[] = [
     nombre: 'Pedidos',
     icono: 'Package',
     acento: '#2EE1A8',
-    descripcion: 'CRM de pedidos (app aparte)',
-    rutaHome: '/dashboard',
+    descripcion: 'Los cuatro canales, envíos y reservas de stock',
+    rutaHome: '/admin/pedidos',
     navInterna: 'tabs',
     permisosRequeridos: ['pedidos'],
-    modulos: [],
-    quickActions: [],
-    proximamente: true,
-    externo: true,
+    modulos: [
+      { nombre: 'Tablero', ruta: '/admin/pedidos/tablero' },
+      { nombre: 'Armar un pedido', ruta: '/admin/pedidos/nuevo' },
+      { nombre: 'Envíos', ruta: '/admin/pedidos/envios' },
+      { nombre: 'Reservas de stock', ruta: '/admin/pedidos/reservas' },
+      // El CRM de pedidos original. Sigue vivo y es la misma tabla `orders`:
+      // no es un modelo paralelo, es otra puerta al mismo pedido.
+      { nombre: 'CRM de despacho', ruta: '/dashboard' },
+    ],
+    quickActions: [
+      { id: 'pedido-nuevo', nombre: 'Armar un pedido', icono: 'Package', destino: '/admin/pedidos/nuevo', modulo: 'pedidos', accion: 'crear', primary: true },
+      { id: 'pedido-tablero', nombre: 'Tablero de pedidos', icono: 'ClipboardList', destino: '/admin/pedidos/tablero', modulo: 'pedidos', accion: 'ver', primary: true },
+      { id: 'pedido-envios', nombre: 'Envíos y viajes', icono: 'Truck', destino: '/admin/pedidos/envios', modulo: 'pedidos', accion: 'ver', primary: true },
+      { id: 'pedido-reservas', nombre: 'Reservas de stock', icono: 'PackageX', destino: '/admin/pedidos/reservas', modulo: 'pedidos', accion: 'ver' },
+    ],
   },
 ]
 
