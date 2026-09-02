@@ -68,7 +68,7 @@ propio control. Se revisaron una por una.
    está completo; si dice más, la diferencia es lo que falta
    (`docs/EL-MAESTRO-ESTA-INCOMPLETO.md`).
 4. **Qué se hace con los 82 productos marcados `BORRAR`** en la nota de SIFACO.
-5. **Los 2.648 productos con receta que tienen stock y código de barras.**
+5. **Los 2.633 productos con receta que tienen stock y código de barras.**
    Hay que cruzarlos contra lo que se subió a mano a los canales:
    `/admin/canales/regla-9`. NORA no puede verificar un archivo que no generó.
 
