@@ -4,6 +4,7 @@ import { mapStatusToWoo, updateWooOrderStatus } from '@/lib/woo/client'
 import { messageForStatus, normalizePhoneForWhatsApp } from '@/lib/whatsapp/messages'
 import { formatOrderNumber } from '@/lib/orders/format'
 import { sendStatusEmail } from '@/lib/email/resend'
+import { cerrarReservas } from '@/lib/pedidos/reserva'
 import type { OrderStatus } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -37,6 +38,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
 
   const order = Array.isArray(updated) ? updated[0] : updated
+
+  // 1.b) La reserva de stock se cierra con el pedido (v0.91, bloque C.1). Se
+  //      libera al cancelar —la unidad vuelve a estar— y se consume al entregar
+  //      —salió, y SIFACO la descuenta por su lado; NORA no ajusta stock—.
+  if (body.status === 'cancelado') {
+    await cerrarReservas(createAdminClient(), params.id, 'liberada', 'el pedido se canceló')
+  } else if (body.status === 'entregado') {
+    await cerrarReservas(createAdminClient(), params.id, 'consumida', 'el pedido se entregó')
+  }
 
   // 2) Generar mensaje de WhatsApp pendiente para el nuevo estado.
   //    Queda guardado aunque no haya teléfono (el operador decide si

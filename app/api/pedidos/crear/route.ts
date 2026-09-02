@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { buscarOCrearCliente } from '@/lib/pedidos/cliente'
+import { reservarParaPedido } from '@/lib/pedidos/reserva'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -133,5 +134,29 @@ export async function POST(req: NextRequest) {
   }).select('id, codigo').maybeSingle()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true, id: creado?.id, codigo: creado?.codigo })
+
+  // ── LA RESERVA ────────────────────────────────────────────────────────────
+  // Se hace SIEMPRE, aunque no alcance el stock: lo que falta genera tarea, no
+  // un pedido colgado. Protege entre canales; no contra el mostrador.
+  const reserva = await reservarParaPedido(adm, {
+    orderId: creado!.id,
+    codigoPedido: creado!.codigo,
+    sucursalId: body.sucursal_id,
+    renglones: renglonesOk.map((r) => ({
+      producto_id: r.producto_id, sku: r.sku, nombre: r.name, cantidad: r.qty,
+    })),
+    userId: user.id,
+  })
+
+  return NextResponse.json({
+    ok: true,
+    id: creado?.id,
+    codigo: creado?.codigo,
+    reserva: {
+      reservadas: reserva.reservadas,
+      vence_at: reserva.vence_at,
+      faltantes: reserva.faltantes,
+      tarea_id: reserva.tarea_id,
+    },
+  })
 }
