@@ -15,6 +15,7 @@ export const metadata = { title: 'Envíos' }
 const TABS = [
   { label: 'Zonas y tarifas', href: '/admin/pedidos/envios' },
   { label: 'Viajes', href: '/admin/pedidos/envios/viajes' },
+  { label: 'Correo', href: '/admin/pedidos/envios/correo' },
 ]
 
 /**

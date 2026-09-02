@@ -12,6 +12,7 @@ export const metadata = { title: 'Viajes de reparto' }
 const TABS = [
   { label: 'Zonas y tarifas', href: '/admin/pedidos/envios' },
   { label: 'Viajes', href: '/admin/pedidos/envios/viajes' },
+  { label: 'Correo', href: '/admin/pedidos/envios/correo' },
 ]
 
 /** Listos para salir: ya armados, de reparto propio, sin viaje asignado. */
