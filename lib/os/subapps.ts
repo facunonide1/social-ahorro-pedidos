@@ -477,6 +477,7 @@ export const SUBAPPS: SubAppManifest[] = [
     permisosRequeridos: ['ia', 'bi'],
     modulos: [
       { nombre: 'NORA', ruta: '/admin/nora' },
+      { nombre: 'Estado del sistema', ruta: '/admin/nora/estado' },
       { nombre: 'Feed de NORA', ruta: '/admin/nora/feed' },
       { nombre: 'BI / Reportes', ruta: '/admin/bi' },
       { nombre: 'Resumen IA del día', ruta: '/admin/ia/resumen' },
@@ -491,6 +492,7 @@ export const SUBAPPS: SubAppManifest[] = [
     quickActions: [
       { id: 'nora-chat', nombre: 'Preguntarle a NORA', icono: 'Sparkles', destino: '/admin/nora', primary: true },
       { id: 'nora-feed', nombre: 'Feed de NORA', icono: 'Activity', destino: '/admin/nora/feed', modulo: 'ia', accion: 'ver', primary: true },
+      { id: 'nora-estado', nombre: 'Estado del sistema', icono: 'ShieldCheck', destino: '/admin/nora/estado', modulo: 'ia', accion: 'ver', primary: true },
       { id: 'bi', nombre: 'BI / Reportes', icono: 'BarChart3', destino: '/admin/bi', modulo: 'bi', accion: 'ver', primary: true },
       { id: 'ia-resumen', nombre: 'Resumen IA del día', icono: 'FileBarChart', destino: '/admin/ia/resumen', modulo: 'ia', accion: 'ver' },
       { id: 'suc-performance', nombre: 'Performance de sucursales', icono: 'LineChart', destino: '/admin/sucursales/performance', modulo: 'bi', accion: 'ver' },

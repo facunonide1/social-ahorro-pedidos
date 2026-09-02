@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "npm run auditar:cortes && npm run auditar:rls && npm run auditar:lente && npm run probar:permisos && next build",
+    "build": "node scripts/build-info.mjs && npm run auditar:cortes && npm run auditar:rls && npm run auditar:lente && npm run probar:permisos && next build",
     "start": "next start -p 3001",
     "lint": "next lint",
     "auditar:cortes": "node scripts/auditar-cortes.mjs",

@@ -36,19 +36,45 @@ export async function POST(req: NextRequest) {
   const herrs = herramientasParaUsuario(me.rol, me.permisos_custom ?? null, b?.subapp ?? null)
   const adm = createAdminClient()
 
-  async function guardar(cid: string | null, entidad?: string | null): Promise<string | null> {
+  /**
+   * LA BITÁCORA (v0.92, bloque D.1).
+   *
+   * Guarda qué se preguntó, qué contestó, qué hizo, con qué usuario y con qué
+   * ROL. El rol importa: sin él no se distingue «no te lo puedo mostrar con tu
+   * rol» de «eso no existe todavía», y son dos problemas opuestos — uno se
+   * arregla dando un permiso, el otro construyendo la capacidad.
+   */
+  async function guardar(
+    cid: string | null,
+    entidad?: string | null,
+    traza?: { herramienta?: string | null; resultado?: string; motivo?: string | null },
+  ): Promise<string | null> {
     try {
       const mensajes = Array.isArray(b?.historial) ? b.historial.slice(-40) : []
+      const comun: any = {
+        rol: ctx.rol,
+        usuario_nombre: nombre,
+        herramientas_ofrecidas: herrs.length,
+        ultimo_resultado: traza?.resultado ?? null,
+        motivo_negativa: traza?.motivo ?? null,
+      }
       if (cid) {
-        const patch: any = { mensajes }
-        if (entidad) {
-          const { data: prev } = await sb.from('nora_conversaciones').select('entidades_creadas').eq('id', cid).maybeSingle<any>()
-          patch.entidades_creadas = [...new Set([...(prev?.entidades_creadas ?? []), entidad])]
+        const patch: any = { ...comun, mensajes }
+        const { data: prev } = await sb.from('nora_conversaciones')
+          .select('entidades_creadas, herramientas_usadas').eq('id', cid).maybeSingle<any>()
+        if (entidad) patch.entidades_creadas = [...new Set([...(prev?.entidades_creadas ?? []), entidad])]
+        if (traza?.herramienta) {
+          patch.herramientas_usadas = [...new Set([...(prev?.herramientas_usadas ?? []), traza.herramienta])]
         }
         await sb.from('nora_conversaciones').update(patch).eq('id', cid)
         return cid
       }
-      const { data } = await sb.from('nora_conversaciones').insert({ user_id: ctx.userId, subapp: b?.subapp ?? 'finanzas', mensajes, entidades_creadas: entidad ? [entidad] : [] }).select('id').maybeSingle<{ id: string }>()
+      const { data } = await sb.from('nora_conversaciones').insert({
+        ...comun,
+        user_id: ctx.userId, subapp: b?.subapp ?? 'finanzas', mensajes,
+        entidades_creadas: entidad ? [entidad] : [],
+        herramientas_usadas: traza?.herramienta ? [traza.herramienta] : [],
+      }).select('id').maybeSingle<{ id: string }>()
       return data?.id ?? null
     } catch { return cid }
   }
@@ -76,7 +102,8 @@ export async function POST(req: NextRequest) {
     if (!h || !h.ejecutar) return NextResponse.json({ tipo: 'error', texto: 'No tenés permiso para ejecutar esta acción.' })
     const r = await h.ejecutar(adm, b.valores ?? {}, ctx)
     if (!r.ok) return NextResponse.json({ tipo: 'error', texto: r.error ?? 'No se pudo ejecutar.' })
-    const cid = await guardar(b.conversacion_id ?? null, r.entidad_id ?? null)
+    const cid = await guardar(b.conversacion_id ?? null, r.entidad_id ?? null,
+      { herramienta: h.id, resultado: 'ejecuto' })
     return NextResponse.json({ tipo: 'resultado', texto: r.texto, entidad_id: r.entidad_id ?? null, conversacion_id: cid })
   }
 
@@ -104,13 +131,19 @@ export async function POST(req: NextRequest) {
     })
 
     const toolUse = (resp.content ?? []).find((x: any) => x.type === 'tool_use')
-    const cid = await guardar(b?.conversacion_id ?? null)
+    const cid = await guardar(b?.conversacion_id ?? null, null,
+      { resultado: toolUse ? 'entendio' : 'contesto' })
     if (!toolUse) {
       const texto = (resp.content ?? []).filter((x: any) => x.type === 'text').map((x: any) => x.text).join('').trim()
       return NextResponse.json({ tipo: 'texto', texto: texto || 'Contame qué necesitás y lo hacemos.', conversacion_id: cid })
     }
     const h = herrs.find((x) => x.id === toolUse.name)
-    if (!h) return NextResponse.json({ tipo: 'texto', texto: 'Eso no lo puedo hacer con tus permisos. Si querés, decime otra cosa.', conversacion_id: cid })
+    if (!h) {
+      // Le pidió algo que su rol no habilita. Queda anotado con el motivo: sin
+      // eso, «NORA no me sirve» y «NORA no me deja» se leen igual.
+      await guardar(cid, null, { resultado: 'nego', motivo: 'sin permiso para esa herramienta' })
+      return NextResponse.json({ tipo: 'texto', texto: 'Eso no lo puedo hacer con tus permisos. Si querés, decime otra cosa.', conversacion_id: cid })
+    }
 
     const input = Object.fromEntries(Object.entries(toolUse.input ?? {}).filter(([, v]) => v != null && String(v).trim() !== ''))
     const valores = { ...(b?.valores ?? {}), ...input }

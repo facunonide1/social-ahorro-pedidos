@@ -1,0 +1,13 @@
+-- 0178 · v0.92-deuda-cerrada · BLOQUE D · aplicada vía MCP
+--
+-- LA BITÁCORA DE NORA.
+--
+-- `nora_conversaciones` guardaba los mensajes y las entidades creadas. Le
+-- faltaba lo que permite saber si NORA sirve: **con qué rol** hablaba el
+-- usuario, **qué herramientas ejecutó** y **por qué no pudo** cuando no pudo.
+--
+-- Sin el rol no se distingue «te lo niego porque no tenés permiso» de «eso no
+-- existe», que son dos problemas opuestos: uno se arregla dando un permiso y el
+-- otro construyendo una capacidad.
+--
+-- El DDL vigente vive en la base.
