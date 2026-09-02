@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-import { guardarConfigEnvios, guardarZona } from './actions'
+import { crearZona, guardarConfigEnvios, guardarZona } from './actions'
 
 type Sucursal = { id: string; nombre: string; codigo: string | null; es_ecommerce: boolean }
 type Config = {
@@ -93,8 +93,37 @@ export function EnviosClient({
             contra el costo.
           </p>
         )}
+        {/* Sin zonas cargadas la pantalla no sirve para nada: lo primero es poder
+            crear una, y con la sucursal desde el principio. */}
+        <form action={(fd) => enviar(crearZona, fd)}
+          className="flex flex-wrap items-end gap-3 rounded-lg border border-dashed border-border p-3">
+          <div className="min-w-[160px] flex-1 space-y-1">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Nueva zona</Label>
+            <Input name="nombre" placeholder="Zona 1" required />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Sucursal *</Label>
+            <select name="sucursal_id" required
+              className="h-9 w-40 rounded-md border border-border bg-background px-2 text-sm">
+              <option value="">Elegir…</option>
+              {sucursales.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+            </select>
+          </div>
+          <div className="min-w-[180px] flex-1 space-y-1">
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Barrios (separados por coma)</Label>
+            <Input name="barrios" placeholder="Ituzaingó centro, Villa Udaondo" />
+          </div>
+          <Campo n="tarifa" l="Tarifa" v={null} ancho="w-24" />
+          <Campo n="km_estimados" l="Km est." v={null} ancho="w-20" />
+          <Campo n="minutos_estimados" l="Min. est." v={null} ancho="w-20" />
+          <Button type="submit" size="sm" disabled={pendiente}>Crear zona</Button>
+        </form>
+
         {zonas.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No hay zonas de reparto cargadas.</p>
+          <p className="text-sm text-muted-foreground">
+            Todavía no hay ninguna zona de reparto cargada. Sin zonas no se puede cobrar un envío
+            por distancia ni armar un viaje.
+          </p>
         ) : (
           <div className="space-y-2">
             {zonas.map((z) => {

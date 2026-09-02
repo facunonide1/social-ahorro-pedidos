@@ -62,3 +62,33 @@ export async function guardarZona(fd: FormData) {
   revalidatePath('/admin/pedidos/envios')
   return { ok: true }
 }
+
+/**
+ * Crear una zona.
+ *
+ * `zonas_reparto` estaba vacía: no había ninguna zona cargada, y sin zonas la
+ * pantalla de envíos no se puede usar. Se crea con la sucursal desde el
+ * principio, que es lo que le faltaba al modelo viejo.
+ */
+export async function crearZona(fd: FormData) {
+  await requireAdminHubAccess({ allowedRoles: [...ROLES] })
+  const sb = createClient()
+
+  const nombre = String(fd.get('nombre') ?? '').trim()
+  const sucursalId = String(fd.get('sucursal_id') ?? '')
+  if (!nombre) return { error: 'La zona necesita un nombre.' }
+  if (!sucursalId) return { error: 'La zona sale de una sucursal: elegí cuál.' }
+
+  const barrios = String(fd.get('barrios') ?? '')
+    .split(',').map((b) => b.trim()).filter(Boolean)
+
+  const { error } = await sb.from('zonas_reparto').insert({
+    nombre, sucursal_id: sucursalId, barrios,
+    tarifa: n(fd.get('tarifa')),
+    km_estimados: n(fd.get('km_estimados')),
+    minutos_estimados: n(fd.get('minutos_estimados')),
+  })
+  if (error) return { error: error.message }
+  revalidatePath('/admin/pedidos/envios')
+  return { ok: true }
+}
