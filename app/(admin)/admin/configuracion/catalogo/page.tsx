@@ -5,6 +5,7 @@ import type { ProductoCatalogo } from '@/lib/types/catalogo'
 import { PageHeader } from '@/components/shared/page-header'
 
 import { CatalogoClient } from './catalogo-client'
+import { lente } from '@/lib/demo/lente'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Catálogo de productos' }
@@ -17,8 +18,8 @@ export default async function CatalogoPage() {
   // El total se cuenta EN LA BASE. Contar `data.length` era contar lo que entro
   // en memoria: con `limit(1000)` sobre 46.129 productos, la pantalla decia
   // "1000 de 1000" y no habia forma de notar que faltaban 45.129.
-  const { count: total } = await sb
-    .from('productos_catalogo').select('id', { count: 'exact', head: true })
+  const { count: total } = await lente(sb
+    .from('productos_catalogo').select('id', { count: 'exact', head: true }))
 
   // TOPE de pantalla, dicho arriba de la tabla. Mandar 46.000 productos al
   // navegador no es una lista: es una descarga.
@@ -28,7 +29,7 @@ export default async function CatalogoPage() {
   let truncado = false
   try {
     const r = await paginar<ProductoCatalogo>(
-      sb.from('productos_catalogo').select('*').order('nombre', { ascending: true }),
+      lente(sb.from('productos_catalogo').select('*').order('nombre', { ascending: true })),
       { maximo: TOPE },
     )
     filas = r.filas

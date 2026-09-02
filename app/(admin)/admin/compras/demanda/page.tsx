@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { DemandaClient, type ExisteRow, type LibreRow } from './demanda-client'
+import { lente } from '@/lib/demo/lente'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Radar de demanda' }
@@ -13,7 +14,7 @@ export default async function DemandaPage({ searchParams }: { searchParams: { di
   const desde = new Date(Date.now() - dias * 86_400_000).toISOString()
 
   const [{ data: rows }, { data: sucs }] = await Promise.all([
-    adm.from('demanda_invisible').select('texto_pedido, producto_id, sucursal_id, created_at').gte('created_at', desde).limit(5000),
+    lente(adm.from('demanda_invisible').select('texto_pedido, producto_id, sucursal_id, created_at').gte('created_at', desde).limit(5000)),
     adm.from('sucursales').select('id, nombre'),
   ])
   const sucMap = new Map(((sucs ?? []) as any[]).map((s) => [s.id, s.nombre]))
@@ -31,8 +32,8 @@ export default async function DemandaPage({ searchParams }: { searchParams: { di
   const stockMap = new Map<string, number>()
   if (existeIds.length) {
     const [{ data: prods }, { data: stock }] = await Promise.all([
-      adm.from('productos_catalogo').select('id, nombre, sku').in('id', existeIds),
-      adm.from('stock_items').select('producto_id, cantidad_gondola, cantidad_deposito').in('producto_id', existeIds),
+      lente(adm.from('productos_catalogo').select('id, nombre, sku').in('id', existeIds)),
+      lente(adm.from('stock_items').select('producto_id, cantidad_gondola, cantidad_deposito').in('producto_id', existeIds)),
     ])
     for (const p of (prods ?? []) as any[]) prodMap.set(p.id, p)
     for (const s of (stock ?? []) as any[]) stockMap.set(s.producto_id, (stockMap.get(s.producto_id) ?? 0) + Number(s.cantidad_gondola ?? 0) + Number(s.cantidad_deposito ?? 0))

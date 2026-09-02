@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { CalendarioOfertasClient, type EventoOferta, type CampaniaRow } from './calendario-client'
+import { lente } from '@/lib/demo/lente'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Calendario de ofertas' }
@@ -11,9 +12,9 @@ export default async function CalendarioOfertasPage() {
   const sb = createClient()
 
   const [{ data: ofertas }, { data: camps }, { data: propuestas }] = await Promise.all([
-    sb.from('ofertas').select('id, codigo, nombre, tipo, estado, fecha_inicio, fecha_fin, campania_id, productos_ids, sucursales_ids').not('estado', 'in', '("rechazada","finalizada")').limit(1000),
+    lente(sb.from('ofertas').select('id, codigo, nombre, tipo, estado, fecha_inicio, fecha_fin, campania_id, productos_ids, sucursales_ids').not('estado', 'in', '("rechazada","finalizada")').limit(1000)),
     sb.from('campanias').select('id, nombre, objetivo, estado, fecha_inicio, fecha_fin').order('fecha_inicio', { ascending: false }).limit(200),
-    sb.from('ofertas').select('id', { count: 'exact', head: true }).eq('propuesta_por', 'nora').eq('estado', 'borrador'),
+    lente(sb.from('ofertas').select('id', { count: 'exact', head: true }).eq('propuesta_por', 'nora').eq('estado', 'borrador')),
   ])
 
   const eventos: EventoOferta[] = ((ofertas ?? []) as any[])

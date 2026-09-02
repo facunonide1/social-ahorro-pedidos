@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
+import { lenteCliente } from '@/lib/demo/lente-cliente'
 
 export type UserLite = { id: string; nombre: string | null; email: string; rol: string; sucursal_id: string | null }
 export type CanalRow = { id: string; nombre: string; tipo: string; vinculo: string | null; esMiembro: boolean; unread: number; ultimo: string; ultimoAt: string | null }
@@ -140,7 +141,7 @@ function Conversacion({ canal, yo, esEncargado, usuarios, userName, onBack, focu
   const endRef = useRef<HTMLDivElement>(null)
 
   async function load() {
-    const { data } = await sb.from('mensajes').select('*').eq('canal_id', canal.id).order('created_at', { ascending: true }).limit(500)
+    const { data } = await lenteCliente(sb.from('mensajes').select('*').eq('canal_id', canal.id).order('created_at', { ascending: true }).limit(500))
     setMsgs((data ?? []) as Msg[])
     const ids = ((data ?? []) as any[]).map((m) => m.id)
     if (ids.length) {
@@ -155,7 +156,7 @@ function Conversacion({ canal, yo, esEncargado, usuarios, userName, onBack, focu
       .filter((e) => e?.tipo === 'tarea' && e.id)
       .map((e) => e.id as string))]
     if (tareaIds.length) {
-      const { data: ts } = await sb.from('tareas').select('id, estado, responsable_id').in('id', tareaIds)
+      const { data: ts } = await lenteCliente(sb.from('tareas').select('id, estado, responsable_id').in('id', tareaIds))
       const tmap: Record<string, { estado: string; responsable_id: string | null }> = {}
       for (const t of (ts ?? []) as any[]) tmap[t.id] = { estado: t.estado, responsable_id: t.responsable_id }
       setTareaEstados(tmap)

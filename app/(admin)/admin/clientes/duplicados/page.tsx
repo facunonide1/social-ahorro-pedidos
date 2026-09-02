@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { DuplicadosClient, type DedupRow } from './duplicados-client'
+import { lente } from '@/lib/demo/lente'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Duplicados · CRM' }
@@ -16,7 +17,7 @@ export default async function DuplicadosPage() {
   const ids = Array.from(new Set(((data ?? []) as any[]).flatMap((d) => [d.cliente_a, d.cliente_b])))
   const cliMap = new Map<string, any>()
   if (ids.length) {
-    const { data: clis } = await sb.from('clientes').select('id, nombre, dni, telefono, email, fuentes, total_gastado_12m').in('id', ids)
+    const { data: clis } = await lente(sb.from('clientes').select('id, nombre, dni, telefono, email, fuentes, total_gastado_12m').in('id', ids))
     for (const c of (clis ?? []) as any[]) cliMap.set(c.id, c)
   }
 

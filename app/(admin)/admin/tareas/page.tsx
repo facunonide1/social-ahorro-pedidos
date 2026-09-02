@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 
 import { BandejaV2Client } from './bandeja-v2-client'
 import { MiDiaMobile } from './mi-dia-mobile'
+import { lente } from '@/lib/demo/lente'
 import { KanbanClient } from './kanban-client'
 
 export const dynamic = 'force-dynamic'
@@ -60,7 +61,7 @@ export default async function TareasBandejaPage({
   const finHoy = `${fechaAR}T23:59:59-03:00`
 
   // Query según tab
-  let q = sb.from('tareas').select(SELECT).order('hora_limite', { ascending: true, nullsFirst: false }).order('fecha_vencimiento', { ascending: true, nullsFirst: false }).limit(300)
+  let q = lente(sb.from('tareas').select(SELECT).order('hora_limite', { ascending: true, nullsFirst: false }).order('fecha_vencimiento', { ascending: true, nullsFirst: false }).limit(300))
 
   if (tab === 'mi_dia') {
     q = q.eq('responsable_id', profile.id).in('estado', ACTIVOS)
@@ -93,8 +94,8 @@ export default async function TareasBandejaPage({
       : profile.sucursal_id && !esTransversal ? b.eq('sucursal_id', profile.sucursal_id)
       : b
     const [act, done] = await Promise.all([
-      scope(sb.from('tareas').select(SELECT).in('estado', ESTADOS_KANBAN)).limit(400),
-      scope(sb.from('tareas').select(SELECT).eq('estado', 'completada').gte('fecha_completada', inicioHoy)).limit(200),
+      scope(lente(sb.from('tareas').select(SELECT).in('estado', ESTADOS_KANBAN))).limit(400),
+      scope(lente(sb.from('tareas').select(SELECT).eq('estado', 'completada').gte('fecha_completada', inicioHoy))).limit(200),
     ])
     tareasTablero = [...((act.data ?? []) as any[]), ...((done.data ?? []) as any[])]
   }
@@ -104,7 +105,7 @@ export default async function TareasBandejaPage({
   const enrich = (rows ?? []) as any[]
   const allDepIds = [...new Set(enrich.flatMap((r) => (Array.isArray(r.dependencias_ids) ? r.dependencias_ids : [])))]
   if (allDepIds.length > 0) {
-    const { data: depRows } = await sb.from('tareas').select('id, titulo, estado').in('id', allDepIds as string[])
+    const { data: depRows } = await lente(sb.from('tareas').select('id, titulo, estado').in('id', allDepIds as string[]))
     const depMap = Object.fromEntries((depRows ?? []).map((d: any) => [d.id, d]))
     for (const r of enrich) {
       const ids = Array.isArray(r.dependencias_ids) ? r.dependencias_ids : []
@@ -117,13 +118,13 @@ export default async function TareasBandejaPage({
 
   // Progreso de "Mi día": completadas hoy / total de hoy (mías)
   const [{ count: totalHoy }, { count: completadasHoy }, { count: poolCount }] = await Promise.all([
-    sb.from('tareas').select('id', { count: 'exact', head: true })
-      .eq('responsable_id', profile.id).gte('fecha_vencimiento', inicioHoy).lte('fecha_vencimiento', finHoy),
-    sb.from('tareas').select('id', { count: 'exact', head: true })
-      .eq('responsable_id', profile.id).eq('estado', 'completada').gte('fecha_completada', inicioHoy),
+    lente(sb.from('tareas').select('id', { count: 'exact', head: true })
+      .eq('responsable_id', profile.id).gte('fecha_vencimiento', inicioHoy).lte('fecha_vencimiento', finHoy)),
+    lente(sb.from('tareas').select('id', { count: 'exact', head: true })
+      .eq('responsable_id', profile.id).eq('estado', 'completada').gte('fecha_completada', inicioHoy)),
     (() => {
-      let pq = sb.from('tareas').select('id', { count: 'exact', head: true })
-        .is('responsable_id', null).in('asignacion_tipo', ['pool_turno', 'pool_sucursal']).eq('estado', 'pendiente')
+      let pq = lente(sb.from('tareas').select('id', { count: 'exact', head: true })
+        .is('responsable_id', null).in('asignacion_tipo', ['pool_turno', 'pool_sucursal']).eq('estado', 'pendiente'))
       if (profile.sucursal_id && !esSuper) pq = pq.eq('sucursal_id', profile.sucursal_id)
       return pq
     })(),

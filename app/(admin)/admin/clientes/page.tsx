@@ -11,6 +11,7 @@ import { KpiCard } from '@/components/cards/kpi-card'
 import { NoraCard } from '@/components/nora/nora-card'
 import type { Cliente } from '@/lib/types/crm'
 import { ClientesListClient, type ClienteRow } from './clientes-list-client'
+import { lente } from '@/lib/demo/lente'
 import { CrmDemoButton } from './demo-button'
 
 export const dynamic = 'force-dynamic'
@@ -30,7 +31,7 @@ export default async function ClientesCrmPage() {
   const sb = createClient()
   const { sucursalId, esTodas } = getSucursalActiva()
 
-  let q = sb.from('clientes').select('*').eq('activo', true).order('total_gastado_12m', { ascending: false }).limit(3000)
+  let q = lente(sb.from('clientes').select('*').eq('activo', true).order('total_gastado_12m', { ascending: false }).limit(3000))
   if (!esTodas && sucursalId) q = q.eq('sucursal_habitual_id', sucursalId)
 
   const inicioMes = new Date().toISOString().slice(0, 7) + '-01'

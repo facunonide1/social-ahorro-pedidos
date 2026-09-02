@@ -8,6 +8,7 @@ import type { TareaConTipo, TipoTarea } from '@/lib/types/tareas'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { TaskCard } from '@/components/tareas/task-card'
 import { NuevaTareaSheet } from '@/app/(admin)/admin/tareas/nueva-tarea-sheet'
+import { lente } from '@/lib/demo/lente'
 
 /**
  * Componente reusable para mostrar y crear tareas vinculadas a una
@@ -39,7 +40,7 @@ export async function TareasRelacionadas({
 
   const [{ data: tareasData }, { data: tiposData }, users, { data: sucData }] =
     await Promise.all([
-      sb
+      lente(sb
         .from('tareas')
         .select(
           '*, tipo:tipos_tareas(codigo,nombre,icono,color,categoria,evidencia_requerida,niveles_workflow)',
@@ -47,7 +48,7 @@ export async function TareasRelacionadas({
         .eq('entidad_relacionada', entidadTipo)
         .eq('entidad_id', entidadId)
         .order('created_at', { ascending: false })
-        .limit(20),
+        .limit(20)),
       sb.from('tipos_tareas').select('*').eq('activo', true).order('nombre'),
       listAdminUsers(),
       sb.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),

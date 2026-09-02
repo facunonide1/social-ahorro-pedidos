@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { adminUsersMap } from '@/lib/admin-hub/users'
 import { PageHeader } from '@/components/shared/page-header'
+import { lente } from '@/lib/demo/lente'
 
 import { VerificacionesClient, type VerifItem } from './verificaciones-client'
 
@@ -26,12 +27,12 @@ export default async function VerificacionesPage() {
     sucursalIds = (sups ?? []).map((s: any) => s.sucursal_id)
   }
 
-  let q = sb
+  let q = lente(sb
     .from('tareas')
     .select('id, codigo, titulo, sucursal_id, responsable_id, fecha_completada, evidencias, pre_verificacion_ia, tipo:tipos_tareas(nombre,categoria,prioridad_default,evidencia_requerida)')
     .eq('estado', 'en_verificacion')
     .order('fecha_completada', { ascending: true })
-    .limit(200)
+    .limit(200))
   if (sucursalIds) {
     if (sucursalIds.length === 0) {
       // no supervisa nada → lista vacía

@@ -80,7 +80,7 @@ export function AlertasClient({ alertas, sucursales, puedeRegenerar }: { alertas
       {rows.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed py-16 text-center">
           <CheckCircle2 className="size-8 text-emerald-500" />
-          <div><div className="font-medium">Sin alertas activas</div><div className="mt-0.5 text-sm text-muted-foreground">Todo en orden por ahora.</div></div>
+          <div><div className="font-medium">Sin alertas activas</div><div className="mt-0.5 text-sm text-muted-foreground">Ninguna alerta abierta. Las alertas las genera una tarea programada: si todavía no corrió, esto no dice que no haya nada que alertar.</div></div>
         </div>
       ) : (
         <div className="grid gap-2.5 lg:grid-cols-2">

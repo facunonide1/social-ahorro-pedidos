@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { lente } from '@/lib/demo/lente'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,10 +41,10 @@ export default async function PerformanceSucursalesPage() {
       .from('caja_turnos')
       .select('sucursal_id, estado, contado, diferencia, fecha')
       .gte('fecha', inicioMes),
-    sb
+    lente(sb
       .from('stock_items')
       .select('sucursal_id, cantidad, stock_minimo')
-      .gt('stock_minimo', 0),
+      .gt('stock_minimo', 0)),
   ])
 
   if (sucRes.error) {

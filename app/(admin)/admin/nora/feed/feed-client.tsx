@@ -41,7 +41,9 @@ export function FeedClient({ rows }: { rows: AvisoRow[] }) {
     try {
       const r = await fetch('/api/nora/auditar', { method: 'POST' })
       const j = await r.json(); if (!r.ok) throw new Error(j?.error)
-      toast.success(j.avisos > 0 ? `NORA encontró ${j.avisos} cosas para avisarte` : 'Todo en orden, sin novedades')
+      // «Todo en orden» es una afirmación sobre el negocio; NORA sólo puede
+      // afirmar sobre lo que revisó (v0.92).
+      toast.success(j.avisos > 0 ? `NORA encontró ${j.avisos} cosas para avisarte` : 'NORA no encontró nada para avisarte en lo que revisó')
       router.refresh()
     } catch (e: any) { toast.error(e?.message ?? 'Error') } finally { setRevisando(false) }
   }

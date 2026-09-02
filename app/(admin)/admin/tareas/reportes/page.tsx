@@ -7,6 +7,7 @@ import { TAREA_CATEGORIA_LABELS } from '@/lib/constants/tareas'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { lente } from '@/lib/demo/lente'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export const dynamic = 'force-dynamic'
@@ -30,13 +31,13 @@ export default async function ReportesTareasPage({
   desde.setDate(desde.getDate() - dias)
   desde.setHours(0, 0, 0, 0)
 
-  const { data, error } = await sb
+  const { data, error } = await lente(sb
     .from('tareas')
     .select(
       'id, codigo, titulo, estado, prioridad, responsable_id, fecha_creacion, fecha_completada, fecha_vencimiento, tiempo_resolucion_horas, tipo:tipos_tareas(categoria,nombre)',
     )
     .gte('fecha_creacion', desde.toISOString())
-    .limit(2000)
+    .limit(2000))
 
   const tareas = (data ?? []) as any[]
   const usersMap = await adminUsersMap()

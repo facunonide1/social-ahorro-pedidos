@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Users, ArrowRight, AlertTriangle, Megaphone, UserPlus } from 'lucide-react'
+import { lente } from '@/lib/demo/lente'
 
 import { createAdminClient } from '@/lib/supabase/server'
 
@@ -8,10 +9,10 @@ export async function ClientesMCCard() {
   const adm = createAdminClient()
   const inicioMes = new Date().toISOString().slice(0, 7) + '-01'
   const [{ count: total }, { count: riesgo }, { count: camp }, { count: nuevos }] = await Promise.all([
-    adm.from('clientes').select('id', { count: 'exact', head: true }).eq('activo', true),
-    adm.from('clientes').select('id', { count: 'exact', head: true }).eq('activo', true).neq('riesgo_churn', 'bajo'),
+    lente(adm.from('clientes').select('id', { count: 'exact', head: true }).eq('activo', true)),
+    lente(adm.from('clientes').select('id', { count: 'exact', head: true }).eq('activo', true).neq('riesgo_churn', 'bajo')),
     adm.from('campanias_crm').select('id', { count: 'exact', head: true }).in('estado', ['programada', 'enviada']),
-    adm.from('clientes').select('id', { count: 'exact', head: true }).eq('activo', true).gte('created_at', inicioMes),
+    lente(adm.from('clientes').select('id', { count: 'exact', head: true }).eq('activo', true).gte('created_at', inicioMes)),
   ])
   if (!total) return null
 

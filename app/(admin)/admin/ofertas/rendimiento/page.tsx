@@ -6,6 +6,7 @@ import { NoraCard } from '@/components/nora/nora-card'
 import { Badge } from '@/components/ui/badge'
 import { RendimientoExport, type RendRow } from './rendimiento-client'
 import { TIPO_LABEL } from '../ofertas-client'
+import { lente } from '@/lib/demo/lente'
 import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -21,7 +22,7 @@ export default async function RendimientoPage() {
   try { await medirFinalizadasSinMetricas(createAdminClient()) } catch { /* no bloquea */ }
 
   const [{ data: ofertas }, { data: aprend }] = await Promise.all([
-    sb.from('ofertas').select('id, codigo, nombre, tipo, estado, metricas').eq('estado', 'finalizada').limit(500),
+    lente(sb.from('ofertas').select('id, codigo, nombre, tipo, estado, metricas').eq('estado', 'finalizada').limit(500)),
     sb.from('ofertas_aprendizaje').select('tipo_oferta, rubro, uplift_promedio, n_casos').order('uplift_promedio', { ascending: false }),
   ])
 

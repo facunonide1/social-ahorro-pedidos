@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { NuevaOrdenForm, type ProvLite, type SucLite, type ProdLite, type ItemInicial } from './form'
+import { lente } from '@/lib/demo/lente'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Nueva orden de compra' }
@@ -11,18 +12,18 @@ export default async function NuevaOrdenPage({ searchParams }: { searchParams: {
   const sb = createClient()
 
   const [{ data: provs }, { data: sucs }, { data: prods }] = await Promise.all([
-    sb.from('proveedores').select('id, razon_social, rubros, plazo_pago_dias, forma_pago_default').eq('activo', true).order('razon_social').limit(500),
+    lente(sb.from('proveedores').select('id, razon_social, rubros, plazo_pago_dias, forma_pago_default').eq('activo', true).order('razon_social').limit(500)),
     sb.from('sucursales').select('id, nombre, codigo').eq('activa', true).order('nombre'),
-    sb.from('productos_catalogo').select('id, sku, nombre, precio_costo_promedio').eq('activo', true).order('nombre').limit(5000),
+    lente(sb.from('productos_catalogo').select('id, sku, nombre, precio_costo_promedio').eq('activo', true).order('nombre').limit(5000)),
   ])
 
   // Precarga desde avisos de faltante (?avisos=id1,id2)
   let iniciales: ItemInicial[] = []
   const avisoIds = (searchParams.avisos ?? '').split(',').map((s) => s.trim()).filter(Boolean)
   if (avisoIds.length) {
-    const { data: avisos } = await sb.from('avisos_faltante')
+    const { data: avisos } = await lente(sb.from('avisos_faltante')
       .select('id, producto_id, texto_libre, cantidad_sugerida, sucursal_id, productos_catalogo(nombre, sku, precio_costo_promedio)')
-      .in('id', avisoIds)
+      .in('id', avisoIds))
     const map = new Map<string, ItemInicial>()
     for (const a of (avisos ?? []) as any[]) {
       if (!a.producto_id) continue
@@ -46,8 +47,8 @@ export default async function NuevaOrdenPage({ searchParams }: { searchParams: {
   const recomPairs = (searchParams.recom ?? '').split(',').map((s) => s.trim()).filter(Boolean)
   if (recomPairs.length) {
     const ids = recomPairs.map((p) => p.split('-')[0])
-    const { data: prodsRecom } = await sb.from('productos_catalogo')
-      .select('id, sku, nombre, precio_costo_promedio').in('id', ids)
+    const { data: prodsRecom } = await lente(sb.from('productos_catalogo')
+      .select('id, sku, nombre, precio_costo_promedio').in('id', ids))
     const pmap = new Map(((prodsRecom ?? []) as any[]).map((p) => [p.id, p]))
     const sucDest = searchParams.suc ?? null
     for (const pair of recomPairs) {

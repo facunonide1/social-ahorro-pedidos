@@ -17,6 +17,7 @@ import { ScoreProgress } from '@/components/empleados/score-progress'
 import { BadgesGallery } from '@/components/empleados/badge-display'
 
 import { NoraCoachingSection } from './nora-coaching-section'
+import { lente } from '@/lib/demo/lente'
 
 export const dynamic = 'force-dynamic'
 
@@ -60,7 +61,7 @@ export default async function MiPanelPage({
     usersMap,
     { data: objetivoActual },
   ] = await Promise.all([
-    sb
+    lente(sb
       .from('tareas')
       .select('*, tipo:tipos_tareas(codigo,nombre,icono,color,categoria,evidencia_requerida,niveles_workflow)')
       .eq('responsable_id', profile.id)
@@ -69,26 +70,26 @@ export default async function MiPanelPage({
       )
       .not('estado', 'in', '("completada","descartada","rechazada")')
       .order('prioridad', { ascending: false })
-      .order('fecha_vencimiento', { ascending: true, nullsFirst: false }),
-    sb
+      .order('fecha_vencimiento', { ascending: true, nullsFirst: false })),
+    lente(sb
       .from('tareas')
       .select('*, tipo:tipos_tareas(codigo,nombre,icono,color,categoria,evidencia_requerida,niveles_workflow)')
       .eq('responsable_id', profile.id)
       .in('estado', ['pendiente', 'asignada', 'en_progreso', 'en_verificacion', 'bloqueada'])
       .order('fecha_vencimiento', { ascending: true, nullsFirst: false })
-      .limit(60),
-    sb
+      .limit(60)),
+    lente(sb
       .from('tareas')
       .select('id', { count: 'exact', head: true })
       .eq('responsable_id', profile.id)
       .eq('estado', 'completada')
-      .gte('fecha_completada', mesInicio.toISOString()),
-    sb
+      .gte('fecha_completada', mesInicio.toISOString())),
+    lente(sb
       .from('tareas')
       .select('fecha_vencimiento, fecha_completada')
       .eq('responsable_id', profile.id)
       .eq('estado', 'completada')
-      .gte('fecha_completada', mesInicio.toISOString()),
+      .gte('fecha_completada', mesInicio.toISOString())),
     adminUsersMap(),
     empleado
       ? sb

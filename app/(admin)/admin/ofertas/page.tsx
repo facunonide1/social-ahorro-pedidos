@@ -14,6 +14,7 @@ import { OfertasClient, type OfertaRow, type ProdLite, type CampLite, type SucLi
 
 import { paginarProductos } from '@/lib/catalogo/indice'
 import { Button } from '@/components/ui/button'
+import { lente } from '@/lib/demo/lente'
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Ofertas' }
 
@@ -27,7 +28,7 @@ export default async function OfertasPage({ searchParams }: { searchParams: { sk
   try { await finalizarVencidas(createAdminClient(), profile.id) } catch { /* no bloquea la carga */ }
 
   const [{ data: ofertas }, { data: confs }, { data: prods }, { data: camps }, { data: sucs }] = await Promise.all([
-    sb.from('ofertas').select('id, codigo, nombre, tipo, valor, productos_ids, rubro, canales, vigencia_tipo, fecha_inicio, fecha_fin, origen, estado, propuesta_por, publicada_cuponera, version, metricas, created_at').order('created_at', { ascending: false }).limit(1000),
+    lente(sb.from('ofertas').select('id, codigo, nombre, tipo, valor, productos_ids, rubro, canales, vigencia_tipo, fecha_inicio, fecha_fin, origen, estado, propuesta_por, publicada_cuponera, version, metricas, created_at').order('created_at', { ascending: false }).limit(1000)),
     sb.from('ofertas_confirmaciones').select('oferta_id, version_confirmada'),
     paginarProductos(sb, 'id, sku, nombre, codigo_barras, precio_sugerido, precio_costo_promedio'),
     sb.from('campanias').select('id, nombre, estado').order('created_at', { ascending: false }).limit(200),

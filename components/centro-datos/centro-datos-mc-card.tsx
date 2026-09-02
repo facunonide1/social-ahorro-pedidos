@@ -41,8 +41,16 @@ export async function CentroDatosMCCard() {
       </div>
       {atrasados.length > 0 ? (
         <div className="mt-2 flex items-start gap-1.5 text-xs text-amber-600"><Clock className="mt-0.5 size-3 shrink-0" /> {atrasados.slice(0, 2).map((p) => p.nombre).join(', ')} sin actualizar.</div>
+      ) : (perfiles ?? []).length === 0 ? (
+        // Cero atrasados sobre cero perfiles configurados no es «al día»: es que
+        // no hay contra qué medir si algo se atrasó (v0.92).
+        <div className="mt-2 text-xs leading-snug text-muted-foreground">
+          Ningún perfil tiene frecuencia configurada: no hay contra qué medir si falta una carga.
+        </div>
       ) : (
-        <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground"><CheckCircle2 className="size-3 text-emerald-500" /> Datos al día.</div>
+        <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <CheckCircle2 className="size-3 text-emerald-500" /> Los {(perfiles ?? []).length} perfiles con frecuencia están al día.
+        </div>
       )}
     </div>
   )

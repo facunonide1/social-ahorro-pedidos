@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Sparkles, ArrowRight, AlertTriangle, Info, Flame } from 'lucide-react'
+import { lente } from '@/lib/demo/lente'
 
 import { createAdminClient } from '@/lib/supabase/server'
 
@@ -9,9 +10,9 @@ const SEV_CLS: Record<string, string> = { info: 'text-blue-600', sugerencia: 'te
 /** Card de Mission Control: lo más urgente que detectó NORA (feed). */
 export async function NoraFeedCard() {
   const adm = createAdminClient()
-  const { data, count } = await adm.from('nora_avisos').select('id, tipo, severidad, titulo, accion_href, accion_label', { count: 'exact' })
+  const { data, count } = await lente(adm.from('nora_avisos').select('id, tipo, severidad, titulo, accion_href, accion_label', { count: 'exact' })
     .eq('estado', 'pendiente')
-    .order('severidad', { ascending: true }).order('created_at', { ascending: false }).limit(4)
+    .order('severidad', { ascending: true }).order('created_at', { ascending: false }).limit(4))
   const avisos = (data ?? []) as any[]
   if (!avisos.length) return null
 

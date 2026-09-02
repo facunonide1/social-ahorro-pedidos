@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { PanelClient, type OfertaPanel } from './panel-client'
+import { lente } from '@/lib/demo/lente'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Ofertas para ofrecer' }
@@ -12,7 +13,7 @@ export default async function PanelOfertasPage() {
   const adm = createAdminClient()
 
   const [{ data: ofertas }, { data: confs }] = await Promise.all([
-    adm.from('ofertas').select('id, codigo, nombre, tipo, valor, productos_ids, canales, version, fecha_fin').eq('estado', 'activa').order('updated_at', { ascending: false }).limit(200),
+    lente(adm.from('ofertas').select('id, codigo, nombre, tipo, valor, productos_ids, canales, version, fecha_fin').eq('estado', 'activa').order('updated_at', { ascending: false }).limit(200)),
     adm.from('ofertas_confirmaciones').select('oferta_id, version_confirmada').eq('empleado_user_id', profile.id),
   ])
   const confMap = new Map(((confs ?? []) as any[]).map((c) => [c.oferta_id, c.version_confirmada]))
@@ -21,7 +22,7 @@ export default async function PanelOfertasPage() {
   const allPids = [...new Set(((ofertas ?? []) as any[]).flatMap((o) => o.productos_ids ?? []))]
   const prodMap = new Map<string, string>()
   if (allPids.length) {
-    const { data: prods } = await adm.from('productos_catalogo').select('id, nombre').in('id', allPids)
+    const { data: prods } = await lente(adm.from('productos_catalogo').select('id, nombre').in('id', allPids))
     for (const p of (prods ?? []) as any[]) prodMap.set(p.id, p.nombre)
   }
 

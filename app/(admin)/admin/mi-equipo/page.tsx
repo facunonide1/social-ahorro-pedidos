@@ -12,6 +12,7 @@ import { KpiCard } from '@/components/cards/kpi-card'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { TaskCard } from '@/components/tareas/task-card'
+import { lente } from '@/lib/demo/lente'
 import { EmpleadoAvatar } from '@/components/empleados/empleado-avatar'
 
 export const dynamic = 'force-dynamic'
@@ -59,14 +60,14 @@ export default async function MiEquipoPage({
   const empleadoUserIds = empleados.map((e) => e.user_id).filter(Boolean) as string[]
 
   // Tareas del equipo
-  let qTareas = sb
+  let qTareas = lente(sb
     .from('tareas')
     .select(
       '*, tipo:tipos_tareas(codigo,nombre,icono,color,categoria,evidencia_requerida,niveles_workflow)',
     )
     .in('estado', ['pendiente', 'asignada', 'en_progreso', 'en_verificacion', 'bloqueada'])
     .order('fecha_vencimiento', { ascending: true, nullsFirst: false })
-    .limit(120)
+    .limit(120))
   if (!verTodos && profile.sucursal_id) {
     qTareas = qTareas.eq('sucursal_id', profile.sucursal_id)
   } else if (!verTodos && empleadoUserIds.length > 0) {
@@ -76,14 +77,14 @@ export default async function MiEquipoPage({
   const tareasEquipo = (tareasEquipoData ?? []) as TareaConTipo[]
 
   // Por verificar mías
-  const { data: porVerificarData } = await sb
+  const { data: porVerificarData } = await lente(sb
     .from('tareas')
     .select(
       '*, tipo:tipos_tareas(codigo,nombre,icono,color,categoria,evidencia_requerida,niveles_workflow)',
     )
     .eq('verificador_id', profile.id)
     .eq('estado', 'en_verificacion')
-    .order('fecha_vencimiento', { ascending: true, nullsFirst: false })
+    .order('fecha_vencimiento', { ascending: true, nullsFirst: false }))
   const porVerificar = (porVerificarData ?? []) as TareaConTipo[]
 
   const usersMap = await adminUsersMap()

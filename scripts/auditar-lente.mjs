@@ -67,6 +67,8 @@ const EXENTOS = [
   'scripts/auditar-lente.mjs',
   'lib/demo/estado.ts',
   'lib/demo/cliente.ts',
+  'lib/demo/lente.ts',
+  'lib/demo/lente-cliente.ts',
   'lib/demo/guarda-calculo.ts',
   'components/demo/aviso-demo.tsx',
   // Los importadores y los crons NO son pantallas: no afirman nada al usuario.
@@ -79,7 +81,11 @@ const ARCHIVO_ACEPTADAS = 'scripts/lente-aceptado.json'
 
 /** Señales de que la pantalla respeta el lente o evita afirmar. */
 function respetaElLente(src) {
-  return /sinDemo\(\)|sinDemoCliente\(\)|es_demo|esDemo|AvisoDemo|contarDemo/.test(src)
+  // `lente(...)` y `lenteCliente(...)` son el mismo interruptor envuelto para que
+  // entre donde esta la consulta (lib/demo/lente.ts, v0.92). Se agregaron porque
+  // aplicarlo a mano eran tres lineas que no entraban adentro de un Promise.all,
+  // y veintiocho pantallas se quedaron sin el por eso.
+  return /sinDemo\(\)|sinDemoCliente\(\)|\blente\(|\blenteCliente\(|es_demo|esDemo|AvisoDemo|contarDemo/.test(src)
 }
 
 export function auditar() {

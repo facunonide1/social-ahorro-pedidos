@@ -12,6 +12,7 @@ import { TAREA_ESTADO_LABELS } from '@/lib/constants/tareas'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
+import { lenteCliente } from '@/lib/demo/lente-cliente'
 import { EmpleadoAvatar } from '@/components/empleados/empleado-avatar'
 
 export type UserMap = Record<string, { nombre: string | null; email: string }>
@@ -78,11 +79,11 @@ export function TaskComments({
     if (menciones.length > 0) {
       try {
         const { notificarMenciones } = await import('@/lib/tareas/notificaciones')
-        const tarea = await sb
+        const tarea = await lenteCliente(sb
           .from('tareas')
           .select('titulo')
           .eq('id', tareaId)
-          .maybeSingle<{ titulo: string }>()
+          .maybeSingle<{ titulo: string }>())
         await notificarMenciones(sb, {
           tareaId,
           tareaTitulo: tarea.data?.titulo || 'una tarea',

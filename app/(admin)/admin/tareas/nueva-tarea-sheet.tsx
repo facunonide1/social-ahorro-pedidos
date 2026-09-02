@@ -33,6 +33,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
+import { lenteCliente } from '@/lib/demo/lente-cliente'
 import { Textarea } from '@/components/ui/textarea'
 
 const NONE = '__none__'
@@ -164,11 +165,11 @@ export function NuevaTareaSheet({
     // Notif al responsable asignado (si hay)
     if (form.responsable_id) {
       const { notificarAsignacion } = await import('@/lib/tareas/notificaciones')
-      const { data: tareaCompleta } = await sb
+      const { data: tareaCompleta } = await lenteCliente(sb
         .from('tareas')
         .select('*')
         .eq('id', data.id)
-        .maybeSingle()
+        .maybeSingle())
       if (tareaCompleta) {
         await notificarAsignacion(sb, tareaCompleta as never)
       }

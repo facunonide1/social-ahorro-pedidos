@@ -37,6 +37,7 @@ export default async function CentroDatosPage() {
   ])
 
   // mejora 5: recordatorios de carga (perfiles con frecuencia vencida)
+  const perfilesConFrecuencia = (perfiles ?? []).length
   const atrasados = ((perfiles ?? []) as any[]).filter((p) => {
     const limite = FRECUENCIA_HORAS[p.frecuencia as FrecuenciaDatos]
     if (limite == null) return false
@@ -74,7 +75,18 @@ export default async function CentroDatosPage() {
                   <div key={i} className="text-xs"><span className="font-medium text-amber-600">{p.nombre}</span> · {FRECUENCIA_LABEL[p.frecuencia as FrecuenciaDatos].toLowerCase()} sin cargar</div>
                 ))}
               </div>
-            ) : <div className="mt-1 text-sm text-muted-foreground">Todo al día ✓</div>}
+            ) : perfilesConFrecuencia === 0 ? (
+              // Cero atrasados sobre cero perfiles configurados no es «al día»:
+              // es que no hay contra qué medir si algo se atrasó (v0.92).
+              <div className="mt-1 text-sm leading-snug text-muted-foreground">
+                <span className="block font-medium text-foreground">Sin datos todavía</span>
+                Ningún perfil tiene frecuencia configurada, así que no hay contra qué medir.
+              </div>
+            ) : (
+              <div className="mt-1 text-sm text-muted-foreground">
+                Los {perfilesConFrecuencia} perfiles con frecuencia están al día.
+              </div>
+            )}
           </div>
         </div>
 

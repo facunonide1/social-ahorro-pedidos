@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { B2bClient, type B2bRow } from './b2b-client'
+import { lente } from '@/lib/demo/lente'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'B2B · CRM' }
@@ -10,7 +11,7 @@ export default async function B2bPage() {
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'marketing', 'administrativo', 'auditor'] })
   const sb = createClient()
 
-  const { data: clientes } = await sb.from('clientes').select('id, nombre, cuit, telefono, email, total_gastado_12m').eq('tipo', 'b2b').eq('activo', true).order('nombre')
+  const { data: clientes } = await lente(lente(sb.from('clientes').select('id, nombre, cuit, telefono, email, total_gastado_12m').eq('tipo', 'b2b').eq('activo', true).order('nombre')))
   const ids = ((clientes ?? []) as any[]).map((c) => c.id)
   const ccteMap = new Map<string, any>(); const recMap = new Map<string, number>()
   if (ids.length) {

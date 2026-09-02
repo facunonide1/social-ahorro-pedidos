@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { ControladosClient, type ControladoRow } from './controlados-client'
+import { lente } from '@/lib/demo/lente'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Productos controlados' }
@@ -15,8 +16,8 @@ export default async function ControladosPage() {
   // tope se alcanza, la pantalla lo dice en vez de callarse.
   const TOPE = 5000
   const [{ data }, { count: total }] = await Promise.all([
-    adm.from('productos_catalogo').select('id, nombre, sku, lista_controlado, bloqueado_recall').eq('es_controlado', true).order('nombre').limit(TOPE),
-    adm.from('productos_catalogo').select('id', { count: 'exact', head: true }).eq('es_controlado', true),
+    lente(adm.from('productos_catalogo').select('id, nombre, sku, lista_controlado, bloqueado_recall').eq('es_controlado', true).order('nombre').limit(TOPE)),
+    lente(adm.from('productos_catalogo').select('id', { count: 'exact', head: true }).eq('es_controlado', true)),
   ])
   const rows: ControladoRow[] = ((data ?? []) as any[]).map((p) => ({ id: p.id, nombre: p.nombre, sku: p.sku, lista: p.lista_controlado, recall: !!p.bloqueado_recall }))
   const puedeEditar = ['super_admin', 'gerente', 'administrativo'].includes(profile.rol)

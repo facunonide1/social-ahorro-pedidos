@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { RecallsClient, type RecallRow } from './recalls-client'
+import { lente } from '@/lib/demo/lente'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Recalls' }
@@ -15,7 +16,7 @@ export default async function RecallsPage() {
   // Tareas pendientes por recall activo.
   const pendPorRecall = new Map<string, number>()
   for (const r of recalls.filter((x) => x.estado === 'activo')) {
-    const { count } = await adm.from('tareas').select('id', { count: 'exact', head: true }).contains('datos_custom', { recall_id: r.id }).not('estado', 'in', '("completada","en_verificacion","en_aprobacion")')
+    const { count } = await lente(adm.from('tareas').select('id', { count: 'exact', head: true }).contains('datos_custom', { recall_id: r.id }).not('estado', 'in', '("completada","en_verificacion","en_aprobacion")'))
     pendPorRecall.set(r.id, count ?? 0)
   }
 
