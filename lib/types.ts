@@ -16,6 +16,27 @@ export type OrderOrigin =
 
 export type TipoEnvio = 'express' | 'programado' | 'retiro'
 
+/**
+ * Quién lleva el pedido. Distinto de `TipoEnvio`, que es la urgencia.
+ * `mercado_envios` está declarado y NO conectado (v0.91, bloque D.1).
+ */
+export type FormaEntrega =
+  | 'reparto_propio' | 'correo' | 'mercado_envios' | 'pedidosya' | 'retiro_local'
+
+export const FORMA_ENTREGA_LABELS: Record<FormaEntrega, string> = {
+  reparto_propio: 'Reparto propio',
+  correo:         'Correo o transporte',
+  mercado_envios: 'Mercado Envíos',
+  pedidosya:      'PedidosYa retira',
+  retiro_local:   'Retiro en el local',
+}
+
+/** Las que todavía no se pueden operar desde NORA, con el motivo. */
+export const FORMA_ENTREGA_PENDIENTE: Partial<Record<FormaEntrega, string>> = {
+  mercado_envios: 'Declarada, sin conectar. No se puede cotizar ni seguir desde NORA.',
+  pedidosya:      'El repartidor es de PedidosYa: retira del local y NORA no lo maneja ni lo sigue.',
+}
+
 export type UserRole = 'admin' | 'operador' | 'repartidor'
 
 export type ZonaReparto = {
@@ -110,6 +131,8 @@ export type Order = {
   cliente_id?: string | null
   /** El id del pedido EN el canal, para los que no son Woo. */
   canal_externo_id?: string | null
+  /** Quién lleva el pedido. Obligatorio al armarlo a mano. */
+  forma_entrega?: FormaEntrega | null
   codigo: string
   woo_order_id: number | null
   manual_order_number: number | null
