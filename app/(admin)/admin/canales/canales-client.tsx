@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { ShieldAlert, PowerOff, Download } from 'lucide-react'
 
 import { exportExcel } from '@/lib/utils/export-excel'
@@ -66,7 +67,12 @@ export function CanalesClient({
             Es la regla de oro 9: no es una decisión comercial. Hay que despublicarlos, o corregir la
             condición de venta en SIFACO si está mal clasificada. NORA no los despublica sola porque
             no escribe en el canal sin que una persona lo confirme.
-            <div className="mt-2">
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" className="gap-1" asChild>
+                <Link href="/admin/canales/regla-9">
+                  <ShieldAlert className="size-3.5" /> Qué revisar en todos los canales
+                </Link>
+              </Button>
               <Button variant="outline" size="sm" className="gap-1"
                 onClick={() => exportExcel('despublicar-regla-9', ilegales.map((i) => ({
                   SKU: i.sku, Producto: i.producto,

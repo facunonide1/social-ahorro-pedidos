@@ -1,0 +1,29 @@
+-- 0177 · v0.92-deuda-cerrada · BLOQUE A · aplicada vía MCP
+--
+-- EL IMPORTADOR, PARA QUE NO SE VUELVA A PERDER.
+--
+-- `sifaco_aplicar_maestro` copiaba 16 de las 68 columnas del archivo. Ahora
+-- copia además: la condición de venta (`vl`), el precio con `publico` como
+-- respaldo de `prec_vta`, el registro sanitario, la clasificación A/B/C, la
+-- ubicación, la sección, las unidades por envase, el tipo de unidad, el nombre
+-- comercial, la nota del operador, las cuatro fechas y el vademécum.
+--
+-- ── DOS CRITERIOS DISTINTOS AL PISAR ────────────────────────────────────────
+--
+-- La condición de venta **se pisa siempre**: es terreno legal y una
+-- clasificación vieja pegada es peor que ninguna. Las excepciones firmadas
+-- viven aparte, en `clasificacion_excepciones`, y no las toca este archivo.
+--
+-- El resto **sólo completa**: no pisa lo que alguien corrigió a mano. Las fechas
+-- son la excepción de la excepción — `ult_venta`, `ult_compra` y
+-- `precio_actualizado` sí se refrescan, porque un archivo nuevo trae una fecha
+-- más reciente por definición y quedarse con la vieja sería el error.
+--
+-- ── Y UNA GUARDA NUEVA ──────────────────────────────────────────────────────
+--
+-- Si el archivo trae un `vl` que no está declarado en `sifaco_condicion_venta`,
+-- la importación **no se aplica**. Es el mismo default-deny que ya existía para
+-- el nivel de control: un valor que nadie sabe qué significa no se interpreta
+-- solo. Así apareció el `vl = 5` en v0.88 y el `vl = 0` en v0.91.
+--
+-- El DDL vigente está en la base.
