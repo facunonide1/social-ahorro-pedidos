@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Comunicados' }
 
 export default async function ComunicadosPage() {
-  await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'administrativo', 'sucursal', 'auditor'] })
+  await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'administrativo', 'sucursal', 'encargado_sucursal', 'auditor'] })
   const adm = createAdminClient()
 
   const { data: coms } = await adm.from('mensajes').select('id, canal_id, contenido, created_at, canales(nombre)').eq('tipo', 'comunicado').order('created_at', { ascending: false }).limit(100)

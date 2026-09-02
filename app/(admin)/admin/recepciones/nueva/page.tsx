@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function NuevaRecepcionPage() {
   const profile = await requireAdminHubAccess({
-    allowedRoles: ['super_admin', 'gerente', 'administrativo', 'sucursal'],
+    allowedRoles: ['super_admin', 'gerente', 'administrativo', 'sucursal', 'encargado_sucursal'],
   })
   const sb = createClient()
 

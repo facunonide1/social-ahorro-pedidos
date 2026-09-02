@@ -32,7 +32,7 @@ export default async function RecepcionesPage() {
       'super_admin',
       'gerente',
       'administrativo',
-      'sucursal',
+      'sucursal', 'encargado_sucursal',
       'auditor',
     ],
   })

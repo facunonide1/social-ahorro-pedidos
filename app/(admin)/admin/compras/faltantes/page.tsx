@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Avisos de faltantes' }
 
 export default async function FaltantesPage({ searchParams }: { searchParams: { rubro?: string } }) {
-  const profile = await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'sucursal', 'auditor'] })
+  const profile = await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'sucursal', 'encargado_sucursal', 'auditor'] })
   const sb = createClient()
   const rubro = parseRubro(searchParams.rubro)
   const { sucursalId, esTodas } = getSucursalActiva()

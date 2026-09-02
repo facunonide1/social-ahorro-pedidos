@@ -28,7 +28,7 @@ export default async function ConteosPage() {
   const titulo = await tituloDePantalla('stock', '/admin/operaciones/conteos', 'Conteos por zona')
 
   const perfil = await requireAdminHubAccess({
-    allowedRoles: ['super_admin', 'gerente', 'administrativo', 'sucursal', 'comprador'],
+    allowedRoles: ['super_admin', 'gerente', 'administrativo', 'sucursal', 'encargado_sucursal', 'comprador'],
   })
 
   /**

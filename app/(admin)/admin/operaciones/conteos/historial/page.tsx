@@ -21,7 +21,7 @@ const pesos = (n: number) =>
  */
 export default async function HistorialPage() {
   await requireAdminHubAccess({
-    allowedRoles: ['super_admin', 'gerente', 'administrativo', 'sucursal', 'comprador', 'auditor'],
+    allowedRoles: ['super_admin', 'gerente', 'administrativo', 'sucursal', 'encargado_sucursal', 'comprador', 'auditor'],
   })
 
   const [zonas, items] = await Promise.all([zonasEnElTiempo(), itemsQueRepiten(2)])

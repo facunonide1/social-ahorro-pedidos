@@ -17,7 +17,7 @@ export default async function OperacionesDashboard() {
   // o algo falla, devuelve este mismo texto: la pantalla no cambia.
   const tituloDeclarado = await tituloDePantalla('stock', '/admin/operaciones', 'Operaciones')
 
-  await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'sucursal', 'auditor'] })
+  await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'sucursal', 'encargado_sucursal', 'auditor'] })
   const sb = createClient()
   const { sucursalId, esTodas } = getSucursalActiva()
   const en30 = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10)

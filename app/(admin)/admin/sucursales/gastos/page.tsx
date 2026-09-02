@@ -22,7 +22,7 @@ export default async function GastosOperativosPage() {
       'gerente',
       'administrativo',
       'tesoreria',
-      'sucursal',
+      'sucursal', 'encargado_sucursal',
       'auditor',
     ],
   })

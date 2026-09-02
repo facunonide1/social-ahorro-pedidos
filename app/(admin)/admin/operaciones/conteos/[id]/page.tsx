@@ -26,7 +26,7 @@ const pesos = (n: number) =>
  */
 export default async function ConteoPage({ params }: { params: { id: string } }) {
   await requireAdminHubAccess({
-    allowedRoles: ['super_admin', 'gerente', 'administrativo', 'sucursal', 'comprador', 'auditor'],
+    allowedRoles: ['super_admin', 'gerente', 'administrativo', 'sucursal', 'encargado_sucursal', 'comprador', 'auditor'],
   })
   const sb = createClient()
 

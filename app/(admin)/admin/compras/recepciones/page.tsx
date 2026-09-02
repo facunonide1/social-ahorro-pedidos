@@ -12,7 +12,7 @@ export const metadata = { title: 'Recepciones' }
 const RECIBIBLES = ['enviada', 'confirmada', 'recibida_parcial']
 
 export default async function RecepcionesComprasPage({ searchParams }: { searchParams: { rubro?: string } }) {
-  await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'sucursal', 'auditor'] })
+  await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'sucursal', 'encargado_sucursal', 'auditor'] })
   const sb = createClient()
   const rubro = parseRubro(searchParams.rubro)
   const { sucursalId, esTodas } = getSucursalActiva()

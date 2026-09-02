@@ -47,7 +47,7 @@ export default async function ProductoDetailPage({
       'super_admin',
       'gerente',
       'administrativo',
-      'sucursal',
+      'sucursal', 'encargado_sucursal',
       'comprador',
       'auditor',
     ],

@@ -41,7 +41,7 @@ export default async function RecepcionDetailPage({
       'super_admin',
       'gerente',
       'administrativo',
-      'sucursal',
+      'sucursal', 'encargado_sucursal',
       'auditor',
     ],
   })

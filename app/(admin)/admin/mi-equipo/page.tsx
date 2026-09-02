@@ -34,7 +34,7 @@ export default async function MiEquipoPage({
   searchParams: { tab?: string }
 }) {
   const profile = await requireAdminHubAccess({
-    allowedRoles: ['super_admin', 'gerente', 'sucursal', 'administrativo', 'auditor'],
+    allowedRoles: ['super_admin', 'gerente', 'sucursal', 'encargado_sucursal', 'administrativo', 'auditor'],
   })
   const sb = createClient()
   const tab: Tab = TABS.includes(searchParams.tab as Tab)
