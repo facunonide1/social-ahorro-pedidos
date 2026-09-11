@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-09-11T23:07:00.110Z",
-  "commit": "b25b681cebd60b69e5d443a353e656389956f3b5",
-  "mensaje": "fix(importacion): el alta de proveedores fallaba en silencio",
+  "construido_at": "2026-09-11T23:10:05.136Z",
+  "commit": "b6bd32817bd8c650cf1ef668a235bbc1d372d1e3",
+  "mensaje": "chore: el plan de compra en el menú de Compras",
   "rama": "main"
 }
