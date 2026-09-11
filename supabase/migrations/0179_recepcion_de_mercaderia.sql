@@ -130,3 +130,29 @@ drop policy if exists recepcion_comprobantes_write on recepcion_comprobantes;
 create policy recepcion_comprobantes_write on recepcion_comprobantes for all
   using (public.hub_rol_activo() = any (array['super_admin','gerente','comprador','administrativo','encargado_sucursal','sucursal']::admin_role[]))
   with check (public.hub_rol_activo() = any (array['super_admin','gerente','comprador','administrativo','encargado_sucursal','sucursal']::admin_role[]));
+
+-- ── BLOQUE B · LO QUE FALTA CONFIRMAR ───────────────────────────────────────
+--
+-- El motor de documentos ya escribe `doc_precios_historial` dentro de
+-- `doc_confirmar_documento`, junto con el documento y la cuenta por pagar. La
+-- tabla está vacía porque **nunca se confirmó una factura**, no porque falte el
+-- escritor.
+--
+-- Entonces el cuello de botella es este: una factura fotografiada que nadie
+-- revisó no deja costo. Esta vista lo hace visible.
+create or replace view facturas_esperando_revision as
+  select rc.id as comprobante_id, rc.recepcion_id, rc.extraccion_id, rc.archivo_url,
+         e.estado as estado_extraccion, e.archivo_nombre, e.confianza_global,
+         e.created_at as subida_at,
+         r.proveedor_id, p.razon_social as proveedor,
+         r.sucursal_id, s.nombre as sucursal, r.fecha_recepcion,
+         (current_date - r.fecha_recepcion::date) as dias_esperando
+    from recepcion_comprobantes rc
+    join recepciones_mercaderia r on r.id = rc.recepcion_id
+    left join doc_extracciones e on e.id = rc.extraccion_id
+    left join proveedores p on p.id = r.proveedor_id
+    left join sucursales  s on s.id = r.sucursal_id
+   where rc.rol = 'factura' and rc.documento_id is null
+     and rc.extraccion_id is not null and not coalesce(r.es_demo, false);
+
+alter view facturas_esperando_revision set (security_invoker = true);

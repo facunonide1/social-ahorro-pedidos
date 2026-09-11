@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-09-11T22:01:30.671Z",
-  "commit": "af320b8efe4e574ec26ec9788f5fb8b5488a9f8e",
-  "mensaje": "docs: el número exacto de la lista de regla 9 (2.633, no 2.648)",
+  "construido_at": "2026-09-11T22:03:47.179Z",
+  "commit": "1a998903c107ccd14c03cb05e2d65e246e62cab6",
+  "mensaje": "feat: la recepción de mercadería, con las dos fotos",
   "rama": "main"
 }
