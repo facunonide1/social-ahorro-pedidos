@@ -163,10 +163,16 @@ async function main() {
     for (const n of nuevos) console.log(`   ${n}`)
     if (!APLICAR) return
     for (const n of nuevos) {
-      const { data } = await adm.from('proveedores').insert({
+      const { data, error } = await adm.from('proveedores').insert({
         razon_social: n, nombre_comercial: n, activo: true,
+        // Sin CUIT: no está en el archivo y no se inventa. Identifica
+        // fiscalmente, y un número falso se termina usando en una retención.
+        cuit: null,
         notas: 'Dado de alta por la importación del Excel 2026. Faltan CUIT, condición de IVA y forma de pago.',
       }).select('id').maybeSingle()
+      // Un alta que falla en silencio se lleva puestos los comprobantes de ese
+      // proveedor sin que nadie lo note. Ya pasó una vez con el CUIT.
+      if (error) { console.log(`   ! no se pudo dar de alta ${n}: ${error.message}`); continue }
       if (data?.id) porNombre.set(normalizar(n), data.id)
     }
   }
