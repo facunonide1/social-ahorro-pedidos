@@ -1,0 +1,21 @@
+-- 0181 · v0.93-proveedores · BLOQUE D · aplicada vía MCP
+--
+-- LO QUE NORA DETECTA SOLA EN EL CIRCUITO DE PROVEEDORES.
+--
+-- `proveedores_detectar(dias_aviso, dias_faltante)` devuelve hallazgos y NO
+-- escribe nada: es `stable`. Quien la llama decide si los convierte en avisos.
+-- Seis reglas, todas sobre hechos medidos:
+--
+--   · lo que vence dentro de la ventana (anticipación configurable)
+--   · el proveedor que pasa a cobrar hoy o mañana, con lo que se le debe
+--   · el mismo comprobante cargado dos veces
+--   · un monto más de 10× la mediana DE ESE PROVEEDOR, y sólo si ese proveedor
+--     tiene al menos 10 comprobantes: con menos, la mediana no dice nada
+--   · un faltante sin nota de crédito después de N días
+--   · mercadería recibida hace más de dos días sin ninguna factura cargada
+--
+-- La comparación de montos es contra la mediana del MISMO proveedor, no contra
+-- un número fijo: una factura de $2.000.000 es normal en Americana y rarísima
+-- en Caramelos.
+--
+-- El DDL vigente vive en la base.
