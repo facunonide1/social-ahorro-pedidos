@@ -1,0 +1,20 @@
+-- 0185 · v0.94-compras · BLOQUE E · aplicada vía MCP
+--
+-- LO QUE NORA AVISA SOLA EN COMPRAS.
+--
+-- Cuatro reglas que sí se pueden calcular hoy:
+--   · lo que entra en quiebre esta semana
+--   · lo que CAMBIÓ de estado — más útil que la foto de hoy
+--   · un producto que se le compra a más de dos droguerías
+--   · un proveedor que da pronto pago y al que se le debe: puede convenir
+--     pagar distinto
+--
+-- **E.3 no está y es a propósito**: «un proveedor que subió más que el resto»
+-- necesita el histórico de costos, que se llena con las facturas
+-- fotografiadas. Hoy tiene 0 líneas. Se prende cuando haya datos, no antes.
+--
+-- `compras_estado_producto` guarda la foto anterior. Se escribe DESPUÉS de
+-- detectar: si se guardara antes, el cambio se compararía contra sí mismo y no
+-- habría cambio nunca.
+--
+-- El DDL vigente vive en la base.
