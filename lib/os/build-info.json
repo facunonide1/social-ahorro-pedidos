@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-09-11T22:03:47.179Z",
-  "commit": "1a998903c107ccd14c03cb05e2d65e246e62cab6",
-  "mensaje": "feat: la recepción de mercadería, con las dos fotos",
+  "construido_at": "2026-09-11T22:06:48.069Z",
+  "commit": "54d8819452dfe1ad01689e7d2357179bcaccf98f",
+  "mensaje": "feat: histórico de costos por producto y proveedor",
   "rama": "main"
 }

@@ -250,6 +250,7 @@ export const SUBAPPS: SubAppManifest[] = [
     modulos: [
       { nombre: 'Tablero', ruta: '/admin/finanzas' },
       { nombre: 'Caja / arqueos', ruta: '/admin/finanzas/caja' },
+      { nombre: 'Qué se debe', ruta: '/admin/finanzas/deuda' },
       { nombre: 'Documentos a pagar', ruta: '/admin/finanzas/documentos' },
       { nombre: 'Pagos', ruta: '/admin/finanzas/pagos' },
       { nombre: 'Gastos fijos', ruta: '/admin/finanzas/gastos-fijos' },

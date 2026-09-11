@@ -1,0 +1,29 @@
+-- 0180 · v0.93-proveedores · BLOQUE C · aplicada vía MCP
+--
+-- EL ACUERDO CON CADA PROVEEDOR, Y QUÉ SE DEBE.
+--
+-- ── EL DÍA DE COBRO VIVÍA EN EL NOMBRE DE UNA HOJA ──────────────────────────
+--
+-- «COFALOZA (JUEVES)», «DEL SUD (VIERNES)», «AMERICANA(SABADO)». El dato existe
+-- y está escrito, pero adentro del nombre de una pestaña de Excel, donde ningún
+-- aviso lo puede leer. Ahora es una columna.
+--
+-- ── UN PAGO CUBRE VARIAS FACTURAS ───────────────────────────────────────────
+--
+-- `pago_facturas` ya modelaba el muchos a muchos. Lo que faltaba era el número
+-- de resumen —Asopro y Americana mandan uno con decenas de facturas y se paga
+-- todo junto: 315 casos en el archivo— y de qué caja salió la plata.
+--
+-- ── EL PAGO EN EFECTIVO ES UN RETIRO DE FONDO ───────────────────────────────
+--
+-- Regla de oro 7. `caja_general_movimientos` ya tenía el tipo `pago_proveedor`
+-- y el estado `pendiente_aprobacion`: lo que faltaba era que el pago apuntara
+-- al movimiento. En el Excel el retiro se anota con el nombre de quien tenía la
+-- caja —«CAJA FLOR», «CAJA TAMI»— y ese dato se conserva tal cual, porque es
+-- como lo buscan.
+--
+-- El DDL vigente vive en la base. Resumen:
+--   proveedores: dia_visita, dia_cobro, trabaja_por_resumen, nombre_hoja_excel
+--   metodo_pago y pago_origen: + 'nota_credito' (compensación)
+--   pagos: resumen_numero, caja_movimiento_id, caja_nombre, sucursal_id
+--   vistas: deuda_proveedores (por factura) y deuda_por_proveedor (el total)
