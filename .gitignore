@@ -38,3 +38,6 @@ next-env.d.ts
 # siempre en el historial. La imagen del archivo que importa vive en Storage,
 # con su hash, que es donde tiene que estar (v0.83).
 data/sifaco/
+
+# El Excel de facturas y pagos: es del negocio, se baja de Drive cuando hace falta.
+data/proveedores/*.xlsx

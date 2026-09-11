@@ -1,0 +1,26 @@
+-- 0182 · v0.93-proveedores · BLOQUE E · aplicada vía MCP
+--
+-- LOS COMPROBANTES DE 2026, DEL EXCEL A LA BASE.
+--
+-- ── LO QUE HUBO QUE AFLOJAR, Y POR QUÉ ──────────────────────────────────────
+--
+-- `fecha_emision` y `fecha_recepcion` eran NOT NULL. Hay 59 comprobantes cuya
+-- fecha en el Excel no se puede leer: «09/069/2026», «03/12/0202», «20/4/».
+-- Ponerles una fecha inventada para satisfacer la restricción sería exactamente
+-- el dato falso que este sistema viene sacando — después alguien ordena por
+-- fecha y el comprobante aparece donde no va. Entran sin fecha, en cuarentena.
+--
+-- ── LAS COLUMNAS NUEVAS ─────────────────────────────────────────────────────
+--
+--   en_cuarentena / cuarentena_motivo  fuera de todos los totales, con el motivo
+--   pago_no_registrado                 se pagó y no se anotó. NO es deuda.
+--   pago_texto_original                el texto libre, tal cual, sin interpretar
+--   faltantes_texto / origen_hoja      de dónde salió cada fila
+--
+-- ── Y LA DEUDA NO CUENTA LO QUE YA SE PAGÓ ──────────────────────────────────
+--
+-- Un comprobante con texto de pago —«TRANSFERENCIA MP 11/8»— se pagó: lo dice
+-- el archivo. Sin ese filtro la pantalla mostraba 926 facturas abiertas cuando
+-- las que hay que revisar son 405, e inventaba más de cien millones de deuda.
+--
+-- El DDL vigente vive en la base.
