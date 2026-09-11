@@ -228,6 +228,7 @@ export const SUBAPPS: SubAppManifest[] = [
         { id: 'orden-manual', nombre: 'Orden manual', icono: 'FilePlus', destino: '/admin/compras/ordenes/nueva', modulo: 'compras', accion: 'crear' },
         { id: 'orden-faltantes', nombre: 'Desde faltantes', icono: 'AlertTriangle', destino: '/admin/compras/faltantes', modulo: 'compras', accion: 'ver' },
         { id: 'orden-sugerida', nombre: 'Desde recomendaciones', icono: 'Sparkles', destino: '/admin/compras/recomendaciones', modulo: 'compras', accion: 'ver' },
+        { id: 'orden-plan', nombre: 'Desde el plan de compra', icono: 'ClipboardList', destino: '/admin/compras/plan', modulo: 'compras', accion: 'ver' },
       ] },
       { id: 'recepcion', nombre: 'Registrar recepción', icono: 'PackageCheck', destino: '/admin/compras/recepciones', modulo: 'compras', accion: 'crear', primary: true },
       { id: 'devolucion', nombre: 'Nueva devolución / reclamo', icono: 'Undo2', destino: '/admin/compras/devoluciones/nueva', modulo: 'compras', accion: 'crear', primary: true },

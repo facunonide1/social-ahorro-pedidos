@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-09-11T22:19:58.452Z",
-  "commit": "3fa2d8375b576b8c407eb0b50cb6950433d12765",
-  "mensaje": "feat: avisos de pago y detección de problemas",
+  "construido_at": "2026-09-11T23:07:00.110Z",
+  "commit": "b25b681cebd60b69e5d443a353e656389956f3b5",
+  "mensaje": "fix(importacion): el alta de proveedores fallaba en silencio",
   "rama": "main"
 }

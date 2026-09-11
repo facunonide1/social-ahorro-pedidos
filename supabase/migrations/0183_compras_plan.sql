@@ -1,0 +1,23 @@
+-- 0183 · v0.94-compras · BLOQUE A · aplicada vía MCP
+--
+-- EL PLAN DE COMPRA.
+--
+-- ── EL CÁLCULO YA ESTABA ────────────────────────────────────────────────────
+--
+-- `reco_compras` (v0.89) implementa exactamente lo del brief: la demanda es el
+-- MAYOR entre el promedio de los 11 meses cerrados y el de los últimos 3, las
+-- urgencias cortan en 0,25 / 0,5 / 1 mes de cobertura, y lo sugerido es llevar
+-- la cobertura al objetivo. `ago25` queda afuera solo: viene marcado
+-- `parcial = true`, igual que el mes en curso.
+--
+-- ── LO QUE SE AGREGA ────────────────────────────────────────────────────────
+--
+--   compras_sin_calcular   los que no entran, con el motivo. No con cero.
+--   compras_salud_stock    los cuatro estados. La plata cuenta stock POSITIVO:
+--                          SIFACO tiene negativos y sumarlos daba «-$6.827 de
+--                          plata parada», que no es una cifra, es un artefacto.
+--   compras_quien_provee   a quién se le compra cada producto, de compra_venta.
+--                          NO dice a qué precio: ese dato no está.
+--   compras_transferir_*   la comparación entre sucursales, ESCRITA y apagada.
+--
+-- El DDL vigente vive en la base.
