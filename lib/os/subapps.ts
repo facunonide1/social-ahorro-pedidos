@@ -214,6 +214,7 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Cómo pagarlo', ruta: '/admin/compras/como-pagar' },
       { nombre: 'Comparador de listas', ruta: '/admin/compras/comparador' },
       { nombre: 'Órdenes de compra', ruta: '/admin/compras/ordenes' },
+      { nombre: 'Seguimiento de órdenes', ruta: '/admin/compras/ordenes/seguimiento' },
       { nombre: 'Recepciones', ruta: '/admin/compras/recepciones' },
       { nombre: 'Devoluciones', ruta: '/admin/compras/devoluciones' },
       { nombre: 'Listas de precios', ruta: '/admin/compras/listas-precios' },

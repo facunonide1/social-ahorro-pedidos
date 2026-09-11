@@ -1,0 +1,19 @@
+-- 0184 · v0.94-compras · BLOQUES C y D · aplicada vía MCP
+--
+-- CÓMO PAGARLO, Y LA ORDEN CONTRA LA RECEPCIÓN.
+--
+-- `compras_comparar_pago(monto, opciones, tasa)` pone todas las formas de pago
+-- en la misma unidad. El valor del plazo se calcula sobre el monto
+-- EFECTIVAMENTE a pagar, no sobre el nominal: una opción con descuento Y plazo
+-- no rinde sobre plata que no se va a desembolsar.
+--
+-- La tasa vive en `compras_parametros` (`tasa_mensual_pct`, 3%) y se puede
+-- pisar por llamada. Es cuánto rinde la plata de Facundo: el sistema no lo
+-- puede saber, así que no lo fija en código.
+--
+-- `ordenes_esperando_mercaderia` compara las tres puntas —lo pedido, lo
+-- recibido y lo facturado— y deriva la situación de esa comparación, no de un
+-- estado que alguien tiene que acordarse de cambiar. Un estado a mano se
+-- olvida; una comparación no.
+--
+-- El DDL vigente vive en la base.
