@@ -5,6 +5,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { SinDatos } from '@/components/demo/sin-datos'
 
 import { CajaClient, type SucCajaConfig, type TurnoRow, type MovRow } from './caja-client'
 
@@ -75,7 +76,8 @@ export default async function CajaPage() {
       <PageHeader title="Caja" description="Arqueo manual al cierre (SIFACO) → consolidado para pagos → retiros con aprobación."
         breadcrumbs={[{ label: 'Finanzas' }, { label: 'Caja' }]}
         actions={<Link href="/admin/finanzas/caja/historico" className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted/50"><History className="size-4" /> Histórico y control</Link>} />
-      <div className="p-4 md:p-6">
+      <div className="space-y-4 p-4 md:p-6">
+        <SinDatos sector="caja" hayReales={(arqs ?? []).length > 0 || (cajas ?? []).length > 0} />
         <CajaClient rol={profile.rol} sucursales={sucursales} turnos={turnoRows} movimientos={movRows} desglose={desglose} />
       </div>
     </>

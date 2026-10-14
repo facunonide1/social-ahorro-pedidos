@@ -67,7 +67,10 @@ export function OsDock({ profile }: { profile: HubProfile }) {
       {/* Sub-apps */}
       <nav className="flex flex-1 flex-col items-center gap-1.5 overflow-y-auto" aria-label="Sub-apps">
         {visibles.map((app) => (
-          <DockIcon key={app.id} ruta={app.rutaHome} icono={app.icono} nombre={app.nombre} activo={activa?.id === app.id} badge={badges[app.id]} acento={app.acento} />
+          <DockIcon key={app.id} ruta={app.rutaHome} icono={app.icono}
+            nombre={app.sinDatosReales ? `${app.nombre} · sin datos cargados` : app.nombre}
+            activo={activa?.id === app.id} badge={badges[app.id]} acento={app.acento}
+            sinDatos={!!app.sinDatosReales} />
         ))}
 
         {resto.length > 0 && (
@@ -83,6 +86,9 @@ export function OsDock({ profile }: { profile: HubProfile }) {
                 <Link key={app.id} href={app.rutaHome} className="flex items-center gap-2.5 rounded-md px-2 py-2 text-sm transition-colors hover:bg-accent/60">
                   <Icon name={app.icono} className="size-4" style={{ color: app.acento }} />
                   <span>{app.nombre}</span>
+                  {app.sinDatosReales && (
+                    <span className="text-[10px] text-muted-foreground">sin datos</span>
+                  )}
                   {badges[app.id] && <span className={cn('ml-auto rounded-full px-1.5 text-[10px] font-bold text-white', SEV_CLS[badges[app.id]!.severidad])}>{badges[app.id]!.count}</span>}
                 </Link>
               ))}
@@ -120,8 +126,9 @@ export function OsDock({ profile }: { profile: HubProfile }) {
   )
 }
 
-function DockIcon({ ruta, icono, nombre, activo, badge, acento }: {
-  ruta: string; icono: string; nombre: string; activo: boolean; badge: BadgeResult; acento: string
+function DockIcon({ ruta, icono, nombre, activo, badge, acento, sinDatos }: {
+  ruta: string; icono: string; nombre: string; activo: boolean; badge: BadgeResult
+  acento: string; sinDatos?: boolean
 }) {
   return (
     <Tooltip>
@@ -131,7 +138,13 @@ function DockIcon({ ruta, icono, nombre, activo, badge, acento }: {
           aria-label={nombre}
           className={cn('relative flex size-11 items-center justify-center rounded-xl transition-colors', activo ? 'bg-nora-bg text-primary' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground')}
         >
-          <Icon name={icono} className="size-5" style={activo ? { color: acento } : undefined} />
+          {/* Un sector sin un dato real se muestra atenuado: en el menú se veía
+              igual que los que andan, y parecía que andaba (auditoría 14-oct). */}
+          <Icon name={icono} className={cn('size-5', sinDatos && !activo && 'opacity-40')}
+            style={activo ? { color: acento } : undefined} />
+          {sinDatos && !badge && (
+            <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full bg-muted-foreground/50" aria-hidden />
+          )}
           {badge && (
             <span className={cn('absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold text-white', SEV_CLS[badge.severidad])}>
               {badge.count > 99 ? '99+' : badge.count}

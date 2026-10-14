@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 
 import { PageHeader } from '@/components/shared/page-header'
+import { SinDatos } from '@/components/demo/sin-datos'
 import { createAdminClient } from '@/lib/supabase/server'
 import { gateDocumentos } from '@/lib/documentos/permisos'
 import { grillaComparador } from '@/lib/documentos/costos'
@@ -43,7 +44,8 @@ export default async function ComparadorCostosPage({ searchParams }: { searchPar
         description="Lo que realmente pagaste, por producto y por proveedor."
         breadcrumbs={[{ label: 'Compras' }, { label: 'Costos' }]}
       />
-      <div className="p-4 md:p-6">
+      <div className="space-y-4 p-4 md:p-6">
+        <SinDatos sector="costos" hayReales={filas.length > 0} />
         <ComparadorCostosClient
           filas={filas}
           proveedores={proveedores}

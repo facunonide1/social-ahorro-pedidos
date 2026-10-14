@@ -2,6 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { SinDatos } from '@/components/demo/sin-datos'
 import { parametro, tituloDePantalla } from '@/lib/os/definicion'
 import { getVencimientos, resumenVencimientos } from '@/lib/operaciones/vencimientos'
 import { VencimientosClient } from './vencimientos-client'
@@ -33,7 +34,8 @@ export default async function VencimientosPage() {
       <PageHeader title={tituloDeclarado}
         description="Control manual por producto. NORA decide qué hacer cruzando vencimiento + stock."
         breadcrumbs={[{ label: 'Operación', href: '/admin/operaciones' }, { label: 'Vencimientos' }]} />
-      <div className="p-4 md:p-6">
+      <div className="space-y-4 p-4 md:p-6">
+        <SinDatos sector="vencimientos" hayReales={filas.length > 0} />
         <VencimientosClient filas={filas} resumen={resumen} sucursales={(sucs ?? []) as any} proveedores={(provs ?? []) as any} sucursalActiva={sucursalId} esTodas={esTodas} diasAviso={diasAviso} />
       </div>
     </>

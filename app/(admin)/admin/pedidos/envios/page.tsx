@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { KpiCard } from '@/components/cards/kpi-card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { SinDatos } from '@/components/demo/sin-datos'
 import { FORMA_ENTREGA_LABELS, FORMA_ENTREGA_PENDIENTE, type FormaEntrega } from '@/lib/types'
 
 import { EnviosClient } from './envios-client'
@@ -104,6 +105,8 @@ export default async function EnviosPage() {
             ))}
           </div>
         </section>
+
+        <SinDatos sector="zonas" hayReales={filas.length > 0} />
 
         <EnviosClient
           zonas={filas}

@@ -30,9 +30,22 @@ import { COOKIE_SIN_DEMO } from './estado-nombre'
 
 export { COOKIE_SIN_DEMO }
 
-/** ¿Está puesto el interruptor de «ver sin demostración»? */
+/**
+ * ¿Se está mirando el sistema SIN los datos de demostración?
+ *
+ * ── POR QUÉ EL DEFAULT ES «SÍ» ──────────────────────────────────────────────
+ *
+ * Estaba al revés: había que prender el lente a propósito. La auditoría del 14
+ * de octubre lo midió — ocho tablas con 8.880 filas y CERO reales: 7.620 ventas
+ * que nunca ocurrieron, 480 stocks, 150 clientes, 48 arqueos. Alguien que
+ * entrara sin saber las veía como si fueran del negocio.
+ *
+ * Un dato inventado que se muestra por defecto no es una demostración: es una
+ * mentira con un interruptor opcional. Ahora hay que pedir explícitamente ver la
+ * demostración, y mientras se la mira el aviso está puesto.
+ */
 export function sinDemo(): boolean {
-  return cookies().get(COOKIE_SIN_DEMO)?.value === '1'
+  return cookies().get(COOKIE_SIN_DEMO)?.value !== '0'
 }
 
 export interface ConteoDemo {

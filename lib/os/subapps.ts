@@ -79,6 +79,15 @@ export type SubAppManifest = {
   quickActions: QuickAction[]
   /** Registrada pero NO mostrada (sub-apps del catálogo aún no construidas). */
   proximamente?: boolean
+  /**
+   * El sector está construido y **no tiene un solo dato real**: la clave de
+   * `SECTORES_VACIOS` que explica qué le falta.
+   *
+   * Se muestra en el menú con una marca. La auditoría del 14 de octubre
+   * encontró ocho tablas con 8.880 filas y cero reales, y en el menú se veían
+   * igual que los sectores que sí andan: parecía que andaban.
+   */
+  sinDatosReales?: string
   /** Abre en app externa (link ↗). */
   externo?: boolean
 }
@@ -303,6 +312,7 @@ export const SUBAPPS: SubAppManifest[] = [
     acento: '#3B82F6',
     descripcion: 'Chat interno, comunicados y tu bandeja',
     rutaHome: '/admin/comunicacion',
+    sinDatosReales: 'comunicacion',
     navInterna: 'tabs',
     permisosRequeridos: ['comunicacion'],
     modulos: [
@@ -326,6 +336,7 @@ export const SUBAPPS: SubAppManifest[] = [
     acento: '#EC4899',
     descripcion: 'CRM, segmentos, puntos y campañas',
     rutaHome: '/admin/clientes',
+    sinDatosReales: 'clientes',
     navInterna: 'tabs',
     permisosRequeridos: ['clientes'],
     modulos: [
@@ -411,6 +422,7 @@ export const SUBAPPS: SubAppManifest[] = [
     acento: '#DC2626',
     descripcion: 'Controlados, trazabilidad, papeles, recalls y SOPs',
     rutaHome: '/admin/compliance',
+    sinDatosReales: 'compliance',
     navInterna: 'tabs',
     permisosRequeridos: ['operaciones'],
     modulos: [

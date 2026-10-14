@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-14T19:06:50.955Z",
-  "commit": "45b20b500fc6469eb3274f184fa4b807167eaaa0",
-  "mensaje": "fix: la RLS distingue rol y sucursal",
+  "construido_at": "2026-10-14T19:13:00.765Z",
+  "commit": "b9dfb35934cc2de1524b7c96e516554d2834ca3d",
+  "mensaje": "fix: las seis cosas rotas de la auditoría",
   "rama": "main"
 }

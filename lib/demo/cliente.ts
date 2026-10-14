@@ -14,9 +14,11 @@
 
 import { COOKIE_SIN_DEMO } from './estado-nombre'
 
+/**
+ * El mismo default que `sinDemo()` del servidor: SIN demostración, salvo que
+ * se haya pedido verla explícitamente (`=0`).
+ */
 export function sinDemoCliente(): boolean {
-  if (typeof document === 'undefined') return false
-  return document.cookie
-    .split('; ')
-    .some((c) => c === `${COOKIE_SIN_DEMO}=1`)
+  if (typeof document === 'undefined') return true
+  return !document.cookie.split('; ').some((c) => c === `${COOKIE_SIN_DEMO}=0`)
 }

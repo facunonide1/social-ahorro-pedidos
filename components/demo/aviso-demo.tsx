@@ -28,9 +28,10 @@ export function AvisoDemo({
   const [pendiente, empezar] = useTransition()
 
   function alternar() {
-    // La cookie es la lente. Un año de vida para que no se apague sola en el
-    // medio de una revisión.
-    document.cookie = `${COOKIE_SIN_DEMO}=${sinDemo ? '' : '1'}; path=/; max-age=${sinDemo ? 0 : 31536000}`
+    // La cookie es la lente, y el DEFAULT es sin demostración: para ver los
+    // datos sembrados hay que pedirlo (`=0`). Antes era al revés y alguien que
+    // entraba sin saber veía 7.620 ventas que nunca ocurrieron.
+    document.cookie = `${COOKIE_SIN_DEMO}=${sinDemo ? '0' : '1'}; path=/; max-age=31536000`
     empezar(() => router.refresh())
   }
 
@@ -38,11 +39,12 @@ export function AvisoDemo({
     return (
       <div className="rounded-lg border border-dashed border-border bg-muted/40 px-4 py-3">
         <p className="text-sm">
-          <b>Estás viendo el sistema sin la demostración.</b> Lo que aparezca acá es lo
-          que hay de verdad cargado. Si está vacío, está vacío.
+          <b>Estás viendo el sistema sin la demostración.</b> Es así por defecto: lo que
+          aparezca acá es lo que hay de verdad cargado. Si está vacío, está vacío.
+          {total > 0 && <> Hay {total.toLocaleString('es-AR')} registros sembrados escondidos.</>}
         </p>
         <Button variant="ghost" size="sm" className="mt-1 h-7 px-2 text-xs" onClick={alternar} disabled={pendiente}>
-          Volver a mostrar la demostración
+          Mostrar la demostración
         </Button>
       </div>
     )
@@ -53,14 +55,14 @@ export function AvisoDemo({
   return (
     <div className="rounded-lg border border-amber-400/60 bg-amber-50 px-4 py-3 dark:bg-amber-950/20">
       <p className="text-sm text-amber-900 dark:text-amber-200">
-        <b>Los números de abajo son de demostración.</b> Hay{' '}
+        <b>Estás mirando la demostración, y lo pediste vos.</b> Los números de abajo no
+        son del negocio: hay{' '}
         {total.toLocaleString('es-AR')} registros sembrados —{' '}
         {conceptos.map((c) => `${c.filas.toLocaleString('es-AR')} ${c.concepto}`).join(', ')} —
-        y ninguno pasó por el negocio. Cuando cargues los datos reales, esto va a
-        cambiar solo.
+        y ninguno pasó por el negocio.
       </p>
       <Button variant="ghost" size="sm" className="mt-1 h-7 px-2 text-xs text-amber-900 dark:text-amber-200" onClick={alternar} disabled={pendiente}>
-        Ver el sistema sin la demostración
+        Volver a ver sólo lo real
       </Button>
     </div>
   )

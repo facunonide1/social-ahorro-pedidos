@@ -7,6 +7,7 @@ import type { RecepcionMercaderia } from '@/lib/types/admin'
 
 import { RecepcionEstadoBadge } from '@/components/hub/recepcion-estado-badge'
 import { PageHeader } from '@/components/shared/page-header'
+import { SinDatos } from '@/components/demo/sin-datos'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -72,6 +73,8 @@ export default async function RecepcionesPage() {
             <AlertDescription>{error.message}</AlertDescription>
           </Alert>
         )}
+
+        <SinDatos sector="recepcion" hayReales={(rawRows ?? []).length > 0} />
 
         <Card className="overflow-hidden">
           <Table>

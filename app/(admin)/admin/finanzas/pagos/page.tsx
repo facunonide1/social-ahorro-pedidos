@@ -1,6 +1,7 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { SinDatos } from '@/components/demo/sin-datos'
 
 import { PagosClient, type PagoRow, type SucCaja, type CuentaSaldo } from './pagos-client'
 
@@ -37,7 +38,8 @@ export default async function PagosPage() {
     <>
       <PageHeader title="Pagos" description="Ejecutá pagos a proveedores moviendo dinero real desde un origen."
         breadcrumbs={[{ label: 'Finanzas' }, { label: 'Pagos' }]} />
-      <div className="p-4 md:p-6">
+      <div className="space-y-4 p-4 md:p-6">
+        <SinDatos sector="pagos" hayReales={rows.length > 0} />
         <PagosClient pagos={rows} proveedores={((provs ?? []) as any[]).map((p) => ({ id: p.id, nombre: p.razon_social }))} sucursales={sucursales} cuentas={cuentasBancarias} />
       </div>
     </>

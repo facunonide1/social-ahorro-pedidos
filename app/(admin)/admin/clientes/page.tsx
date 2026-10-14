@@ -5,6 +5,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
+import { SinDatos } from '@/components/demo/sin-datos'
 import { AccionesSubApp } from '@/components/os/acciones-subapp'
 import { AccesoCentroDatos } from '@/components/centro-datos/acceso-centro-datos'
 import { KpiCard } from '@/components/cards/kpi-card'
@@ -89,6 +90,8 @@ export default async function ClientesCrmPage() {
             )
           })}
         </section>
+
+        <SinDatos sector="clientes" hayReales={rows.length > 0} />
 
         <ClientesListClient rows={rows} sucursales={((sucs ?? []) as any[]).map((s) => ({ id: s.id, nombre: s.nombre }))} puedeCrear={['super_admin', 'gerente', 'marketing', 'administrativo'].includes(profile.rol)} />
       </div>
