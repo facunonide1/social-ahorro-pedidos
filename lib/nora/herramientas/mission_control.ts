@@ -66,8 +66,17 @@ export const HERRAMIENTAS_MISSION_CONTROL: Herramienta[] = [
         if (n) items.push(`🔴 ${n} tarea(s) vencida(s) → /admin/tareas`)
       }
       if (ve(ctx, 'finanzas')) {
-        const n = await cuenta(adm.from('facturas_proveedor').select('id', { count: 'exact', head: true }).lt('fecha_vencimiento', hoy).in('estado', DOC_PEND))
-        if (n) items.push(`🔴 ${n} documento(s) a pagar vencido(s) → /admin/finanzas/documentos`)
+        // LA DEUDA SALE DE `deuda_proveedores`, NO DE CONTAR FACTURAS.
+        //
+        // Contar `facturas_proveedor` por estado daba 4.293 cuando la deuda son
+        // 412: incluía los 3.913 marcados «se pagó y no se anotó», los pagados,
+        // las notas de crédito y los que están en cuarentena. La vista ya
+        // resuelve esos cuatro filtros y es la que muestra la pantalla de deuda.
+        // Dos lugares que dicen distinto sobre el mismo dato es peor que uno
+        // solo que no diga nada (auditoría del 14-oct).
+        const n = await cuenta(adm.from('deuda_proveedores').select('factura_id', { count: 'exact', head: true })
+          .gt('saldo', 0).lt('vence', hoy))
+        if (n) items.push(`🔴 ${n} comprobante(s) vencido(s) sin pagar → /admin/finanzas/deuda`)
       }
       if (ve(ctx, 'operaciones')) {
         const n = await cuenta(adm.from('vencimientos').select('id', { count: 'exact', head: true }).eq('estado', 'vigente').lte('fecha_vencimiento', en30))

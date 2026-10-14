@@ -117,8 +117,23 @@ export async function POST(req: NextRequest) {
   const envio = Math.max(0, Number(body.envio) || 0)
   const total = renglonesOk.reduce((a, r) => a + r.price * r.qty, 0) + envio
 
+  // ── EL NÚMERO DEL PEDIDO ──────────────────────────────────────────────────
+  //
+  // La base exige que todo pedido que no venga de la tienda web tenga un número
+  // propio: `woo_order_id` XOR `manual_order_number`, con un check constraint.
+  // Sin esto el insert se rechaza y la pantalla no puede crear un pedido —
+  // que es lo que pasaba desde v0.91 y encontró la auditoría del 14 de octubre.
+  //
+  // El número sale de la misma secuencia que usa el CRM de pedidos: es el
+  // correlativo que la gente ya conoce, no uno nuevo.
+  const { data: numero, error: eNum } = await adm.rpc('siguiente_numero_manual')
+  if (eNum || numero == null) {
+    return NextResponse.json({ error: 'No se pudo asignar el número del pedido.' }, { status: 500 })
+  }
+
   const { data: creado, error } = await adm.from('orders').insert({
     origin: body.canal ?? 'whatsapp',
+    manual_order_number: numero,
     status: 'nuevo',
     sucursal_id: body.sucursal_id,
     forma_entrega: body.forma_entrega,

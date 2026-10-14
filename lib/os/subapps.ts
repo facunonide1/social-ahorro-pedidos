@@ -270,10 +270,11 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Aprobaciones', ruta: '/admin/aprobaciones' },
     ],
     badge: async (sb) => {
-      // Documentos con vencimiento pasado (cuentas por pagar atrasadas).
-      const n = await cuenta(sb.from('facturas_proveedor').select('id', { count: 'exact', head: true })
-        .lt('fecha_vencimiento', hoyISO())
-        .in('estado', ['pendiente_aprobacion', 'aprobada', 'programada_pago', 'pagada_parcial', 'vencida']))
+      // La deuda sale de `deuda_proveedores`, que ya descuenta lo pagado, lo que
+      // se pagó sin anotar, las notas de crédito y lo que está en cuarentena.
+      // Contar facturas por estado daba 4.293 cuando son 412 (auditoría 14-oct).
+      const n = await cuenta(sb.from('deuda_proveedores').select('factura_id', { count: 'exact', head: true })
+        .gt('saldo', 0).lt('vence', hoyISO()))
       return n > 0 ? { count: n, severidad: 'danger' } : null
     },
     quickActions: [

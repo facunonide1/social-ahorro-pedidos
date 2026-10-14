@@ -4,13 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "node scripts/build-info.mjs && npm run auditar:cortes && npm run auditar:rls && npm run auditar:lente && npm run probar:permisos && next build",
+    "build": "node scripts/build-info.mjs && npm run auditar:cortes && npm run auditar:rls && npm run auditar:lente && npm run probar:permisos && npm run auditar:rls-roles && next build",
     "start": "next start -p 3001",
     "lint": "next lint",
     "auditar:cortes": "node scripts/auditar-cortes.mjs",
     "auditar:lente": "node scripts/auditar-lente.mjs",
     "probar:permisos": "npx tsx scripts/probar-permisos-nora.ts",
-    "auditar:rls": "node scripts/auditar-rls.mjs"
+    "auditar:rls": "node scripts/auditar-rls.mjs",
+    "auditar:rls-roles": "node scripts/auditar-rls-roles.mjs",
+    "permisos:sincronizar": "npx tsx --env-file=.env.local scripts/sincronizar-permisos.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",

@@ -1,0 +1,62 @@
+-- 0186 · v0.95-usable · BLOQUE A · aplicada vía MCP
+--
+-- LA RLS DISTINGUE ROL Y SUCURSAL.
+--
+-- ── EL AGUJERO ──────────────────────────────────────────────────────────────
+--
+-- Las ~230 políticas de lectura decían lo mismo:
+--
+--     EXISTS (SELECT 1 FROM users_admin ua WHERE ua.id = auth.uid() AND ua.activo)
+--
+-- O sea: cualquier usuario activo del hub lee todo. La auditoría del 14 de
+-- octubre lo probó creando tres usuarios y entrando con cada uno: encargado,
+-- cajero y repartidor veían las 4.976 facturas, la deuda completa, los 150
+-- clientes, los 48 arqueos y las 13.076 anomalías.
+--
+-- La separación por rol existía SÓLO en las pantallas (`requireAdminHubAccess`).
+-- El token del repartidor vive en su navegador y PostgREST está expuesto: era
+-- una URL.
+--
+-- ── POR QUÉ NO SE PODÍA ARREGLAR ANTES ──────────────────────────────────────
+--
+-- La matriz de permisos —18 módulos × 5 acciones × 13 roles— vive en
+-- `lib/types/permisos.ts`. Una política de Postgres no puede importar
+-- TypeScript, así que la RLS no tenía con qué decidir.
+--
+-- ── CÓMO SE RESOLVIÓ ────────────────────────────────────────────────────────
+--
+--   1 · `permisos_matriz` — la misma matriz, en SQL. La sincroniza
+--       `scripts/sincronizar-permisos.ts` desde el TS, que sigue siendo la
+--       fuente de verdad.
+--   2 · `tabla_modulo` — qué módulo protege cada tabla y por qué columna se
+--       filtra por sucursal. Es DATO, no código: 180 tablas declaradas con su
+--       motivo al lado.
+--   3 · `hub_puede_ver(modulo)`, `hub_puede(modulo, accion)` y
+--       `hub_sucursal_activa()` — preset del rol + overrides de
+--       `permisos_custom`, igual que `puede()` en el TS.
+--   4 · Las políticas se GENERAN del mapeo, no se escriben a mano.
+--
+-- ── Y UNA LECCIÓN DE RENDIMIENTO QUE COSTÓ DOS INTENTOS ─────────────────────
+--
+-- Una función STABLE dentro de una política **se llama una vez por fila**:
+-- Postgres no la saca del bucle. Sobre `productos_catalogo` son 46.009
+-- llamadas, cada una con un join, y la consulta no termina — el primer intento
+-- rompió `pedidos_buscar_productos` y `compras_detectar`.
+--
+-- Envolverla en `(select ...)` la convierte en un InitPlan: se evalúa UNA vez
+-- por sentencia. Es la diferencia entre 11 ms y un timeout, y es también lo que
+-- arregla el timeout viejo de `proveedores_detectar()`.
+--
+-- ── EL CASO DEL CATÁLOGO, DECLARADO ─────────────────────────────────────────
+--
+-- Los nombres y los precios de venta no son secretos: están en la góndola.
+-- Quien vende o reparte necesita buscar un producto, así que la lectura se abre
+-- a operaciones + pedidos + clientes.
+--
+-- **Pero `precio_costo_promedio` viaja en la misma fila.** Postgres no filtra
+-- por columna en una política de fila: hoy quien ve el catálogo ve el costo.
+-- Separarlo es trabajo pendiente y está anotado.
+--
+-- El DDL vigente vive en la base. Lo que queda SIN tocar: las políticas de
+-- escritura (ya nombraban roles) y las de la app de pedidos y la cuponera, que
+-- tienen su propio padrón de usuarios.
