@@ -25,11 +25,27 @@
  *   npm run auditar:rls-roles
  */
 import { execSync } from 'child_process'
+import { existsSync } from 'fs'
 
-const SALIDA = execSync('npx tsx --env-file=.env.local scripts/_auditar-rls-roles.ts', {
-  stdio: ['ignore', 'pipe', 'inherit'],
-  env: process.env,
-}).toString()
+// `.env.local` existe en la máquina de Facundo y NO existe en la de Vercel: está
+// en el .gitignore. Pasarlo con `--env-file` cuando no está hace que node corte
+// con ENOENT antes de empezar, y el deploy entero falla por un auditor. En
+// Vercel las variables ya vienen en el entorno del build.
+const ENV = existsSync('.env.local') ? '--env-file=.env.local ' : ''
 
-process.stdout.write(SALIDA)
-if (/FALLA/.test(SALIDA)) process.exit(1)
+// Si el auditor corta con código distinto de cero, lo que dijo antes de cortar
+// es justamente el motivo: hay que imprimirlo, no perderlo.
+let salida = ''
+let corto = false
+try {
+  salida = execSync(`npx tsx ${ENV}scripts/_auditar-rls-roles.ts`, {
+    stdio: ['ignore', 'pipe', 'inherit'],
+    env: process.env,
+  }).toString()
+} catch (e) {
+  salida = (e.stdout ?? '').toString()
+  corto = true
+}
+
+process.stdout.write(salida)
+if (corto || /FALLA/.test(salida)) process.exit(1)

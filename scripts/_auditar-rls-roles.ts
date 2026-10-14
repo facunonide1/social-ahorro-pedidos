@@ -73,6 +73,26 @@ async function main() {
   }
 
   // ── 3 · ENTRAR CON CADA ROL Y MEDIR ───────────────────────────────────────
+  //
+  // Esta parte crea usuarios de verdad en auth, entra con cada uno y los borra.
+  // Hacerlo en el build de Vercel sería crear y borrar usuarios en la base de
+  // PRODUCCIÓN en cada deploy: si el build se cancela a la mitad, queda un
+  // usuario vivo con contraseña conocida. Eso es una puerta, no una prueba.
+  //
+  // El portón sigue siendo el build local, que es el que corre antes de cada
+  // push y el que falla. En Vercel quedan las dos verificaciones de arriba, que
+  // sólo leen — y la de la matriz desincronizada es la única de las tres que
+  // puede llegar sola hasta producción sin que nadie la vea.
+  if (process.env.VERCEL) {
+    console.log(
+      '  --    las sesiones por rol no se prueban en el build de Vercel: crear usuarios en ' +
+      'producción para medir es peor que la medición. Se prueban en el build local, antes del push.',
+    )
+    console.log(fallas === 0 ? '\nTODO BIEN' : `\nFALLA · ${fallas} problemas de RLS por rol`)
+    if (fallas > 0) process.exit(1)
+    return
+  }
+
   const { data: suc } = await adm.from('sucursales')
     .select('id').eq('activa', true).order('codigo').limit(1).maybeSingle()
 
@@ -123,6 +143,7 @@ async function main() {
   }
 
   console.log(fallas === 0 ? '\nTODO BIEN' : `\nFALLA · ${fallas} problemas de RLS por rol`)
+  if (fallas > 0) process.exit(1)
 }
 
 main().catch((e) => { console.error('FALLA · el auditor no pudo correr:', e?.message ?? e); process.exit(1) })
