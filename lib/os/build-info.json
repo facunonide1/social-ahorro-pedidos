@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-14T19:15:05.476Z",
-  "commit": "0362d236bce9380e60f69d8de7ad2f0cd5f6d174",
-  "mensaje": "fix: el lente prendido por defecto y los motivos a la vista",
+  "construido_at": "2026-10-14T19:20:44.027Z",
+  "commit": "138efd2f55f183d4da05944b976606f93024bc83",
+  "mensaje": "fix: las pantallas huérfanas al menú",
   "rama": "main"
 }

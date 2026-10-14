@@ -1,0 +1,18 @@
+-- 0188 · v0.95-usable · BLOQUE E · aplicada vía MCP
+--
+-- EL ENCABEZADO DE COMPRAS, CON LA FÓRMULA QUE MANDA.
+--
+-- `compras_global` usaba sólo el promedio de los 11 meses ($160.491.698 · 1,66
+-- meses) y `reco_compras` el MAYOR entre 11 meses y últimos 3 ($205.787.414 ·
+-- 1,29). Dos números distintos sobre el mismo dato en la misma pantalla: se
+-- reportó en v0.94 y quedó sin arreglar.
+--
+-- Manda la fórmula. El encabezado se corrige, no la lista: la regla existe para
+-- que un producto que acelera no se subestime.
+--
+-- Y la vista trae `stock_leido_at`: los $100,8 M urgentes se calculan sobre el
+-- archivo que esté cargado, y hoy tiene seis semanas. El cálculo está bien; la
+-- foto vieja es otra cosa y hay que poder verla.
+--
+-- La plata también pasó a contar stock POSITIVO: SIFACO tiene negativos
+-- (bonificados y ajustes) y sumarlos daba cifras que no son cifras.

@@ -34,6 +34,9 @@ export function PlanClient({
   const [lista, setLista] = useState<'comprar' | 'sobra' | 'dormido' | 'pedido'>('comprar')
 
   const objetivo = Number(parametros.find((p) => p.clave === 'cobertura_objetivo_meses')?.valor ?? 1)
+  const diasDelDato = global?.stock_leido_at
+    ? Math.floor((Date.now() - Date.parse(global.stock_leido_at)) / 86_400_000)
+    : 0
   const sobra = noComprar.filter((r) => r.sobra)
   const dormido = noComprar.filter((r) => r.sin_venta_11m)
   const pedido = noComprar.filter((r) => r.a_pedido)
@@ -56,6 +59,18 @@ export function PlanClient({
           con más de tres meses de cobertura, y al mismo tiempo{' '}
           {aComprar.length.toLocaleString('es-AR')} productos entran en quiebre.
         </p>
+
+        {/* E.2 · DE CUÁNDO ES LA FOTO. El cálculo está bien; el archivo puede
+            tener semanas, y todos estos millones salen de ahí. */}
+        {global?.stock_leido_at && (
+          <p className={`mt-2 text-xs leading-snug ${diasDelDato > 7 ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
+            {diasDelDato > 7 ? '⚠ ' : ''}
+            Todo esto se calcula sobre el archivo de stock del{' '}
+            <b>{new Date(global.stock_leido_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}</b>
+            {diasDelDato > 0 && <> — hace {diasDelDato} días</>}.
+            {diasDelDato > 7 && ' El cálculo está bien; la foto está vieja. Importá el maestro de SIFACO otra vez antes de pedir.'}
+          </p>
+        )}
       </section>
 
       {/* ── A.3 · PRIMERO MIRAR SI HAY QUE TRANSFERIR ─────────────────── */}
@@ -73,6 +88,26 @@ export function PlanClient({
               sobre el <b>consolidado de las cuatro</b>.
             </>
           )}
+        </AlertDescription>
+      </Alert>
+
+      {/* ── E.5 · LO QUE ESTA PANTALLA NO PUEDE CONTESTAR ─────────────── */}
+      <Alert>
+        <HelpCircle className="size-4" />
+        <AlertDescription className="space-y-1 text-xs leading-snug">
+          <p className="font-medium">Tres cosas que esta pantalla no sabe, y conviene tenerlas presentes:</p>
+          <p>
+            · <b>A qué precio te lo vende cada droguería.</b> Ese dato no está en ningún archivo. Se
+            arma solo cuando empiecen a entrar facturas fotografiadas en la recepción.
+          </p>
+          <p>
+            · <b>Cuánto hay en cada sucursal.</b> El stock que ves es el total de las cuatro: SIFACO
+            exporta el maestro sin apertura por local.
+          </p>
+          <p>
+            · <b>Si otra sucursal lo tiene parado.</b> Transferir es gratis y comprar cuesta plata,
+            pero sin el stock por local no se puede comparar.
+          </p>
         </AlertDescription>
       </Alert>
 
