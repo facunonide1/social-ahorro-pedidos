@@ -1,0 +1,23 @@
+-- 0187 · v0.95-usable · BLOQUE B · aplicada vía MCP
+--
+-- LAS COSAS ROTAS DE LA AUDITORÍA.
+--
+-- `siguiente_numero_manual()` — la pantalla de armar un pedido no podía crear
+-- ninguno: la base exige `woo_order_id` XOR `manual_order_number` con un check
+-- constraint y el endpoint de v0.91 no lo asignaba. Usa la misma secuencia que
+-- el CRM desde la migración 0002: el correlativo que la gente ya conoce.
+--
+-- `contar_filas_demo()` — cuántas filas inventadas tiene cada tabla, contadas
+-- de verdad. El auditor del lente las tenía escritas a mano y se
+-- desincronizaron: decía `tareas: 12` cuando había 64. Ahora conoce las 75
+-- tablas marcables en vez de 23.
+--
+-- `proveedores_detectar()` — dos arreglos para que corra con sesión de usuario:
+-- la mediana por proveedor se calcula UNA vez en un CTE sobre los últimos 12
+-- meses (antes la recalculaba por cada comprobante), y los duplicados se buscan
+-- en los últimos 90 días (un duplicado de 2024 ya no es noticia).
+--
+-- El bucle de ruido: las cuatro recurrencias de «Cargar trazabilidad ANMAT» —una
+-- por sucursal— quedaron APAGADAS, sus 196 tareas descartadas con el motivo
+-- escrito, y las 989 notificaciones borradas. No se borraron las tareas: son el
+-- registro de que la recurrencia corrió. Reactivarla es decisión de Facundo.

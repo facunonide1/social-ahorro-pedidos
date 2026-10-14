@@ -37,31 +37,41 @@ import { execSync } from 'child_process'
  * Una tabla marcable pero vacía no puede mentir todavía; se lista igual, porque
  * el día que se carguen datos de prueba sí puede.
  */
-export const TABLAS_MARCABLES = {
-  ventas_diarias: 7620,
-  irregularidades_stock: 108,
-  arqueos_caja: 48,
-  stock_items: 480,
-  clientes: 150,
-  vencimientos: 26,
-  tareas: 12,
-  ofertas: 3,
-  nora_avisos: 15,
-  notificaciones_admin: 0,
-  producto_rotacion: 0,
-  movimientos_stock: 0,
-  lotes_productos: 0,
-  alertas_stock: 0,
-  avisos_faltante: 10,
-  facturas_proveedor: 0,
-  transferencias_sucursal: 0,
-  controles_zona: 0,
-  demanda_invisible: 0,
-  mensajes: 0,
-  ordenes_compra: 0,
-  proveedores: 0,
-  productos_catalogo: 120,
+/**
+ * Las tablas con `es_demo` y cuántas filas inventadas tienen HOY.
+ *
+ * **No se escribe a mano.** Lo estuvo, y se desincronizó: decía `tareas: 12`
+ * cuando había 64 y `controles_zona: 0` cuando había 64, así que marcaba como
+ * «no mienten hoy» dos pantallas que sí mentían. Lo encontró la auditoría del
+ * 14 de octubre.
+ *
+ * Los números salen de `scripts/conteo-demo.json`, que genera
+ * `npm run contar:demo` contando contra la base.
+ */
+function cargarConteo() {
+  if (!existsSync(ARCHIVO_CONTEO)) {
+    console.log(`AVISO: falta ${ARCHIVO_CONTEO}. Corré: npm run contar:demo`)
+    console.log('       Sin él no se puede saber qué tablas tienen datos inventados hoy.\n')
+    return { tablas: {}, medido_at: null }
+  }
+  return JSON.parse(readFileSync(ARCHIVO_CONTEO, 'utf8'))
 }
+
+const ARCHIVO_CONTEO = 'scripts/conteo-demo.json'
+const CONTEO = cargarConteo()
+
+// Un conteo viejo es casi tan malo como uno escrito a mano: los datos de
+// demostración se cargan y se borran, y el auditor decide con esto.
+if (CONTEO.medido_at) {
+  const dias = Math.floor((Date.now() - Date.parse(CONTEO.medido_at)) / 86_400_000)
+  if (dias > 7) {
+    console.log(`AVISO: el conteo de filas de demostración tiene ${dias} días. Corré: npm run contar:demo\n`)
+  }
+}
+
+export const TABLAS_MARCABLES = Object.fromEntries(
+  Object.entries(CONTEO.tablas ?? {}).map(([t, v]) => [t, v.demo]),
+)
 
 const EXENTOS = [
   'scripts/auditar-lente.mjs',

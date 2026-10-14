@@ -12,7 +12,8 @@
     "probar:permisos": "npx tsx scripts/probar-permisos-nora.ts",
     "auditar:rls": "node scripts/auditar-rls.mjs",
     "auditar:rls-roles": "node scripts/auditar-rls-roles.mjs",
-    "permisos:sincronizar": "npx tsx --env-file=.env.local scripts/sincronizar-permisos.ts"
+    "permisos:sincronizar": "npx tsx --env-file=.env.local scripts/sincronizar-permisos.ts",
+    "contar:demo": "node --env-file=.env.local scripts/contar-demo.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",

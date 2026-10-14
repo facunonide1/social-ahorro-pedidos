@@ -1,20 +1,80 @@
 {
   "crons": [
-    { "path": "/api/ai/resumen-diario",       "schedule": "0 11 * * *" },
-    { "path": "/api/cron/generar-agenda",     "schedule": "0 8 * * *" },
-    { "path": "/api/cron/marcar-vencidas",    "schedule": "0 12 * * *" },
-    { "path": "/api/cron/escalamiento",       "schedule": "30 12 * * *" },
-    { "path": "/api/cron/metricas-nightly",   "schedule": "0 3 * * *" },
-    { "path": "/api/cron/metricas-stock",     "schedule": "30 3 * * *" },
-    { "path": "/api/cron/alertas-stock",      "schedule": "0 4 * * *" },
-    { "path": "/api/cron/reporte-semanal",    "schedule": "0 10 * * 1" },
-    { "path": "/api/cron/calcular-objetivos", "schedule": "0 2 * * *" },
-    { "path": "/api/cron/check-triggers",     "schedule": "0 9 * * *" },
-    { "path": "/api/cron/gastos-fijos",       "schedule": "0 6 1 * *" },
-    { "path": "/api/cron/comunicacion-recordatorios", "schedule": "0 13 * * *" },
-    { "path": "/api/cron/comunicacion-resumen",       "schedule": "0 22 * * *" },
-    { "path": "/api/cron/correr-automatizaciones",    "schedule": "0 9 * * *" },
-    { "path": "/api/cron/nora-auditor",               "schedule": "0 7 * * *" },
-    { "path": "/api/cron/controles-zona",             "schedule": "0 6 * * *" }
+    {
+      "path": "/api/ai/resumen-diario",
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/cron/generar-agenda",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/marcar-vencidas",
+      "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/escalamiento",
+      "schedule": "30 12 * * *"
+    },
+    {
+      "path": "/api/cron/metricas-nightly",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/metricas-stock",
+      "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/alertas-stock",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/reporte-semanal",
+      "schedule": "0 10 * * 1"
+    },
+    {
+      "path": "/api/cron/calcular-objetivos",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/check-triggers",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/gastos-fijos",
+      "schedule": "0 6 1 * *"
+    },
+    {
+      "path": "/api/cron/comunicacion-recordatorios",
+      "schedule": "0 13 * * *"
+    },
+    {
+      "path": "/api/cron/comunicacion-resumen",
+      "schedule": "0 22 * * *"
+    },
+    {
+      "path": "/api/cron/correr-automatizaciones",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/nora-auditor",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/controles-zona",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/avisos-proveedores",
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/cron/avisos-compras",
+      "schedule": "30 11 * * *"
+    },
+    {
+      "path": "/api/cron/recurrencias",
+      "schedule": "15 8 * * *"
+    }
   ]
 }

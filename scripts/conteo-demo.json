@@ -1,0 +1,305 @@
+{
+ "medido_at": "2026-10-14T19:05:28.946Z",
+ "tablas": {
+  "zonas": {
+   "total": 8,
+   "demo": 8
+  },
+  "gastos_fijos_instancias": {
+   "total": 0,
+   "demo": 0
+  },
+  "recepciones_mercaderia": {
+   "total": 0,
+   "demo": 0
+  },
+  "listas_precios_items": {
+   "total": 0,
+   "demo": 0
+  },
+  "movimientos_stock": {
+   "total": 0,
+   "demo": 0
+  },
+  "automatizaciones": {
+   "total": 0,
+   "demo": 0
+  },
+  "notificaciones_admin": {
+   "total": 1,
+   "demo": 0
+  },
+  "puntos_reglas": {
+   "total": 3,
+   "demo": 0
+  },
+  "transferencias_sucursal": {
+   "total": 0,
+   "demo": 0
+  },
+  "clima_chats": {
+   "total": 14,
+   "demo": 0
+  },
+  "proveedor_score_eventos": {
+   "total": 0,
+   "demo": 0
+  },
+  "campanias_crm": {
+   "total": 0,
+   "demo": 0
+  },
+  "sucursales_metricas_diarias": {
+   "total": 0,
+   "demo": 0
+  },
+  "devoluciones_drogueria": {
+   "total": 0,
+   "demo": 0
+  },
+  "nora_acciones": {
+   "total": 0,
+   "demo": 0
+  },
+  "compliance_documentos": {
+   "total": 0,
+   "demo": 0
+  },
+  "canales": {
+   "total": 0,
+   "demo": 0
+  },
+  "cliente_compras": {
+   "total": 0,
+   "demo": 0
+  },
+  "export_jobs": {
+   "total": 0,
+   "demo": 0
+  },
+  "productos_catalogo": {
+   "total": 46129,
+   "demo": 120
+  },
+  "avisos_faltante": {
+   "total": 10,
+   "demo": 10
+  },
+  "zz_deprecated_precios_historico": {
+   "total": 0,
+   "demo": 0
+  },
+  "cliente_fuentes": {
+   "total": 0,
+   "demo": 0
+  },
+  "irregularidades_stock": {
+   "total": 108,
+   "demo": 108
+  },
+  "stock_imports": {
+   "total": 0,
+   "demo": 0
+  },
+  "dedup_pendientes": {
+   "total": 0,
+   "demo": 0
+  },
+  "listas_recartelado": {
+   "total": 0,
+   "demo": 0
+  },
+  "canal_miembros": {
+   "total": 0,
+   "demo": 0
+  },
+  "stock_snapshots": {
+   "total": 960,
+   "demo": 960
+  },
+  "acciones_export": {
+   "total": 3,
+   "demo": 0
+  },
+  "caja_general": {
+   "total": 0,
+   "demo": 0
+  },
+  "clientes": {
+   "total": 150,
+   "demo": 150
+  },
+  "empleados_metricas_diarias": {
+   "total": 0,
+   "demo": 0
+  },
+  "empleado_documentos": {
+   "total": 0,
+   "demo": 0
+  },
+  "cheques": {
+   "total": 0,
+   "demo": 0
+  },
+  "puntos_movimientos": {
+   "total": 0,
+   "demo": 0
+  },
+  "mensajes": {
+   "total": 0,
+   "demo": 0
+  },
+  "import_jobs": {
+   "total": 0,
+   "demo": 0
+  },
+  "compliance_despachos": {
+   "total": 0,
+   "demo": 0
+  },
+  "items_sin_match": {
+   "total": 0,
+   "demo": 0
+  },
+  "ofertas_confirmaciones": {
+   "total": 0,
+   "demo": 0
+  },
+  "pagos": {
+   "total": 0,
+   "demo": 0
+  },
+  "campanias": {
+   "total": 0,
+   "demo": 0
+  },
+  "ventas_diarias": {
+   "total": 7620,
+   "demo": 7620
+  },
+  "caja_general_movimientos": {
+   "total": 0,
+   "demo": 0
+  },
+  "gastos_fijos": {
+   "total": 0,
+   "demo": 0
+  },
+  "tareas_recurrencias": {
+   "total": 4,
+   "demo": 0
+  },
+  "proveedores": {
+   "total": 55,
+   "demo": 0
+  },
+  "impuestos_obligaciones": {
+   "total": 0,
+   "demo": 0
+  },
+  "arqueos_caja": {
+   "total": 48,
+   "demo": 48
+  },
+  "movimientos_bancarios": {
+   "total": 0,
+   "demo": 0
+  },
+  "ofertas": {
+   "total": 21,
+   "demo": 3
+  },
+  "ordenes_compra": {
+   "total": 0,
+   "demo": 0
+  },
+  "stock_items": {
+   "total": 480,
+   "demo": 480
+  },
+  "vencimientos": {
+   "total": 26,
+   "demo": 26
+  },
+  "campania_envios": {
+   "total": 0,
+   "demo": 0
+  },
+  "listas_precios": {
+   "total": 0,
+   "demo": 0
+  },
+  "backup_stock_items_v20": {
+   "total": 144,
+   "demo": 144
+  },
+  "lotes_productos": {
+   "total": 0,
+   "demo": 0
+  },
+  "b2b_cuenta_corriente": {
+   "total": 0,
+   "demo": 0
+  },
+  "nora_avisos": {
+   "total": 16,
+   "demo": 15
+  },
+  "facturas_proveedor": {
+   "total": 4976,
+   "demo": 0
+  },
+  "controles_zona": {
+   "total": 64,
+   "demo": 64
+  },
+  "b2b_pedidos_recurrentes": {
+   "total": 0,
+   "demo": 0
+  },
+  "segmentos": {
+   "total": 1,
+   "demo": 0
+  },
+  "conciliacion_items": {
+   "total": 0,
+   "demo": 0
+  },
+  "recordatorios_programados": {
+   "total": 0,
+   "demo": 0
+  },
+  "ofertas_experimentos": {
+   "total": 0,
+   "demo": 0
+  },
+  "perfiles_datos": {
+   "total": 5,
+   "demo": 0
+  },
+  "alertas_stock": {
+   "total": 0,
+   "demo": 0
+  },
+  "backup_movimientos_stock_v20": {
+   "total": 1680,
+   "demo": 1680
+  },
+  "producto_rotacion": {
+   "total": 0,
+   "demo": 0
+  },
+  "tareas": {
+   "total": 264,
+   "demo": 64
+  },
+  "caja_turnos": {
+   "total": 3,
+   "demo": 0
+  },
+  "demanda_invisible": {
+   "total": 0,
+   "demo": 0
+  }
+ }
+}

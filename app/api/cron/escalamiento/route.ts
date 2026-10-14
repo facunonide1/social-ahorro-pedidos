@@ -46,6 +46,19 @@ async function run() {
   const notifs: any[] = []
   const updates: { id: string; patch: Record<string, unknown> }[] = []
 
+  // ── EL TOPE, PARA QUE NO VUELVA A PASAR ───────────────────────────────────
+  //
+  // `escalamiento_nivel` ya evita re-notificar la misma tarea en el mismo
+  // nivel, y eso funciona. Lo que no había era un techo por corrida: una
+  // recurrencia que generaba cuatro tareas por día terminó mandando 768
+  // notificaciones iguales en 49 días, y nadie lo vio porque nadie entraba.
+  //
+  // Con el tope, el día que vuelva a pasar el aviso dice CUÁNTAS quedaron sin
+  // avisar. Un número grande en un solo aviso se lee; mil avisos iguales se
+  // dejan de leer, y ahí abajo se pierde el que importaba.
+  const TOPE_POR_CORRIDA = 40
+  let omitidas = 0
+
   // ---- Tareas vencidas / por escalar ----
   const { data: vencidas } = await adm
     .from('tareas')
@@ -73,6 +86,7 @@ async function run() {
       }
     }
     if (Object.keys(patch).length) updates.push({ id: t.id, patch })
+    if (notifs.length >= TOPE_POR_CORRIDA) { omitidas = (vencidas ?? []).length - updates.length; break }
   }
 
   // ---- Verificaciones estancadas ----
@@ -96,6 +110,15 @@ async function run() {
   }
 
   for (const u of updates) await adm.from('tareas').update(u.patch).eq('id', u.id)
+  // Si se llegó al tope, UN aviso que dice cuántas quedaron. No mil iguales.
+  if (omitidas > 0) {
+    for (const sid of superIds) {
+      notifs.push(n(sid, 'alerta', 'critica', 'Hay muchas tareas vencidas sin resolver',
+        `Se avisó por ${TOPE_POR_CORRIDA} y quedaron ${omitidas} más sin avisar. Si son todas iguales, puede haber una recurrencia generando tareas que nadie completa.`,
+        '/admin/tareas?estado=vencida'))
+    }
+  }
+
   if (notifs.length) await adm.from('notificaciones_admin').insert(notifs)
 
   return NextResponse.json({ ok: true, tareas_evaluadas: (vencidas ?? []).length, notificaciones: notifs.length })
