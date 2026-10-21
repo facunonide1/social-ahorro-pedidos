@@ -1,0 +1,91 @@
+-- 0192 · v0.96-sucursales · BLOQUE D · aplicada vía MCP
+--
+-- ════════════════════════════════════════════════════════════════════════════
+-- QUE NO VUELVA A PASAR
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- El archivo anterior era del 28 de agosto y se importó el 30. El siguiente
+-- llegó el 14 de octubre —47 días después— y entró porque alguien escribió un
+-- script. Todo lo que calcula el plan de compra sale de esa foto: mientras
+-- importar necesite una sesión de código, la foto va a estar vieja.
+
+-- ── D.2 · LO QUE SE VERIFICA, GUARDADO CON LA IMPORTACIÓN ───────────────────
+--
+-- `sifaco_importaciones.verificacion` (jsonb) y `aplicado_con_avisos`.
+--
+-- No alcanza con verificar: hay que poder volver a leer qué se verificó y qué
+-- se decidió. Una importación que entró con un aviso de «puede venir filtrado»
+-- es un hecho sobre los datos que alguien va a necesitar seis semanas después,
+-- cuando un número no cierre.
+--
+-- Los seis chequeos (lib/sifaco/verificacion.ts):
+--
+--   columnas     CORTA si falta una obligatoria. Sin el stock de una sucursal,
+--                esa sucursal queda en cero — y cero es «lo miré y no hay».
+--   filtrado     AVISA si `NOM_GRU` trae un solo valor. Es la señal que ya nos
+--                engañó dos veces: un export filtrado se lee igual que el
+--                catálogo completo.
+--   filas        AVISA si cambian más de 10% contra la importación anterior.
+--   valor        AVISA si el valor al costo cambia más de 15%.
+--   duplicados   AVISA y los lista. No se pisa nada en silencio.
+--   fecha        CORTA si los meses del archivo no caen donde deberían.
+--
+-- `corta` bloquea y no se puede confirmar. `avisa` no bloquea, porque **un
+-- aviso puede ser un hallazgo y no un defecto**: el de «+71,8% en el valor» fue
+-- el que destapó que el maestro anterior traía una sola sucursal. Pero queda
+-- escrito que se aplicó sabiendo.
+
+-- ── D.3 · LA FECHA DEL DATO, Y NO LA DE IMPORTACIÓN ─────────────────────────
+--
+-- `maestro_estado()` devuelve la fecha del ARCHIVO, los días que tiene, el
+-- límite que decide el dueño y si está viejo. `dias` en null quiere decir que el
+-- archivo no declaró fecha, que NO es lo mismo que cero.
+--
+-- Se arreglaron dos lugares que mostraban la fecha equivocada:
+--
+--   · el plan de compra decía «el archivo del 30 de agosto» y el archivo era
+--     del 28. El 30 era el día en que lo importamos.
+--   · `compras_global.stock_leido_at` salía de `max(leido_at)`, así que recién
+--     importado decía «hoy» aunque el archivo tuviera semanas.
+--
+-- Dos días no cambian ninguna decisión. Lo que la cambia es el caso general: un
+-- export que alguien guardó el viernes y subió el martes se muestra tres días
+-- más fresco de lo que es.
+--
+-- De dónde sale la fecha del archivo de agosto, por tres caminos que coinciden:
+-- la venta más reciente que registra (2026-08-28), el precio actualizado más
+-- reciente (2026-08-28), y el encabezado del .xls original («*** 28/08/26 ***»).
+-- Para el nuevo, el máximo `FEC_ACTU`: serial 46309 = 2026-10-14.
+
+-- ── D.4 · EL AVISO CUANDO ENVEJECE ──────────────────────────────────────────
+--
+-- `compras_parametros.dias_maestro_viejo` = 7. Hasta hoy los 7 días estaban
+-- escritos a mano en la pantalla del plan de compra; un número que decide cuándo
+-- avisar es una decisión del dueño, no una constante.
+--
+-- El auditor de NORA (lib/ai/auditor.ts, chequeo 0.0) emite tres avisos
+-- distintos porque son tres situaciones distintas:
+--
+--   maestro_sin_importar  no hay ninguno. Nada sobre productos puede afirmarse.
+--   maestro_sin_fecha     hay uno y no dice de qué día es. No es que esté
+--                         viejo: es que no se puede saber, y eso es peor.
+--   maestro_viejo         pasó el límite.
+--
+-- Va PRIMERO en el auditor porque condiciona a todos los que vienen abajo: el
+-- stock por agotarse, el dormido y las recomendaciones de compra se calculan
+-- sobre esa foto. El 14 de octubre tenía 47 días y nadie avisaba.
+--
+-- La clave de dedup lleva la fecha del archivo: mientras no se importe uno
+-- nuevo el aviso no se repite, y en cuanto entra otro vuelve a poder avisar.
+
+-- ── D.5 · EL HISTÓRICO ──────────────────────────────────────────────────────
+--
+-- La tabla de importaciones anteriores pasa a mostrar la fecha del archivo, el
+-- valor al costo que dio, y cuántos chequeos pasaron, avisaron o cortaron. Es
+-- lo que permite comparar dos importaciones sin recalcular nada — que es
+-- exactamente lo que encontró que el maestro de agosto era Guzmán.
+--
+-- Y la de agosto quedó completada hacia atrás: `fecha_archivo` = 2026-08-28,
+-- `aplicado_at`, y `resultado.valor_costo` = $266.374.988 calculado del
+-- catálogo que dejó. Sin eso, la verificación del archivo nuevo no tenía contra
+-- qué comparar y el aviso de +71,8% no habría existido.

@@ -2,7 +2,11 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 
+import { edadDelDato, } from '@/lib/sifaco/edad-del-dato.server'
+import { FechaDelDatoLinea } from '@/components/sifaco/fecha-del-dato'
+
 import { ImportarSifacoClient } from './importar-client'
+import { ImportarSucursalesClient } from './importar-sucursales-client'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Maestro de SIFACO' }
@@ -50,11 +54,33 @@ export default async function SifacoPage() {
   const periodos = new Set((meses ?? []).map((m: any) => m.periodo))
   const parciales = new Set((meses ?? []).filter((m: any) => m.parcial).map((m: any) => m.periodo))
 
+  // D.5 · El histórico. Con la fecha del ARCHIVO y con la verificación: saber
+  // que una importación entró con un aviso de «puede venir filtrado» es un dato
+  // que alguien va a necesitar seis semanas después, cuando un número no cierre.
   const { data: previas } = await sb
     .from('sifaco_importaciones')
-    .select('id, tipo, archivo_nombre, bytes, estado, codificacion, filas_cargadas, created_at')
+    .select('id, tipo, archivo_nombre, bytes, estado, codificacion, filas_cargadas, created_at, fecha_archivo, aplicado_at, aplicado_con_avisos, verificacion, resultado')
     .order('created_at', { ascending: false })
     .limit(10)
+
+  // La última aplicada, para que la verificación del archivo nuevo tenga contra
+  // qué comparar las filas y la plata.
+  const [edad, { data: ultima }] = await Promise.all([
+    edadDelDato(),
+    sb.from('sifaco_importaciones')
+      .select('filas_cargadas, fecha_archivo, resultado')
+      .in('tipo', ['maestro', 'sucursal'])
+      .not('cargado_at', 'is', null)
+      .order('fecha_archivo', { ascending: false })
+      .limit(1).maybeSingle(),
+  ])
+  const anterior = ultima
+    ? {
+        filas: Number(ultima.filas_cargadas ?? 0),
+        valorCosto: Number((ultima.resultado as any)?.valor_costo ?? 0) || null,
+        fechaArchivo: (ultima.fecha_archivo as string | null) ?? null,
+      }
+    : null
 
   return (
     <>
@@ -89,6 +115,19 @@ export default async function SifacoPage() {
           </div>
         )}
 
+        {/* D.3 · De cuándo es el dato, arriba de todo: es lo primero que hay
+            que ver al entrar a esta pantalla. */}
+        <div className="rounded-lg border bg-card p-4">
+          <FechaDelDatoLinea e={edad} queSeCalcula="Todo lo que calcula el plan de compra" />
+          {edad?.conAvisos && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Esa importación se aplicó con avisos. Quedó escrito a propósito: un aviso puede ser un
+              hallazgo, y seis semanas después importa saber que alguien lo leyó.
+            </p>
+          )}
+        </div>
+
+        <ImportarSucursalesClient anterior={anterior} />
         <ImportarSifacoClient />
 
         <div>
@@ -104,26 +143,61 @@ export default async function SifacoPage() {
                 <thead className="bg-muted/50 text-xs text-muted-foreground">
                   <tr>
                     <th className="px-3 py-2 text-left">Archivo</th>
+                    <th className="px-3 py-2 text-left">Tipo</th>
+                    <th className="px-3 py-2 text-left">Del día</th>
                     <th className="px-3 py-2 text-left">Estado</th>
                     <th className="px-3 py-2 text-right">Filas</th>
-                    <th className="px-3 py-2 text-left">Codificación</th>
-                    <th className="px-3 py-2 text-left">Cuándo</th>
+                    <th className="px-3 py-2 text-right">Valor al costo</th>
+                    <th className="px-3 py-2 text-left">Verificación</th>
+                    <th className="px-3 py-2 text-left">Importado</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {previas.map((p: any) => (
-                    <tr key={p.id} className="border-t">
-                      <td className="px-3 py-2">{p.archivo_nombre}</td>
-                      <td className="px-3 py-2">{p.estado}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">
-                        {Number(p.filas_cargadas ?? 0).toLocaleString('es-AR')}
-                      </td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">{p.codificacion ?? '—'}</td>
-                      <td className="px-3 py-2 text-xs text-muted-foreground">
-                        {new Date(p.created_at).toLocaleString('es-AR')}
-                      </td>
-                    </tr>
-                  ))}
+                  {previas.map((p: any) => {
+                    const ch = Array.isArray(p.verificacion) ? p.verificacion : []
+                    const cortes = ch.filter((c: any) => c.nivel === 'corta').length
+                    const avisos = ch.filter((c: any) => c.nivel === 'avisa').length
+                    const valor = Number(p.resultado?.valor_costo ?? 0)
+                    return (
+                      <tr key={p.id} className="border-t align-top">
+                        <td className="px-3 py-2">{p.archivo_nombre}</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">{p.tipo}</td>
+                        {/* La fecha del ARCHIVO, que es la que importa. La de
+                            importación está en la última columna. */}
+                        <td className="px-3 py-2 text-xs">
+                          {p.fecha_archivo
+                            ? new Date(`${p.fecha_archivo}T12:00:00`).toLocaleDateString('es-AR')
+                            : <span className="text-muted-foreground">no lo dice</span>}
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          {p.estado}
+                          {p.aplicado_con_avisos && (
+                            <div className="text-[10px] text-amber-600 dark:text-amber-400">con avisos</div>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums">
+                          {Number(p.filas_cargadas ?? 0).toLocaleString('es-AR')}
+                        </td>
+                        <td className="px-3 py-2 text-right text-xs tabular-nums">
+                          {valor ? `$${valor.toLocaleString('es-AR')}` : '—'}
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          {!ch.length ? (
+                            <span className="text-muted-foreground">no se verificó</span>
+                          ) : (
+                            <>
+                              {ch.length - cortes - avisos} ok
+                              {avisos > 0 && <> · <span className="text-amber-600 dark:text-amber-400">{avisos} avisos</span></>}
+                              {cortes > 0 && <> · <span className="text-destructive">{cortes} cortes</span></>}
+                            </>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">
+                          {new Date(p.created_at).toLocaleDateString('es-AR')}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
