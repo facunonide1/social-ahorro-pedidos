@@ -1,0 +1,72 @@
+-- 0193 · v0.96-sucursales · BLOQUE E · aplicada vía MCP
+--
+-- ════════════════════════════════════════════════════════════════════════════
+-- REHACER LOS NÚMEROS
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- Todo lo calculado hasta hoy usaba la foto de agosto y «el stock consolidado»,
+-- que resultó ser el de Guzmán. El detalle de qué cambió y por qué está en
+-- docs/QUE-CAMBIO-CON-EL-STOCK-POR-SUCURSAL.md.
+
+-- ── E.1 · EL PLAN DE COMPRA, RECALCULADO ────────────────────────────────────
+--
+--                        v0.94 (28/08)        v0.96 (14/10)
+--   stock al costo        $266.374.988         $460.256.766   +73%
+--   consumo mensual       $205.787.414         $208.940.383   +1,5%
+--   cobertura              1,29 meses           2,20 meses    +71%
+--   urgente        3.392 ítems · $100,8 M   2.402 · $63,3 M   −990 ítems
+--
+-- El consumo casi no se movió —es el mismo negocio— y el stock subió 73%. Eso
+-- dice que no cambió el negocio: cambió qué estábamos midiendo.
+--
+-- Y los precios y costos se actualizaron del archivo nuevo (regla de oro 1:
+-- SIFACO es la autoridad). 31.033 productos con precio distinto (+4,4%
+-- promedio) y 4.866 con costo distinto (+9,8%). Sin eso el stock sería del 14
+-- de octubre y la plata de fines de agosto: una mezcla que no es ninguna de las
+-- dos fechas.
+--
+-- Acá SÍ se pisa y con `vl` no, y no es incoherente: el archivo nuevo trae el
+-- dato más fresco del mismo hecho, mientras que en `vl` trae MENOS información
+-- que el viejo. Y no se pierde nada mejor: `doc_precios_historial` —los costos
+-- que saldrían de las facturas— está en 0 filas.
+
+-- ── E.2 · LA SALUD DEL STOCK, POR SUCURSAL ──────────────────────────────────
+--
+-- `comparar_sucursales` (bloque C) abre los cuatro estados por local. El
+-- hallazgo: Guzmán vende el 73,3% de la cadena y tiene el 57,4% del stock. Le
+-- faltan $73,4 M y las otras tres tienen $73,3 M de más entre ellas.
+
+-- ── E.3 · LOS DORMIDOS, POR SUCURSAL ────────────────────────────────────────
+--
+-- `dormidos_por_sucursal` parte en dos lo que antes era un solo montón:
+--
+--   transferir   2.969 productos · $57,1 M   dormido acá, la cadena lo vende
+--   liquidar     3.461 productos · $83,1 M   no lo vende ninguna
+--
+-- Liquidar y transferir son decisiones opuestas y hasta hoy el sistema no
+-- podía distinguirlas: un producto dormido en Arabia puede ser un éxito en
+-- Guzmán.
+
+-- ── E.4 · LAS OFERTAS Y LOS CANALES ─────────────────────────────────────────
+--
+-- `canal_stock_concentrado`. De los 4.606 publicados con fila de stock:
+--
+--    1.026  sin stock en ningún local   — ya se contaban mal, siguen mal
+--    1.132  con todo el stock en UNO    — nuevos: según cuál despache, están
+--                                          disponibles o agotados
+--    2.448  en dos o más                — aguantan cualquier despacho
+--
+-- `sin_stock_donde_despacha` devuelve NULL, no cero: los dos canales tienen
+-- `sucursal_despacho_id` sin declarar y no se adivina (regla de oro 8). Cero
+-- querría decir «ninguno falta», y lo que pasa es que no se puede saber.
+--
+-- Y los que no deberían estar publicados pasaron de 17 a 20: el archivo nuevo
+-- declara con receta a tres productos que teníamos como venta libre y estaban a
+-- la vista del público.
+
+-- ── E.5 · DECIR QUÉ CAMBIÓ ──────────────────────────────────────────────────
+--
+-- En la pantalla del plan de compra, arriba, con los dos números al lado y la
+-- causa escrita. Reemplazar $100,8 M por $63,3 M sin decir nada dejaría a
+-- cualquiera que recuerde el número anterior pensando que el sistema se
+-- equivoca — o peor, creyendo que llegó mercadería.

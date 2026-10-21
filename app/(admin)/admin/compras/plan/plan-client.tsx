@@ -41,6 +41,10 @@ export function PlanClient({
   const productosATransferir = new Set(aTransferir.map((t) => t.producto_id)).size
   const plataTransferible = aTransferir.reduce((a, t) => a + Number(t.plata_que_no_hay_que_gastar ?? 0), 0)
   const deEsosQuietos = aTransferir.filter((t) => t.el_origen_no_lo_vende).length
+  const urgentesItems = urgencias.filter((u) => ['ya', 'esta_semana'].includes(u.urgencia))
+    .reduce((a, u) => a + Number(u.items ?? 0), 0)
+  const urgentesPlata = urgencias.filter((u) => ['ya', 'esta_semana'].includes(u.urgencia))
+    .reduce((a, u) => a + Number(u.monto ?? 0), 0)
   const sobra = noComprar.filter((r) => r.sobra)
   const dormido = noComprar.filter((r) => r.sin_venta_11m)
   const pedido = noComprar.filter((r) => r.a_pedido)
@@ -118,7 +122,24 @@ export function PlanClient({
         </AlertDescription>
       </Alert>
 
-      {/* ── E.5 · LO QUE ESTA PANTALLA NO PUEDE CONTESTAR ─────────────── */}
+      {/* ── E.5 · QUÉ CAMBIÓ, Y POR QUÉ ───────────────────────────────── */}
+      <Alert>
+        <AlertTriangle className="size-4" />
+        <AlertDescription className="text-xs leading-snug">
+          <b>Estos números cambiaron contra la versión anterior y no en silencio.</b> El plan de
+          compra decía 3.392 ítems urgentes por $100,8 M y ahora dice{' '}
+          {urgentesItems.toLocaleString('es-AR')} por {formatARS(urgentesPlata)}. La cobertura pasó
+          de 1,29 a {global?.cobertura_meses ?? '—'} meses. No llegó mercadería: el maestro anterior
+          traía el stock de <b>una sola sucursal</b> y se comparaba contra las ventas de las cuatro,
+          así que el faltante salía exagerado. La fórmula estaba bien; el dato decía otra cosa de la
+          que parecía decir.{' '}
+          <Link href="/admin/operaciones/sucursales" className="underline">
+            Ver la comparación entre sucursales
+          </Link>.
+        </AlertDescription>
+      </Alert>
+
+      {/* ── LO QUE ESTA PANTALLA NO PUEDE CONTESTAR ────────────────────── */}
       <Alert>
         <HelpCircle className="size-4" />
         <AlertDescription className="space-y-1 text-xs leading-snug">
