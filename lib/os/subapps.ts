@@ -164,6 +164,9 @@ export const SUBAPPS: SubAppManifest[] = [
     modulos: [
       { nombre: 'Panel', ruta: '/admin/operaciones' },
       { nombre: 'Stock', ruta: '/admin/operaciones/stock' },
+      // v0.96 · se puede desde que llegó el archivo por sucursal. Antes la
+      // pregunta «qué tiene cada local» no tenía con qué contestarse.
+      { nombre: 'Comparar sucursales', ruta: '/admin/operaciones/sucursales' },
       { nombre: 'Recibir mercadería', ruta: '/admin/recepciones' },
       { nombre: 'Pendientes con proveedores', ruta: '/admin/recepciones/pendientes' },
       { nombre: 'Transferencias', ruta: '/admin/operaciones/transferencias' },

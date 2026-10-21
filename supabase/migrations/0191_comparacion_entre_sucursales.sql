@@ -1,0 +1,62 @@
+-- 0191 · v0.96-sucursales · BLOQUE C · aplicada vía MCP
+--
+-- ════════════════════════════════════════════════════════════════════════════
+-- LO QUE RECIÉN AHORA SE PUEDE VER
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- Estas cuatro preguntas no estaban sin contestar: estaban sin poder hacerse.
+-- El maestro traía el stock en una columna y las ventas en otra, las dos de la
+-- cadena entera. Comparar locales con eso habría sido repartir el total entre
+-- cuatro, que es inventar.
+
+-- ── C.1 y C.3 · COMPARAR, Y LA CONCENTRACIÓN ────────────────────────────────
+--
+-- `comparar_sucursales` pone los dos porcentajes al lado, que es la pregunta
+-- entera. Lo que sale:
+--
+--   sucursal   stock        % stock   % consumo   cobertura   stock de más
+--   GUZ        $264,7 M      57,4%      73,3%      1,40 mes    −$73,4 M
+--   FIG        $155,9 M      33,8%      21,7%      2,79 mes    +$55,8 M
+--   TES         $23,2 M       5,0%       2,9%      3,15 mes    +$10,0 M
+--   ARA         $17,4 M       3,8%       2,1%      3,16 mes     +$7,5 M
+--
+-- El prompt de esta versión preguntaba si el 68% del stock de Guzmán
+-- «corresponde con cuánto vende». La respuesta es que no, pero al revés de lo
+-- que se esperaba: Guzmán vende el 73% de la cadena y tiene el 57% del stock.
+-- **Le faltan $73,4 M**, y las otras tres tienen $73,3 M de más entre ellas —
+-- casi exactamente la misma plata.
+--
+-- El 68% era en UNIDADES. En plata es 57%, porque lo que Guzmán tiene es más
+-- barato por unidad. Dos medidas de la misma cosa que contestan distinto, y la
+-- que decide una compra es la de plata.
+--
+-- «Stock de más» = el stock que tiene por encima de lo que le tocaría por su
+-- ritmo de venta. No es un error contable: es dónde está parada la plata.
+
+-- ── C.2 · LO MAL REPARTIDO ──────────────────────────────────────────────────
+--
+-- 693 casos, 621 productos, $9.082.339 quietos. El caso que importa: el
+-- producto está acá y no se vende acá, y se vende allá donde no está.
+--
+-- Era invisible y no por falta de pantalla: el total de la cadena decía «hay
+-- stock y hay venta» y cerraba perfecto.
+
+-- ── C.4 · LOS 488 QUE EL ARCHIVO MARCA ──────────────────────────────────────
+--
+-- `STATUS` en b o B. SIFACO **no documenta qué significa**, así que acá no se
+-- da por sentado que sea «baja»: no se sacan de ningún cálculo y no se
+-- desactivan. Se muestran con lo que tienen encima y la decisión la toma una
+-- persona.
+--
+-- 203 tienen mercadería por $1.284.706: ésos son los que hay que decidir. Los
+-- otros 285 no tienen stock y no molestan a nadie.
+--
+-- Es el mismo criterio que con `vl = '0'` y `vl = '5'` en v0.88 y v0.91: un
+-- valor que el proveedor del dato no documenta no se interpreta, se declara.
+
+-- ── C.5 · LA COMPARACIÓN ENTRE IMPORTACIONES ────────────────────────────────
+--
+-- Vive en el bloque A, porque fue la que encontró que el maestro de agosto era
+-- Guzmán. Queda guardada en `sifaco_importaciones.resultado` y
+-- `sifaco_importaciones.verificacion`, para que la próxima no tenga que
+-- recalcularse ni creerse de memoria.
