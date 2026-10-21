@@ -1,6 +1,7 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createClient } from '@/lib/supabase/server'
 import { paginar } from '@/lib/supabase/paginar'
+import { edadDelDato } from '@/lib/sifaco/edad-del-dato.server'
 import { PageHeader } from '@/components/shared/page-header'
 
 import { PlanClient } from './plan-client'
@@ -34,6 +35,20 @@ export default async function PlanPage() {
     sb.from('compras_sin_calcular').select('producto_id', { count: 'exact', head: true }),
   ])
 
+  // De cuándo es la foto. Sale de la fecha del ARCHIVO y no de cuándo lo
+  // importamos: la pantalla venía mostrando el 30 de agosto, que es el día en
+  // que lo leímos nosotros, y el archivo es del 28.
+  const edad = await edadDelDato()
+
+  // B.3 · Lo que se resuelve transfiriendo en vez de comprando. Va completo
+  // porque cada fila es una decisión, y con `paginar` porque PostgREST corta en
+  // 1000 sin avisar.
+  const { filas: aTransferir } = await paginar<any>(
+    sb.from('transferir_antes_de_comprar').select('*')
+      .order('plata_que_no_hay_que_gastar', { ascending: false }),
+    { maximo: 5000 },
+  )
+
   // Sólo lo que hay que comprar, ordenado por urgencia y por plata. El resto
   // —lo que sobra, lo dormido, lo de encargo— va en sus propias listas.
   const { filas: aComprar } = await paginar<any>(
@@ -57,10 +72,12 @@ export default async function PlanPage() {
       <div className="p-4 md:p-6">
         <PlanClient
           global={global as any}
+          edad={edad}
           urgencias={(urgencias ?? []) as any[]}
           salud={(salud ?? []) as any[]}
           parametros={(params ?? []) as any[]}
           transferir={((transferir as any[]) ?? [])[0] ?? null}
+          aTransferir={aTransferir}
           sinCalcular={sinCalcular ?? 0}
           aComprar={aComprar}
           noComprar={noComprar}

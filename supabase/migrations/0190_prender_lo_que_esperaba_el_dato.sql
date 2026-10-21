@@ -1,0 +1,90 @@
+-- 0190 · v0.96-sucursales · BLOQUE B · aplicada vía MCP
+--
+-- ════════════════════════════════════════════════════════════════════════════
+-- PRENDER LO QUE ESTABA APAGADO
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- Cinco cosas escritas y esperando este archivo. Ninguna se construyó de nuevo.
+--
+-- ── Y UN DOBLE CONTEO QUE LA IMPORTACIÓN DEJÓ ACTIVO ────────────────────────
+--
+-- `producto_stock_sifaco` tiene ahora CINCO filas por producto: el consolidado
+-- (sucursal_id null) más las cuatro aperturas. De los 14 objetos que la leen,
+-- 12 ya filtraban por sucursal. Dos no:
+--
+--   · `stock_disponible`         — sumaba las cinco: el doble del stock real
+--   · `pedidos_buscar_productos` — lo mismo, en la pantalla de tomar pedidos
+--
+-- No fallaban: mostraban el doble, que es la forma de fallar que no se nota. Es
+-- exactamente el riesgo por el que las ventas por sucursal fueron a una tabla
+-- aparte en vez de a una columna nullable de la que ya existía.
+
+-- ── LA DEMANDA POR SUCURSAL, QUE ES LA BASE DE TODO LO DEMÁS ────────────────
+--
+-- `demanda_por_sucursal`: los tres meses CERRADOS. El mes en curso queda afuera
+-- a propósito — viene cortado y promediarlo subestima la demanda de todo el
+-- catálogo.
+
+-- ── B.1 · EL STOCK POR SUCURSAL EN LAS PANTALLAS ────────────────────────────
+--
+-- `stock_por_sucursal` devuelve las cuatro siempre: una en cero quiere decir
+-- «no hay apertura importada», y eso se tiene que ver. Trae `sin_costo` al lado
+-- del valor porque si no, el valor se lee como el valor de todo lo que hay y es
+-- el valor de lo que se puede valuar.
+
+-- ── B.2 · LOS QUIEBRES REALES ───────────────────────────────────────────────
+--
+-- ¿Por qué no por punto de pedido? Porque este archivo no lo trae por sucursal:
+-- `stock_items.stock_minimo` quedó en 0, que acá quiere decir SIN DECLARAR. Un
+-- quiebre definido por mínimo daría CERO en las cuatro sucursales, y cero se
+-- lee como «lo miré y no hay quiebres» — el mismo cero falso que
+-- lib/stock/fuente.ts viene evitando desde v0.81.
+--
+-- La definición que sí se sostiene: **vende acá y no tiene acá**. Un producto
+-- que se vendió 40 veces en Tesei en tres meses y hoy tiene cero en Tesei está
+-- en quiebre, con mínimo declarado o sin él. Es un hecho más duro, no un
+-- sustituto peor.
+--
+-- Son 2.765 casos: GUZ 1.245 · FIG 870 · TES 334 · ARA 316.
+
+-- ── B.3 · LA TRANSFERENCIA ANTES DE COMPRAR ─────────────────────────────────
+--
+-- 1.687 productos se pueden transferir en vez de comprar: $33.508.249. Y en
+-- 1.565 de los 2.909 pares la sucursal que lo tiene NO LO VENDE, así que ahí no
+-- hay nada que discutir.
+--
+-- Lo que la vista no hace es transferir. Propone, y la transferencia se crea por
+-- el circuito que ya existe —`transferencias_sucursal`, en `pendiente_salida`—
+-- que es el que exige las TRES FOTOS de la regla de oro 2: al crear, al
+-- despachar y al recibir. Un atajo que moviera stock sin esas fotos sería un
+-- agujero de control, no una mejora.
+--
+-- La primera versión arrancaba con un cross join de 48.116 × 4 y no terminaba
+-- dentro del límite de la consulta. Ahora cada lado arranca de donde hay algo:
+-- lo que falta sale de la demanda, lo que sobra sale del stock positivo.
+--
+-- `compras_transferir_antes_de_comprar()` existía desde v0.94 con su límite
+-- escrito: prorrateaba el consumo de la cadena en proporción al stock de cada
+-- local. Esa suposición es justamente la que esta versión refuta —Guzmán tiene
+-- el 57% del stock y vende el 73%— y se fue.
+
+-- ── B.4 · LA RESERVA SOBRE LA SUCURSAL CORRECTA ─────────────────────────────
+--
+-- `stock_disponible_sucursal`: stock del local menos las reservas DE ESE LOCAL.
+-- Hasta hoy la reserva pesaba sobre el total porque el stock no estaba abierto,
+-- y una reserva podía estar bloqueando algo que físicamente estaba en otra
+-- sucursal.
+--
+-- Las reservas SIN sucursal declarada siguen pesando sobre el total: no se les
+-- puede asignar un local sin inventarlo. Se cuentan aparte en
+-- `reservas_sin_sucursal` para que no se lean como cero.
+
+-- ── B.5 · LA SUCURSAL DE DESPACHO ───────────────────────────────────────────
+--
+-- `despacho_sugerido(producto, cantidad)`. La sugerencia NO es «la que más
+-- tiene»: es la que puede cumplir sin quedarse en quiebre, porque despachar
+-- desde el local que lo vende para traerlo de vuelta la semana siguiente no es
+-- despachar, es mover el problema.
+--
+-- Si ninguna puede sin quedar corta, se devuelven igual con `queda_corta`: eso
+-- es una decisión, no un error, y la toma la persona. NORA sugiere.

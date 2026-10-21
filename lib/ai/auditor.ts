@@ -18,6 +18,47 @@ export async function correrAuditor(adm: Adm): Promise<{ avisos: number }> {
   let n = 0
   const inc = () => { n++ }
 
+  // 0.0) EL DATO ESTÁ VIEJO.
+  //
+  // Va primero porque condiciona a todos los que vienen abajo: el stock por
+  // agotarse, el dormido y las recomendaciones de compra se calculan sobre la
+  // foto del maestro, y el 14 de octubre esa foto tenía 47 días. El cálculo
+  // estaba bien; lo que estaba viejo era el archivo, y nadie avisaba.
+  //
+  // El umbral lo decide el dueño (`compras_parametros.dias_maestro_viejo`).
+  // La clave de dedup lleva la fecha del archivo: mientras no se importe uno
+  // nuevo, el aviso no se repite; en cuanto entra otro, vuelve a poder avisar.
+  try {
+    const { data } = await adm.rpc('maestro_estado').maybeSingle()
+    const e = data as { fecha_archivo: string | null; dias: number | null; dias_limite: number; esta_viejo: boolean | null; archivo: string | null } | null
+
+    if (!e) {
+      await emitirAviso(adm, {
+        tipo: 'maestro_sin_importar', severidad: 'alerta', modulo: 'operaciones', sucursalId: null,
+        titulo: 'No hay ningún maestro de SIFACO importado',
+        detalle: 'Sin la foto del maestro no hay stock, no hay costos y no hay plan de compra. Nada de lo que calcule NORA sobre productos va a poder afirmar nada.',
+        accionLabel: 'Importar el maestro', accionHref: '/admin/operaciones/sifaco',
+        claveDedup: 'maestro_sin_importar', esDemo: false,
+      }); inc()
+    } else if (e.dias === null) {
+      await emitirAviso(adm, {
+        tipo: 'maestro_sin_fecha', severidad: 'info', modulo: 'operaciones', sucursalId: null,
+        titulo: 'El maestro importado no dice de qué día es',
+        detalle: `El archivo ${e.archivo ?? 'importado'} no declara fecha, así que no se puede saber si el stock está fresco. No es que esté viejo: es que no se puede saber, y eso es peor para decidir.`,
+        accionLabel: 'Ver importaciones', accionHref: '/admin/operaciones/sifaco',
+        claveDedup: `maestro_sin_fecha:${e.archivo ?? 'x'}`, esDemo: false,
+      }); inc()
+    } else if (e.esta_viejo) {
+      await emitirAviso(adm, {
+        tipo: 'maestro_viejo', severidad: 'alerta', modulo: 'operaciones', sucursalId: null,
+        titulo: `La foto de stock tiene ${e.dias} días`,
+        detalle: `El último maestro de SIFACO es del ${e.fecha_archivo} y el límite está puesto en ${e.dias_limite} días. Todo lo que calcula el plan de compra sale de ese archivo: el cálculo está bien, la foto está vieja. Entre archivo y archivo el mostrador vendió y NORA no se enteró.`,
+        accionLabel: 'Importar el maestro', accionHref: '/admin/operaciones/sifaco',
+        claveDedup: `maestro_viejo:${e.fecha_archivo}`, esDemo: false,
+      }); inc()
+    }
+  } catch { /* */ }
+
   // 0) Irregularidades de stock pendientes (descuadres del cruce stock vs ventas)
   try {
     const { filas: data } = await paginar<any>(adm.from('irregularidades_stock')

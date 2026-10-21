@@ -4,36 +4,42 @@ import { sinDemo } from '@/lib/demo/estado'
 /**
  * DE DÓNDE SALE EL STOCK, Y QUÉ SE PUEDE AFIRMAR CON ESO.
  *
- * ── EL PROBLEMA QUE VIENE A RESOLVER ────────────────────────────────────────
+ * ── EL PROBLEMA QUE RESOLVIÓ, Y QUE YA NO ESTÁ ──────────────────────────────
  *
- * Hay DOS fuentes de stock y no dicen lo mismo:
+ * Durante siete versiones hubo DOS fuentes de stock que no decían lo mismo:
  *
  *   `stock_items`            480 filas, las 480 de demostración, abiertas por
- *                            sucursal. Es el modelo operativo de NORA.
- *   `producto_stock_sifaco`  46.009 filas reales, TOTALES, sin abrir por
- *                            sucursal. Es lo que declara SIFACO.
+ *                            sucursal. Era el modelo operativo de NORA.
+ *   `producto_stock_sifaco`  46.009 filas reales, el total de las cuatro juntas.
  *
- * El panel de Operaciones mezclaba las dos: sacaba el valor de SIFACO —real— y
- * los quiebres de `stock_items` —inventados—. Mostraba «$0 de stock» y «56
- * quiebres» al mismo tiempo, y NORA escribía un párrafo afirmando los 56.
+ * El panel de Operaciones mezclaba las dos: el valor de SIFACO —real— y los
+ * quiebres de `stock_items` —inventados—. Mostraba «$0 de stock» y «56
+ * quiebres» al mismo tiempo. Los 56 eran reales en el sentido de que existían
+ * 56 filas así; lo que no existía era el hecho.
  *
- * Los 56 son reales en el sentido de que existen 56 filas así. Lo que no existe
- * es el hecho: no hay 56 productos en quiebre, hay 56 filas de demostración.
+ * ── QUÉ CAMBIÓ EN v0.96 ─────────────────────────────────────────────────────
  *
- * ── LA REGLA ────────────────────────────────────────────────────────────────
+ * Llegó `tabla3e` y las 480 filas de demostración se reemplazaron por 192.464
+ * reales. Las dos fuentes pasaron a ser la misma: `stock_items` ahora es la
+ * apertura de `producto_stock_sifaco`, sucursal por sucursal, del mismo archivo.
+ *
+ * Y apareció otra cosa: el total que se leía como «la cadena» era el stock de
+ * GUZMÁN. Ver docs/EL-MAESTRO-DE-AGOSTO-ERA-GUZMAN.md.
+ *
+ * ── LA REGLA, QUE NO CAMBIA ─────────────────────────────────────────────────
  *
  * Un panel que no puede distinguir demostración de realidad NO AFIRMA. Dice que
- * no tiene datos reales todavía, y por qué. Un cero honesto vale más que un 56
- * falso, y mucho más que un 56 sin aclaración.
+ * no tiene datos reales todavía, y por qué. Esto sigue acá porque el próximo
+ * sector que se cargue va a empezar igual: con datos sembrados.
  *
  * Todo lo que muestre stock pasa por acá, para que la respuesta sea la misma en
  * todas las pantallas del sector.
  */
 
 export interface EstadoDelStock {
-  /** ¿Hay stock por sucursal cargado de verdad? Hoy: no. */
+  /** ¿Hay stock por sucursal cargado de verdad? Desde v0.96: sí. */
   hayPorSucursal: boolean
-  /** ¿Hay stock total declarado por SIFACO? Hoy: sí. */
+  /** ¿Hay stock total declarado por SIFACO? */
   hayTotalSifaco: boolean
   /** Cuántas filas de `stock_items` son de demostración. */
   filasDemo: number
@@ -82,8 +88,8 @@ export async function estadoDelStock(): Promise<EstadoDelStock> {
   let motivoSinDatos: string | null = null
   if (!hayPorSucursal) {
     motivoSinDatos = filasDemo > 0
-      ? `El stock por sucursal todavía no llegó: SIFACO exportó el maestro con el total y la apertura viene en otro archivo. Las ${filasDemo.toLocaleString('es-AR')} filas que hay son de demostración.`
-      : 'El stock por sucursal todavía no llegó: SIFACO exportó el maestro con el total y la apertura viene en otro archivo.'
+      ? `El stock por sucursal no está importado. Las ${filasDemo.toLocaleString('es-AR')} filas que hay son de demostración.`
+      : 'El stock por sucursal no está importado: hace falta el archivo `tabla3e` de SIFACO, que trae las cuatro columnas de stock.'
   }
 
   return { hayPorSucursal, hayTotalSifaco: sifaco.productosConStock > 0, filasDemo, filasReales, sifaco, lentePuesto, motivoSinDatos }
@@ -92,9 +98,21 @@ export async function estadoDelStock(): Promise<EstadoDelStock> {
 /**
  * Los quiebres, contados EN LA BASE y sólo sobre stock real.
  *
- * Devuelve `null` —no cero— cuando no hay stock real por sucursal. La
- * diferencia importa: cero es «lo miré y no hay quiebres», null es «no lo puedo
- * saber». Mostrar cero cuando es null es la misma mentira que mostrar 56.
+ * Devuelve `null` —no cero— cuando no se puede saber. La diferencia importa:
+ * cero es «lo miré y no hay quiebres», null es «no lo puedo saber».
+ *
+ * ── POR QUÉ NO SE CUENTAN POR PUNTO DE PEDIDO ───────────────────────────────
+ *
+ * `contar_quiebres_reales` exige `stock_minimo > 0`, y el archivo por sucursal
+ * NO trae punto de pedido por local: las 192.464 filas quedaron con mínimo 0,
+ * que acá quiere decir SIN DECLARAR. Contar por mínimo daría CERO en las cuatro
+ * sucursales, y ese cero se lee como «no hay quiebres» — exactamente el cero
+ * falso que este archivo viene evitando desde v0.81.
+ *
+ * La definición que sí se sostiene con lo que hay: **vende acá y no tiene acá**.
+ * Un producto que se vendió 40 veces en Tesei en tres meses y hoy tiene cero en
+ * Tesei está en quiebre, con mínimo declarado o sin él. Es un hecho más duro que
+ * el mínimo, no un sustituto peor.
  */
 export async function contarQuiebres(sucursalId: string | null): Promise<number | null> {
   const sb = createClient()
@@ -103,9 +121,32 @@ export async function contarQuiebres(sucursalId: string | null): Promise<number 
     .from('stock_items').select('producto_id', { count: 'exact', head: true }).eq('es_demo', false)
   if (!reales) return null
 
-  // PostgREST no compara columna contra columna, así que el filtro va en una
-  // función de la base: contar acá trayendo filas seria el error de siempre.
-  const { data, error } = await sb.rpc('contar_quiebres_reales', { p_sucursal: sucursalId })
+  let q = sb.from('quiebres_por_sucursal').select('producto_id', { count: 'exact', head: true })
+  if (sucursalId) q = q.eq('sucursal_id', sucursalId)
+  const { count, error } = await q
   if (error) return null
-  return Number(data ?? 0)
+  return count ?? 0
+}
+
+/**
+ * Cuántos de los quiebres tienen el producto parado en OTRA sucursal.
+ *
+ * Es el número que cambia la decisión: no se compra, se transfiere. Null cuando
+ * no hay apertura por sucursal, porque sin eso la pregunta no existe.
+ */
+export async function quiebresQueSeResuelvenTransfiriendo(): Promise<{
+  productos: number; plata: number
+} | null> {
+  const sb = createClient()
+  const { data } = await sb.rpc('compras_transferir_se_puede').maybeSingle<{ se_puede: boolean }>()
+  if (!data?.se_puede) return null
+
+  const { data: filas } = await sb
+    .from('transferir_antes_de_comprar')
+    .select('producto_id, plata_que_no_hay_que_gastar')
+  if (!filas) return null
+
+  const productos = new Set((filas as any[]).map((f) => f.producto_id)).size
+  const plata = (filas as any[]).reduce((a, f) => a + Number(f.plata_que_no_hay_que_gastar ?? 0), 0)
+  return { productos, plata }
 }

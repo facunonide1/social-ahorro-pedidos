@@ -1,9 +1,12 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { Download, ArrowLeftRight, AlertTriangle, HelpCircle } from 'lucide-react'
 
 import { exportExcel } from '@/lib/utils/export-excel'
+import type { EdadDelDato } from '@/lib/sifaco/edad-del-dato'
+import { FechaDelDatoLinea } from '@/components/sifaco/fecha-del-dato'
 import { formatARS } from '@/lib/utils/format'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -25,18 +28,19 @@ const SALUD = {
 const MAX = 200
 
 export function PlanClient({
-  global, urgencias, salud, parametros, transferir, sinCalcular, aComprar, noComprar,
+  global, edad, urgencias, salud, parametros, transferir, aTransferir, sinCalcular, aComprar, noComprar,
 }: {
-  global: any; urgencias: any[]; salud: any[]; parametros: any[]
+  global: any; edad: EdadDelDato | null; urgencias: any[]; salud: any[]; parametros: any[]
   transferir: { se_puede: boolean; por_que: string } | null
+  aTransferir: any[]
   sinCalcular: number; aComprar: any[]; noComprar: any[]
 }) {
   const [lista, setLista] = useState<'comprar' | 'sobra' | 'dormido' | 'pedido'>('comprar')
 
   const objetivo = Number(parametros.find((p) => p.clave === 'cobertura_objetivo_meses')?.valor ?? 1)
-  const diasDelDato = global?.stock_leido_at
-    ? Math.floor((Date.now() - Date.parse(global.stock_leido_at)) / 86_400_000)
-    : 0
+  const productosATransferir = new Set(aTransferir.map((t) => t.producto_id)).size
+  const plataTransferible = aTransferir.reduce((a, t) => a + Number(t.plata_que_no_hay_que_gastar ?? 0), 0)
+  const deEsosQuietos = aTransferir.filter((t) => t.el_origen_no_lo_vende).length
   const sobra = noComprar.filter((r) => r.sobra)
   const dormido = noComprar.filter((r) => r.sin_venta_11m)
   const pedido = noComprar.filter((r) => r.a_pedido)
@@ -60,32 +64,55 @@ export function PlanClient({
           {aComprar.length.toLocaleString('es-AR')} productos entran en quiebre.
         </p>
 
-        {/* E.2 · DE CUÁNDO ES LA FOTO. El cálculo está bien; el archivo puede
-            tener semanas, y todos estos millones salen de ahí. */}
-        {global?.stock_leido_at && (
-          <p className={`mt-2 text-xs leading-snug ${diasDelDato > 7 ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
-            {diasDelDato > 7 ? '⚠ ' : ''}
-            Todo esto se calcula sobre el archivo de stock del{' '}
-            <b>{new Date(global.stock_leido_at).toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}</b>
-            {diasDelDato > 0 && <> — hace {diasDelDato} días</>}.
-            {diasDelDato > 7 && ' El cálculo está bien; la foto está vieja. Importá el maestro de SIFACO otra vez antes de pedir.'}
-          </p>
-        )}
+        {/* DE CUÁNDO ES LA FOTO. Todos estos millones salen de ahí, y la fecha
+            es la del ARCHIVO: la pantalla decía el 30 de agosto porque leía
+            cuándo lo importamos nosotros, y el archivo es del 28. El umbral de
+            «vieja» lo decide el dueño en Configuración, no esta pantalla. */}
+        <FechaDelDatoLinea e={edad} queSeCalcula="Todo esto" className="mt-2" />
       </section>
 
-      {/* ── A.3 · PRIMERO MIRAR SI HAY QUE TRANSFERIR ─────────────────── */}
-      <Alert variant={transferir?.se_puede ? 'default' : undefined}>
+      {/* ── B.3 · PRIMERO MIRAR SI HAY QUE TRANSFERIR ─────────────────── */}
+      <Alert>
         <ArrowLeftRight className="size-4" />
         <AlertDescription className="text-xs leading-snug">
           {transferir?.se_puede ? (
-            <>La comparación entre sucursales está activa: antes de comprar se mira si otra sucursal lo tiene parado.</>
+            <>
+              <b>
+                {productosATransferir.toLocaleString('es-AR')} de estos productos no hay que
+                comprarlos: están parados en otra sucursal.
+              </b>{' '}
+              Son {formatARS(plataTransferible)} que se resuelven moviendo mercadería en vez de
+              gastando. {deEsosQuietos > 0 && (
+                <>En {deEsosQuietos.toLocaleString('es-AR')} casos la sucursal que lo tiene <b>no lo
+                vende</b>, así que ahí no hay nada que discutir. </>
+              )}
+              La transferencia se crea desde Operaciones → Transferencias, con las tres fotos de la
+              regla de oro 2. NORA propone; mover lo confirma una persona.
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" className="gap-1" asChild>
+                  <Link href="/admin/operaciones/sucursales">
+                    <ArrowLeftRight className="size-3.5" /> Comparar sucursales
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1"
+                  onClick={() => exportExcel('transferir-en-vez-de-comprar', aTransferir.map((t) => ({
+                    SKU: t.sku, Producto: t.nombre,
+                    'Falta en': t.destino_nombre, 'Faltan': t.faltan_en_destino,
+                    'Sobra en': t.origen_nombre, 'Sobran': t.sobran_en_origen,
+                    'El origen lo vende por mes': t.venta_mensual_en_origen,
+                    'Transferir': t.transferir,
+                    'Plata que no hay que gastar': t.plata_que_no_hay_que_gastar,
+                    'Claridad': t.el_origen_no_lo_vende ? 'el origen no lo vende' : 'el origen también lo vende',
+                  })))}>
+                  <Download className="size-3.5" /> Exportar los {aTransferir.length}
+                </Button>
+              </div>
+            </>
           ) : (
             <>
               <b>Antes de comprar habría que mirar si otra sucursal lo tiene parado</b> —transferir es
               gratis, comprar cuesta plata—. El cálculo está escrito y <b>no puede correr</b>:{' '}
-              {transferir?.por_que ?? 'falta el stock por sucursal'}. Se prende solo el día que
-              llegue ese archivo, sin tocar código. Mientras tanto, todo lo de esta pantalla es
-              sobre el <b>consolidado de las cuatro</b>.
+              {transferir?.por_que ?? 'falta el stock por sucursal'}.
             </>
           )}
         </AlertDescription>

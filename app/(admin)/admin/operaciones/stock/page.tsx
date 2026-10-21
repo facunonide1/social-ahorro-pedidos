@@ -68,8 +68,22 @@ export default async function StockPage({
     .from('productos_catalogo').select('id', { count: 'exact', head: true })
     .eq('es_demo', false).eq('activo', true)
 
-  const [{ data: stock }, { data: rot }, { data: sucs }, { data: lotesVenc }] =
-    await Promise.all([stockQ, rotQ, sb.from('sucursales').select('id, nombre, codigo, usa_deposito').eq('activa', true).order('nombre'), lotesQ])
+  // Los quiebres de los productos de ESTA pagina.
+  //
+  // No por punto de pedido: el archivo por sucursal no lo trae y las 192.464
+  // filas quedaron con minimo 0. Comparar cantidad contra 0 marca en rojo todo
+  // producto con cero unidades —o sea casi todos, porque casi ninguno esta en
+  // las cuatro sucursales— y un semaforo rojo en todo no dice nada.
+  //
+  // La definicion que si se sostiene: vende en esa sucursal y no tiene ahi.
+  let quiebreQ = sb.from('quiebres_por_sucursal').select('producto_id, sucursal_id')
+  if (idsPagina.length) quiebreQ = quiebreQ.in('producto_id', idsPagina).limit(500)
+  else quiebreQ = quiebreQ.limit(1)
+
+  const [{ data: stock }, { data: rot }, { data: sucs }, { data: lotesVenc }, { data: quiebres }] =
+    await Promise.all([stockQ, rotQ, sb.from('sucursales').select('id, nombre, codigo, usa_deposito').eq('activa', true).order('nombre'), lotesQ, quiebreQ])
+
+  const enQuiebre = new Set(((quiebres ?? []) as any[]).map((q) => `${q.producto_id}|${q.sucursal_id}`))
 
   const sucursales = ((sucs ?? []) as any[]).map((s) => ({ id: s.id, nombre: s.nombre, codigo: s.codigo, usaDeposito: !!s.usa_deposito })) as SucursalLite[]
   const stockItems = (stock ?? []) as any[]
@@ -91,15 +105,18 @@ export default async function StockPage({
 
   const productos: ProductoRow[] = pagina.filas.map((p) => {
     const porSuc = stockByProd.get(p.id) ?? {}
-    // `stock_items` (por sucursal) sigue siendo de demostracion; el numero real
-    // es el consolidado que declara SIFACO y viene en la fila de la pagina.
+    // Desde v0.96 `stock_items` es la apertura real por sucursal del mismo
+    // archivo del que sale el consolidado. Si la suma de las cuatro da cero se
+    // cae al consolidado de la fila, que cubre los productos que el archivo por
+    // sucursal no trajo.
     const totalSuc = Object.values(porSuc).reduce((a, s) => a + s.cantidad, 0)
     const total = totalSuc > 0 ? totalSuc : Number(p.stock ?? 0)
     const totalGondola = Object.values(porSuc).reduce((a, s) => a + s.gondola, 0)
     const totalDeposito = Object.values(porSuc).reduce((a, s) => a + s.deposito, 0)
     const ventaDia = ventaByProd.get(p.id) ?? 0
     const cobertura = ventaDia > 0 ? Math.round((total / ventaDia) * 10) / 10 : null
-    const critico = sucursales.some((s) => { const x = porSuc[s.id]; return x && x.cantidad <= x.min })
+    // Critico = esta en quiebre en alguna sucursal: vende ahi y no tiene ahi.
+    const critico = sucursales.some((s) => enQuiebre.has(`${p.id}|${s.id}`))
     const costo = Number(p.precio_costo_promedio ?? 0)
     return {
       id: p.id, sku: p.sku, ean: p.codigo_barras, nombre: p.nombre, laboratorio: p.laboratorio,
@@ -145,7 +162,11 @@ export default async function StockPage({
 
   // Criticos: se calculan comparando cantidad contra minimo POR SUCURSAL. Sin
   // apertura no hay con que compararlo, ni siquiera mirando las cuatro juntas.
-  const criticos = hayStockPorSucursal ? productos.filter((p) => p.critico).length : null
+  // Contado EN LA BASE, no sobre las 50 filas de la pagina: un KPI que dice
+  // cuantos hay no puede salir de contar lo que trajo la pagina.
+  const { count: criticosBase } = await sb
+    .from('quiebres_por_sucursal').select('producto_id', { count: 'exact', head: true })
+  const criticos = hayStockPorSucursal ? (criticosBase ?? 0) : null
 
   // Por vencer: no hay ni un lote cargado. Cero lotes por vencer suena a buena
   // noticia y es que no hay vencimientos cargados.
@@ -174,8 +195,12 @@ export default async function StockPage({
           kpis={{ productos: totalProductos ?? 0, valorStock, criticos, porVencer: porVencerKpi }}
           laboratorios={((labsRows ?? []) as any[]).map((l) => l.laboratorio)}
           notas={{
-            valorStock: valorStock === null ? 'SIFACO no exportó la apertura por sucursal: el total sólo se puede ver en «todas las sucursales».' : (esTodas ? 'total que declara SIFACO, sin abrir por sucursal' : undefined),
-            criticos: criticos === null ? 'Se calcula comparando cantidad contra mínimo por sucursal, y esa apertura todavía no llegó.' : undefined,
+            valorStock: valorStock === null
+              ? 'SIFACO no exportó la apertura por sucursal: el total sólo se puede ver en «todas las sucursales».'
+              : (esTodas ? 'el total de las cuatro sucursales, del archivo del 14 de octubre' : undefined),
+            criticos: criticos === null
+              ? 'Se calcula comparando cantidad contra mínimo por sucursal, y esa apertura todavía no llegó.'
+              : 'Productos que venden en una sucursal y no tienen stock ahí. No se usa el punto de pedido: el archivo de SIFACO no lo trae por sucursal.',
             porVencer: porVencerKpi === null ? 'No hay ningún lote con vencimiento cargado: no es que no venza nada, es que no hay con qué mirarlo.' : undefined,
           }}
           pagina={pagina}
