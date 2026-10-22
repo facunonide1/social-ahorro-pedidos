@@ -288,7 +288,210 @@ function avisar(
   }
 }
 
+
+// ════════════════════════════════════════════════════════════════════════════
+// v1.1 · EL AGENTE CONVENIO
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * D.4 · ARMAR LA PRESENTACIÓN Y DEJARLA EN BORRADOR.
+ *
+ * Nunca la envía, ni en `hace_y_avisa` — que para este agente no existe: el
+ * techo de todas sus acciones es «prepara» (ver `elenco.ts`).
+ *
+ * Lo que hace en «prepara»: crea la presentación en `borrador` y le mete los
+ * comprobantes sueltos del período. Falta que una persona la mire y la mande.
+ *
+ * ── POR QUÉ NO ENVÍA ────────────────────────────────────────────────────────
+ *
+ * Porque una presentación mal armada se manda y no se vuelve: la obra social
+ * la debita entera y el período se pierde. No es un riesgo teórico — es el
+ * caso normal de un error de carga.
+ */
+const armarPresentacion: Ejecutor = async (c, ejecuta) => {
+  // El convenio que cierra más cerca y no tiene la presentación armada.
+  const { data: cierres } = await c.adm
+    .from('convenio_cierres_proximos')
+    .select('convenio_id, convenio, sucursal_id, sucursal, cierre, dias, aviso_dias_antes, ya_presentada')
+    .not('dias', 'is', null)
+    .eq('ya_presentada', false)
+    .order('dias')
+    .limit(1)
+  const k = (cierres ?? [])[0] as any
+  if (!k) {
+    return { ok: true, nivelAplicado: c.nivel, texto: 'No hay ninguna presentación por armar con cierre a la vista.' }
+  }
+  if (Number(k.dias) > Number(k.aviso_dias_antes)) {
+    return {
+      ok: true, nivelAplicado: c.nivel,
+      texto: `La próxima es ${k.convenio} en ${k.sucursal}, que cierra en ${k.dias} días. Todavía está lejos del plazo de aviso (${k.aviso_dias_antes}).`,
+    }
+  }
+
+  // El período: desde el último cierre presentado hasta el cierre que viene.
+  const hasta = String(k.cierre)
+  const desde = new Date(new Date(hasta).getTime() - 31 * 86400000).toISOString().slice(0, 10)
+
+  const { count: sueltos } = await c.adm
+    .from('convenio_comprobantes').select('id', { count: 'exact', head: true })
+    .eq('convenio_id', k.convenio_id).eq('sucursal_id', k.sucursal_id)
+    .is('presentacion_id', null).eq('estado', 'sin_presentar')
+    .gte('fecha', desde).lte('fecha', hasta)
+
+  const texto = `${k.convenio} en ${k.sucursal} cierra en ${k.dias} día(s) y no está armada. ` +
+    `Hay ${sueltos ?? 0} comprobante(s) sin presentar del período ${desde} a ${hasta}.`
+
+  if (!ejecuta) return { ok: true, nivelAplicado: c.nivel, texto }
+
+  if (!sueltos) {
+    return {
+      ok: true, nivelAplicado: c.nivel,
+      texto: texto + ' No armo nada: una presentación vacía es perder el período igual que no presentarla.',
+    }
+  }
+
+  const { data: pres, error } = await c.adm.from('convenio_presentaciones').insert({
+    convenio_id: k.convenio_id, sucursal_id: k.sucursal_id,
+    periodo_desde: desde, periodo_hasta: hasta, estado: 'borrador',
+    armada_por: c.userId, armada_at: new Date().toISOString(),
+    notas: 'Armada por el agente Convenio. Falta revisarla y enviarla.',
+  }).select('id').maybeSingle()
+
+  if (error || !pres) {
+    return {
+      ok: false, nivelAplicado: c.nivel, texto: 'No se pudo armar la presentación.',
+      error: error?.message ?? 'sin id',
+    }
+  }
+
+  await c.adm.from('convenio_comprobantes')
+    .update({ presentacion_id: pres.id, estado: 'en_presentacion' })
+    .eq('convenio_id', k.convenio_id).eq('sucursal_id', k.sucursal_id)
+    .is('presentacion_id', null).eq('estado', 'sin_presentar')
+    .gte('fecha', desde).lte('fecha', hasta)
+
+  const { data: rec } = await c.adm.rpc('convenio_presentacion_recalcular', { p_presentacion: pres.id })
+  const total = Number(((rec ?? []) as any[])[0]?.total ?? 0)
+
+  return {
+    ok: true, nivelAplicado: c.nivel,
+    texto: `Presentación de ${k.convenio} (${k.sucursal}) armada en BORRADOR con ${sueltos} comprobante(s) por ${ars(total)}. ` +
+      'No la envié: la revisa y la manda una persona.',
+    entidad: { tabla: 'convenio_presentaciones', id: pres.id },
+    // El medidor va a comparar contra esto dentro de 30 días: si la
+    // presentación se envió, el agente acertó al avisar que había que armarla.
+    esperado: { presentacion_id: pres.id, comprobantes: sueltos, total },
+  }
+}
+
+/** Los avisos del agente Convenio. Todos leen vistas que ya existen. */
+const avisarCierre = avisar('tarea_vencida', async (c) => {
+  const { data } = await c.adm.from('convenio_cierres_proximos')
+    .select('convenio, sucursal, dias, aviso_dias_antes, comprobantes_sueltos, ya_presentada')
+    .not('dias', 'is', null).eq('ya_presentada', false).order('dias')
+  const filas = ((data ?? []) as any[]).filter((k) => Number(k.dias) <= Number(k.aviso_dias_antes))
+  if (!filas.length) return null
+  const k = filas[0]
+  return {
+    t: `${filas.length} presentación(es) cierran pronto y no están armadas`,
+    d: `La más próxima es ${k.convenio} en ${k.sucursal}: cierra en ${k.dias} día(s) y tiene ` +
+       `${k.comprobantes_sueltos} comprobante(s) sin presentar. Pasado el cierre, lo que no entró ` +
+       'no se presenta ni se reclama: es la pérdida más evitable de todas.',
+    esperado: { presentaciones_por_vencer: filas.length },
+  }
+})
+
+const avisarDebitoPorVencer = avisar('tarea_vencida', async (c) => {
+  const { data } = await c.adm.from('convenio_recupero')
+    .select('convenio, sucursal, motivo_nombre, importe, vence_at, dias, situacion')
+    .eq('situacion', 'reclamable y sin reclamar')
+  const filas = (data ?? []) as any[]
+  if (!filas.length) return null
+  const pronto = filas.filter((d) => d.dias != null && Number(d.dias) <= 7)
+  const plata = filas.reduce((a, d) => a + Number(d.importe), 0)
+  return {
+    t: `${ars(plata)} en débitos reclamables sin reclamar`,
+    d: `Son ${filas.length} débito(s)` +
+       (pronto.length
+         ? `, y ${pronto.length} vencen dentro de 7 días por ${ars(pronto.reduce((a, d) => a + Number(d.importe), 0))}.`
+         : '.') +
+       ' Un débito reclamable que vence no se pierde por no saberlo: se pierde por enterarse tarde.',
+    esperado: { reclamables: filas.length, plata_reclamable: plata },
+  }
+})
+
+const avisarMotivoQueCrecio = avisar('tarea_vencida', async (c) => {
+  // El trimestre contra el anterior. Se compara en la base con dos filtros de
+  // fecha y no trayendo los débitos: un trimestre de cuatro sucursales pasa
+  // las 1.000 filas y PostgREST corta sin avisar.
+  const hoy = new Date()
+  const d90 = new Date(hoy.getTime() - 90 * 86400000).toISOString().slice(0, 10)
+  const d180 = new Date(hoy.getTime() - 180 * 86400000).toISOString().slice(0, 10)
+
+  const { data: motivos } = await c.adm.from('convenio_debito_motivos').select('clave, nombre')
+  const peor: { nombre: string; ahora: number; antes: number } | null = await (async () => {
+    let top: { nombre: string; ahora: number; antes: number } | null = null
+    for (const m of (motivos ?? []) as any[]) {
+      const [{ data: a }, { data: b }] = await Promise.all([
+        c.adm.rpc('convenios_suma_debitos', { p_motivo: m.clave, p_desde: d90, p_hasta: null }),
+        c.adm.rpc('convenios_suma_debitos', { p_motivo: m.clave, p_desde: d180, p_hasta: d90 }),
+      ])
+      const ahora = Number(a ?? 0)
+      const antes = Number(b ?? 0)
+      if (antes > 0 && ahora > antes * 1.5 && (!top || ahora - antes > top.ahora - top.antes)) {
+        top = { nombre: m.nombre, ahora, antes }
+      }
+    }
+    return top
+  })()
+
+  if (!peor) return null
+  return {
+    t: `Los débitos por «${peor.nombre}» crecieron contra el trimestre anterior`,
+    d: `Pasaron de ${ars(peor.antes)} a ${ars(peor.ahora)}. Un motivo que crece suele ser un ` +
+       'paso del mostrador que se dejó de hacer, no mala suerte.',
+    esperado: { motivo: peor.nombre, trimestre_anterior: peor.antes, trimestre_actual: peor.ahora },
+  }
+})
+
+const avisarSucursalQueDebitaMas = avisar('tarea_vencida', async (c) => {
+  const { data } = await c.adm.from('convenio_debitos_por_sucursal')
+    .select('sucursal, motivo_nombre, plata, veces_el_promedio')
+    .not('veces_el_promedio', 'is', null).gte('veces_el_promedio', 1.5)
+    .order('plata', { ascending: false }).limit(1)
+  const k = ((data ?? []) as any[])[0]
+  if (!k) return null
+  return {
+    t: `${k.sucursal} debita ${Number(k.veces_el_promedio).toFixed(1)}× el promedio en «${k.motivo_nombre}»`,
+    d: `Son ${ars(Number(k.plata))}. Puede ser un problema de proceso, o puede ser que despache ` +
+       'más obra social que las demás: el número no lo dice. Lo que dice es dónde mirar.',
+    esperado: { sucursal: k.sucursal, motivo: k.motivo_nombre, veces: Number(k.veces_el_promedio) },
+  }
+})
+
+const avisarObraSocialQueCambio = avisar('tarea_vencida', async (c) => {
+  const { data } = await c.adm.rpc('convenios_que_debitan_mas')
+  const k = ((data ?? []) as any[])[0]
+  if (!k) return null
+  return {
+    t: `${k.convenio} empezó a debitar más de lo habitual`,
+    d: `Pasó de ${ars(Number(k.antes))} a ${ars(Number(k.ahora))} entre un trimestre y el ` +
+       'siguiente. Qué se hace con un convenio que empeoró es la decisión más grande del sector ' +
+       'y no la toma un agente.',
+    esperado: { convenio: k.convenio, antes: Number(k.antes), ahora: Number(k.ahora) },
+  }
+})
+
 const EJECUTORES: Record<string, Ejecutor> = {
+  // v1.1 · el agente Convenio. Todas sus acciones tienen techo en «prepara»:
+  // ver `elenco.ts`. La puerta (`ejecutar`) lo fuerza, no el ejecutor.
+  'convenio:armar_presentacion': armarPresentacion,
+  'convenio:avisar_cierre': avisarCierre,
+  'convenio:avisar_debito_por_vencer': avisarDebitoPorVencer,
+  'convenio:avisar_motivo_que_crecio': avisarMotivoQueCrecio,
+  'convenio:avisar_sucursal_que_debita_mas': avisarSucursalQueDebitaMas,
+  'convenio:avisar_obra_social_que_cambio': avisarObraSocialQueCambio,
+
   'abasto:armar_pedido': armarPedido,
   'abasto:emitir_orden': armarPedido,
   'abasto:sacar_de_otra_sucursal': proponerTransferencia,

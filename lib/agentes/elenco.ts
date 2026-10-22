@@ -152,6 +152,54 @@ export const ELENCO: Agente[] = [
         techo: 'Liquidar es cambiar un precio.' },
     ],
   },
+  // ── v1.1 · EL AGENTE CONVENIO ─────────────────────────────────────────────
+  //
+  // D.2 · Alcance de CADENA. Las obras sociales son de la empresa: el convenio
+  // con OSDE es uno, aunque la presentación se arme por sucursal. Mirando una
+  // sucursal no aparece, igual que Abasto.
+  //
+  // D.4 · **El techo de este agente es «prepara», en todas sus acciones.**
+  //
+  // No es prudencia genérica. Una presentación mal armada se manda y no se
+  // vuelve: la obra social la debita entera y el período se pierde. Y una
+  // reclamación mandada fuera de tiempo o sin respaldo quema el reclamo — no
+  // se puede reclamar dos veces lo mismo.
+  //
+  // Las dos cosas son irreversibles hacia afuera, y «hace y avisa» es sólo
+  // para lo reversible y sin efecto sobre plata.
+  {
+    id: 'convenio',
+    nombre: 'Convenio',
+    queHace: 'Obras sociales: presentación y débitos',
+    alcance: 'cadena',
+    deDondeLee: 'el padrón de convenios, las presentaciones y los débitos (v1.1)',
+    icono: 'FileSignature',
+    acciones: [
+      { clave: 'avisar_cierre', nombre: 'Avisar qué presentación vence esta semana',
+        niveles: SUGIERE_O_PREPARA,
+        techo: 'Avisar un cierre es gratis, pero el aviso que importa es la tarea al responsable, y esa la crea el que decide armar la presentación.' },
+
+      { clave: 'armar_presentacion', nombre: 'Armar la presentación del período',
+        niveles: SUGIERE_O_PREPARA,
+        techo: 'Una presentación mal armada se manda y no se vuelve: la obra social la debita entera y el período se pierde. La confirma una persona.' },
+
+      { clave: 'avisar_debito_por_vencer', nombre: 'Avisar qué débito reclamable vence pronto',
+        niveles: SUGIERE_O_PREPARA,
+        techo: 'Lo que sigue al aviso es reclamar, y un reclamo mandado sin respaldo quema el reclamo: no se puede reclamar dos veces lo mismo.' },
+
+      { clave: 'avisar_motivo_que_crecio', nombre: 'Avisar qué motivo de débito creció',
+        niveles: SUGIERE_O_PREPARA,
+        techo: 'Es una lectura para que alguien decida. El agente no cambia un proceso de mostrador.' },
+
+      { clave: 'avisar_sucursal_que_debita_mas', nombre: 'Avisar qué sucursal debita más en el mismo motivo',
+        niveles: SUGIERE_O_PREPARA,
+        techo: 'Muestra el número. Quién tiene que hacer qué con eso lo decide una persona: el número no distingue un problema de proceso de una sucursal que despacha más obra social.' },
+
+      { clave: 'avisar_obra_social_que_cambio', nombre: 'Avisar qué obra social empezó a debitar más',
+        niveles: SUGIERE_O_PREPARA,
+        techo: 'Decidir qué se hace con un convenio que empeoró es la decisión más grande del sector y no es de un agente.' },
+    ],
+  },
   {
     id: 'documentos',
     nombre: 'Documentos',

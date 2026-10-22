@@ -76,10 +76,15 @@ export async function leerEquipo(sucursalId: string | null): Promise<{
   const alcance: Alcance = sucursalId ? 'sucursal' : 'cadena'
   const agentes = elencoDe(alcance)
 
-  const [{ data: resumen }, { data: config }, { data: bitacora }] = await Promise.all([
+  const [{ data: resumen }, { data: config }, { data: bitacora }, { data: conv }] = await Promise.all([
     sb.rpc('agentes_resumen', { p_sucursal: sucursalId }),
     sb.from('agente_config').select('agente, accion, nivel, sucursal_id'),
     sb.from('agente_bitacora').select('agente, estado, acerto'),
+    // v1.1 · El agente Convenio NO lee el snapshot diario. Un débito aparece
+    // cuando entra una liquidación, no a las 5 de la mañana, y un plazo de
+    // reclamo de 30 días no tolera un número de ayer. `convenios_resumen` es
+    // barato: cuenta sobre tablas chicas, no sobre 598.117 ventas.
+    sb.rpc('convenios_resumen', { p_sucursal: sucursalId }),
   ])
   // ── NULL NO ES CERO ────────────────────────────────────────────────────
   //
@@ -88,6 +93,7 @@ export async function leerEquipo(sucursalId: string | null): Promise<{
   // nada» — que es lo que estuvo diciendo Abasto mientras la función se
   // cancelaba por timeout, hasta que lo encontró la verificación de coherencia.
   const hayResumen = resumen != null
+  const convenios = (conv ?? null) as Record<string, any> | null
   const r = (resumen ?? {}) as Record<string, any>
   const calculadoAt = (r.calculado_at as string | undefined) ?? null
 
@@ -115,9 +121,12 @@ export async function leerEquipo(sucursalId: string | null): Promise<{
   return {
     calculadoAt,
     agentes: agentes.map((a) =>
-      hayResumen
-        ? leerUno(a, r[a.id] ?? {}, nivelDe(a.id), marcadorDe(a.id))
-        : sinCalcular(a, nivelDe(a.id), marcadorDe(a.id))),
+      // Convenio no depende del snapshot: se lee siempre.
+      a.id === 'convenio'
+        ? leerConvenio(a, convenios, nivelDe(a.id), marcadorDe(a.id))
+        : hayResumen
+          ? leerUno(a, r[a.id] ?? {}, nivelDe(a.id), marcadorDe(a.id))
+          : sinCalcular(a, nivelDe(a.id), marcadorDe(a.id))),
   }
 }
 
@@ -253,6 +262,110 @@ function leerUno(
 
     default:
       return off('sin lectura definida', 'declararla en lib/agentes/lectura.ts', '/admin')
+  }
+}
+
+/**
+ * D · QUÉ DICE EL AGENTE CONVENIO.
+ *
+ * ── D.5 · Y LO QUE NO PUEDE SABER ───────────────────────────────────────────
+ *
+ * Se apaga en dos escalones, y los dos dicen qué los enciende:
+ *
+ *   · Sin padrón no puede decir nada: no hay a quién presentarle.
+ *   · Con padrón y sin débitos puede avisar cierres, pero no puede hablar de
+ *     plata perdida. Eso lo enciende un archivo de débitos de un trimestre.
+ *
+ * Un agente que mostrara «$0 debitados» con cero liquidaciones cargadas
+ * estaría diciendo que la obra social no te debitó nada, que es exactamente lo
+ * contrario de lo que pasa.
+ */
+function leerConvenio(
+  agente: Agente, d: Record<string, any> | null, nivel: Nivel,
+  marcador: LecturaDeAgente['marcador'],
+): LecturaDeAgente {
+  const base = {
+    agente, nivel, marcador,
+    puedeHacer: agente.acciones
+      .filter((a) => hayEjecutor(agente.id, a.clave) && nivel !== 'nunca')
+      .map((a) => ({ clave: a.clave, nombre: a.nombre, nivel })),
+  }
+  const off = (motivo: string, enciende: string): LecturaDeAgente => ({
+    ...base, encendido: false, frase: null, motivoApagado: motivo,
+    queLoEnciende: enciende, href: '/admin/convenios',
+  })
+
+  if (!d) {
+    return off('no se pudo leer el estado del sector',
+      'revisar que `convenios_resumen` esté creada (migración 0210)')
+  }
+
+  const convenios = n(d.padron?.convenios)
+  if (!convenios) {
+    return off(
+      'no hay ningún convenio cargado, así que no hay a quién presentarle',
+      'la lista de obras sociales con las que trabajan, con el plazo de presentación de cada una. ' +
+      'Entre el 50% y el 70% de lo que se despacha pasa por una obra social: esto no es un detalle')
+  }
+
+  const debitos = n(d.debitos?.cantidad)
+  const porVencer = n(d.cierres?.por_vencer)
+  const sinCalcular = n(d.cierres?.sin_calcular)
+
+  if (!debitos) {
+    // Hay padrón: ya puede avisar cierres. Lo que no puede es hablar de plata.
+    const frase = porVencer
+      ? `Hay ${porVencer} presentación(es) que cierran dentro de su plazo de aviso y no están armadas. ` +
+        'De débitos todavía no puedo decir nada: no entró ninguna liquidación, y eso NO quiere decir ' +
+        'que no te hayan debitado — quiere decir que nadie los sumó.'
+      : 'Ninguna presentación cierra dentro de su plazo de aviso. De débitos todavía no puedo decir ' +
+        'nada: no entró ninguna liquidación, y eso no quiere decir que no te hayan debitado.'
+    return {
+      ...base, encendido: true, frase, motivoApagado: null,
+      queLoEnciende: 'un archivo de débitos de un trimestre, para poder decir cuánto se pierde y cuánto se puede recuperar',
+      href: '/admin/convenios',
+    }
+  }
+
+  // Con débitos cargados: el número que importa primero.
+  const perdida = n(d.reclamables?.plata_perdida)
+  const recuperable = n(d.reclamables?.plata)
+  const vencenPronto = n(d.reclamables?.vencen_en_7)
+  const sinSaber = n(d.reclamables?.no_se_sabe)
+
+  const partes: string[] = []
+  if (recuperable > 0) {
+    partes.push(
+      `Hay ${ars(recuperable)} en débitos reclamables sin reclamar` +
+      (vencenPronto ? `, y ${vencenPronto} vencen dentro de 7 días` : '') + '.')
+  }
+  if (perdida > 0) {
+    partes.push(`Ya se perdieron ${ars(perdida)} por dejar vencer el plazo de reclamo.`)
+  }
+  if (sinSaber > 0) {
+    partes.push(`${sinSaber} débito(s) no los puedo clasificar: falta un dato y tiene que mirarlos una persona.`)
+  }
+  if (porVencer > 0) {
+    partes.push(`${porVencer} presentación(es) cierran dentro de su plazo de aviso y no están armadas.`)
+  }
+  const sinAcuse = n(d.presentaciones?.sin_acuse_troquel)
+  if (sinAcuse > 0) {
+    partes.push(
+      `${sinAcuse} presentación(es) enviadas no tienen el acuse del remito de troqueles guardado: ` +
+      'si debitan por troquel faltante, esos no se van a poder reclamar.')
+  }
+  if (!partes.length) {
+    partes.push(
+      `${debitos} débito(s) cargados por ${ars(n(d.debitos?.plata))}, y ninguno está reclamable sin reclamar.`)
+  }
+  if (sinCalcular > 0) {
+    partes.push(
+      `De ${sinCalcular} convenio/sucursal no puedo calcular el cierre: falta la periodicidad o el día.`)
+  }
+
+  return {
+    ...base, encendido: true, frase: partes.join(' '),
+    motivoApagado: null, queLoEnciende: null, href: '/admin/convenios/debitos',
   }
 }
 

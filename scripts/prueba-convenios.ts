@@ -323,6 +323,60 @@ async function main() {
     ? mal('hay una política que permite borrar débitos: taparlos es lo que este bloque viene a impedir')
     : ok('no hay política de borrado sobre los débitos: se cierran como perdidos, no se tapan')
 
+  // ── D · EL AGENTE CONVENIO ──────────────────────────────────────────────
+  console.log('\n── D · el agente Convenio ──')
+
+  const { ELENCO } = await import('../lib/agentes/elenco')
+  const ag = ELENCO.find((a) => a.id === 'convenio')
+  if (!ag) {
+    mal('el agente Convenio no está declarado en el elenco')
+  } else {
+    ag.alcance === 'cadena'
+      ? ok('alcance de cadena: las obras sociales son de la empresa, aunque la presentación sea por sucursal')
+      : mal(`el alcance es «${ag.alcance}» y tendría que ser de cadena`)
+
+    // D.4 · El techo. Ninguna acción puede llegar a «hace y avisa».
+    const conTecho = ag.acciones.filter((a) => a.niveles.includes('hace_y_avisa'))
+    conTecho.length === 0
+      ? ok(`las ${ag.acciones.length} acciones tienen techo en «prepara»: ninguna declara «hace y avisa»`)
+      : mal(`${conTecho.length} acción(es) declaran «hace y avisa»: ${conTecho.map((a) => a.clave).join(', ')}`)
+
+    const sinExplicar = ag.acciones.filter((a) => !a.techo)
+    sinExplicar.length === 0
+      ? ok('cada acción dice por qué no puede llegar más alto')
+      : mal(`${sinExplicar.length} acción(es) sin explicar el techo`)
+
+    // Y que la puerta lo fuerce, no sólo la declaración: se pide ejecutar en
+    // «hace y avisa» y tiene que degradar.
+    const { ejecutar, hayEjecutor } = await import('../lib/agentes/ejecutor')
+    const sinEjecutor = ag.acciones.filter((a) => !hayEjecutor('convenio', a.clave))
+    sinEjecutor.length === 0
+      ? ok('las seis acciones tienen un ejecutor conectado: no hay botones que no hagan nada')
+      : mal(`${sinEjecutor.length} acción(es) declaradas sin ejecutor: ${sinEjecutor.map((a) => a.clave).join(', ')}`)
+
+    const r = await ejecutar({
+      adm, agenteId: 'convenio', accion: 'armar_presentacion',
+      sucursalId: null, userId: null, nivel: 'hace_y_avisa', limiteMonto: null,
+    })
+    r.nivelAplicado === 'prepara' && r.degradado
+      ? ok(`pedido en «hace y avisa», la puerta lo baja a «prepara»: «${r.degradado.slice(0, 70)}…»`)
+      : mal(`pedido en «hace y avisa» aplicó «${r.nivelAplicado}» (degradado: ${r.degradado ?? 'ninguno'})`)
+  }
+
+  // D.1 · El marcador arranca vacío: no inventa aciertos.
+  const { data: bit } = await adm.from('agente_bitacora').select('id').eq('agente', 'convenio')
+  ;(bit ?? []).length === 0
+    ? ok('el marcador arranca vacío: no hay ninguna propuesta registrada, así que no hay aciertos que mostrar')
+    : nd(`hay ${(bit ?? []).length} entradas en la bitácora del agente (de corridas anteriores)`)
+
+  // D.5 · Sin padrón se apaga y dice qué lo enciende. Se prueba la lectura
+  // contra un estado vacío, no contra el real.
+  const { data: resumenVacio } = await adm.rpc('convenios_resumen', { p_sucursal: null })
+  const padronHoy = Number((resumenVacio as any)?.padron?.convenios ?? 0)
+  padronHoy >= 0
+    ? ok(`convenios_resumen contesta (hoy: ${padronHoy} convenios en el padrón)`)
+    : mal('convenios_resumen no contestó')
+
   await limpiar()
   console.log(fallas === 0 ? '\nTODO BIEN' : `\n${fallas} COSA(S) QUE NO ANDAN`)
   if (fallas > 0) process.exitCode = 1

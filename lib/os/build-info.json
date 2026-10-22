@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T05:48:37.457Z",
-  "commit": "5cdb2f6843cffdccc0c6730685dc4fbf41ebcbf8",
-  "mensaje": "feat: presentación por obra social y sucursal",
+  "construido_at": "2026-10-22T05:56:17.270Z",
+  "commit": "9218b824170453e0559963fbd9fcb865e4618029",
+  "mensaje": "feat: débitos con motivo, recupero y reclamo",
   "rama": "main"
 }
