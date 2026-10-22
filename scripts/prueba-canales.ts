@@ -665,6 +665,97 @@ async function main() {
     }
   }
 
+  // ── G · UN CANAL SE DA DE ALTA, NO SE PROGRAMA ──────────────────────────
+  console.log('\n── G · alta y administración de canales ──')
+
+  // G.5 · el estado de todas las conexiones, con qué hacer.
+  const { data: cx, error: eCx } = await adm.rpc('canales_conexiones')
+  if (eCx) { mal(`canales_conexiones falló: ${eCx.message}`) }
+  const conexiones = (cx ?? []) as any[]
+  const rotas = conexiones.filter((c) => c.anda === false)
+  for (const c of rotas) {
+    if (!c.que_hacer?.trim()) {
+      mal(`${c.canal} · ${c.que} está en rojo y no dice qué hacer: eso es un semáforo, no una herramienta`)
+    }
+  }
+  ok(`${conexiones.length} conexiones revisadas; las ${rotas.length} que no andan dicen qué hacer`)
+  for (const c of rotas.slice(0, 3)) nd(`${c.canal} · ${c.que}: ${c.que_hacer}`)
+
+  // Y las que no reciben a propósito no son un problema.
+  const aProposito = conexiones.filter((c) => c.anda === null)
+  aProposito.every((c) => /a propósito|a proposito/.test(c.que_hacer ?? ''))
+    ? ok(`las ${aProposito.length} que no reciben a propósito lo dicen, y no cuentan como rotas`)
+    : mal('una conexión que no recibe a propósito aparece como problema')
+
+  // G.1 y G.6 · dar de alta un canal, sin código.
+  {
+    const email = 'prueba.canales.alta@social-ahorro.test'
+    const pass = 'Prueba-alta-12!'
+    const { data: previos } = await adm.auth.admin.listUsers({ page: 1, perPage: 200 })
+    for (const u of previos?.users ?? []) if (u.email === email) await adm.auth.admin.deleteUser(u.id)
+    const { data: nuevo } = await adm.auth.admin.createUser({ email, password: pass, email_confirm: true })
+    if (!nuevo?.user) {
+      mal('no se pudo crear el usuario de prueba del alta')
+    } else {
+      await adm.from('users_admin').upsert(
+        { id: nuevo.user.id, rol: 'comprador', activo: true }, { onConflict: 'id' })
+      const suyo = createClient(env('NEXT_PUBLIC_SUPABASE_URL'), env('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+        { auth: { persistSession: false } })
+      await suyo.auth.signInWithPassword({ email, password: pass })
+
+      // Un comprador no abre canales.
+      const { data: negado } = await suyo.rpc('canal_alta', {
+        p_id: 'prueba_rappi', p_nombre: 'PRUEBA Rappi', p_tipo: 'delivery',
+        p_comision_pct: 28, p_recargo_pct: 0, p_sucursal: null,
+      })
+      ;(negado as any)?.ok === false && /no da de alta canales/.test(String((negado as any)?.por_que ?? ''))
+        ? ok('un comprador no da de alta canales: abrir uno compromete al negocio con una plataforma')
+        : mal('un comprador dio de alta un canal')
+
+      // Un gerente sí, y el canal nace declarado vacío.
+      await adm.from('users_admin').update({ rol: 'gerente' }).eq('id', nuevo.user.id)
+      const { data: alta } = await suyo.rpc('canal_alta', {
+        p_id: 'prueba_rappi', p_nombre: 'PRUEBA Rappi', p_tipo: 'delivery',
+        p_comision_pct: 28, p_recargo_pct: 0, p_sucursal: null,
+      })
+      const a = alta as any
+      if (a?.ok !== true) {
+        mal(`no se pudo dar de alta el canal: ${a?.por_que}`)
+      } else {
+        ok('un gerente da de alta un canal desde la pantalla, sin migración')
+        Array.isArray(a.que_le_falta) && a.que_le_falta.length >= 5
+          ? ok(`y nace declarado vacío, con ${a.que_le_falta.length} cosas que le faltan`)
+          : mal('el canal nuevo no declara qué le falta')
+
+        // No nace en cero: nace diciendo que no sabe.
+        const { data: est2 } = await adm.rpc('canales_estado')
+        const nuevoCanal = ((est2 ?? []) as any[]).find((c) => c.canal_id === 'prueba_rappi')
+        if (!nuevoCanal) {
+          mal('el canal nuevo no aparece en el tablero')
+        } else if (nuevoCanal.publicados !== null) {
+          mal(`el canal nuevo reporta ${nuevoCanal.publicados} publicados y debería reportar null`)
+        } else if (!nuevoCanal.que_falta) {
+          mal('el canal nuevo aparece sin decir qué le falta')
+        } else {
+          ok('aparece en el tablero con null —no con cero— y diciendo qué le falta')
+        }
+
+        // Y el duplicado se rechaza.
+        const { data: dup } = await suyo.rpc('canal_alta', {
+          p_id: 'prueba_rappi', p_nombre: 'PRUEBA Rappi otra vez', p_tipo: 'delivery',
+          p_comision_pct: 28, p_recargo_pct: 0, p_sucursal: null,
+        })
+        ;(dup as any)?.ok === false
+          ? ok('y no se puede dar de alta dos veces el mismo id')
+          : mal('dio de alta dos canales con el mismo id')
+
+        await adm.from('canales_venta').delete().eq('id', 'prueba_rappi')
+      }
+      await adm.from('users_admin').delete().eq('id', nuevo.user.id)
+      await adm.auth.admin.deleteUser(nuevo.user.id)
+    }
+  }
+
   console.log(`\n${fallas === 0 ? 'TODO BIEN' : `${fallas} FALLA(S)`}`)
   process.exit(fallas === 0 ? 0 : 1)
 }
