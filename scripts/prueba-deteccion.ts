@@ -70,6 +70,10 @@ const DETECTORES: { clave: string; rpc: string; bloque: string }[] = [
   { bloque: 'B.4', clave: 'monto_fuera_de_lo_habitual', rpc: 'detectar_monto_fuera_de_lo_habitual' },
   { bloque: 'B.5', clave: 'faltante_sin_nota_credito', rpc: 'detectar_faltante_sin_nota_credito' },
   { bloque: 'B.6', clave: 'barras_con_dos_precios', rpc: 'detectar_barras_con_dos_precios' },
+  { bloque: 'C.1', clave: 'dejo_de_venderse', rpc: 'detectar_dejo_de_venderse' },
+  { bloque: 'C.2', clave: 'empezo_a_vender_mas', rpc: 'detectar_empezo_a_vender_mas' },
+  { bloque: 'C.3', clave: 'proveedor_cambio', rpc: 'detectar_proveedor_cambio' },
+  { bloque: 'C.4', clave: 'sucursal_bajo', rpc: 'detectar_sucursal_bajo' },
 ]
 
 async function main() {
@@ -193,6 +197,30 @@ async function main() {
   if (!filtrados) {
     ok(`ninguno de los ${todos.length} hallazgos nombra a una de las ${new Set(nombres).size} personas`)
   }
+
+  // ── C.4 · CONTRA LO SUYO, NO CONTRA LAS OTRAS ───────────────────────────
+  //
+  // No se puede leer en el SQL desde acá, pero sí se puede verificar la
+  // consecuencia: si comparara entre sucursales, la más chica aparecería
+  // siempre y la más grande nunca. Con tres meses de historia eso no se puede
+  // demostrar, así que se verifica lo que sí: que la evidencia declare contra
+  // qué comparó, y que no mencione a otra sucursal.
+  console.log('\n── C.4 · contra su propia historia ──')
+  const { data: bajo } = await adm.rpc('detectar_sucursal_bajo')
+  const { data: todasSucs } = await adm.from('sucursales').select('id, nombre')
+  for (const f of (bajo ?? []) as Fila[]) {
+    const ev = f.evidencia ?? {}
+    if (ev.comparado_contra !== 'su propia historia') {
+      mal(`C.4 ${f.clave} no declara contra qué comparó`)
+      continue
+    }
+    const otras = (todasSucs ?? []).filter((s: any) => s.id !== f.sucursal_id)
+    const mencionaOtra = otras.filter((s: any) =>
+      `${f.hecho} ${JSON.stringify(ev)}`.toLowerCase().includes(String(s.nombre).toLowerCase()))
+    if (mencionaOtra.length) mal(`C.4 ${f.clave} menciona ${mencionaOtra.map((s: any) => s.nombre).join(', ')}`)
+    else ok(`C.4 ${ev.sucursal}: compara contra su propia historia y no nombra a ninguna otra`)
+  }
+  if (!(bajo ?? []).length) nd('C.4 no encontró ninguna sucursal por debajo de su propia historia')
 
   // Y que el detector de caja no traiga el cajero ni en la evidencia.
   const { data: caja } = await adm.rpc('detectar_caja_diferencias_repetidas')
