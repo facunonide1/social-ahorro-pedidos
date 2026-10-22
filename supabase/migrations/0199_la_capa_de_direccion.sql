@@ -1,0 +1,52 @@
+-- 0199 · v0.98-direccion · BLOQUES A y C · aplicada vía MCP
+--
+-- ════════════════════════════════════════════════════════════════════════════
+-- LA CAPA DE DIRECCIÓN
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- Un agente NO es un módulo: es una LECTURA de lo que el sistema ya calcula,
+-- con nombre y nivel encima. Por eso acá no hay tabla `agentes` con lógica — el
+-- elenco vive en `lib/agentes/elenco.ts` y la lectura en `lib/agentes/lectura.ts`.
+-- La base guarda sólo lo que es una decisión de una persona.
+--
+-- No es una restricción estética: si Abasto calculara su propio faltante, en
+-- tres semanas Abasto y el plan de compra dirían cosas distintas y nadie
+-- sabría cuál creer.
+--
+-- ── C · LAS DECISIONES, Y LO QUE SE PUEDE CALCULAR ──────────────────────────
+--
+-- `decisiones_pendientes` junta lo que espera una firma. De las cinco fuentes,
+-- el costo diario se puede calcular en UNA:
+--
+--   quiebre            SÍ   ventas/mes ÷ 30 × margen unitario
+--   transferir         no   ahorra una vez, no por día
+--   deuda impaga       no   no sabemos si hay recargo por mora
+--   diferencia de caja no   puede ser un vuelto mal dado, o nada
+--   baja con stock     no   no se deteriora por esperar
+--
+-- Las cuatro van con `costo_por_dia` en NULL y `por_que_no_se_sabe` escrito.
+-- Cero diría «esperar no cuesta nada», que es una afirmación que no podemos
+-- hacer. El total de la pantalla suma sólo las que tienen número y dice
+-- cuántas quedaron afuera.
+--
+-- ── Y UNA ADVERTENCIA DENTRO DEL PROPIO CÁLCULO ─────────────────────────────
+--
+-- Los quiebres dan $748.284 por día, que es cerca de la cuarta parte de todo
+-- el margen de la cadena. La cuenta es correcta pero supone que cada venta que
+-- no se hace se pierde ENTERA, y en una farmacia el que no encuentra una marca
+-- se lleva otra.
+--
+-- No se le aplicó un descuento inventado —no sabemos cuánto se sustituye— ni
+-- se sacó el número, que sirve para ordenar qué sucursal duele más. Se dice lo
+-- que supone, en el texto que la pantalla muestra.
+--
+-- ── C.5 · LA BITÁCORA ───────────────────────────────────────────────────────
+--
+-- `agente_bitacora` guarda qué propuso el agente, el cálculo que mostró, el
+-- costo que dijo, quién decidió y qué eligió. Y aparte `resultado` y `acerto`,
+-- que los llena quien mide después.
+--
+-- Es lo que llena el marcador. Hoy está vacía, y por eso cada agente dice
+-- «todavía sin antecedentes» — que es como empieza cualquier empleado.
+--
+-- `acerto` en NULL no es falso: es que todavía no se sabe.

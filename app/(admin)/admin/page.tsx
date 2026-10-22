@@ -20,6 +20,11 @@ import { NoraPrediccionesPanel } from './nora-predicciones-panel'
 import { SucursalesLive } from './sucursales-live'
 import { OsAccionesRapidas } from './os-acciones-rapidas'
 import { OsSubAppsGrid } from './os-subapps-grid'
+import { EquipoClient } from './equipo-client'
+import { leerEquipo } from '@/lib/agentes/lectura'
+import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
+import { LayoutGrid } from 'lucide-react'
 import { OsLoUrgente, type UrgenteItem } from './os-lo-urgente'
 import { AvisoDemo } from '@/components/demo/aviso-demo'
 import { contarDemo, sinDemo } from '@/lib/demo/estado'
@@ -228,12 +233,28 @@ export default async function MissionControlPage() {
   })
 
   const verSinDemo = sinDemo()
-  const [kpis, gerencial, urgente, demo] = await Promise.all([
-    esTransversal ? getKpis() : Promise.resolve(null),
-    esTransversal ? getResumenGerencial() : Promise.resolve(null),
-    getLoUrgente(profile.rol, custom),
-    contarDemo(),
-  ])
+
+  // ── EL EQUIPO Y LAS DECISIONES ────────────────────────────────────────────
+  //
+  // El elenco CAMBIA con el alcance, no se filtra: mirando la cadena se ven los
+  // agentes de cadena, mirando Arabia los que trabajan ahí. Ver §2 del modelo y
+  // `elencoDe()`.
+  //
+  // Las decisiones las filtra la RLS por sucursal: un encargado ve las suyas.
+  const sbEq = createClient()
+  const [kpis, gerencial, urgente, demo, equipo, { data: decisiones }, { data: sucActiva }] =
+    await Promise.all([
+      esTransversal ? getKpis() : Promise.resolve(null),
+      esTransversal ? getResumenGerencial() : Promise.resolve(null),
+      getLoUrgente(profile.rol, custom),
+      contarDemo(),
+      leerEquipo(esTodas ? null : sucursalId),
+      sbEq.from('decisiones_pendientes').select('*'),
+      sucursalId
+        ? sbEq.from('sucursales').select('nombre').eq('id', sucursalId).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ])
+  const nombreAlcance = (sucActiva as any)?.nombre ?? 'la cadena'
 
   return (
     <div className="container mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-6 md:py-8">
@@ -258,11 +279,28 @@ export default async function MissionControlPage() {
       {/* Zona 2 · Acciones rápidas (por rol) */}
       <OsAccionesRapidas />
 
+      {/* ── LA CAPA DE DIRECCIÓN ──────────────────────────────────────────
+          Lo primero que se ve deja de ser el listado de 13 aplicaciones y pasa
+          a ser el equipo: qué hizo cada agente y qué necesita tu firma.
+
+          Las 13 no se fueron: están una pestaña más allá, enteras. La regla es
+          que una persona pueda hacer su día sin bajar a los listados — si para
+          operar hay que ir ahí, esta capa está mal armada. */}
+      <EquipoClient
+        equipo={equipo as any}
+        decisiones={decisiones as any}
+        alcanceNombre={nombreAlcance}
+        esCadena={esTodas}
+      />
+
       {/* Zona 3 · Lo urgente (transversal) */}
       <OsLoUrgente items={urgente} />
 
-      {/* Zona 4 · Grilla de sub-apps (permitidas) */}
-      <OsSubAppsGrid />
+      <Link href="/admin/aplicaciones"
+        className="flex items-center gap-2 rounded-lg border border-dashed p-3 text-sm text-muted-foreground hover:border-primary/40 hover:text-foreground">
+        <LayoutGrid className="size-4" />
+        Las 13 aplicaciones completas — listados, filtros, fichas y exportaciones
+      </Link>
 
       {/* Zona 5 · KPIs + resumen (roles altos) */}
       {kpis && (
