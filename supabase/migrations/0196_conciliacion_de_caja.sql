@@ -77,3 +77,18 @@
 -- forma. Queda declarado en `decisiones_comerciales` con el motivo.
 --
 -- La regla de oro 3 NO se toca: sigue siendo el objetivo.
+
+-- ── Y UNA TRAMPA QUE COSTÓ ENCONTRAR ───────────────────────────────────────
+--
+-- `create or replace function` CONSERVA el ACL de la versión anterior. A
+-- `caja_controlar` se le revocó el público al crearla, después se reemplazó
+-- para arreglar los nombres de columna, y ese reemplazo trajo de vuelta el
+-- grant a PUBLIC que la función tenía al nacer. El linter la encontró llamable
+-- por `anon` — una función que escribe diferencias y lee la caja fuerte.
+--
+-- El revoke va DESPUÉS de la última versión de la función, siempre.
+--
+-- Verificado: anon=false y authenticated=true en caja_controlar, maestro_estado,
+-- despacho_sugerido y puede_completar_tarea. Las dos que sólo usa el servicio
+-- —sifaco_aplicar_sucursales y rls_escrituras_que_dan_lectura— tienen las dos
+-- en false.
