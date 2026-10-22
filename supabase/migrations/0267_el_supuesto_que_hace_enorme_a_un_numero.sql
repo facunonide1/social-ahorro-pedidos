@@ -1,0 +1,29 @@
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║  0267 · EL SUPUESTO QUE HACE ENORME A UN NUMERO                          ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
+--
+-- C.5 proyectado sobre PedidosYa dio esto:
+--
+--   24.788 productos · $650.692.508 al año de diferencia contra el mostrador
+--
+-- El numero esta bien calculado y **leido solo es enganoso**. Sale de
+-- multiplicar la diferencia por unidad por lo que cada producto vende en tres
+-- meses — pero esa venta es la **venta total**, de todos los canales, sobre
+-- todo del mostrador.
+--
+-- O sea: el calculo supone que **todo lo que hoy se vende pasaria a venderse
+-- por PedidosYa**, y eso no va a pasar. La tienda propia, con 7.737 productos
+-- publicados, hizo 21 pedidos.
+--
+-- ── QUE SE HACE CON UN NUMERO ASI ───────────────────────────────────────────
+--
+-- No se borra y no se achica con un porcentaje inventado. Se dice el
+-- supuesto, al lado del numero, cada vez. El que decide necesita las dos
+-- cosas: el techo y la condicion que lo haria cierto.
+--
+-- Lo que si se puede afirmar sin supuestos es **la diferencia por unidad** y
+-- los productos que no solo dejan menos sino que pierden plata: ahi el
+-- resultado es negativo y eso no depende de cuanto se venda. Esos van
+-- primero en el orden.
+--
+-- (El cuerpo final queda en 0268, que agrega el limite.)

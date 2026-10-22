@@ -1,0 +1,20 @@
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║  0266 · «QUE NO CONVIENE» TAMBIEN SE PREGUNTA ANTES DE PUBLICAR          ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
+--
+-- C.5 devolvio **cero productos**, y la funcion estaba bien: el unico canal
+-- con catalogo cargado es la tienda propia, que no cobra comision. Sin
+-- comision y sin recargo, ningun producto deja menos que en el mostrador.
+--
+-- Pero la pregunta util no es esa. Es la de antes de publicar: **si el
+-- catalogo entrara en PedidosYa con 24% de comision, cuales perderian.** Eso
+-- se puede calcular hoy, con el maestro, y es lo que decide si conviene abrir
+-- el canal.
+--
+-- Entonces la funcion contesta las dos cosas y **dice cual de las dos esta
+-- contestando**: medido cuando el canal tiene catalogo, PROYECTADO cuando no.
+--
+-- Un numero proyectado que no dice que lo es se lee como medido, y despues
+-- alguien toma una decision con un dato que nunca existio.
+--
+-- (El cuerpo final queda en 0267 y 0268.)

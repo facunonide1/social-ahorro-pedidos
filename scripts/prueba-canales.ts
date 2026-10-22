@@ -283,6 +283,138 @@ async function main() {
     }
   }
 
+  // ── C · CUÁNTO DEJA CADA CANAL ──────────────────────────────────────────
+  console.log('\n── C.3 · el recargo contra la comisión ──')
+  const { data: rvc, error: eR } = await adm.rpc('canal_recargo_vs_comision')
+  if (eR) { mal(`canal_recargo_vs_comision falló: ${eR.message}`) }
+  for (const r of ((rvc ?? []) as any[])) {
+    if (r.canal_id === 'mostrador') continue
+    if (!r.cubre) {
+      nd(`${r.canal}: recargo ${r.recargo_pct}% vs comisión ${r.comision_pct}% · ` +
+         `haría falta ${r.recargo_que_haria_falta}%`)
+    }
+    // El recargo que haría falta NO es igual a la comisión: la comisión se
+    // cobra sobre el precio ya recargado.
+    if (Number(r.comision_pct) > 0 &&
+        Number(r.recargo_que_haria_falta) <= Number(r.comision_pct)) {
+      mal(`${r.canal}: el recargo necesario (${r.recargo_que_haria_falta}%) no puede ser ` +
+          `menor o igual a la comisión (${r.comision_pct}%) — la comisión se cobra sobre el precio ya recargado`)
+    }
+    if (!r.hecho?.trim()) mal(`${r.canal} no explica el resultado en una frase`)
+  }
+  const pierdenC = ((rvc ?? []) as any[]).filter((r) => !r.cubre && r.canal_id !== 'mostrador')
+  pierdenC.length
+    ? ok(`${pierdenC.length} canales con el recargo por debajo de lo que haría falta, y cada uno dice el número`)
+    : ok('todos los canales cubren su comisión')
+
+  // ── C.1 y C.2 ───────────────────────────────────────────────────────────
+  console.log('\n── C.1 y C.2 · el desglose de una venta ──')
+  const { data: unPedido } = await adm.from('orders')
+    .select('id, total').gt('total', 0).order('total', { ascending: false })
+    .limit(3)
+  const pedidos = (unPedido ?? []) as any[]
+  // El más grande es el pedido extremo: se usa el segundo, que sí es una venta.
+  const elPedido = pedidos[1] ?? pedidos[0]
+  if (!elPedido) {
+    nd('no hay pedidos para desglosar')
+  } else {
+    const { data: des, error: eD } = await adm.rpc('canal_desglose_pedido', { p_order: elPedido.id })
+    if (eD) {
+      mal(`el desglose falló: ${eD.message}`)
+    } else {
+      const d = des as any
+      const esperado = ['venta', 'comision', 'costo_de_lo_vendido', 'resultado', 'resultado_pct']
+      const faltan = esperado.filter((k) => d[k] === undefined)
+      faltan.length ? mal(`al desglose le faltan: ${faltan.join(', ')}`)
+                    : ok('el desglose trae venta, comisión, costo, resultado y porcentaje')
+      Array.isArray(d.que_no_se_sabe) && d.que_no_se_sabe.length
+        ? ok(`y declara ${d.que_no_se_sabe.length} cosas que no puede saber`)
+        : mal('el desglose no declara nada de lo que no puede saber (el IVA siempre lo es)')
+      // El IVA siempre está en la lista: nunca se puede separar.
+      ;(d.que_no_se_sabe ?? []).some((x: string) => /IVA/.test(x))
+        ? ok('el IVA está declarado como no separable en todos los desgloses')
+        : mal('el desglose no dice que el IVA no se puede separar')
+      nd(`pedido de $${Math.round(d.venta).toLocaleString('es-AR')} · resultado ${d.resultado_pct}%`)
+    }
+
+    const { data: otros, error: eO } = await adm.rpc('canal_mismo_pedido_en_otros', { p_order: elPedido.id })
+    if (eO) {
+      mal(`la comparación entre canales falló: ${eO.message}`)
+    } else {
+      const o = (otros ?? []) as any[]
+      o.length >= 2
+        ? ok(`el mismo pedido valuado en ${o.length} canales`)
+        : mal('la comparación trae menos de dos canales')
+      const mostradorFila = o.find((x) => x.canal_id === 'mostrador')
+      mostradorFila
+        ? ok('el mostrador está entre los canales comparados: es el patrón')
+        : mal('el mostrador no aparece en la comparación')
+      for (const x of o) {
+        if (x.canal_id !== 'mostrador' && x.contra_el_mostrador === null) {
+          mal(`${x.canal} no dice cuánto más o menos deja que el mostrador`)
+        }
+      }
+    }
+  }
+
+  // ── EL PEDIDO QUE NO ES UNA VENTA ───────────────────────────────────────
+  console.log('\n── los pedidos que no son ventas ──')
+  const { data: ext } = await adm.rpc('canal_ventas_extremas')
+  const extremos = (ext ?? []) as any[]
+  for (const e of extremos) {
+    nd(`${e.cliente}: $${Math.round(e.total).toLocaleString('es-AR')} · ${e.items} items · ${e.veces}× la mediana`)
+    if (!e.por_que?.trim()) mal('un pedido extremo no dice por qué lo es')
+  }
+  const { data: mes } = await adm.rpc('canal_resultado_por_mes', { p_meses: 12 })
+  const meses = (mes ?? []) as any[]
+  const conExtremos = meses.filter((m) => m.pedidos_extremos > 0)
+  if (extremos.length && !conExtremos.length) {
+    mal('hay pedidos extremos y ningún mes los informa')
+  } else if (conExtremos.length) {
+    ok(`los meses con pedidos extremos los informan aparte, no los borran`)
+    for (const m of conExtremos) {
+      if (!/quedaron afuera/.test(m.que_no_se_sabe ?? '')) {
+        mal(`${m.canal} ${m.mes} excluyó pedidos sin decirlo`)
+      }
+    }
+  }
+
+  // ── C.5 · EL SUPUESTO AL LADO DEL NÚMERO ────────────────────────────────
+  console.log('\n── C.5 · qué no conviene, y con qué supuesto ──')
+  const { data: nc } = await adm.rpc('canal_producto_no_conviene',
+    { p_canal: null, p_limite: 200 })
+  const noConv = (nc ?? []) as any[]
+  // El corte silencioso: si la lista viene redonda en 1.000 es PostgREST, no
+  // el resultado. Y cada fila tiene que decir de cuántos es.
+  if (noConv.length === 1000) {
+    mal('la lista vino con exactamente 1.000 filas: es el corte de PostgREST, no el resultado')
+  }
+  if (noConv.length && !noConv[0].de_cuantos_es_este) {
+    mal('el listado no dice de cuántos está mostrando: un listado cortado se lee como completo')
+  } else if (noConv.length) {
+    ok(`el listado trae ${noConv.length} de ${Number(noConv[0].de_cuantos_es_este).toLocaleString('es-AR')}, y lo dice`)
+  }
+  const proyectados = noConv.filter((x) => x.medido_o_proyectado === 'proyectado')
+  const sinSupuesto = proyectados.filter((x) => !x.el_supuesto?.trim())
+  sinSupuesto.length
+    ? mal(`${sinSupuesto.length} proyecciones sin el supuesto al lado`)
+    : ok(`las ${proyectados.length} proyecciones dicen el supuesto que las hace válidas`)
+  const sinMarca = proyectados.filter((x) => !/PROYECTADO/.test(x.hecho ?? ''))
+  sinMarca.length
+    ? mal(`${sinMarca.length} proyecciones no se declaran como tales en el hecho`)
+    : ok('y se declaran como proyección en el hecho, no sólo en una columna')
+  const pierdenPlata = noConv.filter((x) => x.pierde_plata)
+  nd(`${noConv.length} productos dejarían menos que en el mostrador; ${pierdenPlata.length} perderían plata`)
+
+  // ── C.7 ─────────────────────────────────────────────────────────────────
+  console.log('\n── C.7 · lo que no se puede calcular ──')
+  const { data: nsp } = await adm.rpc('canal_lo_que_no_se_puede_calcular')
+  for (const x of ((nsp ?? []) as any[])) {
+    if (!x.que_lo_enciende?.trim()) mal(`«${x.que}» no dice qué lo encendería`)
+    nd(`${x.que}${x.cuantos !== null ? ` (${Number(x.cuantos).toLocaleString('es-AR')})` : ''}`)
+  }
+  ok(`las ${(nsp ?? []).length} cosas que no se pueden calcular dicen qué las encendería`)
+
   console.log(`\n${fallas === 0 ? 'TODO BIEN' : `${fallas} FALLA(S)`}`)
   process.exit(fallas === 0 ? 0 : 1)
 }

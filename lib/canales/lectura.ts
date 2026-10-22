@@ -149,3 +149,81 @@ export async function conflictoLegal(adm: Adm) {
     por_que_no_se_arregla: string
   } | null
 }
+
+/**
+ * C · CUÁNTO DEJA CADA CANAL.
+ *
+ * ── EL NÚMERO QUE CONTESTA EL BLOQUE ────────────────────────────────────────
+ *
+ * El recargo que haría falta para igualar al mostrador **no es igual a la
+ * comisión**. Con 24% de comisión hace falta 31,6% de recargo, no 24%, porque
+ * la comisión se cobra sobre el precio ya recargado: cobrar un 24% más no
+ * compensa que te saquen el 24% de ese total.
+ *
+ * El recargo de PedidosYa es 19%. La brecha no es de 5 puntos: es de 12,6.
+ */
+export type RecargoVsComision = {
+  canal_id: string; canal: string
+  recargo_pct: number; comision_pct: number; diferencia_pts: number
+  cubre: boolean; comision_confirmada: boolean
+  recargo_que_haria_falta: number | null; hecho: string
+}
+
+export type ResultadoPorMes = {
+  canal_id: string; canal: string; mes: string
+  pedidos: number; venta: number; comision: number; costo: number
+  resultado: number; resultado_pct: number | null
+  pedidos_extremos: number; venta_de_los_extremos: number
+  que_no_se_sabe: string | null
+}
+
+export type NoConviene = {
+  canal_id: string; canal: string; producto_id: string
+  sku: string | null; nombre: string
+  precio_mostrador: number; costo: number
+  precio_en_el_canal: number; queda_para_el_negocio: number
+  resultado_mostrador: number; diferencia: number
+  vende_3m: number; plata_al_ano_si_se_vendiera_todo_ahi: number | null
+  pierde_plata: boolean; medido_o_proyectado: 'medido' | 'proyectado'
+  hecho: string; el_supuesto: string; de_cuantos_es_este: number
+}
+
+export type NoSePuede = {
+  que: string; cuantos: number | null; el_numero: string; que_lo_enciende: string
+}
+
+export const recargoVsComision = (adm: Adm) =>
+  rpc<RecargoVsComision>(adm, 'canal_recargo_vs_comision')
+
+export const resultadoPorMes = (adm: Adm, meses = 12) =>
+  rpc<ResultadoPorMes>(adm, 'canal_resultado_por_mes', { p_meses: meses })
+
+/**
+ * Acotado a propósito, y cada fila dice de cuántos es.
+ *
+ * Sin límite la función devuelve 24.788 filas y PostgREST entrega 1.000 sin
+ * avisar — el corte silencioso que este proyecto persigue desde la v0.98. El
+ * auditor de cortes mira el código TypeScript y no ve los RPC, así que el
+ * límite tiene que estar del lado de la base y venir declarado.
+ */
+export const noConviene = (adm: Adm, canal?: string | null, limite = 200) =>
+  rpc<NoConviene>(adm, 'canal_producto_no_conviene',
+    { p_canal: canal ?? null, p_limite: limite })
+
+export const noConvieneResumen = (adm: Adm) =>
+  rpc<any>(adm, 'canal_no_conviene_resumen')
+
+export const loQueNoSePuedeCalcular = (adm: Adm) =>
+  rpc<NoSePuede>(adm, 'canal_lo_que_no_se_puede_calcular')
+
+export const ventasExtremas = (adm: Adm) =>
+  rpc<any>(adm, 'canal_ventas_extremas')
+
+export async function desglosePedido(adm: Adm, order: string) {
+  const { data, error } = await adm.rpc('canal_desglose_pedido', { p_order: order })
+  if (error) { console.error(`[canales] desglose: ${error.message}`); return null }
+  return data as any
+}
+
+export const mismoPedidoEnOtros = (adm: Adm, order: string) =>
+  rpc<any>(adm, 'canal_mismo_pedido_en_otros', { p_order: order })
