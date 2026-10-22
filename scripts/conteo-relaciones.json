@@ -18,7 +18,7 @@
   "aprobaciones": 0,
   "arqueos_caja": 48,
   "auditoria_logs": 0,
-  "auth_trigger_errors": 243,
+  "auth_trigger_errors": 253,
   "automatizaciones": 0,
   "avisos_al_cliente": 13,
   "avisos_faltante": 10,
@@ -26,7 +26,7 @@
   "b2b_pedidos_recurrentes": 0,
   "baja_con_stock_para_decidir": 203,
   "bloqueos_publicacion": 40617,
-  "bloqueos_resumen": -1,
+  "bloqueos_resumen": 6,
   "caja_diferencias": 0,
   "caja_general": 0,
   "caja_general_movimientos": 0,
@@ -91,6 +91,8 @@
   "convenio_debitos_por_quien_armo": 0,
   "convenio_debitos_por_sucursal": 0,
   "convenio_historico": 0,
+  "convenio_liquidaciones": 0,
+  "convenio_motivo_sinonimos": 36,
   "convenio_presentaciones": 0,
   "convenio_reclamos": 0,
   "convenio_recupero": 0,
@@ -306,7 +308,5 @@
   "zz_deprecated_matcheos_aprendidos_compras": 0,
   "zz_deprecated_precios_historico": 0
  },
- "desconocidas": [
-  "bloqueos_resumen"
- ]
+ "desconocidas": []
 }

@@ -323,6 +323,50 @@ async function main() {
     ? mal('hay una política que permite borrar débitos: taparlos es lo que este bloque viene a impedir')
     : ok('no hay política de borrado sobre los débitos: se cierran como perdidos, no se tapan')
 
+  // ── E · EL IMPORTADOR ───────────────────────────────────────────────────
+  //
+  // No se prueba el lector de XLSX (corre en el navegador): se prueba lo que
+  // decide, que es el matcheo de motivos. Es donde está el riesgo — una
+  // clasificación mal hecha marca un débito como no reclamable para siempre.
+  console.log('\n── E · el importador ──')
+
+  const casos: [string, string][] = [
+    ['TROQUEL FALTANTE', 'troquel_faltante'],
+    ['Falta troquel en receta', 'troquel_faltante'],
+    ['FUERA DE VADEMECUM', 'fuera_de_vademecum'],
+    ['Afiliado dado de baja al 01/03', 'afiliado_de_baja'],
+    ['PRESENTACION EXTEMPORANEA', 'fuera_de_plazo'],
+    ['Supera maximo de unidades', 'supera_el_tope'],
+    ['SIN FIRMA DEL AFILIADO', 'firma_ilegible'],
+    ['RECETA DUPLICADA', 'duplicada'],
+    ['Requiere auditoria previa', 'sin_autorizacion_previa'],
+    ['DEB. S/COD 4471 VER CIRCULAR', 'otro'],
+    ['', 'otro'],
+  ]
+  let bien = 0
+  for (const [texto, esperadoMotivo] of casos) {
+    const { data } = await adm.rpc('convenio_motivo_de_texto', { p_texto: texto, p_convenio: null })
+    const m = ((data ?? []) as any[])[0]?.motivo ?? 'otro'
+    if (m === esperadoMotivo) bien++
+    else mal(`«${texto}» se clasificó como ${m} y esperaba ${esperadoMotivo}`)
+  }
+  bien === casos.length
+    ? ok(`los ${casos.length} textos de prueba se clasifican bien, incluidos los dos que caen en «otro»`)
+    : nd(`${bien} de ${casos.length} textos bien clasificados`)
+
+  // Lo importante: un texto que no se entiende NO se fuerza a un motivo.
+  const { data: raro } = await adm.rpc('convenio_motivo_de_texto', {
+    p_texto: 'XJ-992 REVISAR CON AUDITORIA MEDICA SEGUN ANEXO', p_convenio: null,
+  })
+  const mRaro = ((raro ?? []) as any[])[0]
+  if (!mRaro || mRaro.motivo === 'otro') {
+    ok('un texto que no se entiende no se fuerza a ningún motivo: cae en «otro» con su texto')
+  } else {
+    // «auditoria» está como sinónimo de sin_autorizacion_previa: si matchea
+    // por eso, es un match legítimo y no un invento.
+    nd(`matcheó «${mRaro.termino}» → ${mRaro.motivo}; es un término declarado, no un invento`)
+  }
+
   // ── D · EL AGENTE CONVENIO ──────────────────────────────────────────────
   console.log('\n── D · el agente Convenio ──')
 

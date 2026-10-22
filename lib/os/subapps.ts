@@ -290,6 +290,7 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Tablero', ruta: '/admin/convenios' },
       { nombre: 'Presentaciones', ruta: '/admin/convenios/presentaciones' },
       { nombre: 'Débitos', ruta: '/admin/convenios/debitos' },
+      { nombre: 'Liquidaciones', ruta: '/admin/convenios/liquidaciones' },
       { nombre: 'Padrón', ruta: '/admin/convenios/padron' },
     ],
     // Construido y sin un solo dato real. Se marca en el menú para que no se
@@ -302,6 +303,8 @@ export const SUBAPPS: SubAppManifest[] = [
         destino: '/admin/convenios/padron', modulo: 'convenios', accion: 'crear', primary: true },
       { id: 'presentacion-nueva', nombre: 'Armar presentación', icono: 'Send',
         destino: '/admin/convenios/presentaciones', modulo: 'convenios', accion: 'crear', primary: true },
+      { id: 'liquidacion-foto', nombre: 'Liquidación por foto', icono: 'Camera',
+        destino: '/admin/convenios/liquidaciones/foto', modulo: 'convenios', accion: 'crear', primary: true },
     ],
   },
   {

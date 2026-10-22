@@ -39,9 +39,27 @@ function limpiarJson(texto: string): string {
  * Lee un documento con el modelo de visión y devuelve el JSON estructurado.
  *
  * No escribe en la base: eso lo hace `procesarExtraccion`. Acá sólo se lee.
+ *
+ * ── EL PARÁMETRO `otroPrompt` (v1.1) ────────────────────────────────────────
+ *
+ * Una liquidación de obra social no es una factura de droguería: no tiene
+ * renglones de producto, tiene renglones de débito con un motivo. El prompt de
+ * acá está escrito para facturas y le pide `lineas`.
+ *
+ * En vez de copiar esta función con otro prompt —que es lo que haría que en
+ * seis meses haya dos motores de documentos que se desincronizan— se le pasa
+ * el prompt y el validador. Todo lo demás se reusa: el modelo, el esfuerzo de
+ * razonamiento, el bloque de PDF vs imagen, la limpieza del JSON y los
+ * mensajes de error, que son los que la gente lee.
  */
 export async function extraerDeArchivo(
   archivo: { base64: string; mime: string },
+  otroPrompt?: {
+    system: string
+    instruccion: string
+    /** Qué forma tiene que tener el JSON para considerarse legible. */
+    valido: (datos: any) => boolean
+  },
 ): Promise<ResultadoExtraccion> {
   if (!hasAnthropicKey()) return { estado: 'error', mensaje: ERRORES.sinModelo }
   if (!DOC_MIMES_LEGIBLES.includes(archivo.mime as any)) {
@@ -60,11 +78,15 @@ export async function extraerDeArchivo(
     const resp = await anthropic.messages.create({
       model: DOC_MODELO,
       max_tokens: DOC_MAX_TOKENS,
-      system: PROMPT_EXTRACCION,
+      system: otroPrompt?.system ?? PROMPT_EXTRACCION,
       messages: [
         {
           role: 'user',
-          content: [bloque as any, { type: 'text', text: 'Extraé los datos de este documento y devolvé solo el JSON.' }],
+          content: [bloque as any, {
+            type: 'text',
+            text: otroPrompt?.instruccion
+              ?? 'Extraé los datos de este documento y devolvé solo el JSON.',
+          }],
         },
       ],
       // `effort` todavía no está tipado en la versión del SDK instalada.
@@ -91,7 +113,10 @@ export async function extraerDeArchivo(
     return { estado: 'error', mensaje: ERRORES.ilegible }
   }
 
-  if (!datos || typeof datos !== 'object' || !Array.isArray(datos.lineas)) {
+  const formaOk = otroPrompt
+    ? otroPrompt.valido(datos)
+    : !!datos && typeof datos === 'object' && Array.isArray(datos.lineas)
+  if (!formaOk) {
     return { estado: 'error', mensaje: ERRORES.ilegible }
   }
 
