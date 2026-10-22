@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T01:33:52.407Z",
-  "commit": "a091911438b0794298201d19182a31ee81217770",
-  "mensaje": "fix: cerrar lo que quedó abierto",
+  "construido_at": "2026-10-22T01:42:34.956Z",
+  "commit": "75f09f0a5f49e293350b0703163d22c61d0b103b",
+  "mensaje": "feat: listo para los primeros usuarios",
   "rama": "main"
 }

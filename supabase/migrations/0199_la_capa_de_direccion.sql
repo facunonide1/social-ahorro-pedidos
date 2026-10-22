@@ -69,3 +69,21 @@
 -- parametros que puede tocar es un modelo con permiso de escritura sobre la
 -- configuracion. Lo que no esta en la lista se le ofrece a NORA, que contesta
 -- sin escribir.
+
+-- ── Y UN CORTE SILENCIOSO EN MI PROPIO CÓDIGO ──────────────────────────────
+--
+-- `lib/agentes/lectura.ts` traía las filas de `transferir_antes_de_comprar` y
+-- contaba productos distintos en JavaScript. Esa vista tiene 2.909 filas y
+-- PostgREST devuelve 1.000 sin avisar: Abasto decía «635 productos» donde hay
+-- 1.687, y $11,3 M donde hay $33,5 M.
+--
+-- No fallaba. Daba un número más chico — la forma de fallar que no se nota, y
+-- exactamente el corte que documenta docs/CONSULTAS-QUE-NO-MIENTEN.md y que el
+-- auditor busca en el código de las pantallas. El agente nuevo lo repitió.
+--
+-- Lo destapó una verificación escrita para sacar el texto de los agentes para
+-- el informe: el script tenía el mismo defecto que el código, y al no coincidir
+-- con la consulta directa quedó a la vista.
+--
+-- `agentes_resumen(sucursal)` agrega EN LA BASE: un viaje, sin tope, y el mismo
+-- número que muestra el plan de compra. Verificado: 2.402 y 1.687.
