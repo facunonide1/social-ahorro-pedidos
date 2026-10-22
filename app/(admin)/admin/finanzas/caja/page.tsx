@@ -32,7 +32,7 @@ export default async function CajaPage() {
 
   const [{ data: sucs }, { data: cfg }, { data: cajas }, { data: turnos }, { data: movs }, { data: arqs }] = await Promise.all([
     sb.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
-    sb.from('config_caja_sucursal').select('sucursal_id, fondo_fijo, usa_caja_general, usa_caja_fuerte'),
+    sb.from('config_caja_sucursal').select('sucursal_id, fondo_fijo, usa_caja_general, usa_caja_fuerte, tope_efectivo'),
     cajasQ,
     turnosQ,
     sb.from('caja_general_movimientos').select('id, tipo, monto, estado, notas, fecha, caja_general_id, caja_general(sucursal_id, sucursales(nombre))').order('fecha', { ascending: false }).limit(120),
@@ -53,6 +53,10 @@ export default async function CajaPage() {
   const sucursales: SucCajaConfig[] = ((sucs ?? []) as any[]).map((s) => ({
     id: s.id, nombre: s.nombre,
     fondo_fijo: Number(cfgBySuc.get(s.id)?.fondo_fijo ?? 0),
+    // Null y no cero: sin tope definido NORA no avisa, que no es lo mismo
+    // que un tope de cero pesos.
+    tope_efectivo: cfgBySuc.get(s.id)?.tope_efectivo == null
+      ? null : Number(cfgBySuc.get(s.id).tope_efectivo),
     usa_caja_general: cfgBySuc.get(s.id)?.usa_caja_general ?? true,
     usa_caja_fuerte: cfgBySuc.get(s.id)?.usa_caja_fuerte ?? false,
     saldo_general: cajaBySuc.get(s.id) ?? 0,

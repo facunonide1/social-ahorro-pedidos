@@ -15,7 +15,8 @@
     "permisos:sincronizar": "npx tsx --env-file=.env.local scripts/sincronizar-permisos.ts",
     "contar:demo": "node --env-file=.env.local scripts/contar-demo.mjs",
     "contar:relaciones": "node --env-file=.env.local scripts/contar-relaciones.mjs",
-    "verificar:coherencia": "node scripts/verificar-coherencia.mjs"
+    "verificar:coherencia": "node scripts/verificar-coherencia.mjs",
+    "probar:dia-encargado": "npx tsx --env-file=.env.local scripts/prueba-dia-encargado.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",

@@ -43,13 +43,29 @@ export async function POST(req: NextRequest) {
   const adm = createAdminClient()
   const can = (...roles: AdminRole[]) => roles.includes(g.rol)
 
-  // ---- config fondo fijo ----
+  // ---- config fondo fijo y tope de efectivo ----
+  //
+  // F.3 · El tope de efectivo existía en la base desde la v0.97 y la pantalla
+  // de control lo mostraba —«el tope lo define el dueño en Configuración»—,
+  // pero no había ningún lado donde definirlo: esta acción sólo guardaba el
+  // fondo fijo. Quedaba en null para siempre y NORA no avisaba nunca.
+  //
+  // `tope_efectivo` se distingue de «no vino en el body»: mandar null es
+  // sacarlo a propósito, no mandarlo es no tocarlo. Null no es cero: cero
+  // querría decir que no puede quedar ni un peso en la caja.
   if (action === 'config') {
     if (!can('super_admin', 'gerente')) return NextResponse.json({ error: 'requiere super_admin/gerente' }, { status: 403 })
     if (!b?.sucursal_id) return NextResponse.json({ error: 'sucursal requerida' }, { status: 400 })
+    const tope = b?.tope_efectivo === undefined
+      ? undefined
+      : (b.tope_efectivo === null || b.tope_efectivo === '' ? null : Number(b.tope_efectivo))
+    if (tope != null && (!Number.isFinite(tope) || tope < 0)) {
+      return NextResponse.json({ error: 'el tope de efectivo tiene que ser un número positivo' }, { status: 400 })
+    }
     const { error } = await adm.from('config_caja_sucursal').upsert({
       sucursal_id: b.sucursal_id, fondo_fijo: Number(b.fondo_fijo ?? 0),
       usa_caja_general: b.usa_caja_general ?? true, usa_caja_fuerte: b.usa_caja_fuerte ?? false,
+      ...(tope === undefined ? {} : { tope_efectivo: tope }),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'sucursal_id' })
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })

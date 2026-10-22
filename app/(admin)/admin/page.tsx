@@ -22,6 +22,7 @@ import { OsAccionesRapidas } from './os-acciones-rapidas'
 import { OsSubAppsGrid } from './os-subapps-grid'
 import { EquipoClient } from './equipo-client'
 import { leerEquipo } from '@/lib/agentes/lectura'
+import { primerDia } from '@/lib/os/primer-dia'
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { LayoutGrid } from 'lucide-react'
@@ -274,6 +275,10 @@ export default async function MissionControlPage() {
       {/* Antes que cualquier número: qué parte de lo que sigue es inventado. */}
       <AvisoDemo conceptos={demo.porConcepto} total={demo.total} sinDemo={verSinDemo} />
 
+      {/* F.4 · Mientras falte algo para arrancar con gente real, se dice acá.
+          Sólo a quien puede resolverlo; desaparece solo cuando está todo. */}
+      <AvisoPrimerDia rol={profile.rol} />
+
       {verSinDemo ? null : <NoraBriefingCard />}
 
       {/* Zona 2 · Acciones rápidas (por rol) */}
@@ -412,5 +417,31 @@ export default async function MissionControlPage() {
 
       {esTransversal && <NoraPrediccionesPanel />}
     </div>
+  )
+}
+
+/**
+ * F.4 · El recordatorio de lo que falta para arrancar.
+ *
+ * Desaparece solo cuando los seis pasos están. No se puede «cerrar»: si se
+ * pudiera, se cerraría el primer día y nadie volvería a mirarlo.
+ */
+async function AvisoPrimerDia({ rol }: { rol: string }) {
+  if (rol !== 'super_admin' && rol !== 'gerente') return null
+  const { pasos, listo } = await primerDia()
+  if (listo) return null
+  const faltan = pasos.filter((p) => p.estado !== 'hecho')
+  const frenan = faltan.filter((p) => p.bloquea)
+  return (
+    <Link href="/admin/primer-dia"
+      className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm hover:border-amber-500/70">
+      <span className="font-medium">Falta cargar {faltan.length} de {pasos.length} cosas para empezar con gente de verdad.</span>
+      <span className="text-muted-foreground">
+        {frenan.length
+          ? `${frenan.length} frena${frenan.length > 1 ? 'n' : ''} al resto.`
+          : 'Nada de lo que falta frena al resto.'}
+      </span>
+      <span className="ml-auto text-xs text-muted-foreground">Ver la lista →</span>
+    </Link>
   )
 }

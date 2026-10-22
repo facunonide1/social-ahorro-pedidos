@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 
-export type SucCajaConfig = { id: string; nombre: string; fondo_fijo: number; usa_caja_general: boolean; usa_caja_fuerte: boolean; saldo_general: number }
+export type SucCajaConfig = { id: string; nombre: string; fondo_fijo: number; usa_caja_general: boolean; usa_caja_fuerte: boolean; saldo_general: number; tope_efectivo: number | null }
 export type TurnoRow = { id: string; sucursal_id: string; sucursal: string; fecha: string; apertura: number; ventas: number; pagos: number; esperado: number | null; contado: number | null; diferencia: number | null; fondo_dejado: number | null; retiro: number | null; estado: string }
 export type MovRow = { id: string; tipo: string; monto: number; estado: string; notas: string | null; fecha: string; sucursal: string }
 
@@ -178,22 +178,53 @@ export function CajaClient({ rol, sucursales, turnos, movimientos, desglose }: {
   )
 }
 
+/**
+ * F.3 · LOS DOS NÚMEROS DE LA CAJA DE CADA SUCURSAL.
+ *
+ * El fondo fijo es con cuánto abre el turno. El tope de efectivo es a partir
+ * de cuánto NORA avisa que hay que llevar plata a la caja fuerte.
+ *
+ * El tope puede quedar vacío, y vacío NO es cero: vacío es «no avisa», cero
+ * sería «no puede quedar ni un peso». Hasta la v0.99 la pantalla de control
+ * decía que el tope se definía acá y acá no estaba el campo.
+ */
 function ConfigSucursal({ suc }: { suc: SucCajaConfig }) {
   const router = useRouter()
   const [fondo, setFondo] = useState(String(suc.fondo_fijo))
+  const [tope, setTope] = useState(suc.tope_efectivo == null ? '' : String(suc.tope_efectivo))
   const [busy, setBusy] = useState(false)
   async function save() {
     setBusy(true)
-    try { await post({ action: 'config', sucursal_id: suc.id, fondo_fijo: Number(fondo) }); toast.success('Fondo fijo actualizado.'); router.refresh() }
+    try {
+      await post({
+        action: 'config', sucursal_id: suc.id, fondo_fijo: Number(fondo),
+        tope_efectivo: tope.trim() === '' ? null : Number(tope),
+      })
+      toast.success(tope.trim() === ''
+        ? 'Guardado. Sin tope de efectivo: NORA no va a avisar cuando se pase.'
+        : 'Guardado.')
+      router.refresh()
+    }
     catch (e: any) { toast.error(e?.message ?? 'Error') } finally { setBusy(false) }
   }
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-border p-3">
-      <Settings2 className="size-4 text-muted-foreground" />
-      <div className="flex-1 text-sm font-medium">{suc.nombre}</div>
-      <Label className="text-xs text-muted-foreground">Fondo fijo</Label>
-      <Input type="number" value={fondo} onChange={(e) => setFondo(e.target.value)} className="h-8 w-32 text-right" />
-      <Button size="sm" disabled={busy} onClick={save}>Guardar</Button>
+    <div className="space-y-2 rounded-lg border border-border p-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <Settings2 className="size-4 text-muted-foreground" />
+        <div className="flex-1 text-sm font-medium">{suc.nombre}</div>
+        <Label className="text-xs text-muted-foreground">Fondo fijo</Label>
+        <Input type="number" value={fondo} onChange={(e) => setFondo(e.target.value)}
+          className="h-8 w-28 text-right" />
+        <Label className="text-xs text-muted-foreground">Tope de efectivo</Label>
+        <Input type="number" value={tope} onChange={(e) => setTope(e.target.value)}
+          placeholder="sin tope" className="h-8 w-28 text-right" />
+        <Button size="sm" disabled={busy} onClick={save}>Guardar</Button>
+      </div>
+      <p className="text-[11px] leading-snug text-muted-foreground">
+        {suc.tope_efectivo == null
+          ? 'Sin tope definido: NORA no avisa cuando se junta efectivo. Vacío no es cero — cero querría decir que no puede quedar ni un peso en la caja.'
+          : `Pasando ${formatARS(suc.tope_efectivo)} en caja, NORA avisa que hay que llevar a la caja fuerte.`}
+      </p>
     </div>
   )
 }
