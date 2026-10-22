@@ -39,6 +39,19 @@ export const NIVEL_TEXTO: Record<Nivel, { t: string; d: string }> = {
 export interface AccionDeAgente {
   clave: string
   nombre: string
+  /**
+   * v1.4 · F.2 · El alcance de ESTA acción, cuando no es el del agente.
+   *
+   * Canal es el primero que lo necesita y el motivo es real: el catálogo y
+   * los precios son de la cadena —el recargo de PedidosYa es uno solo— y el
+   * tiempo de preparación y las cancelaciones son del local que despacha.
+   *
+   * Un agente con dos alcances no es un agente mal diseñado: es que el
+   * sector tiene dos. Partirlo en dos agentes haría que «el canal pierde
+   * plata» y «el canal tarda» los mirara gente distinta, y son el mismo
+   * canal.
+   */
+  alcance?: Alcance
   /** Los niveles que esta acción puede tomar. Si `hace_y_avisa` no está, no se ofrece. */
   niveles: Nivel[]
   /** Por qué no puede llegar más alto. Null cuando llega a todos. */
@@ -214,6 +227,53 @@ export const ELENCO: Agente[] = [
       { clave: 'avisar_costo_distinto', nombre: 'Avisar cuando el costo no coincide', niveles: TODOS },
     ],
   },
+  // ── v1.4 · EL AGENTE CANAL ───────────────────────────────────────────────
+  //
+  // F.4 · **El techo es «prepara», en todas sus acciones.**
+  //
+  // No es prudencia genérica. Publicar algo mal en un canal abierto es un
+  // problema con un cliente afuera: el que ve el precio equivocado, el que
+  // compra lo que no hay, el que encuentra un producto con receta en una
+  // tienda. Eso no se corrige con un undo.
+  //
+  // Y hay un motivo más simple que lo hace definitivo: **NORA no tiene
+  // credenciales de ningún canal.** Aunque el techo fuera «hace y avisa», no
+  // habría con qué hacerlo. El techo declara lo que ya es cierto.
+  {
+    id: 'canal',
+    nombre: 'Canal',
+    queHace: 'Catálogo, precios y salud de los canales',
+    // El alcance del agente es el de la mayoría de sus acciones; las de
+    // operación lo sobrescriben.
+    alcance: 'cadena',
+    deDondeLee: 'las publicaciones de cada canal, los detectores de canal y los pedidos (v1.4)',
+    icono: 'Radio',
+    acciones: [
+      { clave: 'que_publicar', nombre: 'Proponer qué publicar en cada canal',
+        niveles: SUGIERE_O_PREPARA,
+        techo: 'Publicar es visible para un cliente y NORA no tiene credenciales de ningún canal. Arma el lote; lo firma una persona y lo carga alguien.' },
+      { clave: 'que_despublicar', nombre: 'Proponer qué despublicar',
+        niveles: SUGIERE_O_PREPARA,
+        techo: 'Lo mismo al revés: sacar algo de un canal también se ve desde afuera.' },
+      { clave: 'avisar_recargo_corto', nombre: 'Avisar si el recargo no cubre la comisión',
+        niveles: SUGIERE_O_PREPARA,
+        techo: 'Cambiar un recargo cambia todos los precios de un canal. Y SIFACO es la autoridad de precio: NORA calcula y exporta, nunca escribe.' },
+      { clave: 'avisar_canal_pierde', nombre: 'Avisar qué canal está dejando menos que el mostrador',
+        niveles: SUGIERE_O_PREPARA,
+        techo: 'Cerrar o abrir un canal es una decisión del negocio, no de un agente.' },
+      { clave: 'avisar_error_urgente', nombre: 'Avisar qué error del catálogo urge',
+        niveles: SUGIERE_O_PREPARA,
+        techo: 'Lo urgente del catálogo es casi siempre terreno legal, y eso lo resuelve una persona en el canal.' },
+      // Las dos de operación son por sucursal: el pedido se prepara donde
+      // está el stock, y el que tarda es el local.
+      { clave: 'avisar_demora_preparacion', nombre: 'Avisar si la preparación tarda más de lo prometido',
+        alcance: 'sucursal', niveles: SUGIERE_O_PREPARA,
+        techo: 'Hoy ni siquiera puede: ningún pedido tiene marcados los dos momentos.' },
+      { clave: 'proponer_cerrar_canal', nombre: 'Proponer cerrar un canal cuando no se da abasto',
+        alcance: 'sucursal', niveles: SUGIERE_O_PREPARA,
+        techo: 'Dejar de recibir pedidos lo decide quien está en el local y sabe si se da abasto.' },
+    ],
+  },
 ]
 
 export function agentePorId(id: string): Agente | undefined {
@@ -227,5 +287,17 @@ export function agentePorId(id: string): Agente | undefined {
  * trabajan ahí. NO es el mismo equipo con menos datos.
  */
 export function elencoDe(alcance: Alcance): Agente[] {
-  return ELENCO.filter((a) => a.alcance === alcance)
+  return ELENCO
+    .map((a) => {
+      // v1.4 · un agente aparece en un alcance si ÉL es de ese alcance o si
+      // tiene acciones de ese alcance — y cuando aparece, trae sólo las
+      // acciones que corresponden.
+      //
+      // Canal es el primero así: el catálogo es de la cadena y el tiempo de
+      // preparación es del local. Mostrarle a un encargado de sucursal la
+      // acción de cambiar el recargo sería ofrecerle algo que no decide.
+      const acciones = a.acciones.filter((ac) => (ac.alcance ?? a.alcance) === alcance)
+      return acciones.length ? { ...a, acciones } : null
+    })
+    .filter((a): a is Agente => a !== null)
 }

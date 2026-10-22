@@ -86,6 +86,13 @@ export async function leerEquipo(sucursalId: string | null): Promise<{
     // barato: cuenta sobre tablas chicas, no sobre 598.117 ventas.
     sb.rpc('convenios_resumen', { p_sucursal: sucursalId }),
   ])
+
+  // v1.4 · El agente Canal tampoco lee el snapshot diario, por el mismo
+  // motivo que Convenio: un producto con receta publicado no aparece a las 5
+  // de la mañana. `canales_resumen` cuenta sobre 7.737 publicaciones, no
+  // sobre 598.117 ventas.
+  const { data: can } = await sb.rpc('canales_resumen', { p_sucursal: sucursalId })
+  const canales = (can ?? null) as Record<string, any> | null
   // ── NULL NO ES CERO ────────────────────────────────────────────────────
   //
   // `agentes_resumen` devuelve NULL cuando el snapshot nunca se calculó. Si
@@ -121,9 +128,13 @@ export async function leerEquipo(sucursalId: string | null): Promise<{
   return {
     calculadoAt,
     agentes: agentes.map((a) =>
-      // Convenio no depende del snapshot: se lee siempre.
+      // Convenio y Canal no dependen del snapshot: se leen siempre, porque
+      // un débito y un producto con receta publicado no aparecen a las 5 de
+      // la mañana.
       a.id === 'convenio'
         ? leerConvenio(a, convenios, nivelDe(a.id), marcadorDe(a.id))
+        : a.id === 'canal'
+        ? leerCanal(a, canales, nivelDe(a.id), marcadorDe(a.id))
         : hayResumen
           ? leerUno(a, r[a.id] ?? {}, nivelDe(a.id), marcadorDe(a.id))
           : sinCalcular(a, nivelDe(a.id), marcadorDe(a.id))),
@@ -262,6 +273,103 @@ function leerUno(
 
     default:
       return off('sin lectura definida', 'declararla en lib/agentes/lectura.ts', '/admin')
+  }
+}
+
+/**
+ * F · QUÉ DICE EL AGENTE CANAL.
+ *
+ * ── F.3 · EL ORDEN DE LO QUE PROPONE NO ES CASUAL ───────────────────────────
+ *
+ * Primero lo legal, siempre, aunque sea un solo producto y aunque no tenga
+ * plata al lado: es la regla de oro 9 y está por encima del presupuesto de
+ * interrupción. Después el recargo que no cubre la comisión, porque es lo
+ * único que se puede afirmar sin una sola venta y afecta a todos los
+ * productos de ese canal a la vez. Y recién después la plata de los errores.
+ *
+ * ── F.5 · Y LO QUE NO PUEDE SABER ───────────────────────────────────────────
+ *
+ * Se apaga sólo si ningún canal tiene catálogo cargado: ahí no hay nada que
+ * mirar. Con catálogo pero sin comisiones confirmadas habla igual, y dice que
+ * los números de comisión no están verificados — callarse por eso sería no
+ * decir que el recargo del 19% no cubre una comisión del 24%, que es cierto
+ * con los números que hay.
+ */
+function leerCanal(
+  agente: Agente, d: Record<string, any> | null, nivel: Nivel,
+  marcador: LecturaDeAgente['marcador'],
+): LecturaDeAgente {
+  const base = {
+    agente, nivel, marcador,
+    puedeHacer: agente.acciones
+      .filter((a) => nivel !== 'nunca')
+      .map((a) => ({ clave: a.clave, nombre: a.nombre, nivel })),
+  }
+  const off = (motivo: string, enciende: string): LecturaDeAgente => ({
+    ...base, encendido: false, frase: null, motivoApagado: motivo,
+    queLoEnciende: enciende, href: '/admin/canales',
+  })
+
+  if (d === null) {
+    return off('no se pudo leer el estado de los canales',
+      'revisar el log: esto no es que no haya canales, es que la consulta falló')
+  }
+
+  const num = (v: unknown) => Number(v ?? 0)
+  const conCatalogo = num(d.con_catalogo)
+
+  if (!conCatalogo) {
+    return off(
+      `ninguno de los ${num(d.canales)} canales tiene el catálogo cargado`,
+      'subir el catálogo de una plataforma por el Centro de Datos. Con uno solo ya empieza a decir algo')
+  }
+
+  const partes: string[] = []
+
+  // 1 · lo legal, primero y siempre.
+  const legales = num(d.legales_publicados)
+  if (legales > 0) {
+    partes.push(
+      `${legales} producto(s) de condición legal están publicados en un canal abierto. ` +
+      'Eso va antes que cualquier número de plata: es la regla de oro 9.')
+  }
+
+  // 2 · el recargo, que se afirma sin una sola venta.
+  const cortos = num(d.canales_con_recargo_corto)
+  if (cortos > 0) {
+    partes.push(
+      `En ${cortos} canal(es) el recargo no cubre la comisión —hasta ${num(d.peor_brecha_pts)} puntos abajo—, ` +
+      'así que cada venta por ahí deja menos que la misma venta en el mostrador. No hace falta medir nada: son dos números declarados.')
+  }
+
+  // 3 · la plata de los errores.
+  const errores = num(d.errores_abiertos)
+  if (errores > 0) {
+    partes.push(
+      `Hay ${errores.toLocaleString('es-AR')} errores de catálogo abiertos por ${ars(num(d.plata_en_errores))}.`)
+  }
+
+  if (!partes.length) {
+    return off('los canales con catálogo no tienen errores abiertos ni problemas de recargo',
+      'nada: esto es un cero de verdad, no un dato que falte')
+  }
+
+  // Lo que no puede sostener, dicho en la misma frase.
+  const advertencias: string[] = []
+  if (num(d.sin_catalogo) > 0) {
+    advertencias.push(`${num(d.sin_catalogo)} canal(es) sin catálogo cargado quedan afuera de todo esto`)
+  }
+  if (num(d.comisiones_sin_confirmar) > 0) {
+    advertencias.push(`${num(d.comisiones_sin_confirmar)} comisión(es) sin confirmar contra una liquidación`)
+  }
+  if (num(d.sin_responsable) > 0) {
+    advertencias.push(`${num(d.sin_responsable)} canal(es) sin responsable: los errores quedan sin dueño`)
+  }
+
+  return {
+    ...base, encendido: true,
+    frase: partes.join(' ') + (advertencias.length ? ` (${advertencias.join('; ')}.)` : ''),
+    motivoApagado: null, queLoEnciende: null, href: '/admin/canales',
   }
 }
 

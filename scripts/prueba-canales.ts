@@ -607,6 +607,64 @@ async function main() {
     }
   }
 
+  // ── F · EL AGENTE CANAL ─────────────────────────────────────────────────
+  console.log('\n── F · el agente Canal ──')
+  const { data: res, error: eRes } = await adm.rpc('canales_resumen', { p_sucursal: null })
+  if (eRes) { mal(`canales_resumen falló: ${eRes.message}`) }
+  const r = (res ?? {}) as any
+  nd(`${r.canales} canales · ${r.con_catalogo} con catálogo · ${r.legales_publicados} legales publicados · ` +
+     `${r.canales_con_recargo_corto} con el recargo corto · ${r.errores_abiertos} errores abiertos`)
+
+  // F.1 · nace en «sugiere» y con el marcador vacío.
+  const { data: cfg } = await adm.from('agente_config')
+    .select('agente, accion, nivel').eq('agente', 'canal').limit(50)
+  ;((cfg ?? []) as any[]).length === 0
+    ? ok('el agente Canal no tiene configuración cargada: nace en el nivel por defecto, «sugiere»')
+    : nd(`tiene ${(cfg ?? []).length} acciones configuradas`)
+
+  const { data: bit } = await adm.from('agente_bitacora')
+    .select('id, acerto').eq('agente', 'canal').limit(50)
+  const propuestas = (bit ?? []) as any[]
+  propuestas.length === 0
+    ? ok('y con el marcador vacío: no inventa aciertos')
+    : nd(`tiene ${propuestas.length} propuestas en la bitácora`)
+
+  // F.4 · el techo es «prepara» en TODAS sus acciones.
+  const elenco = await import('../lib/agentes/elenco')
+  const canal = elenco.ELENCO.find((a: any) => a.id === 'canal')
+  if (!canal) {
+    mal('el agente Canal no está en el elenco')
+  } else {
+    const conHaceYAvisa = canal.acciones.filter((a: any) => a.niveles.includes('hace_y_avisa'))
+    conHaceYAvisa.length
+      ? mal(`${conHaceYAvisa.length} acciones del agente Canal llegan a «hace y avisa»: el techo es «prepara»`)
+      : ok(`las ${canal.acciones.length} acciones del agente Canal tienen techo en «prepara»`)
+    const sinTecho = canal.acciones.filter((a: any) => !a.techo)
+    sinTecho.length
+      ? mal(`${sinTecho.length} acciones no dicen por qué no pueden llegar más alto`)
+      : ok('y cada una dice por qué no puede llegar más alto')
+
+    // F.2 · los dos alcances.
+    const deSucursal = canal.acciones.filter((a: any) => a.alcance === 'sucursal')
+    const deCadena = canal.acciones.filter((a: any) => (a.alcance ?? canal.alcance) === 'cadena')
+    deSucursal.length && deCadena.length
+      ? ok(`${deCadena.length} acciones de cadena (catálogo y precios) y ${deSucursal.length} de sucursal (la operación)`)
+      : mal('el agente Canal no tiene los dos alcances que pide F.2')
+
+    // Y que el elenco filtrado los reparta bien.
+    const enCadena = elenco.elencoDe('cadena').find((a: any) => a.id === 'canal')
+    const enSucursal = elenco.elencoDe('sucursal').find((a: any) => a.id === 'canal')
+    if (!enCadena || !enSucursal) {
+      mal('el agente Canal no aparece en los dos alcances')
+    } else if (enCadena.acciones.some((a: any) => a.alcance === 'sucursal')) {
+      mal('mirando la cadena aparecen acciones que son de la sucursal')
+    } else if (enSucursal.acciones.some((a: any) => (a.alcance ?? 'cadena') === 'cadena')) {
+      mal('mirando una sucursal aparecen acciones que son de la cadena')
+    } else {
+      ok('mirando la cadena trae sólo las de catálogo y precios; mirando una sucursal, sólo las de operación')
+    }
+  }
+
   console.log(`\n${fallas === 0 ? 'TODO BIEN' : `${fallas} FALLA(S)`}`)
   process.exit(fallas === 0 ? 0 : 1)
 }
