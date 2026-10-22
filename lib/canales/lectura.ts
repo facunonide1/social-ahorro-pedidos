@@ -227,3 +227,30 @@ export async function desglosePedido(adm: Adm, order: string) {
 
 export const mismoPedidoEnOtros = (adm: Adm, order: string) =>
   rpc<any>(adm, 'canal_mismo_pedido_en_otros', { p_order: order })
+
+/**
+ * D · LA SALUD DEL CANAL.
+ *
+ * Cuatro de las cinco cosas que pide el bloque no se pueden medir hoy: el
+ * tiempo de preparación (ningún pedido tiene marcados los dos momentos), el
+ * motivo de las cancelaciones, el rating y los horarios. Se construyeron
+ * igual y cada fila dice qué le falta — un tablero de salud sin el tiempo de
+ * preparación, que no dice que le falta, hace creer que el canal está sano.
+ *
+ * Y la ventana viaja con el número: «0 pedidos en 90 días» y «no hay pedidos»
+ * son dos cosas distintas, y la primera sin la ventana se lee como la segunda.
+ */
+export type SaludDeCanal = {
+  canal_id: string; canal: string; sucursal: string | null
+  pedidos: number; cancelados: number; cancelados_pct: number | null
+  cancelados_por_stock: number; cancelados_sin_motivo: number
+  minutos_preparacion: number | null; promete_minutos: number | null
+  cumple: boolean | null; rating: number | null
+  cerrado_hasta: string | null; cerrado_motivo: string | null
+  responsable: string | null
+  dias_mirados: number; pedidos_fuera_de_la_ventana: number
+  que_no_se_puede_medir: string | null
+}
+
+export const saludDeCanales = (adm: Adm, dias = 90) =>
+  rpc<SaludDeCanal>(adm, 'canal_salud', { p_dias: dias })

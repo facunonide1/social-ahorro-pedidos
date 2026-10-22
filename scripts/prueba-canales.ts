@@ -415,6 +415,84 @@ async function main() {
   }
   ok(`las ${(nsp ?? []).length} cosas que no se pueden calcular dicen qué las encendería`)
 
+  // ── D · LA SALUD DEL CANAL ──────────────────────────────────────────────
+  console.log('\n── D · la salud de cada canal ──')
+  const { data: sal, error: eS } = await adm.rpc('canal_salud', { p_dias: 90 })
+  if (eS) { mal(`canal_salud falló: ${eS.message}`) }
+  const salud = (sal ?? []) as any[]
+
+  for (const c of salud) {
+    // «0 pedidos» sin decir la ventana se lee como «el canal está muerto».
+    if (c.pedidos === 0 && c.pedidos_fuera_de_la_ventana > 0 &&
+        !/ventana/.test(c.que_no_se_puede_medir ?? '')) {
+      mal(`${c.canal} dice 0 pedidos y tiene ${c.pedidos_fuera_de_la_ventana} fuera de la ventana, sin decirlo`)
+    }
+    // Lo que no se puede medir, dicho.
+    if (c.minutos_preparacion === null && !/tiempo de preparación/.test(c.que_no_se_puede_medir ?? '')) {
+      mal(`${c.canal} no tiene tiempo de preparación y no dice por qué`)
+    }
+    if (!c.dias_mirados) mal(`${c.canal} no dice cuántos días mira`)
+  }
+  ok(`los ${salud.length} canales declaran su ventana y qué no pueden medir`)
+  const sinResp = salud.filter((c) => !c.responsable)
+  sinResp.length
+    ? nd(`${sinResp.length} canales sin responsable declarado: los errores quedan sin dueño`)
+    : ok('todos los canales tienen responsable')
+
+  // D.7 · cerrar un canal, con las tres condiciones.
+  console.log('\n── D.7 · cerrar un canal temporalmente ──')
+  const { data: sinSes } = await adm.rpc('canal_cerrar',
+    { p_canal: 'woo', p_hasta: new Date(Date.now() + 3600e3).toISOString(), p_motivo: 'prueba' })
+  ;(sinSes as any)?.ok === false
+    ? ok('el cliente de servicio no puede cerrar un canal')
+    : mal('el cliente de servicio cerró un canal sin dueño')
+
+  {
+    const email = 'prueba.canales.cierre@social-ahorro.test'
+    const pass = 'Prueba-cierre-12!'
+    const { data: previos } = await adm.auth.admin.listUsers({ page: 1, perPage: 200 })
+    for (const u of previos?.users ?? []) if (u.email === email) await adm.auth.admin.deleteUser(u.id)
+    const { data: nuevo } = await adm.auth.admin.createUser({ email, password: pass, email_confirm: true })
+    if (nuevo?.user) {
+      await adm.from('users_admin').upsert(
+        { id: nuevo.user.id, rol: 'gerente', activo: true }, { onConflict: 'id' })
+      const suyo = createClient(env('NEXT_PUBLIC_SUPABASE_URL'), env('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+        { auth: { persistSession: false } })
+      await suyo.auth.signInWithPassword({ email, password: pass })
+
+      const { data: sinMotivo } = await suyo.rpc('canal_cerrar',
+        { p_canal: 'woo', p_hasta: new Date(Date.now() + 3600e3).toISOString(), p_motivo: '  ' })
+      ;(sinMotivo as any)?.ok === false && /motivo/.test(String((sinMotivo as any)?.por_que ?? ''))
+        ? ok('no cierra sin motivo: es una decisión que alguien va a preguntar')
+        : mal('cerró un canal sin motivo')
+
+      const { data: sinHora } = await suyo.rpc('canal_cerrar',
+        { p_canal: 'woo', p_hasta: null, p_motivo: 'no damos abasto' })
+      ;(sinHora as any)?.ok === false && /hasta cuándo|hasta cuando/.test(String((sinHora as any)?.por_que ?? ''))
+        ? ok('no cierra sin hora de reapertura: eso sería apagarlo, y se decide distinto')
+        : mal('cerró un canal sin hora de reapertura')
+
+      const { data: cerrado } = await suyo.rpc('canal_cerrar',
+        { p_canal: 'woo', p_hasta: new Date(Date.now() + 3600e3).toISOString(),
+          p_motivo: 'PRUEBA · no damos abasto' })
+      if ((cerrado as any)?.ok !== true) {
+        mal(`no pudo cerrar: ${(cerrado as any)?.por_que}`)
+      } else {
+        ok('cierra con motivo y hora, y lo deja registrado')
+        const { data: reab } = await suyo.rpc('canal_reabrir', { p_canal: 'woo' })
+        ;(reab as any)?.ok === true
+          ? ok('y reabre, dejando el motivo del cierre anterior registrado')
+          : mal(`no pudo reabrir: ${(reab as any)?.por_que}`)
+      }
+      // Se deshace: era una prueba.
+      await adm.from('canales_venta').update({
+        cerrado_hasta: null, cerrado_motivo: null, cerrado_por: null, cerrado_at: null,
+      }).eq('id', 'woo')
+      await adm.from('users_admin').delete().eq('id', nuevo.user.id)
+      await adm.auth.admin.deleteUser(nuevo.user.id)
+    }
+  }
+
   console.log(`\n${fallas === 0 ? 'TODO BIEN' : `${fallas} FALLA(S)`}`)
   process.exit(fallas === 0 ? 0 : 1)
 }
