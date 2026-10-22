@@ -296,6 +296,18 @@ export function ControlCajaClient({ sucursales, config, abiertas, miSucursal, ro
         )}
       </section>
 
+      {/* ── E.2 · LEER LA FOTO DEL CIERRE ──────────────────────────────── */}
+      <Alert>
+        <Info className="size-4" />
+        <AlertDescription className="text-xs leading-snug">
+          <b>La foto del cierre de SIFACO se puede leer sola.</b> Se sube en el arqueo del turno y
+          NORA saca los totales con el mismo motor que lee las facturas. Lo leído se <b>propone</b>,
+          no se guarda: quien cierra ve los números al lado de la foto y confirma o corrige, igual
+          que con el match de productos. Un total mal leído que entra solo haría que este control
+          marque una diferencia que no existe, y alguien saldría a buscar plata que está.
+        </AlertDescription>
+      </Alert>
+
       {/* ── C.4 · EL ARQUEO CIEGO ──────────────────────────────────────── */}
       <Alert>
         <Info className="size-4" />

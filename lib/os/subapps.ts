@@ -281,6 +281,9 @@ export const SUBAPPS: SubAppManifest[] = [
       // verifica los totales contra las ventas y los tickets. Era lo que
       // faltaba, y es donde esta la plata sin controlar.
       { nombre: 'Control de caja', ruta: '/admin/finanzas/caja/control' },
+      // v0.98 · E.1 · existia como tabla desde la v0.20 y no habia un lugar
+      // que dijera cuanto hay. Es «el Drive» del circuito real.
+      { nombre: 'Caja fuerte', ruta: '/admin/finanzas/caja/fuerte' },
       { nombre: 'Qué se debe', ruta: '/admin/finanzas/deuda' },
       { nombre: 'Documentos a pagar', ruta: '/admin/finanzas/documentos' },
       { nombre: 'Pagos', ruta: '/admin/finanzas/pagos' },

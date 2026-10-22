@@ -1,0 +1,61 @@
+-- 0200 · v0.98-direccion · BLOQUE E · aplicada vía MCP
+--
+-- ════════════════════════════════════════════════════════════════════════════
+-- CERRAR LO QUE QUEDÓ ABIERTO
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- E.1 · LA CAJA FUERTE, CON PANTALLA PROPIA
+--
+-- Existía como tabla desde la v0.20 y se veía de costado desde Pagos: no había
+-- un lugar que dijera cuánto hay. Es «el Drive» del circuito que describió
+-- Facundo, adentro del sistema. Solo dueños: la RLS la pasó a `finanzas` en la
+-- v0.97, y la lista de roles de la pantalla es la segunda puerta.
+--
+-- Hoy muestra «—» por sucursal y lo dice: no hay caja fuerte abierta todavía,
+-- y eso NO es cero pesos — es que el circuito no se empezó a usar en NORA.
+--
+-- E.2 · LOS TOTALES DEL CIERRE, LEÍDOS DE LA FOTO
+--
+-- `lib/caja/leer-cierre.ts` reusa el cliente, el modelo y los límites del
+-- motor de documentos; lo único propio es el prompt, porque un cierre no es
+-- una factura: no tiene CUIT ni renglones, y lo que hay que sacar son cuatro
+-- totales.
+--
+-- Dos reglas en el prompt que importan más que la extracción:
+--   · un número que no se ve va en NULL, nunca en 0. Cero diría «ese medio no
+--     cobró nada», que es otra afirmación.
+--   · lo leído se PROPONE y no se guarda. Un total mal leído que entra solo
+--     haría que el control marque una diferencia que no existe, y alguien
+--     saldría a buscar plata que está.
+--
+-- E.3 · `notas_credito_en_cuarentena`
+--
+-- Las 37 están ahí por fecha o monto ilegible, NO por la decisión de la v0.97
+-- —esa ya se aplicó y las 216 legibles restan—. Se listan con el texto que
+-- traía el archivo y qué le falta a cada una, para resolverlas sin abrir el
+-- Excel original.
+--
+-- E.4 · `baja_con_stock_para_decidir`
+--
+-- Facundo contestó «no sé», y para decidir hace falta el número. Separa los
+-- tres casos porque llevan a decisiones opuestas:
+--   2 productos se siguen vendiendo → la marca puede estar mal
+--   201 no se venden y tienen $1.279.590 → liquidar o devolver
+--
+-- E.5 · LOS NOMBRES REALES
+--
+-- Central / Norte / Sur / Este eran nombres de relleno de la primera versión.
+-- Ahora son Guzmán, Figueiras, Arabia y Tesei — los mismos que usa SIFACO y
+-- los mismos que usa la gente. El mapeo contra GUZ/FIG/ARA/TES ya estaba
+-- declarado desde la v0.96; lo que faltaba era que el nombre acompañara.
+--
+-- E.6 · FIRMAR LIBROS
+--
+-- Tipo de tarea con `requiere_farmaceutico`, que la v0.97 dejó listo, y
+-- recurrencia mensual por sucursal. Mensual y no diaria porque no sabemos con
+-- qué frecuencia se firman: una tarea diaria que no corresponde se ignora, y
+-- eso enseña a ignorar las tareas.
+--
+-- E.7 · EL CRM VIEJO
+--
+-- NO se ejecutó, como pedía el prompt. El análisis está en el reporte.
