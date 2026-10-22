@@ -557,6 +557,9 @@ export const SUBAPPS: SubAppManifest[] = [
       // v0.97 · F · habilitaciones, matriculas y el farmaceutico de cada
       // sucursal. SOLO DUEÑOS: la RLS tambien lo garantiza.
       { nombre: 'Documentos de la empresa', ruta: '/admin/configuracion/documentos-empresa' },
+      // v0.98 · hasta donde puede actuar cada agente, por accion y por
+      // sucursal. Y lo que la constitucion no deja, trabado.
+      { nombre: 'Qué puede hacer cada agente', ruta: '/admin/configuracion/agentes' },
     ],
     quickActions: [
       { id: 'usuario-nuevo', nombre: 'Nuevo usuario', icono: 'Shield', destino: '/admin/configuracion/usuarios', modulo: 'configuracion', accion: 'crear', primary: true },

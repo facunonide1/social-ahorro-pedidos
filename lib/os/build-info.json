@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T01:13:36.555Z",
-  "commit": "de43b73e15fee8be7cad547517745cfdcd74b5c6",
-  "mensaje": "fix: tres funciones nuevas quedaron llamables sin sesión",
+  "construido_at": "2026-10-22T01:16:59.630Z",
+  "commit": "fbb84f3e4eea42a26562b29ae1f2538d7a736fed",
+  "mensaje": "feat: el equipo como pantalla de inicio",
   "rama": "main"
 }
