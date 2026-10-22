@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T00:22:05.188Z",
-  "commit": "eeb5a80bba3836344011298e7acee6b2fc169fb4",
-  "mensaje": "feat: exportar a SIFACO precios, ofertas y bajas",
+  "construido_at": "2026-10-22T00:36:06.471Z",
+  "commit": "de4a2d983264c25548c614106a377514b0b6e137",
+  "mensaje": "feat: conciliación de caja con control de diferencias",
   "rama": "main"
 }

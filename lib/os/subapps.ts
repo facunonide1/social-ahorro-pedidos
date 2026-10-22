@@ -122,6 +122,9 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Mi panel', ruta: '/admin/mi-panel' },
       { nombre: 'Tareas', ruta: '/admin/tareas' },
       { nombre: 'Agenda del día', ruta: '/admin/tareas/agenda' },
+      // v0.97 · E.4 · lo que el encargado hace al empezar el turno. Antes las
+      // tareas nacian con un rol y sin persona.
+      { nombre: 'Reparto del turno', ruta: '/admin/tareas/turno' },
       { nombre: 'Reportes', ruta: '/admin/tareas/reportes' },
       { nombre: 'Verificaciones', ruta: '/admin/verificaciones' },
       { nombre: 'NORA (asistente)', ruta: '/admin/tareas/asistente' },
@@ -551,6 +554,9 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Turnos', ruta: '/admin/configuracion/turnos' },
       { nombre: 'Supervisores', ruta: '/admin/configuracion/supervisores' },
       { nombre: 'General', ruta: '/admin/configuracion/general' },
+      // v0.97 · F · habilitaciones, matriculas y el farmaceutico de cada
+      // sucursal. SOLO DUEÑOS: la RLS tambien lo garantiza.
+      { nombre: 'Documentos de la empresa', ruta: '/admin/configuracion/documentos-empresa' },
     ],
     quickActions: [
       { id: 'usuario-nuevo', nombre: 'Nuevo usuario', icono: 'Shield', destino: '/admin/configuracion/usuarios', modulo: 'configuracion', accion: 'crear', primary: true },

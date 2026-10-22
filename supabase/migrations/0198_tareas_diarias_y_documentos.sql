@@ -1,0 +1,71 @@
+-- 0198 · v0.97-caja · BLOQUES E y F · aplicada vía MCP
+--
+-- ── E.1 a E.3 · LAS TRES TAREAS RECURRENTES ─────────────────────────────────
+--
+-- Las tres son tipos nuevos, con recurrencia. Ninguna existía como recurrente:
+-- había que acordarse, y el maestro anterior tuvo 47 días por eso.
+--
+--   subir_maestro_sifaco     diaria 21:00 · una por sucursal · rol sucursal
+--   cargar_vencimientos      diaria 09:00 · una por sucursal · rol sucursal
+--   cargar_listas_proveedor  SEMANAL lunes 10:00 · una sola · administrativo
+--
+-- El maestro a las 21 porque se hace al cierre del turno: crear la tarea a las
+-- 8 la deja todo el día en la lista de alguien que no la puede hacer hasta la
+-- noche.
+--
+-- Y las listas de proveedores SEMANAL y no diaria, aunque el prompt las pedía
+-- «recurrentes»: los proveedores no dejan lista todos los días, y una tarea
+-- diaria que no se puede cumplir enseña a ignorar las tareas. Quedan 9
+-- recurrencias activas (4 + 4 + 1).
+--
+-- ── E.4 · EL REPARTO DEL TURNO ──────────────────────────────────────────────
+--
+-- `turno_reparto`. Las tareas nacen con un rol y sin persona; una tarea sin
+-- dueño a las 9 de la mañana es una tarea que a las 6 de la tarde nadie hizo.
+--
+-- No reemplaza `tareas.responsable_id`: lo llena y guarda quién repartió y
+-- cuándo. Si la tarea no se hizo, «¿a quién se le había asignado?» tiene que
+-- tener respuesta.
+--
+-- Repartir pide `tareas: aprobar`, que tiene el encargado y no el empleado.
+--
+-- ── E.5 · PERMISO POR TIPO DE TAREA ─────────────────────────────────────────
+--
+-- `tipos_tareas.requiere_farmaceutico` y `requiere_rol`, más
+-- `puede_completar_tarea(tarea)` que lo evalúa y devuelve el motivo en
+-- castellano. Se declara en el TIPO y no en la tarea: si estuviera en cada
+-- tarea, la que se cree mañana nace sin la restricción.
+--
+-- Prendido en `control_psicotropicos` y `CARGAR_TRAZABILIDAD`.
+--
+-- ── E.6 · LA TAREA NO COMPLETADA VA AL RENDIMIENTO ──────────────────────────
+--
+-- `rendimiento_tareas_mes`. Hoy una tarea vencida escala y se olvida; esto la
+-- deja en el mes de la persona, que es lo que conecta Tareas con Personas.
+--
+-- VISTA y no tabla: el rendimiento se calcula de las tareas. Un contador
+-- acumulado se desincroniza del hecho la primera vez que alguien reabre una.
+-- Y sólo cuenta como incumplimiento lo vencido: una tarea de hoy sin completar
+-- todavía tiene tiempo.
+--
+-- ════════════════════════════════════════════════════════════════════════════
+-- BLOQUE F · DOCUMENTOS DE LA EMPRESA
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- F.1 y F.2 · `compliance_documentos` ya existía con sucursal, tipo,
+-- descripción, archivo y `vence_at`. Lo que faltaba es el aviso configurable
+-- (`dias_aviso_documento_empresa` = 60 — renovar una habilitación municipal no
+-- se hace en una semana) y que sea de los dueños.
+--
+-- F.3 · SOLO DUEÑOS, textual. La RLS pasa a exigir rol super_admin o gerente,
+-- y borrar sólo super_admin. No es un sector compartido: ahí están las
+-- habilitaciones y las matrículas.
+--
+-- F.4 · `farmaceuticos`: quién firma en cada sucursal, con matrícula y
+-- vencimiento. No estaba en ningún lado y hace falta para E.5 — sin saber quién
+-- es el farmacéutico de Arabia, «solo lo puede el farmacéutico» no se puede
+-- evaluar.
+--
+-- La tabla se LEE con cualquier rol del hub, a propósito: quién está de turno lo
+-- necesita saber cualquiera que trabaje ahí, porque es quien firma. La matrícula
+-- se administra desde la pantalla de dueños.
