@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T00:07:16.865Z",
-  "commit": "cbc6effd0daedadf973cda14141e45c49a3d0b62",
-  "mensaje": "fix: la tabla nueva tenía RLS sin política y la función de aplicar estaba abierta",
+  "construido_at": "2026-10-22T00:10:54.134Z",
+  "commit": "d21ca8447eae80177f7705a4db0519936568cc15",
+  "mensaje": "fix: las correcciones del cuestionario",
   "rama": "main"
 }

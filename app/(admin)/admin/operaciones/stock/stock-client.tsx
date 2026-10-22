@@ -9,6 +9,9 @@ import { toast } from 'sonner'
 
 import { createClient } from '@/lib/supabase/client'
 import { exportExcel } from '@/lib/utils/export-excel'
+import {
+  exportarPreciosParaSifaco, exportarOfertasParaSifaco, exportarBajasParaSifaco,
+} from '@/lib/sifaco/exportar'
 import type { PaginaCatalogo } from '@/lib/catalogo/pagina'
 import { FiltrosCatalogoUrl, Paginador } from '@/components/catalogo/filtros-url'
 import { formatARS } from '@/lib/utils/format'
@@ -77,6 +80,7 @@ function Productos({ productos, sucursales, kpis, canEdit, pagina, stockSifaco, 
   const params = useSearchParams()
   const [sel, setSel] = useState<ProductoRow | null>(null)
   const [exportando, setExportando] = useState(false)
+  const [sifacoNota, setSifacoNota] = useState<string | null>(null)
 
   // Ya vienen filtradas de la base: el filtro viaja en la URL, no en useState.
   // Filtrar acá sólo podía filtrar los 5.000 que se habían traído.
@@ -97,6 +101,46 @@ function Productos({ productos, sucursales, kpis, canEdit, pagina, stockSifaco, 
         'Ultima venta': p.ult_venta ?? '', ABC: p.clasificacion_abc ?? '',
         Controlado: p.lista_controlado ?? '',
       })))
+    } finally { setExportando(false) }
+  }
+
+  /**
+   * B · EL CAMINO DE VUELTA A SIFACO.
+   *
+   * Va acá y no en una pantalla nueva: es el mismo botón de exportar, con la
+   * misma lista filtrada (regla de oro 6). Lo que cambia es el formato — las
+   * columnas que SIFACO puede importar — y que el SKU sale como TEXTO, porque
+   * 6.238 códigos son negativos.
+   *
+   * NORA no escribe en SIFACO. Esto baja un archivo que una persona sube allá.
+   */
+  async function exportarParaSifaco(que: 'precios' | 'ofertas' | 'bajas') {
+    setExportando(true)
+    try {
+      const r = await fetch(`/api/catalogo/exportar?${params.toString()}`)
+      if (!r.ok) return
+      const j = await r.json()
+      const filas = (j.filas as any[]).map((p) => ({
+        sku: String(p.sku ?? ''),
+        barras: p.codigo_barras ?? null,
+        nombre: p.nombre ?? null,
+        precio: p.precio_sugerido ?? null,
+        costo: p.precio_costo_promedio ?? null,
+        descuento_pct: p.oferta_descuento_pct ?? null,
+        precio_con_descuento: p.oferta_precio ?? null,
+        motivo: p.motivo_baja ?? null,
+      })).filter((f) => f.sku)
+
+      const res = que === 'precios' ? exportarPreciosParaSifaco(filas)
+        : que === 'ofertas' ? exportarOfertasParaSifaco(filas)
+        : exportarBajasParaSifaco(filas)
+      setSifacoNota(
+        que === 'precios'
+          ? `${res.exportados.toLocaleString('es-AR')} precios. ${(res as any).sinPrecio ?? 0} quedaron afuera por no tener precio: un renglón vacío importado en SIFACO es un precio en cero.`
+          : que === 'ofertas'
+            ? `${res.exportados.toLocaleString('es-AR')} ofertas. ${(res as any).sinDescuento ?? 0} sin descuento cargado.`
+            : `${res.exportados.toLocaleString('es-AR')} bajas, con el motivo.`,
+      )
     } finally { setExportando(false) }
   }
 
@@ -131,7 +175,25 @@ function Productos({ productos, sucursales, kpis, canEdit, pagina, stockSifaco, 
         <Button variant="outline" size="sm" disabled={exportando} onClick={exportar}>
           <Download className="size-4" /> {exportando ? 'Exportando…' : 'Excel'}
         </Button>
+        {/* B · Para subir a SIFACO. Mismo filtro, otro formato. */}
+        <Button variant="outline" size="sm" disabled={exportando}
+          onClick={() => exportarParaSifaco('precios')} title="Columnas que SIFACO puede importar, con el SKU como texto">
+          <Download className="size-4" /> Precios → SIFACO
+        </Button>
+        <Button variant="outline" size="sm" disabled={exportando} onClick={() => exportarParaSifaco('ofertas')}>
+          <Download className="size-4" /> Ofertas → SIFACO
+        </Button>
+        <Button variant="outline" size="sm" disabled={exportando} onClick={() => exportarParaSifaco('bajas')}>
+          <Download className="size-4" /> Bajas → SIFACO
+        </Button>
       </div>
+
+      {sifacoNota && (
+        <p className="text-xs leading-snug text-muted-foreground">
+          {sifacoNota} Las ofertas son iguales en las cuatro sucursales, así que el archivo no abre
+          por local. <b>NORA no escribe en SIFACO</b>: el archivo lo sube una persona.
+        </p>
+      )}
 
       {/*
         El stock por sucursal no existe todavia: SIFACO exporto el maestro con
