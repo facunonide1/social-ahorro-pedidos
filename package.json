@@ -19,7 +19,8 @@
     "probar:dia-encargado": "npx tsx --env-file=.env.local scripts/prueba-dia-encargado.ts",
     "probar:convenios": "npx tsx --env-file=.env.local scripts/prueba-convenios.ts",
     "verificar:limite": "node scripts/verificar-limite.mjs",
-    "probar:mostrador": "npx tsx --env-file=.env.local scripts/prueba-mostrador.ts"
+    "probar:mostrador": "npx tsx --env-file=.env.local scripts/prueba-mostrador.ts",
+    "probar:deteccion": "npx tsx --env-file=.env.local scripts/prueba-deteccion.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",

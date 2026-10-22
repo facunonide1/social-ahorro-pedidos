@@ -18,7 +18,7 @@
   "aprobaciones": 0,
   "arqueos_caja": 48,
   "auditoria_logs": 0,
-  "auth_trigger_errors": 326,
+  "auth_trigger_errors": 331,
   "automatizaciones": 0,
   "avisos_al_cliente": 13,
   "avisos_faltante": 10,
@@ -26,7 +26,7 @@
   "b2b_pedidos_recurrentes": 0,
   "baja_con_stock_para_decidir": 203,
   "bloqueos_publicacion": 40617,
-  "bloqueos_resumen": -1,
+  "bloqueos_resumen": 6,
   "caja_diferencias": 0,
   "caja_general": 0,
   "caja_general_movimientos": 0,
@@ -115,6 +115,7 @@
   "demanda_real_vs_estimada": 2765,
   "demanda_sin_catalogo": 0,
   "demo_origen_ref": 10,
+  "detectores": 12,
   "deuda_por_proveedor": 36,
   "deuda_proveedores": 629,
   "devolucion_items": 0,
@@ -192,7 +193,7 @@
   "ofertas_confirmaciones": 0,
   "ofertas_experimentos": 0,
   "ofertas_exports_sifaco": 3,
-  "ofertas_medicion": 326,
+  "ofertas_medicion": -1,
   "ofertas_medicion_resumen": 4,
   "ofertas_por_forma": 6,
   "ofertas_por_rotacion": 3,
@@ -316,6 +317,6 @@
   "zz_deprecated_precios_historico": 0
  },
  "desconocidas": [
-  "bloqueos_resumen"
+  "ofertas_medicion"
  ]
 }
