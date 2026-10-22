@@ -91,7 +91,11 @@ export async function POST(req: NextRequest) {
     decidio: r.nivelAplicado === 'hace_y_avisa' ? user.id : null,
     decidio_at: r.nivelAplicado === 'hace_y_avisa' ? new Date().toISOString() : null,
     decidio_que: r.nivelAplicado,
-    esperado: r.entidad ? { entidad: r.entidad, nivel: r.nivelAplicado } : null,
+    // El número de partida va junto con la entidad: sin él, el medidor no
+    // puede juzgar esta propuesta dentro de 30 días y lo va a decir.
+    esperado: (r.esperado || r.entidad)
+      ? { ...(r.esperado ?? {}), ...(r.entidad ? { entidad: r.entidad } : {}), nivel: r.nivelAplicado }
+      : null,
     resultado: r.error ? { error: r.error } : null,
   }).select('id').maybeSingle()
 

@@ -41,6 +41,13 @@ export type ResultadoEjecucion = {
   degradado?: string
   /** La entidad que se creó, para poder deshacerla. */
   entidad?: { tabla: string; id: string }
+  /**
+   * El número de partida contra el que el medidor va a comparar dentro de 30
+   * días. **Sin esto la propuesta no se puede medir nunca**: el medidor lo
+   * dice y la deja en null. Es la diferencia entre un agente que se puede
+   * evaluar y uno que no.
+   */
+  esperado?: Record<string, unknown>
   /** Si falla, el error. No se reintenta: lo mira una persona. */
   error?: string
 }
@@ -63,6 +70,14 @@ export interface ContextoEjecucion {
 type Ejecutor = (c: ContextoEjecucion, ejecutaDeVerdad: boolean) => Promise<ResultadoEjecucion>
 
 const ars = (x: number) => `$${Math.round(x).toLocaleString('es-AR')}`
+
+/** Cuántos quiebres hay ahora. Es el número de partida del medidor. */
+async function quiebresAhora(c: ContextoEjecucion): Promise<number> {
+  let q = c.adm.from('quiebres_por_sucursal').select('producto_id', { count: 'exact', head: true })
+  if (c.sucursalId) q = q.eq('sucursal_id', c.sucursalId)
+  const { count } = await q
+  return count ?? 0
+}
 
 /** Monto en juego de una acción, para contrastarlo con el tope. */
 async function montoDe(c: ContextoEjecucion): Promise<number | null> {
@@ -143,6 +158,9 @@ const proponerTransferencia: Ejecutor = async (c, ejecuta) => {
 
   return {
     ok: true, nivelAplicado: c.nivel,
+    // Lo que el medidor va a mirar: si en el destino se vendió al menos lo
+    // que se movió. Si se movieron 20 y se vendieron 3, movió el problema.
+    esperado: { unidades_movidas: items.reduce((a: number, i: any) => a + Number(i.transferir ?? 0), 0) },
     texto: `Pedido de transferencia creado con ${items.length} producto(s), ${ars(plata)}. Queda en «solicitada»`
       + (c.nivel === 'prepara'
           ? ', esperando que lo confirme el encargado de la otra sucursal.'
@@ -184,6 +202,9 @@ const armarPedido: Ejecutor = async (c, ejecuta) => {
 
   return {
     ok: true, nivelAplicado: c.nivel,
+    // Cuántos quiebres había al proponer: es contra esto que el medidor
+    // compara dentro de 30 días.
+    esperado: { quiebres: await quiebresAhora(c) },
     texto: `Orden ${oc.codigo} en borrador con ${items.toLocaleString('es-AR')} ítems por ${ars(monto)}. Falta elegir la droguería y emitirla: eso compromete plata y lo firma una persona.`,
     entidad: { tabla: 'ordenes_compra', id: oc.id },
   }
@@ -214,7 +235,10 @@ const prepararOferta: Ejecutor = async (c, ejecuta) => {
 }
 
 /** Avisar. Es lo más reversible que hay: un aviso de más se ignora. */
-function avisar(tipo: string, titulo: (c: ContextoEjecucion, d: any) => Promise<{ t: string; d: string } | null>): Ejecutor {
+function avisar(
+  tipo: string,
+  titulo: (c: ContextoEjecucion, d: any) => Promise<{ t: string; d: string; esperado?: Record<string, unknown> } | null>,
+): Ejecutor {
   return async (c, ejecuta) => {
     const r = await titulo(c, null)
     if (!r) return { ok: true, nivelAplicado: c.nivel, texto: 'No hay nada que avisar.' }
@@ -229,7 +253,7 @@ function avisar(tipo: string, titulo: (c: ContextoEjecucion, d: any) => Promise<
     } catch (e: any) {
       return { ok: false, nivelAplicado: c.nivel, texto: 'No se pudo emitir el aviso.', error: e?.message }
     }
-    return { ok: true, nivelAplicado: c.nivel, texto: `Avisado: ${r.t}` }
+    return { ok: true, nivelAplicado: c.nivel, texto: `Avisado: ${r.t}`, esperado: r.esperado }
   }
 }
 
@@ -247,7 +271,11 @@ const EJECUTORES: Record<string, Ejecutor> = {
     const f = (data ?? []) as any[]
     if (!f.length) return null
     const total = f.reduce((a, x) => a + Number(x.saldo ?? 0), 0)
-    return { t: `${f.length} comprobantes con más de un mes sin pagar`, d: `Suman ${ars(total)}. Decidir qué se paga lo hace una persona: regla de oro 7.` }
+    return {
+      t: `${f.length} comprobantes con más de un mes sin pagar`,
+      d: `Suman ${ars(total)}. Decidir qué se paga lo hace una persona: regla de oro 7.`,
+      esperado: { comprobantes: f.length, monto: Math.round(total) },
+    }
   }),
 
   'tesoro:cruzar_caja': async (c, ejecuta) => {

@@ -75,6 +75,10 @@
     {
       "path": "/api/cron/recurrencias",
       "schedule": "15 8 * * *"
+    },
+    {
+      "path": "/api/cron/medidor",
+      "schedule": "0 5 * * *"
     }
   ]
 }

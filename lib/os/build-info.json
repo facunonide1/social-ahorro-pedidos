@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T02:32:32.949Z",
-  "commit": "40430f663782ae779ae2d4a3adac0052592300d6",
-  "mensaje": "fix: los agentes contaban en memoria y PostgREST cortaba en 1000",
+  "construido_at": "2026-10-22T02:38:43.390Z",
+  "commit": "cd932f959af5075167e2d2ea746ec161dd46e94a",
+  "mensaje": "feat: los agentes ejecutan según su nivel",
   "rama": "main"
 }

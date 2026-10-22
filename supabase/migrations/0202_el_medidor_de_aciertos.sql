@@ -1,0 +1,64 @@
+-- 0202 · v0.99-ejecutar · BLOQUE B · aplicada vía MCP
+--
+-- ════════════════════════════════════════════════════════════════════════════
+-- EL MEDIDOR
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- La bitácora de la v0.98 guardaba qué propuso el agente y qué decidió la
+-- persona. Faltaba lo que convierte eso en un juicio: ¿tenía razón?
+--
+-- Sin esto `acerto` queda en null para siempre y ningún agente asciende nunca:
+-- el marcador diría «sin antecedentes» aunque hubiera mil propuestas.
+--
+-- ── B.2 · QUÉ SE COMPARA, Y QUÉ NO SE PUEDE ─────────────────────────────────
+--
+--   abasto   quiebres al proponer vs. quiebres ahora. Necesita un maestro
+--            nuevo: sin eso el stock que se ve es el mismo de entonces.
+--   reparto  unidades movidas vs. vendidas en el destino. Si se movieron 20 y
+--            se vendieron 3, la transferencia movió el problema.
+--   tesoro   ¿hubo pagos registrados en la ventana?
+--   margen   NO SE PUEDE: la medición de ofertas necesita las ventas diarias
+--            por producto, que todavía no se importan.
+--
+-- Y tres casos que nunca se miden, con el motivo escrito:
+--   · rechazada  no pasó nada que observar. Medirla obligaría a simular qué
+--                habría pasado si se aceptaba.
+--   · sin decidir  se marca vencida: no se puede juzgar al agente por una
+--                  propuesta que nadie miró.
+--   · sin número de partida  ver abajo.
+--
+-- ── EL ACIERTO INVENTADO QUE ENCONTRÓ LA PRUEBA ─────────────────────────────
+--
+-- La primera versión comparaba contra
+-- `coalesce((esperado->>'quiebres')::int, v_quiebres + 1)`. Cuando la propuesta
+-- no guardaba el número de partida —que era el caso de TODAS— el coalesce
+-- ponía «uno más que ahora» y la comparación daba siempre verdadera: **el
+-- agente acertaba siempre**. Probado: el marcador de Abasto mostró 100%.
+--
+-- Es exactamente lo que el prompt prohíbe. Ahora sin número de partida la
+-- propuesta no se mide, queda en null, y el motivo dice qué hay que guardar al
+-- proponer para que la próxima sí se pueda. Y el ejecutor lo guarda.
+--
+-- ── B.3 y B.4 · EL MARCADOR, ABIERTO POR SUCURSAL ───────────────────────────
+--
+-- Un agente puede acertar en Guzmán y errar en Arabia, y eso define dónde
+-- conviene subirle el nivel. `pct_acierto` NULL = todavía no se midió ninguna,
+-- que NO es 0% de acierto.
+--
+-- ── B.5 y B.6 · SUBIR Y BAJAR ───────────────────────────────────────────────
+--
+-- `agente_cambio_de_nivel` propone con la evidencia a la vista. Nunca se
+-- aplica solo: el nivel lo cambia una persona, y que un agente se ascienda
+-- está en `constitucion_acciones` desde la v0.98.
+--
+-- Propone BAJAR además de subir. Un sistema que sólo asciende acumula
+-- permisos.
+--
+-- ── B.7 · EL CRON ───────────────────────────────────────────────────────────
+--
+-- `/api/cron/medidor`, 5:00, registrado en `vercel.json` — que son 20 crons y
+-- todos daily o semanal, porque el plan Hobby no admite sub-diarios y en la
+-- v0.95 eso tiró un deploy entero.
+--
+-- Deja su propia fila en la bitácora con lo que midió. Sin eso, «el marcador
+-- está vacío» no se puede distinguir de «el medidor nunca corrió».

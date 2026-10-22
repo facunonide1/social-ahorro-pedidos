@@ -29,11 +29,14 @@ export default async function BitacoraPage() {
   const sb = createClient()
 
   // La RLS la filtra por sucursal: un encargado ve las suyas (C.6).
-  const { data: filas } = await sb
-    .from('agente_bitacora')
-    .select('*')
-    .order('propuesta_at', { ascending: false })
-    .limit(200)
+  const [{ data: filas }, { data: marcador }, { data: cambios }] = await Promise.all([
+    sb.from('agente_bitacora').select('*')
+      .order('propuesta_at', { ascending: false }).limit(200),
+    sb.from('agente_marcador').select('*').order('propuestas', { ascending: false }),
+    // B.5 y B.6 · lo que el medidor propone, con la evidencia. Nunca se aplica
+    // solo: el nivel lo cambia una persona en Configuración.
+    sb.from('agente_cambio_de_nivel').select('*'),
+  ])
 
   const b = (filas ?? []) as any[]
   const decididas = b.filter((x) => x.decidio_at)
@@ -47,6 +50,70 @@ export default async function BitacoraPage() {
         breadcrumbs={[{ label: 'Decisiones' }]}
       />
       <div className="space-y-4 p-4 md:p-6">
+        {/* ── B.5 y B.6 · SUBIR O BAJAR EL NIVEL ──────────────────────── */}
+        {!!(cambios ?? []).length && (
+          <section className="space-y-2 rounded-lg border border-primary/40 bg-primary/5 p-4">
+            <h2 className="text-sm font-semibold">Lo que el medidor propone</h2>
+            {((cambios ?? []) as any[]).map((c, i) => (
+              <div key={i} className="rounded border bg-background p-2.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[10px]">{c.agente}</Badge>
+                  <b>{c.que_propone === 'subir' ? 'Subirle el nivel' : 'Bajarle el nivel'}</b>
+                  {c.sucursal && <span className="text-muted-foreground">en {c.sucursal}</span>}
+                </div>
+                <p className="mt-1 leading-snug text-muted-foreground">{c.evidencia}</p>
+              </div>
+            ))}
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              Son propuestas: <b>el nivel lo cambia una persona</b> en Configuración → Qué puede
+              hacer cada agente. Ningún agente se asciende solo — eso está en la constitución.
+            </p>
+          </section>
+        )}
+
+        {/* ── B.3 y B.4 · EL MARCADOR, POR AGENTE Y SUCURSAL ──────────── */}
+        {!!(marcador ?? []).length && (
+          <section className="space-y-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              El marcador
+            </h2>
+            <div className="overflow-x-auto rounded-lg border">
+              <table className="w-full min-w-[34rem] text-sm">
+                <thead className="bg-muted/50 text-xs text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Agente</th>
+                    <th className="px-3 py-2 text-left">Dónde</th>
+                    <th className="px-3 py-2 text-right">Propuso</th>
+                    <th className="px-3 py-2 text-right">Aceptadas</th>
+                    <th className="px-3 py-2 text-right">Medidas</th>
+                    <th className="px-3 py-2 text-right">Acertó</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {((marcador ?? []) as any[]).map((m, i) => (
+                    <tr key={i} className="border-t">
+                      <td className="px-3 py-2">{m.agente}</td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">{m.sucursal ?? 'la cadena'}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{m.propuestas}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{m.aceptadas}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">{m.medidas}</td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {m.pct_acierto == null
+                          ? <span className="text-xs text-muted-foreground">sin medir</span>
+                          : `${m.pct_acierto}%`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              «Sin medir» no es 0% de acierto: es que todavía ninguna propuesta cumplió los 30 días
+              o que no había con qué compararla. Son dos cosas distintas y el sistema no las mezcla.
+            </p>
+          </section>
+        )}
+
         <div className="grid grid-cols-3 gap-3">
           <Dato n={b.length} t="propuestas" />
           <Dato n={decididas.length} t="decididas" />
