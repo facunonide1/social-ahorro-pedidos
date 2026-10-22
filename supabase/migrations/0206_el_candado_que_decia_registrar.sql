@@ -78,5 +78,8 @@ comment on function public.triggers_que_registran_y_revierten() is
 
 -- Los revokes, después del último `create or replace`: una función nueva nace
 -- con EXECUTE para PUBLIC.
-revoke all on function public.triggers_que_registran_y_revierten() from public, anon;
-grant execute on function public.triggers_que_registran_y_revierten() to authenticated, service_role;
+-- Sólo el service_role: lo corre el build. Una persona no tiene por qué poder
+-- listar los triggers del sistema desde el navegador, y dejarlo abierto suma
+-- un aviso de seguridad por nada.
+revoke all on function public.triggers_que_registran_y_revierten() from public, anon, authenticated;
+grant execute on function public.triggers_que_registran_y_revierten() to service_role;
