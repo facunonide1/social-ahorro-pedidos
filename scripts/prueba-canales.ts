@@ -493,6 +493,120 @@ async function main() {
     }
   }
 
+  // ── E · PUBLICAR Y DESPUBLICAR ──────────────────────────────────────────
+  console.log('\n── E · publicar y despublicar ──')
+
+  const { data: conv, error: eC2 } = await adm.rpc('canal_conviene_publicar',
+    { p_canal: 'pedidosya_figueiras', p_limite: 200 })
+  if (eC2) { mal(`canal_conviene_publicar falló: ${eC2.message}`) }
+  const conviene = (conv ?? []) as any[]
+  conviene.length
+    ? ok(`${conviene.length} de ${Number(conviene[0].de_cuantos_es_este).toLocaleString('es-AR')} convendría publicar en PedidosYa`)
+    : nd('no hay nada que convenga publicar en PedidosYa')
+
+  // E.1 · lo legal NUNCA se propone publicar.
+  if (conviene.length) {
+    const ids = conviene.map((x) => x.producto_id)
+    const { data: legalesEnLista } = await adm.from('productos_catalogo')
+      .select('id, nombre_comercial, condicion_venta, requiere_receta, es_controlado')
+      .in('id', ids.slice(0, 200))
+      .or('requiere_receta.eq.true,es_controlado.eq.true,es_psicotropico.eq.true')
+      .limit(50)
+    ;(legalesEnLista ?? []).length
+      ? mal(`${(legalesEnLista ?? []).length} productos de condición legal aparecen entre los que «conviene publicar»`)
+      : ok('ninguno de condición legal aparece entre los que conviene publicar')
+  }
+
+  // E.3 · los combos. Hoy cero, y hay que saber por qué.
+  const { data: comb } = await adm.rpc('canal_combos',
+    { p_canal: 'pedidosya_figueiras', p_limite: 100 })
+  const combos = (comb ?? []) as any[]
+  if (!combos.length) {
+    const { data: cvs } = await adm.from('canales_venta')
+      .select('id, costo_envio, envio_lo_paga').eq('id', 'pedidosya_figueiras').maybeSingle()
+    const sinEnvio = Number((cvs as any)?.costo_envio ?? 0) === 0
+    sinEnvio
+      ? nd('los combos dan 0 porque el canal no tiene costo de envío cargado: sin envío que repartir no hay combo que calcular')
+      : mal('los combos dan 0 y el canal sí tiene costo de envío: algo no cierra')
+  } else {
+    ok(`${combos.length} productos que solos pierden y de a varios dejan`)
+    for (const c of combos.slice(0, 3)) {
+      if (Number(c.el_combo_deja) <= Number(c.solo_deja)) {
+        mal(`${c.nombre}: el combo no deja más que la unidad suelta`)
+      }
+    }
+  }
+
+  // ── E.4 y E.5 · EL LOTE NO SE EJECUTA ───────────────────────────────────
+  console.log('\n── E.5 · ninguna publicación sale sola ──')
+  {
+    const email = 'prueba.canales.lote@social-ahorro.test'
+    const pass = 'Prueba-lote-12!'
+    const { data: previos } = await adm.auth.admin.listUsers({ page: 1, perPage: 200 })
+    for (const u of previos?.users ?? []) if (u.email === email) await adm.auth.admin.deleteUser(u.id)
+    const { data: nuevo } = await adm.auth.admin.createUser({ email, password: pass, email_confirm: true })
+    if (!nuevo?.user) {
+      mal('no se pudo crear el usuario de prueba del lote')
+    } else {
+      await adm.from('users_admin').upsert(
+        { id: nuevo.user.id, rol: 'marketing', activo: true }, { onConflict: 'id' })
+      const suyo = createClient(env('NEXT_PUBLIC_SUPABASE_URL'), env('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+        { auth: { persistSession: false } })
+      await suyo.auth.signInWithPassword({ email, password: pass })
+
+      // La pared: un producto de condición legal no entra a un lote de publicar.
+      const { data: unLegal } = await adm.from('productos_catalogo')
+        .select('id').eq('requiere_receta', true).eq('activo', true).limit(1).maybeSingle()
+      if (unLegal?.id) {
+        const { data: conLegal } = await suyo.rpc('canal_lote_armar', {
+          p_canal: 'pedidosya_figueiras', p_accion: 'publicar',
+          p_productos: [unLegal.id], p_motivo: 'PRUEBA',
+        })
+        ;(conLegal as any)?.ok === false && /condición legal|condicion legal/.test(String((conLegal as any)?.por_que ?? ''))
+          ? ok('un producto de condición legal no entra a un lote de publicar, y el lote no se arma')
+          : mal('armó un lote de publicar con un producto de condición legal')
+      }
+
+      // Y el camino normal: armar, firmar, y que el estado NO llegue a publicado.
+      const tres = conviene.slice(0, 3).map((x) => x.producto_id)
+      if (tres.length) {
+        const { data: armado } = await suyo.rpc('canal_lote_armar', {
+          p_canal: 'pedidosya_figueiras', p_accion: 'publicar',
+          p_productos: tres, p_motivo: 'PRUEBA · lote de prueba',
+        })
+        const a = armado as any
+        if (a?.ok !== true) {
+          mal(`no se pudo armar el lote: ${a?.por_que}`)
+        } else {
+          a.estado === 'borrador'
+            ? ok('el lote nace en borrador: armarlo no publica nada')
+            : mal(`el lote nació en «${a.estado}» y debería nacer en borrador`)
+
+          const { data: firmado } = await suyo.rpc('canal_lote_firmar',
+            { p_lote: a.lote, p_sacar: [tres[0]] })
+          const f = firmado as any
+          if (f?.ok !== true) {
+            mal(`no se pudo firmar: ${f?.por_que}`)
+          } else {
+            f.estado === 'firmado'
+              ? ok('firmado, y el estado llega hasta «firmado»: NORA no publica')
+              : mal(`el lote quedó en «${f.estado}»`)
+            f.sacados === 1
+              ? ok('y lo que se sacó al revisar quedó afuera, con el motivo')
+              : mal(`se pidió sacar 1 y se sacaron ${f.sacados}`);
+            /no publicó nada|no publico nada/i.test(String(f.que_pasa_ahora ?? ''))
+              ? ok('y lo dice: firmar no publica')
+              : mal('el lote firmado no aclara que no publicó nada')
+          }
+          // Se deshace.
+          await adm.from('canal_lotes').delete().eq('id', a.lote)
+        }
+      }
+      await adm.from('users_admin').delete().eq('id', nuevo.user.id)
+      await adm.auth.admin.deleteUser(nuevo.user.id)
+    }
+  }
+
   console.log(`\n${fallas === 0 ? 'TODO BIEN' : `${fallas} FALLA(S)`}`)
   process.exit(fallas === 0 ? 0 : 1)
 }
