@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 
 import { createClient } from '@/lib/supabase/client'
 import { exportExcel } from '@/lib/utils/export-excel'
+import { abrirPanel } from '@/components/os/panel-entidad'
 import {
   exportarPreciosParaSifaco, exportarOfertasParaSifaco, exportarBajasParaSifaco,
 } from '@/lib/sifaco/exportar'
@@ -243,7 +244,14 @@ function Productos({ productos, sucursales, kpis, canEdit, pagina, stockSifaco, 
             <tbody>
               {rows.slice(0, 500).map((p) => (
                 <tr key={p.id} className="cursor-pointer border-t border-border hover:bg-accent/30" onClick={() => setSel(p)}>
-                  <td className="px-3 py-1.5 font-mono text-xs">{p.sku ?? '—'}</td>
+                  {/* D.1 · el panel lateral desde cualquier fila. El click en
+                      el SKU abre el panel; el resto de la fila sigue haciendo
+                      lo de siempre, para no cambiarle el gesto a nadie. */}
+                  <td className="px-3 py-1.5 font-mono text-xs"
+                    onClick={(e) => { e.stopPropagation(); abrirPanel('producto', p.id) }}
+                    title="Abrir el panel de este producto">
+                    <span className="underline decoration-dotted underline-offset-2">{p.sku ?? '—'}</span>
+                  </td>
                   <td className="px-3 py-1.5"><div className="flex items-center gap-1.5 font-medium">{p.recall && <span className="rounded bg-rose-600 px-1 text-[9px] font-bold text-white">RECALL</span>}{p.controlado && <span title={`Controlado lista ${p.listaControlado ?? ''}`} className="text-primary">⚕</span>}{p.nombre}</div><div className="text-[10px] text-muted-foreground">{p.laboratorio ?? ''}</div></td>
                   {sucursales.map((s) => { const v = sem(p.stockPorSuc[s.id]); return <td key={s.id} className={cn('px-2 py-1.5 text-center tabular-nums', v.c)}>{v.t}</td> })}
                   <td className="px-2 py-1.5 text-right tabular-nums">{p.ventaDia > 0 ? p.ventaDia.toFixed(1) : '—'}</td>

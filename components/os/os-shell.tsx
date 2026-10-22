@@ -17,6 +17,7 @@ import { NotificationsTrigger } from '@/components/layout/notifications-trigger'
 import { OsDock } from '@/components/os/os-dock'
 import { MobileBottomBar } from '@/components/os/mobile-bottom-bar'
 import { CommandPalette } from '@/components/os/command-palette'
+import { PanelEntidad } from '@/components/os/panel-entidad'
 import { QuickActionsMenu } from '@/components/os/quick-actions-menu'
 import { DemandaModal } from '@/components/os/demanda-modal'
 import { DespachoModal } from '@/components/os/despacho-modal'
@@ -148,6 +149,9 @@ export function OsShell({ profile, children }: { profile: HubProfile; children: 
         </button>
 
         <CommandPalette open={cmdkOpen} onOpenChange={setCmdkOpen} />
+        {/* D.1 · El panel lateral, montado UNA vez y disponible en todas las
+            pantallas. Cualquier fila lo abre con `abrirPanel(tipo, id)`. */}
+        <PanelEntidad />
         <QuickActionsMenu open={plusOpen} onOpenChange={setPlusOpen} />
         <DemandaModal />
         <DespachoModal />
