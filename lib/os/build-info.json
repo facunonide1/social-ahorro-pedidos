@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T09:23:40.460Z",
-  "commit": "3954e204546f1fdfc16aba6b78003b0332095d43",
-  "mensaje": "feat: cliente, sugerencia y cobertura",
+  "construido_at": "2026-10-22T09:28:27.072Z",
+  "commit": "192ae8ddf797ebab6b6dd96d91d46a9ef8a6468b",
+  "mensaje": "feat: el mostrador en el celular y sin conexión",
   "rama": "main"
 }

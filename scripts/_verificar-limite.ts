@@ -72,6 +72,27 @@ async function main() {
     }
   }
 
+  // v1.2 · Y el patrón que se repitió seis veces: una función de trigger que
+  // queda ejecutable por RPC porque `create or replace function` la crea con
+  // EXECUTE para PUBLIC y el revoke se olvidó.
+  //
+  // Son SECURITY DEFINER: invocarlas por `/rest/v1/rpc/` las corre con los
+  // permisos del dueño de la base. No hay un caso donde eso sea lo que se
+  // quiso.
+  const { data: trg, error: eT } = await adm.rpc('triggers_ejecutables_por_rpc')
+  if (eT) throw new Error(`no se pudieron revisar los triggers: ${eT.message}`)
+  const abiertos = (trg ?? []) as { funcion: string; quien: string }[]
+  if (!abiertos.length) {
+    console.log('  ok    ninguna función de trigger se puede llamar por RPC')
+  } else {
+    fallas += abiertos.length
+    for (const t of abiertos) {
+      console.log(`  FALLA ${t.funcion} la puede ejecutar ${t.quien}`)
+      console.log('        Una función de trigger la llama Postgres, no una persona, y es SECURITY')
+      console.log('        DEFINER. Agregá: revoke all on function … from public, anon, authenticated;')
+    }
+  }
+
   const { data: pols, error: e2 } = await adm.rpc('convenios_politicas_de_borrado')
   if (e2) throw new Error(`no se pudieron revisar las políticas: ${e2.message}`)
   const borrado = (pols ?? []) as { tabla: string; politica: string }[]
