@@ -18,7 +18,7 @@
   "aprobaciones": 0,
   "arqueos_caja": 48,
   "auditoria_logs": 0,
-  "auth_trigger_errors": 331,
+  "auth_trigger_errors": 336,
   "automatizaciones": 0,
   "avisos_al_cliente": 13,
   "avisos_faltante": 10,
@@ -26,7 +26,7 @@
   "b2b_pedidos_recurrentes": 0,
   "baja_con_stock_para_decidir": 203,
   "bloqueos_publicacion": 40617,
-  "bloqueos_resumen": 6,
+  "bloqueos_resumen": -1,
   "caja_diferencias": 0,
   "caja_general": 0,
   "caja_general_movimientos": 0,
@@ -68,7 +68,7 @@
   "compliance_recalls": 0,
   "compliance_sops": 1,
   "compras_estado_producto": 0,
-  "compras_global": -1,
+  "compras_global": 1,
   "compras_parametros": 13,
   "compras_quien_provee": 3960,
   "compras_salud_stock": 4,
@@ -106,7 +106,7 @@
   "cuentas_bancarias_propias": 0,
   "customers": 9,
   "decisiones_comerciales": 2,
-  "decisiones_pendientes": -1,
+  "decisiones_pendientes": 10,
   "dedup_pendientes": 0,
   "demanda_invisible": 0,
   "demanda_invisible_resumen": 0,
@@ -224,6 +224,7 @@
   "point_transactions": 0,
   "producto_codigos_barras": 49339,
   "producto_condicion_efectiva": 48217,
+  "producto_descripciones": 0,
   "producto_promedios_sifaco": 5108,
   "producto_rotacion": 0,
   "producto_stock_sifaco": 240681,
@@ -319,7 +320,6 @@
   "zz_deprecated_precios_historico": 0
  },
  "desconocidas": [
-  "compras_global",
-  "decisiones_pendientes"
+  "bloqueos_resumen"
  ]
 }

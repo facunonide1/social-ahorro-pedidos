@@ -250,7 +250,12 @@ export default async function MissionControlPage() {
       getLoUrgente(profile.rol, custom),
       contarDemo(),
       leerEquipo(esTodas ? null : sucursalId),
-      sbEq.from('decisiones_pendientes').select('*'),
+      // El límite no es por tamaño: son las decisiones que esperan la firma de
+      // alguien, y si hubiera 200 el problema no es el corte de PostgREST. Es
+      // para que el auditor de cortes no tenga que hacer una excepción con una
+      // vista cuyo conteo no termina — y `decisiones_pendientes` es una de las
+      // dos que el contador no puede contar.
+      sbEq.from('decisiones_pendientes').select('*').limit(200),
       sucursalId
         ? sbEq.from('sucursales').select('nombre').eq('id', sucursalId).maybeSingle()
         : Promise.resolve({ data: null }),

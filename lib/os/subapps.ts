@@ -660,12 +660,17 @@ export const SUBAPPS: SubAppManifest[] = [
       // El CRM de pedidos original. Sigue vivo y es la misma tabla `orders`:
       // no es un modelo paralelo, es otra puerta al mismo pedido.
       { nombre: 'CRM de despacho', ruta: '/dashboard' },
+      // v1.3 · F · las descripciones de lo publicado. Van acá y no en el
+      // catálogo: el catálogo tiene 48.000 productos y esto trabaja sobre los
+      // 7.737 que están publicados en un canal, que es otra cosa.
+      { nombre: 'Descripciones de producto', ruta: '/admin/descripciones' },
     ],
     quickActions: [
       { id: 'pedido-nuevo', nombre: 'Armar un pedido', icono: 'Package', destino: '/admin/pedidos/nuevo', modulo: 'pedidos', accion: 'crear', primary: true },
       { id: 'pedido-tablero', nombre: 'Tablero de pedidos', icono: 'ClipboardList', destino: '/admin/pedidos/tablero', modulo: 'pedidos', accion: 'ver', primary: true },
       { id: 'pedido-envios', nombre: 'Envíos y viajes', icono: 'Truck', destino: '/admin/pedidos/envios', modulo: 'pedidos', accion: 'ver', primary: true },
       { id: 'pedido-reservas', nombre: 'Reservas de stock', icono: 'PackageX', destino: '/admin/pedidos/reservas', modulo: 'pedidos', accion: 'ver' },
+      { id: 'descripciones', nombre: 'Descripciones de producto', icono: 'FileText', destino: '/admin/descripciones', modulo: 'pedidos', accion: 'ver' },
     ],
   },
 ]

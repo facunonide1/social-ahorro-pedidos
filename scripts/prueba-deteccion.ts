@@ -307,19 +307,68 @@ async function main() {
     ok(`la lista larga tiene ${guardados}: el tope recorta lo que se publica, no lo que se guarda`)
   }
 
-  // ── D.5 · DESCARTAR CON UN MOTIVO DEL CATALOGO ────────────────────────
+  // ── D.5 · DESCARTAR, CON UNA SESIÓN DE VERDAD ─────────────────────────
+  //
+  // ── POR QUÉ NO ALCANZA EL CLIENTE DE SERVICIO ───────────────────────────
+  //
+  // `deteccion_descartar` guarda `auth.uid()` y mira el rol en `users_admin`.
+  // Con el cliente de servicio `auth.uid()` es null, así que la función se
+  // niega — y eso es lo correcto: un descarte sin dueño es un detector
+  // callado sin que nadie pueda ver quién lo calló.
+  //
+  // Entonces se prueban las dos cosas: que el cliente de servicio NO pueda,
+  // y que con la sesión de un gerente sí.
   const { data: unHallazgo } = await adm.rpc('deteccion_hallazgos',
     { p_familia: null, p_sucursal: null, p_solo_publicados: true, p_limite: 1 })
   const uno = ((unHallazgo ?? []) as Fila[])[0]
   if (!uno) {
     nd('D.5 no se pudo probar: no hay ningún hallazgo publicado')
   } else {
-    const { data: inventado } = await adm.rpc('deteccion_descartar',
-      { p_anomalia: (uno as any).id, p_motivo: 'porque_no_me_gusta' })
-    const inv = inventado as any
-    inv?.ok === false && String(inv?.por_que ?? '').includes('no es un motivo del catalogo')
-      ? ok('un motivo que no está en el catálogo se rechaza, y dice por qué')
-      : mal('aceptó un motivo que no está en el catálogo')
+    const { data: sinSesion } = await adm.rpc('deteccion_descartar',
+      { p_anomalia: (uno as any).id, p_motivo: 'es_a_proposito' })
+    const ss = sinSesion as any
+    ss?.ok === false && /sesión activa|sesion activa/.test(String(ss?.por_que ?? ''))
+      ? ok('el cliente de servicio no puede descartar: un descarte sin dueño no enseña nada')
+      : mal('el cliente de servicio pudo descartar, y el descarte quedó sin dueño')
+
+    // Y ahora con una sesión real.
+    const ANON = env('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+    const email = 'prueba.deteccion.gerente@social-ahorro.test'
+    const pass = 'Prueba-det-gerente-12!'
+    const { data: previos } = await adm.auth.admin.listUsers({ page: 1, perPage: 200 })
+    for (const u of previos?.users ?? []) if (u.email === email) await adm.auth.admin.deleteUser(u.id)
+    const { data: nuevo } = await adm.auth.admin.createUser({ email, password: pass, email_confirm: true })
+
+    if (!nuevo?.user) {
+      mal('no se pudo crear el usuario de prueba para D.5')
+    } else {
+      await adm.from('users_admin').upsert(
+        { id: nuevo.user.id, rol: 'gerente', activo: true }, { onConflict: 'id' })
+      const suyo = createClient(env('NEXT_PUBLIC_SUPABASE_URL'), ANON,
+        { auth: { persistSession: false } })
+      const { error: eLogin } = await suyo.auth.signInWithPassword({ email, password: pass })
+      if (eLogin) {
+        mal(`el gerente de prueba no pudo entrar: ${eLogin.message}`)
+      } else {
+        const { data: inventado } = await suyo.rpc('deteccion_descartar',
+          { p_anomalia: (uno as any).id, p_motivo: 'porque_no_me_gusta' })
+        const inv = inventado as any
+        inv?.ok === false && String(inv?.por_que ?? '').includes('no es un motivo del catalogo')
+          ? ok('con sesión, un motivo que no está en el catálogo se rechaza y dice por qué')
+          : mal('aceptó un motivo que no está en el catálogo')
+
+        // Y que un rol que no descarta, no descarte.
+        await adm.from('users_admin').update({ rol: 'repartidor' }).eq('id', nuevo.user.id)
+        const { data: negado } = await suyo.rpc('deteccion_descartar',
+          { p_anomalia: (uno as any).id, p_motivo: 'es_a_proposito' })
+        const ng = negado as any
+        ng?.ok === false && /no descarta hallazgos/.test(String(ng?.por_que ?? ''))
+          ? ok('un repartidor no puede descartar, y la función dice por qué')
+          : mal('un repartidor pudo descartar un hallazgo')
+      }
+      await adm.from('users_admin').delete().eq('id', nuevo.user.id)
+      await adm.auth.admin.deleteUser(nuevo.user.id)
+    }
   }
 
   // ── D.7 · EL MARCADOR NO REGALA ACIERTOS ──────────────────────────────

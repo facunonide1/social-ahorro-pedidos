@@ -159,7 +159,7 @@ async function main() {
 
     // ── 4 ─────────────────────────────────────────────────────────────────
     paso('Mira lo que necesita su firma, y sólo lo de su sucursal')
-    const { data: dec, error: eDec } = await suyo.from('decisiones_pendientes').select('*')
+    const { data: dec, error: eDec } = await suyo.from('decisiones_pendientes').select('*').limit(200)
     if (eDec) mal(`no puede leer las decisiones: ${eDec.message}`)
     else {
       const ajenas = (dec ?? []).filter((d: any) =>
