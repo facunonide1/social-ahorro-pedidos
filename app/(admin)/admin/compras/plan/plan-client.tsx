@@ -29,11 +29,17 @@ const MAX = 200
 
 export function PlanClient({
   global, edad, urgencias, salud, parametros, transferir, aTransferir, sinCalcular, aComprar, noComprar,
+  demandaReal,
 }: {
   global: any; edad: EdadDelDato | null; urgencias: any[]; salud: any[]; parametros: any[]
   transferir: { se_puede: boolean; por_que: string } | null
   aTransferir: any[]
   sinCalcular: number; aComprar: any[]; noComprar: any[]
+  /**
+   * D.5 · Lo que alguien registró que le pidieron y no había. Es una señal
+   * MEDIDA, no un pronóstico, y va aparte por eso.
+   */
+  demandaReal: any[]
 }) {
   const [lista, setLista] = useState<'comprar' | 'sobra' | 'dormido' | 'pedido'>('comprar')
 
@@ -178,6 +184,62 @@ export function PlanClient({
           })}
         </div>
       </section>
+
+      {/* ── v1.2 · D.5 · LA DEMANDA REAL, QUE NO ES UN PRONOSTICO ──────── */}
+      {demandaReal.length > 0 && (
+        <section className="space-y-2">
+          <div>
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+              Lo que te pidieron y no había
+            </h2>
+            <p className="text-xs leading-snug text-muted-foreground">
+              Esto <b>no sale de la fórmula</b>: alguien del mostrador registró que se lo pidieron
+              y no estaba. Es demanda medida, y es la única parte de esta pantalla que no es un
+              pronóstico. Entra desde las 3 veces en 90 días: con una no se compra y con doce ya se
+              perdió plata.
+            </p>
+          </div>
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-left text-xs text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2">Producto</th>
+                  <th className="px-3 py-2">Sucursal</th>
+                  <th className="px-3 py-2 text-right">Veces</th>
+                  <th className="px-3 py-2 text-right">Se fue</th>
+                  <th className="px-3 py-2 text-right">Stock hoy</th>
+                  <th className="px-3 py-2">Por qué</th>
+                </tr>
+              </thead>
+              <tbody>
+                {demandaReal.map((d, i) => (
+                  <tr key={`${d.producto_id}-${i}`} className="border-t border-border align-top">
+                    <td className="px-3 py-1.5">
+                      <span className="font-medium">{d.nombre}</span>{' '}
+                      <span className="font-mono text-[10px] text-muted-foreground">{d.sku}</span>
+                    </td>
+                    <td className="px-3 py-1.5 text-xs">{d.sucursal}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">{d.veces}</td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">
+                      {formatARS(Number(d.venta_perdida_de_los_que_se_fueron ?? 0))}
+                    </td>
+                    <td className="px-3 py-1.5 text-right tabular-nums">
+                      {Number(d.stock_hoy ?? 0)}
+                    </td>
+                    <td className="px-3 py-1.5 text-[11px] leading-snug text-muted-foreground">
+                      {d.por_que}
+                      {Number(d.stock_hoy ?? 0) > 0 && (
+                        <> Hoy hay stock: la señal sirve para el punto de pedido, no para comprar
+                        ahora.</>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* ── D.6 · LA SALUD DEL STOCK ──────────────────────────────────── */}
       <section className="space-y-2">

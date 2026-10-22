@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T08:30:12.416Z",
-  "commit": "80ad76fdfddaf186b0b7d7d4e52a446b7b49c34a",
-  "mensaje": "feat: equivalencias por monodroga y presentación",
+  "construido_at": "2026-10-22T08:46:14.662Z",
+  "commit": "907a079bf084585ae557141e7398f9bf5e98d00d",
+  "mensaje": "feat: buscar en la red y ofrecer traer o enviar",
   "rama": "main"
 }

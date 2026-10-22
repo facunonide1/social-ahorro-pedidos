@@ -62,6 +62,18 @@ export default async function PlanPage() {
     { maximo: 12_000 },
   )
 
+  // ── D.5 · LA DEMANDA REAL, MARCADA COMO TAL ──────────────────────────────
+  //
+  // Un producto pedido tres veces o más en 90 días y que no había entra al
+  // plan como **señal medida**, no como pronóstico.
+  //
+  // Va aparte y no mezclado en `aComprar` a propósito: `reco_compras` sale de
+  // una fórmula sobre el histórico de ventas, y esto sale de que alguien
+  // registró que se lo pidieron. Sumarlos haría que nadie supiera de dónde
+  // viene cada número — que es justo lo que este bloque viene a arreglar.
+  const { data: demandaReal } = await sb.from('demanda_real_para_el_plan')
+    .select('*').order('venta_perdida_medida', { ascending: false }).limit(100)
+
   return (
     <>
       <PageHeader
@@ -81,6 +93,7 @@ export default async function PlanPage() {
           sinCalcular={sinCalcular ?? 0}
           aComprar={aComprar}
           noComprar={noComprar}
+          demandaReal={(demandaReal ?? []) as any[]}
         />
       </div>
     </>

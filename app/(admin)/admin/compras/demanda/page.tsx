@@ -2,69 +2,102 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { paginar } from '@/lib/supabase/paginar'
 import { createAdminClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
+
 import { DemandaClient, type ExisteRow, type LibreRow } from './demanda-client'
-import { lente } from '@/lib/demo/lente'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Radar de demanda' }
 
+/**
+ * D.4 · QUE TE PIDEN Y NO TENES.
+ *
+ * ── QUE CAMBIO EN LA v1.2 ───────────────────────────────────────────────────
+ *
+ * Esta pantalla existía desde la v0.50 y agrupaba las filas de
+ * `demanda_invisible` en JavaScript, con `limit(5000)`. Dos problemas:
+ *
+ *   · el límite. 5.000 registros de faltante son tres meses de una sucursal
+ *     con alguien que registra de verdad, y pasado eso el conteo era menor sin
+ *     avisar — la misma clase de error que el corte de 1.000 filas;
+ *   · no tenía la plata. Decía «te lo pidieron 12 veces» y no cuánto era eso,
+ *     que es lo que hace que alguien lo compre.
+ *
+ * Ahora lee `demanda_invisible_resumen` y `demanda_sin_catalogo`, que agrupan
+ * EN LA BASE y traen la venta perdida medida.
+ *
+ * ── D.6 · Y LOS DOS NUMEROS ─────────────────────────────────────────────────
+ *
+ * `demanda_real_vs_estimada` pone la estimación por fórmula al lado de lo
+ * medido. **No se suman**: son dos cosas distintas medidas de dos formas.
+ */
 export default async function DemandaPage({ searchParams }: { searchParams: { dias?: string } }) {
-  await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'auditor'] })
+  await requireAdminHubAccess({
+    allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'auditor'],
+  })
   const adm = createAdminClient()
   const dias = [7, 30, 90].includes(Number(searchParams?.dias)) ? Number(searchParams.dias) : 30
-  const desde = new Date(Date.now() - dias * 86_400_000).toISOString()
+  const desde = new Date(Date.now() - dias * 86_400_000).toISOString().slice(0, 10)
 
-  const [{ data: rows }, { data: sucs }] = await Promise.all([
-    lente(adm.from('demanda_invisible').select('texto_pedido, producto_id, sucursal_id, created_at').gte('created_at', desde).limit(5000)),
-    adm.from('sucursales').select('id, nombre'),
+  // Las dos vistas agrupan en la base. Se paginan igual: el día que haya
+  // 2.000 productos distintos pedidos, el corte de PostgREST no avisa.
+  const [existeR, libreR, { data: dosNumeros }] = await Promise.all([
+    paginar<any>(adm.from('demanda_invisible_resumen').select('*')
+      .gte('hasta', desde).order('venta_perdida_medida', { ascending: false })
+      .order('producto_id'), { maximo: 50_000 }),
+    paginar<any>(adm.from('demanda_sin_catalogo').select('*')
+      .gte('hasta', desde).order('veces', { ascending: false })
+      .order('texto_norm'), { maximo: 50_000 }),
+    adm.from('demanda_real_vs_estimada').select('*')
+      .gt('veces_pedido', 0).order('perdida_medida', { ascending: false }).limit(50),
   ])
-  const sucMap = new Map(((sucs ?? []) as any[]).map((s) => [s.id, s.nombre]))
-  const all = (rows ?? []) as any[]
 
-  // 1) EXISTE PERO FALTÓ (producto_id no nulo)
-  const existeMap = new Map<string, { count: number; sucs: Set<string>; textos: Set<string> }>()
-  for (const r of all.filter((x) => x.producto_id)) {
-    const g = existeMap.get(r.producto_id) ?? { count: 0, sucs: new Set(), textos: new Set() }
-    g.count++; if (r.sucursal_id) g.sucs.add(r.sucursal_id); g.textos.add(r.texto_pedido)
-    existeMap.set(r.producto_id, g)
-  }
-  const existeIds = [...existeMap.keys()]
-  const prodMap = new Map<string, any>()
-  const stockMap = new Map<string, number>()
-  if (existeIds.length) {
-    const [{ data: prods }, { data: stock }] = await Promise.all([
-      lente(adm.from('productos_catalogo').select('id, nombre, sku').in('id', existeIds)),
-      // Acotado por `existeIds`, pero esa lista puede pasar de mil y
-      // `stock_items` tiene 192.464 filas: cuatro por producto.
-      paginar<any>(lente(adm.from('stock_items').select('producto_id, cantidad_gondola, cantidad_deposito').in('producto_id', existeIds)),
-        { maximo: 200_000 }).then((r: { filas: any[] }) => ({ data: r.filas })),
-    ])
-    for (const p of (prods ?? []) as any[]) prodMap.set(p.id, p)
-    for (const s of (stock ?? []) as any[]) stockMap.set(s.producto_id, (stockMap.get(s.producto_id) ?? 0) + Number(s.cantidad_gondola ?? 0) + Number(s.cantidad_deposito ?? 0))
-  }
-  const existe: ExisteRow[] = existeIds.map((id) => ({
-    producto_id: id, nombre: prodMap.get(id)?.nombre ?? 'producto', sku: prodMap.get(id)?.sku ?? null,
-    veces: existeMap.get(id)!.count, stock: stockMap.get(id) ?? 0,
-    sucursales: [...existeMap.get(id)!.sucs].map((s) => sucMap.get(s) ?? '—'),
-  })).sort((a, b) => b.veces - a.veces)
+  const existe: ExisteRow[] = existeR.filas.map((r) => ({
+    producto_id: r.producto_id,
+    nombre: r.nombre,
+    sku: r.sku,
+    veces: Number(r.veces),
+    unidades: Number(r.unidades_pedidas ?? 0),
+    stock: Number(r.stock_hoy ?? 0),
+    sucursales: [r.sucursal],
+    // D.4 · la venta perdida MEDIDA.
+    perdida_medida: Number(r.venta_perdida_medida ?? 0),
+    perdida_de_los_que_se_fueron: Number(r.venta_perdida_de_los_que_se_fueron ?? 0),
+    se_fueron: Number(r.se_fueron ?? 0),
+    se_llevaron_otra: Number(r.se_llevaron_otra ?? 0),
+    sin_desenlace: Number(r.sin_desenlace ?? 0),
+    // Cuántos de esos pedidos no tenían precio: ahí la plata está subestimada.
+    sin_precio: Number(r.sin_precio ?? 0),
+  }))
 
-  // 2) NO LO TRABAJAMOS (texto libre, agrupado por lower/trim)
-  const libreMap = new Map<string, { texto: string; count: number; sucs: Set<string> }>()
-  for (const r of all.filter((x) => !x.producto_id)) {
-    const key = String(r.texto_pedido ?? '').toLowerCase().trim()
-    if (!key) continue
-    const g = libreMap.get(key) ?? { texto: r.texto_pedido, count: 0, sucs: new Set() }
-    g.count++; if (r.sucursal_id) g.sucs.add(r.sucursal_id)
-    libreMap.set(key, g)
-  }
-  const libre: LibreRow[] = [...libreMap.values()].map((g) => ({ texto: g.texto, veces: g.count, sucursales: [...g.sucs].map((s) => sucMap.get(s) ?? '—') })).sort((a, b) => b.veces - a.veces)
+  const libre: LibreRow[] = libreR.filas.map((r) => ({
+    texto: r.texto,
+    veces: Number(r.veces),
+    sucursales: [r.ultima_sucursal ?? '—'],
+    como_lo_escribieron: (r.como_lo_escribieron ?? []) as string[],
+    se_fueron: Number(r.se_fueron ?? 0),
+  }))
 
   return (
     <>
-      <PageHeader title="Radar de demanda" description="La venta perdida hecha data: lo que piden y no hay. En un mes, el mapa de qué comprar que hoy no comprás."
-        breadcrumbs={[{ label: 'Compras', href: '/admin/compras' }, { label: 'Radar de demanda' }]} />
+      <PageHeader
+        title="Radar de demanda"
+        description="La venta perdida hecha dato: lo que piden y no hay, con cuánto se fue."
+        breadcrumbs={[{ label: 'Compras', href: '/admin/compras' }, { label: 'Radar de demanda' }]}
+      />
       <div className="p-4 md:p-6">
-        <DemandaClient existe={existe} libre={libre} dias={dias} />
+        <DemandaClient
+          existe={existe} libre={libre} dias={dias}
+          dosNumeros={((dosNumeros ?? []) as any[]).map((d) => ({
+            producto_id: d.producto_id, sku: d.sku, nombre: d.nombre, sucursal: d.sucursal,
+            estimada: d.perdida_estimada_mes == null ? null : Number(d.perdida_estimada_mes),
+            medida: Number(d.perdida_medida ?? 0),
+            medida_de_los_que_se_fueron: Number(d.perdida_medida_de_los_que_se_fueron ?? 0),
+            veces: Number(d.veces_pedido ?? 0),
+            que_dicen: d.que_dicen_los_dos,
+            estimacion_sin_costo: !!d.estimacion_sin_costo,
+          }))}
+          truncado={existeR.truncado || libreR.truncado}
+        />
       </div>
     </>
   )
