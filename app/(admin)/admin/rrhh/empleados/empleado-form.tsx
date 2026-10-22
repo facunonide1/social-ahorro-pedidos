@@ -46,7 +46,6 @@ export function EmpleadoForm({
     sucursal_id: empleado?.sucursal_id ?? '',
     puesto: empleado?.puesto ?? '',
     es_farmaceutico: (empleado as any)?.es_farmaceutico ?? false,
-    matricula: (empleado as any)?.matricula ?? '',
     fecha_ingreso: empleado?.fecha_ingreso ?? '',
     fecha_egreso: empleado?.fecha_egreso ?? '',
     salario_base: String(empleado?.salario_base ?? ''),
@@ -75,7 +74,6 @@ export function EmpleadoForm({
       sucursal_id: form.sucursal_id || null,
       puesto: form.puesto.trim() || null,
       es_farmaceutico: form.es_farmaceutico,
-      matricula: form.es_farmaceutico ? (form.matricula.trim() || null) : null,
       fecha_ingreso: form.fecha_ingreso || null,
       fecha_egreso: form.fecha_egreso || null,
       salario_base: form.salario_base ? Number(form.salario_base) : null,
@@ -207,11 +205,6 @@ export function EmpleadoForm({
                 Cuenta para la cobertura farmacéutica
               </label>
             </Field>
-            {form.es_farmaceutico && (
-              <Field label="Matrícula">
-                <Input value={form.matricula} onChange={(e) => patch('matricula', e.target.value)} placeholder="N° de matrícula" />
-              </Field>
-            )}
             <Field label="Fecha de ingreso">
               <Input
                 type="date"

@@ -36,7 +36,7 @@ export default async function TurnoPage() {
   // entre dos eslabones le hace ver una consulta sin límite.
   const [{ data: tareas }, { data: gente }, { data: repartidas }] = await Promise.all([
     sb.from('tareas')
-      .select('id, titulo, estado, prioridad, fecha_vencimiento, responsable_id, sucursal_id, tipo_tarea_id, tipos_tareas(nombre, requiere_farmaceutico)')
+      .select('id, titulo, estado, prioridad, fecha_vencimiento, responsable_id, sucursal_id, tipo_tarea_id, tipos_tareas(nombre)')
       .in('estado', ['pendiente', 'asignada', 'en_progreso', 'reclamada'])
       .eq('es_demo', false)
       .order('fecha_vencimiento', { ascending: true, nullsFirst: false })
@@ -46,9 +46,6 @@ export default async function TurnoPage() {
       .eq('activo', true).limit(100),
     sb.from('turno_reparto').select('*').eq('fecha', hoy),
   ])
-
-  const { data: farma } = await sb
-    .from('farmaceuticos').select('sucursal_id, nombre, user_id').eq('activo', true)
 
   return (
     <>
@@ -62,7 +59,6 @@ export default async function TurnoPage() {
           tareas={(tareas ?? []) as any[]}
           gente={(gente ?? []) as any[]}
           repartidas={(repartidas ?? []) as any[]}
-          farmaceuticos={(farma ?? []) as any[]}
           miSucursal={yo.sucursal_id ?? null}
           fecha={hoy}
         />

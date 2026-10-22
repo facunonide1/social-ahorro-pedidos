@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T09:37:09.414Z",
-  "commit": "16a45278de67cf8a0cedec4343754713f936fde1",
-  "mensaje": "fix: ninguna función de trigger se llama por RPC",
+  "construido_at": "2026-10-22T18:30:49.624Z",
+  "commit": "7b88d066442fe0e76e56bfdbc6fdf78eb6b481da",
+  "mensaje": "fix: el service worker no pasa por el middleware",
   "rama": "main"
 }

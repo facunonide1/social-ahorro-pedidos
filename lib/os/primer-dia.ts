@@ -46,14 +46,13 @@ export async function primerDia(): Promise<{ pasos: Paso[]; listo: boolean }> {
   const adm = createAdminClient()
 
   const [
-    sucs, usuarios, farmaceuticos, farmConMat, topes, maestros, lotes, resumen, config,
+    sucs, usuarios, farmaceuticos, topes, maestros, lotes, resumen, config,
   ] = await Promise.all([
     adm.from('sucursales').select('id, nombre, es_ecommerce', { count: 'exact' }).eq('activa', true),
-    adm.from('users_admin').select('id, rol, sucursal_id', { count: 'exact' }).eq('activo', true),
-    adm.from('empleados').select('id', { count: 'exact', head: true })
+    adm.from('users_admin').select('id, rol, sucursal_id, es_farmaceutico', { count: 'exact' }).eq('activo', true),
+    // v1.3 · el farmacéutico es un tilde en el usuario, sin matrícula.
+    adm.from('users_admin').select('id', { count: 'exact', head: true })
       .eq('activo', true).eq('es_farmaceutico', true),
-    adm.from('empleados').select('id', { count: 'exact', head: true })
-      .eq('activo', true).eq('es_farmaceutico', true).not('matricula', 'is', null),
     adm.from('config_caja_sucursal').select('sucursal_id, tope_efectivo'),
     adm.from('sifaco_importaciones').select('aplicado_at')
       .not('aplicado_at', 'is', null).order('aplicado_at', { ascending: false }).limit(1),
@@ -109,24 +108,24 @@ export async function primerDia(): Promise<{ pasos: Paso[]; listo: boolean }> {
   //
   // Regla de oro 9: lo legal-farmacéutico no se toca. Sin matrícula cargada,
   // la cobertura no se puede controlar.
+  // ── v1.3 · EL TILDE, NO LA MATRÍCULA ────────────────────────────────────
+  //
+  // Este paso pedía «los farmacéuticos, con matrícula» y marcaba «a medias»
+  // cuando faltaba el número. Era formalización que la operación no necesita
+  // (§1 de la v1.3): lo que el sistema necesita saber es a quién llamar.
   const farm = n(farmaceuticos.count)
-  const conMat = n(farmConMat.count)
   pasos.push({
     clave: 'farmaceuticos',
-    titulo: 'Los farmacéuticos, con matrícula',
-    que_es: 'Sin matrícula cargada no se puede controlar la cobertura, que es obligación legal y no es negociable.',
-    estado: farm == null ? 'no_se_pudo_saber'
-      : farm === 0 ? 'falta'
-      : (conMat ?? 0) < farm ? 'parcial' : 'hecho',
-    cuantos: conMat, de_cuantos: farm,
+    titulo: 'Quién es farmacéutico',
+    que_es: 'Un tilde en el usuario. El mostrador lo usa para saber a quién llamar cuando la pregunta es clínica.',
+    estado: farm == null ? 'no_se_pudo_saber' : farm === 0 ? 'falta' : 'hecho',
+    cuantos: farm, de_cuantos: null,
     que_hacer: farm == null
-      ? 'No se pudo contar cuántos farmacéuticos hay. Revisar la ficha de empleados.'
+      ? 'No se pudo contar. Revisar la pantalla de usuarios.'
       : farm === 0
-        ? 'Marcar en cada ficha quién es farmacéutico y cargarle el número de matrícula.'
-        : (conMat ?? 0) < farm
-          ? `Hay ${farm - (conMat ?? 0)} farmacéutico(s) sin matrícula cargada.`
-          : '',
-    href: '/admin/rrhh/empleados',
+        ? 'Tildar «farmacéutico» en el usuario de quien lo sea, en Configuración → Usuarios.'
+        : '',
+    href: '/admin/configuracion/usuarios',
     bloquea: false,
   })
 

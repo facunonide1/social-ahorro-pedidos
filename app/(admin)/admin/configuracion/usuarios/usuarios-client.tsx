@@ -190,6 +190,9 @@ function PersonaSheet({
   const [rol, setRol] = useState<AdminRole>(persona?.rol ?? 'empleado_general')
   const [sucursalId, setSucursalId] = useState<string>(persona?.sucursal_id ?? NONE)
   const [sucAcceso, setSucAcceso] = useState<string[]>(persona?.sucursales_acceso ?? [])
+  // A.2 · El farmacéutico es un tilde. Sin matrícula, sin vencimiento, sin
+  // legajo: el mostrador sólo necesita saber a quién llamar.
+  const [esFarmaceutico, setEsFarmaceutico] = useState<boolean>(persona?.es_farmaceutico ?? false)
   const [activo, setActivo] = useState<boolean>(persona?.activo ?? true)
   const [tab, setTab] = useState<'datos' | 'permisos' | 'preview'>('datos')
 
@@ -255,6 +258,7 @@ function PersonaSheet({
       toast.error('Este rol requiere una sucursal principal.'); return
     }
     const permisos_custom: PermisosCustom = personalizar ? diffContraPreset(rol, matriz) : {}
+    const es_farmaceutico = esFarmaceutico
     const sucursal_id = sucursalId === NONE ? null : sucursalId
 
     setBusy(true)
@@ -262,7 +266,10 @@ function PersonaSheet({
       if (mode === 'editar') {
         const r = await fetch(`/api/admin/usuarios/${persona!.userId}`, {
           method: 'PATCH', headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ nombre, rol, sucursal_id, sucursales_acceso: sucAcceso, activo, permisos_custom }),
+          body: JSON.stringify({
+            nombre, rol, sucursal_id, sucursales_acceso: sucAcceso, activo, permisos_custom,
+            es_farmaceutico,
+          }),
         })
         const j = await r.json(); if (!r.ok) throw new Error(j?.error || 'No se pudo guardar.')
         toast.success('Usuario actualizado.')
@@ -274,6 +281,7 @@ function PersonaSheet({
             accion: 'dar_acceso', empleado_id: persona?.empleadoId ?? null,
             nombre, email, password, rol, sucursal_id, sucursales_acceso: sucAcceso, permisos_custom,
             numero_empleado: numeroEmpleado.trim() || null, pin: /^\d{4}$/.test(pin) ? pin : null,
+            es_farmaceutico,
           }),
         })
         const j = await r.json(); if (!r.ok) throw new Error(j?.error || 'No se pudo crear el acceso.')

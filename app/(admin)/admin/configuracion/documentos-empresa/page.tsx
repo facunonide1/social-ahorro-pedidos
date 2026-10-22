@@ -17,19 +17,21 @@ export const metadata = { title: 'Documentos de la empresa' }
  * habilitaciones, las matrículas y los certificados, y quién las tiene y cuándo
  * vencen no es información operativa.
  *
- * La RLS lo garantiza aparte de esta lista de roles: `compliance_documentos` y
- * la matrícula de los farmacéuticos sólo las lee super_admin o gerente.
+ * La RLS lo garantiza aparte de esta lista de roles: `compliance_documentos`
+ * sólo la lee super_admin o gerente.
+ *
+ * v1.3 · se fue la sección de farmacéuticos con matrícula: el farmacéutico es
+ * un tilde en el usuario (§1).
  */
 export default async function DocumentosEmpresaPage() {
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente'] })
   const sb = createClient()
 
-  const [{ data: docs }, { data: farma }, { data: sucs }, diasAviso] = await Promise.all([
+  const [{ data: docs }, { data: sucs }, diasAviso] = await Promise.all([
     // Sin las de demostración: una habilitación inventada que «vence en 10
     // días» hace que alguien salga a renovar un papel que no existe.
     sb.from('compliance_documentos').select('*').eq('es_demo', false)
       .order('vence_at', { ascending: true, nullsFirst: false }),
-    sb.from('farmaceuticos').select('*').order('sucursal_id'),
     sb.from('sucursales').select('id, nombre, codigo').eq('activa', true).order('codigo'),
     parametro('compliance', 'dias_aviso_documento_empresa', 60),
   ])
@@ -38,13 +40,12 @@ export default async function DocumentosEmpresaPage() {
     <>
       <PageHeader
         title="Documentos de la empresa"
-        description="Habilitaciones, matrículas y certificados, con su vencimiento. Y quién es el farmacéutico de cada sucursal."
+        description="Habilitaciones, certificados y seguros, con su vencimiento."
         breadcrumbs={[{ label: 'Configuración', href: '/admin/configuracion' }, { label: 'Documentos' }]}
       />
       <div className="p-4 md:p-6">
         <DocumentosEmpresaClient
           docs={(docs ?? []) as any[]}
-          farmaceuticos={(farma ?? []) as any[]}
           sucursales={(sucs ?? []) as any[]}
           diasAviso={diasAviso}
         />

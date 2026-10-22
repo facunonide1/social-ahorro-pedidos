@@ -50,6 +50,11 @@ export type CreateAdminUserInput = {
   sucursal_id?: string | null
   sucursales_acceso?: string[]
   permisos_custom?: PermisosCustom
+  /**
+   * v1.3 · Un tilde. Sin matrícula, sin vencimiento, sin legajo: el mostrador
+   * sólo necesita saber a quién llamar cuando la pregunta es clínica (§1).
+   */
+  es_farmaceutico?: boolean
   /** Si se pasa, vincula la cuenta nueva a este legajo de empleado. */
   empleado_id?: string | null
 }
@@ -61,6 +66,7 @@ export type UpdateAdminUserInput = {
   activo?: boolean
   permisos_custom?: PermisosCustom
   nombre?: string
+  es_farmaceutico?: boolean
 }
 
 export type CreateAdminUserResult =
@@ -129,6 +135,7 @@ export async function createAdminUser(
     rol,
     sucursal_id: sucursal_id ?? null,
     sucursales_acceso: input.sucursales_acceso ?? [],
+    es_farmaceutico: !!input.es_farmaceutico,
     activo: true,
     permisos_custom: input.permisos_custom ?? {},
   })
@@ -173,6 +180,7 @@ export async function updateAdminUser(
   if (input.rol !== undefined) patch.rol = input.rol
   if (input.sucursal_id !== undefined) patch.sucursal_id = input.sucursal_id
   if (input.sucursales_acceso !== undefined) patch.sucursales_acceso = input.sucursales_acceso
+  if (input.es_farmaceutico !== undefined) patch.es_farmaceutico = input.es_farmaceutico
   if (input.activo !== undefined) patch.activo = input.activo
   if (input.permisos_custom !== undefined) patch.permisos_custom = input.permisos_custom
 

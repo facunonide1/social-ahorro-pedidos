@@ -55,6 +55,8 @@ export async function PATCH(
     rol: body?.rol as AdminRole | undefined,
     sucursal_id: body?.sucursal_id,
     sucursales_acceso: body?.sucursales_acceso,
+    // A.2 · un tilde y nada más.
+    ...(body?.es_farmaceutico === undefined ? {} : { es_farmaceutico: !!body.es_farmaceutico }),
     activo: body?.activo,
     permisos_custom: body?.permisos_custom,
     nombre: body?.nombre,

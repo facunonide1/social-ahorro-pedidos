@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
           const { error } = await adm.from('users_admin').insert({
             id: emp.user_id, rol: (b?.rol as AdminRole) ?? 'empleado_general',
             sucursal_id: b?.sucursal_id ?? null, sucursales_acceso: b?.sucursales_acceso ?? [],
+            es_farmaceutico: !!b?.es_farmaceutico,
             activo: true, permisos_custom: b?.permisos_custom ?? {},
           })
           if (error) return NextResponse.json({ error: error.message }, { status: 400 })
@@ -85,6 +86,7 @@ export async function POST(req: NextRequest) {
       nombre: String(b?.nombre ?? ''),
       sucursal_id: b?.sucursal_id ?? null,
       sucursales_acceso: b?.sucursales_acceso ?? [],
+      es_farmaceutico: !!b?.es_farmaceutico,
       permisos_custom: b?.permisos_custom ?? {},
       empleado_id: b?.empleado_id ?? null,
     })

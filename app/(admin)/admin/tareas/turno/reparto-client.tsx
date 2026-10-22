@@ -1,15 +1,26 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, UserCheck, AlertTriangle, Stethoscope } from 'lucide-react'
+import { Loader2, UserCheck, AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { createClient } from '@/lib/supabase/client'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
-export function RepartoClient({ tareas, gente, repartidas, farmaceuticos, miSucursal, fecha }: {
-  tareas: any[]; gente: any[]; repartidas: any[]; farmaceuticos: any[]
+/**
+ * ── v1.3 · SE SACÓ LA RESTRICCIÓN POR TIPO ──────────────────────────────────
+ *
+ * Había un tipo de tarea que sólo se podía asignar a un empleado marcado como
+ * farmacéutico, y cuando no había ninguno cargado la fila decía «no hay
+ * farmacéutico cargado» y no se podía repartir. Encima había un aviso arriba
+ * de la pantalla explicando que faltaba declararlo.
+ *
+ * Era formalización que la operación no necesita (§1 de la v1.3). Cualquiera
+ * del turno puede recibir cualquier tarea.
+ */
+export function RepartoClient({ tareas, gente, repartidas, miSucursal, fecha }: {
+  tareas: any[]; gente: any[]; repartidas: any[]
   miSucursal: string | null; fecha: string
 }) {
   const [asignado, setAsignado] = useState<Record<string, string>>(
@@ -18,7 +29,6 @@ export function RepartoClient({ tareas, gente, repartidas, farmaceuticos, miSucu
   const [guardando, setGuardando] = useState<string | null>(null)
 
   const sinDuenio = tareas.filter((t) => !t.responsable_id && !asignado[t.id])
-  const farmaDeAqui = farmaceuticos.filter((f) => !miSucursal || f.sucursal_id === miSucursal)
 
   async function repartir(tareaId: string, userId: string) {
     setGuardando(tareaId)
@@ -65,18 +75,6 @@ export function RepartoClient({ tareas, gente, repartidas, farmaceuticos, miSucu
         </Alert>
       )}
 
-      {farmaDeAqui.length === 0 && (
-        <Alert>
-          <Stethoscope className="size-4" />
-          <AlertDescription className="text-xs leading-snug">
-            <b>No hay farmacéutico declarado para esta sucursal.</b> Las tareas que solo puede firmar
-            el farmacéutico —el control de psicotrópicos, la trazabilidad de ANMAT— no se le pueden
-            asignar a nadie hasta que esté cargado. Se declara en Configuración → Documentos de la
-            empresa.
-          </AlertDescription>
-        </Alert>
-      )}
-
       <div className="divide-y rounded-lg border">
         {!tareas.length && (
           <p className="p-4 text-sm text-muted-foreground">
@@ -85,25 +83,22 @@ export function RepartoClient({ tareas, gente, repartidas, farmaceuticos, miSucu
           </p>
         )}
         {tareas.map((t) => {
-          const soloFarma = !!t.tipos_tareas?.requiere_farmaceutico
+          // ── v1.3 · SE SACÓ LA RESTRICCIÓN POR TIPO ─────────────────────
+          //
+          // Había un tipo de tarea que sólo se podía asignar a un empleado
+          // marcado como farmacéutico, y cuando no había ninguno cargado la
+          // fila decía «no hay farmacéutico cargado» y no se podía repartir.
+          //
+          // Era formalización que la operación no necesita: ver §1 de la
+          // v1.3. Cualquiera del turno puede recibir cualquier tarea.
           const yaEs = asignado[t.id] || t.responsable_id || ''
-          // Para una tarea de farmacéutico, la lista son los farmacéuticos de
-          // esta sucursal y nadie más: ofrecer a todos y rechazar después es
-          // hacerle perder el tiempo a quien reparte.
-          const candidatos = soloFarma
-            ? gente.filter((g) => farmaDeAqui.some((f) => f.user_id === g.id))
-            : gente.filter((g) => !miSucursal || !g.sucursal_id || g.sucursal_id === miSucursal)
+          const candidatos = gente
 
           return (
             <div key={t.id} className="flex flex-wrap items-center gap-2 p-3 text-sm">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{t.titulo}</span>
-                  {soloFarma && (
-                    <Badge variant="outline" className="gap-1 text-[10px]">
-                      <Stethoscope className="size-3" /> solo el farmacéutico
-                    </Badge>
-                  )}
                   {t.prioridad === 'alta' && (
                     <Badge variant="outline" className="border-amber-500/40 text-[10px] text-amber-600">alta</Badge>
                   )}
@@ -122,10 +117,8 @@ export function RepartoClient({ tareas, gente, repartidas, farmaceuticos, miSucu
                 <select value={yaEs}
                   onChange={(e) => e.target.value && repartir(t.id, e.target.value)}
                   className="rounded-md border bg-background px-2 py-1 text-xs">
-                  <option value="">
-                    {soloFarma && !candidatos.length ? 'no hay farmacéutico cargado' : 'sin asignar'}
-                  </option>
-                  {candidatos.map((g) => (
+                  <option value="">sin asignar</option>
+                  {candidatos.map((g: any) => (
                     <option key={g.id} value={g.id}>{g.rol}</option>
                   ))}
                 </select>

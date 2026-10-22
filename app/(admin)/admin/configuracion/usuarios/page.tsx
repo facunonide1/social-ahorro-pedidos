@@ -21,6 +21,7 @@ export type PersonaRow = {
   rol: AdminRole | null
   sucursal_id: string | null
   sucursales_acceso: string[]
+  es_farmaceutico: boolean
   sucursal_nombre: string | null
   puesto: string | null
   tieneAcceso: boolean
@@ -39,7 +40,7 @@ export default async function UsuariosConfigPage() {
   const sb = createClient()
 
   const [{ data: uaRows }, { data: empRows }, { data: sucursalesData }] = await Promise.all([
-    sb.from('users_admin').select('id, rol, sucursal_id, sucursales_acceso, activo, permisos_custom, numero_empleado, pin_hash, sucursales(nombre)').order('activo', { ascending: false }),
+    sb.from('users_admin').select('id, rol, sucursal_id, sucursales_acceso, activo, permisos_custom, numero_empleado, pin_hash, es_farmaceutico, sucursales(nombre)').order('activo', { ascending: false }),
     sb.from('empleados').select('id, nombre_completo, email, dni, puesto, sucursal_id, sucursales_acceso, activo, user_id, sucursales(nombre)').order('activo', { ascending: false }),
     sb.from('sucursales').select('id, nombre, activa').eq('activa', true).order('nombre'),
   ])
@@ -76,6 +77,7 @@ export default async function UsuariosConfigPage() {
       rol: u.rol,
       sucursal_id: u.sucursal_id,
       sucursales_acceso: u.sucursales_acceso ?? [],
+      es_farmaceutico: !!u.es_farmaceutico,
       sucursal_nombre: u.sucursales?.nombre ?? emp?.sucursales?.nombre ?? null,
       puesto: emp?.puesto ?? null,
       tieneAcceso: true,
@@ -100,6 +102,9 @@ export default async function UsuariosConfigPage() {
       rol: null,
       sucursal_id: e.sucursal_id,
       sucursales_acceso: e.sucursales_acceso ?? [],
+      // Un empleado sin cuenta de panel no puede ser el farmacéutico al que
+      // llama el mostrador: el tilde vive en el usuario.
+      es_farmaceutico: false,
       sucursal_nombre: e.sucursales?.nombre ?? null,
       puesto: e.puesto,
       tieneAcceso: false,

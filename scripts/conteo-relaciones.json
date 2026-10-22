@@ -18,7 +18,7 @@
   "aprobaciones": 0,
   "arqueos_caja": 48,
   "auditoria_logs": 0,
-  "auth_trigger_errors": 304,
+  "auth_trigger_errors": 326,
   "automatizaciones": 0,
   "avisos_al_cliente": 13,
   "avisos_faltante": 10,
@@ -35,7 +35,7 @@
   "campania_envios": 0,
   "campanias": 0,
   "campanias_crm": 0,
-  "canal_candidatos": -1,
+  "canal_candidatos": 371,
   "canal_estado": 7737,
   "canal_miembros": 0,
   "canal_problemas": 7,
@@ -68,7 +68,7 @@
   "compliance_recalls": 0,
   "compliance_sops": 1,
   "compras_estado_producto": 0,
-  "compras_global": -1,
+  "compras_global": 1,
   "compras_parametros": 13,
   "compras_quien_provee": 3960,
   "compras_salud_stock": 4,
@@ -150,7 +150,6 @@
   "extracto_lineas_pendientes": 0,
   "facturas_esperando_revision": 0,
   "facturas_proveedor": 4976,
-  "farmaceuticos": 0,
   "gastos_fijos": 0,
   "gastos_fijos_instancias": 0,
   "gastos_operativos": 0,
@@ -286,10 +285,10 @@
   "tareas_adjuntos": 0,
   "tareas_comentarios": 0,
   "tareas_historial": 193,
-  "tareas_recurrencias": 17,
+  "tareas_recurrencias": 13,
   "tareas_triggers_auto": 0,
   "tickets_validacion": 0,
-  "tipos_tareas": 33,
+  "tipos_tareas": 32,
   "tipos_tareas_metricas_mensuales": 0,
   "transferencia_items": 0,
   "transferencias_diferencias": 0,
@@ -317,8 +316,6 @@
   "zz_deprecated_precios_historico": 0
  },
  "desconocidas": [
-  "bloqueos_resumen",
-  "canal_candidatos",
-  "compras_global"
+  "bloqueos_resumen"
  ]
 }

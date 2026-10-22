@@ -512,13 +512,6 @@ function ItemProducto({ f, verPlata }: { f: Fila; verPlata: boolean }) {
           </div>
         </div>
 
-        {/* A.3 · si requiere receta, lo dice ANTES de ofrecerlo. */}
-        {f.requiere_receta && (
-          <p className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-500">
-            <AlertTriangle className="size-3.5" /> Requiere receta
-          </p>
-        )}
-
         {/* A.4 · el motivo, siempre a la vista. */}
         <p className={`text-xs leading-snug ${sinStock ? 'text-muted-foreground' : ''}`}>
           {f.motivos.join(' · ')}

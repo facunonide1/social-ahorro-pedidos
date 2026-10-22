@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Phone, Clock, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Phone } from 'lucide-react'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { puede, type PermisosCustom } from '@/lib/types/permisos'
@@ -11,22 +11,21 @@ export const dynamic = 'force-dynamic'
 export const metadata = { title: 'El farmacéutico' }
 
 /**
- * E.6 · LLAMAR AL FARMACÉUTICO, Y SABER SI ESTÁ.
+ * A.2 · LLAMAR AL FARMACÉUTICO.
  *
- * ── POR QUÉ ESTA PANTALLA NO DICE «DISPONIBLE» ──────────────────────────────
+ * ── QUÉ CAMBIÓ EN LA v1.3 ───────────────────────────────────────────────────
  *
- * Porque el sistema no lo sabe. Lo que sabe es si fichó y si no fichó la
- * salida. Decir «disponible» cuando está atendiendo a otra persona hace que la
- * próxima vez nadie mire la pantalla.
+ * Esta pantalla mostraba matrícula, si había fichado, a qué hora, y cuando no
+ * había nadie cargado explicaba largamente que no podía saber si había
+ * farmacéutico en el local.
  *
- * Se dice el hecho —«fichó a las 8 y no fichó la salida»— y el empleado
- * decide. Es menos cómodo y es verdad.
+ * Era formalización que la operación no necesita. Ahora: **quién es y su
+ * teléfono.** Un tilde en el usuario y el nombre.
  *
- * ── Y ES LA SALIDA DE TODA PREGUNTA CLÍNICA ─────────────────────────────────
+ * ── LO QUE NO CAMBIÓ ────────────────────────────────────────────────────────
  *
- * Cada vez que el mostrador no puede contestar algo, lleva acá. Por eso la
- * pantalla existe aunque hoy no haya ningún farmacéutico cargado: lo dice, y
- * decirlo es la información.
+ * Es la salida de toda pregunta clínica. El sistema sigue sin contestar qué
+ * tomar, cuánto ni si se puede combinar — eso no se movió y no se va a mover.
  */
 export default async function FarmaceuticoPage() {
   const sb = createClient()
@@ -46,8 +45,9 @@ export default async function FarmaceuticoPage() {
 
   const { data } = await adm.rpc('mostrador_farmaceuticos', { p_sucursal: mia })
   const f = (data ?? {}) as any
-  const aca = (f.aca ?? []) as any[]
-  const otras = (f.en_otras ?? []) as any[]
+  const aca = (f.aca ?? []) as { nombre: string; telefono: string | null }[]
+  const otras = (f.en_otras ?? []) as { nombre: string; telefono: string | null; sucursal: string }[]
+  const miSuc = ((sucs ?? []) as any[]).find((s) => s.id === mia)
 
   return (
     <div className="mx-auto max-w-md">
@@ -60,95 +60,61 @@ export default async function FarmaceuticoPage() {
 
       <div className="space-y-4 p-3">
         <p className="border-l-2 border-foreground/60 bg-muted/30 p-3 text-sm leading-snug">
-          Lo que el sistema no contesta —qué tomar, cuánto, por cuántos días, si se puede combinar,
-          si es apto para alguien— lo contesta una persona con matrícula. Esta pantalla dice quién
-          es y qué se sabe de si está.
+          Lo que el sistema no contesta —qué tomar, cuánto, por cuántos días, si se puede
+          combinar, si es apto para alguien— lo contesta una persona.
         </p>
 
-        {!f.hay_alguno ? (
-          <div className="space-y-2 rounded-lg border border-dashed p-4">
-            <p className="flex items-start gap-2 text-sm">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-              <span><b>No hay ningún farmacéutico cargado en el sistema.</b></span>
-            </p>
-            <p className="text-xs leading-snug text-muted-foreground">{f.por_que_no}</p>
-            <p className="text-xs leading-snug">
-              Lo que lo enciende: marcar en la ficha de cada empleado quién es farmacéutico y
-              cargarle la matrícula, en RRHH → Empleados.
-            </p>
-            <div className="pt-1">
-              {((sucs ?? []) as any[]).filter((s) => s.id === mia && s.telefono).map((s) => (
-                <Button key={s.id} size="lg" className="h-12 w-full" asChild>
-                  <a href={`tel:${s.telefono}`}>
-                    <Phone className="size-5" /> Llamar a {s.nombre}
-                  </a>
-                </Button>
-              ))}
-            </div>
-          </div>
+        {aca.length > 0 ? (
+          <ul className="divide-y rounded-lg border">
+            {aca.map((p, i) => (
+              <li key={i} className="flex items-center gap-3 p-3">
+                <span className="min-w-0 flex-1 font-medium">{p.nombre}</span>
+                {p.telefono && (
+                  <Button size="lg" className="h-12" asChild>
+                    <a href={`tel:${p.telefono}`}><Phone className="size-5" /> Llamar</a>
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
         ) : (
-          <>
-            <section className="space-y-2">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Acá
-              </h2>
-              {aca.length === 0 ? (
-                <p className="rounded-lg border border-dashed p-3 text-xs leading-snug text-muted-foreground">
-                  No hay ningún farmacéutico asignado a esta sucursal.
-                </p>
-              ) : (
-                <ul className="divide-y rounded-lg border">
-                  {aca.map((p, i) => (
-                    <li key={i} className="space-y-1 p-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium">{p.nombre}</span>
-                        {p.matricula && (
-                          <span className="text-xs text-muted-foreground">MN {p.matricula}</span>
-                        )}
-                      </div>
-                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Clock className="size-3.5" /> {p.que_se_sabe}
-                      </p>
-                      {p.telefono && (
-                        <Button size="lg" className="mt-1 h-12 w-full" asChild>
-                          <a href={`tel:${p.telefono}`}>
-                            <Phone className="size-5" /> Llamar
-                          </a>
-                        </Button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-
-            {otras.length > 0 && (
-              <section className="space-y-2">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  En otras sucursales
-                </h2>
-                <ul className="divide-y rounded-lg border">
-                  {otras.map((p, i) => (
-                    <li key={i} className="flex flex-wrap items-center gap-2 p-3 text-sm">
-                      <span className="font-medium">{p.nombre}</span>
-                      <span className="text-xs text-muted-foreground">{p.sucursal}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {p.ficho_hoy ? 'fichó hoy' : 'no fichó hoy'}
-                      </span>
-                      {p.telefono && (
-                        <Button size="sm" variant="outline" className="ml-auto" asChild>
-                          <a href={`tel:${p.telefono}`}><Phone className="size-4" /></a>
-                        </Button>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </section>
+          <div className="space-y-2 rounded-lg border border-dashed p-4">
+            <p className="text-sm leading-snug">
+              No hay nadie marcado como farmacéutico en esta sucursal.
+            </p>
+            <p className="text-xs leading-snug text-muted-foreground">
+              Se marca con un tilde en Configuración → Usuarios. {f.por_que_no ? '' : null}
+            </p>
+            {miSuc?.telefono && (
+              <Button size="lg" className="mt-1 h-12 w-full" asChild>
+                <a href={`tel:${miSuc.telefono}`}>
+                  <Phone className="size-5" /> Llamar a {miSuc.nombre}
+                </a>
+              </Button>
             )}
-          </>
+          </div>
         )}
 
-        <p className="text-xs leading-snug text-muted-foreground">{f.ojo}</p>
+        {otras.length > 0 && (
+          <section className="space-y-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              En otras sucursales
+            </h2>
+            <ul className="divide-y rounded-lg border">
+              {otras.map((p, i) => (
+                <li key={i} className="flex items-center gap-2 p-3 text-sm">
+                  <span className="font-medium">{p.nombre}</span>
+                  <span className="text-xs text-muted-foreground">{p.sucursal}</span>
+                  {p.telefono && (
+                    <Button size="sm" variant="outline" className="ml-auto" asChild>
+                      <a href={`tel:${p.telefono}`}><Phone className="size-4" /></a>
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
     </div>
   )

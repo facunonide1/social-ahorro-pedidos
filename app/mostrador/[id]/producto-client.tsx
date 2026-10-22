@@ -70,11 +70,6 @@ export function ProductoClient({
       <div className="space-y-6 p-3">
         {/* ── LO QUE ES, SIN INTERPRETAR ───────────────────────────────── */}
         <section className="space-y-1.5">
-          {p.requiere_receta && (
-            <p className="flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-500">
-              <AlertTriangle className="size-4" /> Requiere receta
-            </p>
-          )}
           <dl className="space-y-1 text-sm">
             <Dato k="Monodroga" v={p.droga_principal ?? 'no está cargada en el maestro'} />
             <Dato k="Concentración" v={p.concentracion ?? 'no se pudo leer de la presentación'} />
@@ -274,9 +269,6 @@ function ItemEq({ e }: { e: Equivalente }) {
             ? <span className="text-muted-foreground">hay {Math.round(e.disponible)}</span>
             : <span className="text-muted-foreground">no hay acá</span>}
           {e.en_oferta && <Badge variant="outline" className="text-[10px]">en oferta</Badge>}
-          {e.requiere_receta && (
-            <Badge variant="outline" className="text-[10px] text-amber-700">receta</Badge>
-          )}
           {e.misma_concentracion === false && (
             <Badge variant="outline" className="text-[10px]">
               otra concentración{e.concentracion ? `: ${e.concentracion}` : ''}
