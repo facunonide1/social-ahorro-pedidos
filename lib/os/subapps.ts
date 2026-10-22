@@ -125,6 +125,9 @@ export const SUBAPPS: SubAppManifest[] = [
       // v0.97 · E.4 · lo que el encargado hace al empezar el turno. Antes las
       // tareas nacian con un rol y sin persona.
       { nombre: 'Reparto del turno', ruta: '/admin/tareas/turno' },
+      // v0.98 · C.5 · que propuso cada agente y quien decidio. Es lo unico que
+      // puede llenar el marcador de aciertos.
+      { nombre: 'Bitácora de decisiones', ruta: '/admin/decisiones' },
       { nombre: 'Reportes', ruta: '/admin/tareas/reportes' },
       { nombre: 'Verificaciones', ruta: '/admin/verificaciones' },
       { nombre: 'NORA (asistente)', ruta: '/admin/tareas/asistente' },

@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T01:16:59.630Z",
-  "commit": "fbb84f3e4eea42a26562b29ae1f2538d7a736fed",
-  "mensaje": "feat: el equipo como pantalla de inicio",
+  "construido_at": "2026-10-22T01:21:20.621Z",
+  "commit": "48c2457b2c73cb9d206722d3c2492828c7a4f60f",
+  "mensaje": "feat: permisos por acción de cada agente",
   "rama": "main"
 }
