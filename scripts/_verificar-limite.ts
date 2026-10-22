@@ -93,6 +93,22 @@ async function main() {
     }
   }
 
+  // v1.3 · Las reglas de la detección. Son todas de las que se cumplen el
+  // primer día y se rompen el mes que viene, cuando alguien agregue el
+  // detector número trece y copie el de al lado sin el `que_no_dice`.
+  const { data: det, error: eD } = await adm.rpc('deteccion_reglas_violadas')
+  if (eD) throw new Error(`no se pudieron revisar los detectores: ${eD.message}`)
+  const reglas = (det ?? []) as { regla: string; donde: string; por_que: string }[]
+  if (!reglas.length) {
+    console.log('  ok    todo detector declara su historia mínima y lo que NO dice, y nada se publica sin plata')
+  } else {
+    fallas += reglas.length
+    for (const r of reglas) {
+      console.log(`  FALLA ${r.regla}: ${r.donde}`)
+      console.log(`        ${r.por_que}.`)
+    }
+  }
+
   const { data: pols, error: e2 } = await adm.rpc('convenios_politicas_de_borrado')
   if (e2) throw new Error(`no se pudieron revisar las políticas: ${e2.message}`)
   const borrado = (pols ?? []) as { tabla: string; politica: string }[]

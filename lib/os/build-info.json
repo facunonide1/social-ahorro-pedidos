@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T18:30:49.624Z",
-  "commit": "7b88d066442fe0e76e56bfdbc6fdf78eb6b481da",
-  "mensaje": "fix: el service worker no pasa por el middleware",
+  "construido_at": "2026-10-22T19:44:21.854Z",
+  "commit": "e0a11d36d4a3ea146f95f4f7e92a0a65a658543b",
+  "mensaje": "feat: detección de lo que cambió",
   "rama": "main"
 }

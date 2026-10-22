@@ -228,6 +228,115 @@ async function main() {
   if (ev.includes('cajero')) mal('la evidencia de B.2 trae el cajero')
   else ok('la evidencia de B.2 agrupa por sucursal y turno, sin cajero')
 
+  // ── D · QUE NO SE VUELVA RUIDO ──────────────────────────────────────────
+  //
+  // Es el bloque que decide si los doce detectores sirven. Se prueba la
+  // consecuencia, que es lo único verificable: cuántos de los 1.235 llegan a
+  // interrumpir a alguien.
+  console.log('\n── D · que no se vuelva ruido ──')
+
+  const { data: corrida, error: eCorrer } = await adm.rpc('deteccion_correr')
+  if (eCorrer) { mal(`deteccion_correr falló: ${eCorrer.message}`) }
+  const c = (corrida ?? {}) as any
+
+  // ── D.3 · EL TOPE ES POR DIA, NO POR CORRIDA ──────────────────────────
+  //
+  // Se corre DOS VECES a propósito. Con el tope contado por corrida, la
+  // segunda publicaba otros cinco por detector y el presupuesto del día
+  // desaparecía sin que nadie lo notara. Es exactamente el error que tuvo
+  // esta función antes de la 0241.
+  const { data: segunda } = await adm.rpc('deteccion_correr')
+  const s2 = (segunda ?? {}) as any
+  if (Number(s2.publicados ?? 0) > 0) {
+    mal(`la segunda corrida del día publicó ${s2.publicados} más: el tope es por corrida y no por día`)
+  } else {
+    ok('correrla dos veces el mismo día no publica nada más')
+  }
+
+  const { data: porDetector } = await adm.from('detectores')
+    .select('clave, tope_diario, nombre').not('funcion', 'is', null)
+  const hoy = new Date().toISOString().slice(0, 10)
+  for (const d of (porDetector ?? []) as any[]) {
+    const { count } = await adm.from('anomalias')
+      .select('id', { count: 'exact', head: true })
+      .eq('detector', d.clave).gte('publicado_at', `${hoy}T00:00:00Z`)
+    const n = count ?? 0
+    if (n > d.tope_diario) mal(`${d.clave} publicó ${n} hoy y su tope es ${d.tope_diario}`)
+  }
+  ok(`ningún detector pasó su tope del día`)
+
+  // ── D.4 · EL PRESUPUESTO DE INTERRUPCION ──────────────────────────────
+  const { count: publicadosHoy } = await adm.from('anomalias')
+    .select('id', { count: 'exact', head: true }).gte('publicado_at', `${hoy}T00:00:00Z`)
+  const presupuesto = Number(c.presupuesto_del_dia ?? 40)
+  if ((publicadosHoy ?? 0) > presupuesto) {
+    mal(`se publicaron ${publicadosHoy} hoy y el presupuesto es ${presupuesto}`)
+  } else {
+    ok(`${publicadosHoy} publicados hoy, con un presupuesto de ${presupuesto}`)
+  }
+  nd(`de ${c.encontrados} encontrados, ${publicadosHoy} interrumpen a alguien. ` +
+     `${c.esperando_con_plata} esperan con plata y ${c.en_la_lista_larga_sin_plata} no se pueden costear.`)
+
+  // ── D.1 · SIN PLATA NO APARECE ARRIBA ─────────────────────────────────
+  const { data: arriba } = await adm.rpc('deteccion_hallazgos',
+    { p_familia: null, p_sucursal: null, p_solo_publicados: true, p_limite: 200 })
+  const sinPlataArriba = ((arriba ?? []) as Fila[]).filter((f) => f.plata === null)
+  if (sinPlataArriba.length) {
+    mal(`${sinPlataArriba.length} hallazgos sin plata estimada están arriba`)
+  } else {
+    ok(`ninguno de los ${(arriba ?? []).length} de arriba está sin plata estimada`)
+  }
+
+  // ── D.2 · ORDENADO POR PLATA, NO POR FECHA ────────────────────────────
+  const platas = ((arriba ?? []) as Fila[]).map((f) => Number(f.plata ?? 0))
+  const ordenado = platas.every((v, i) => i === 0 || platas[i - 1] >= v)
+  ordenado
+    ? ok('la lista de arriba viene ordenada por plata, de mayor a menor')
+    : mal('la lista de arriba no está ordenada por plata')
+
+  // Y que la lista larga tenga TODO: si el tope recortara lo guardado en vez
+  // de lo publicado, D.1 no existiría.
+  const { count: guardados } = await adm.from('anomalias')
+    .select('id', { count: 'exact', head: true })
+    .not('detector', 'is', null)
+    .in('estado', ['abierta', 'reaparecio'])
+  const encontrados = Number(c.encontrados ?? 0)
+  if ((guardados ?? 0) < encontrados) {
+    mal(`se encontraron ${encontrados} y en la lista larga hay ${guardados}: el tope recortó lo guardado`)
+  } else {
+    ok(`la lista larga tiene ${guardados}: el tope recorta lo que se publica, no lo que se guarda`)
+  }
+
+  // ── D.5 · DESCARTAR CON UN MOTIVO DEL CATALOGO ────────────────────────
+  const { data: unHallazgo } = await adm.rpc('deteccion_hallazgos',
+    { p_familia: null, p_sucursal: null, p_solo_publicados: true, p_limite: 1 })
+  const uno = ((unHallazgo ?? []) as Fila[])[0]
+  if (!uno) {
+    nd('D.5 no se pudo probar: no hay ningún hallazgo publicado')
+  } else {
+    const { data: inventado } = await adm.rpc('deteccion_descartar',
+      { p_anomalia: (uno as any).id, p_motivo: 'porque_no_me_gusta' })
+    const inv = inventado as any
+    inv?.ok === false && String(inv?.por_que ?? '').includes('no es un motivo del catalogo')
+      ? ok('un motivo que no está en el catálogo se rechaza, y dice por qué')
+      : mal('aceptó un motivo que no está en el catálogo')
+  }
+
+  // ── D.7 · EL MARCADOR NO REGALA ACIERTOS ──────────────────────────────
+  const { data: mk } = await adm.rpc('deteccion_marcador')
+  for (const m of ((mk ?? []) as any[])) {
+    // La lección de la v0.99: lo que nadie miró no cuenta como acierto.
+    if (m.aciertos > 0 && m.aciertos > m.abiertos + m.descartes) {
+      mal(`${m.detector} dice ${m.aciertos} aciertos con ${m.abiertos} abiertos y ${m.descartes} descartes`)
+    }
+    if (!m.veredicto?.trim()) mal(`${m.detector} no dice nada en su veredicto`)
+    if (!m.se_puede_juzgar && m.aciertos > 0) {
+      mal(`${m.detector} cuenta aciertos sin poder ser juzgado todavía`)
+    }
+  }
+  const juzgables = ((mk ?? []) as any[]).filter((m) => m.se_puede_juzgar).length
+  ok(`los ${(mk ?? []).length} detectores tienen veredicto; ${juzgables} ya se pueden juzgar`)
+
   console.log(`\n${fallas === 0 ? 'TODO BIEN' : `${fallas} FALLA(S)`} · ${todos.length} hallazgos mirados`)
   process.exit(fallas === 0 ? 0 : 1)
 }

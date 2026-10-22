@@ -12,7 +12,7 @@
   "ai_conversaciones": 4,
   "ai_resumenes_diarios": 8,
   "alertas_stock": 0,
-  "anomalias": 13076,
+  "anomalias": 14311,
   "anomalias_por_tipo": 6,
   "app_settings": 1,
   "aprobaciones": 0,
@@ -68,7 +68,7 @@
   "compliance_recalls": 0,
   "compliance_sops": 1,
   "compras_estado_producto": 0,
-  "compras_global": 1,
+  "compras_global": -1,
   "compras_parametros": 13,
   "compras_quien_provee": 3960,
   "compras_salud_stock": 4,
@@ -106,7 +106,7 @@
   "cuentas_bancarias_propias": 0,
   "customers": 9,
   "decisiones_comerciales": 2,
-  "decisiones_pendientes": 10,
+  "decisiones_pendientes": -1,
   "dedup_pendientes": 0,
   "demanda_invisible": 0,
   "demanda_invisible_resumen": 0,
@@ -115,7 +115,9 @@
   "demanda_real_vs_estimada": 2765,
   "demanda_sin_catalogo": 0,
   "demo_origen_ref": 10,
-  "detectores": 12,
+  "deteccion_descartes": 0,
+  "deteccion_motivos": 6,
+  "detectores": 18,
   "deuda_por_proveedor": 36,
   "deuda_proveedores": 629,
   "devolucion_items": 0,
@@ -179,7 +181,7 @@
   "niveles_empleados": 9,
   "no_publicables_para_revisar": 2981,
   "nora_acciones": 0,
-  "nora_avisos": 454,
+  "nora_avisos": 540,
   "nora_bitacora": 4,
   "nora_config": 6,
   "nora_conversaciones": 4,
@@ -193,7 +195,7 @@
   "ofertas_confirmaciones": 0,
   "ofertas_experimentos": 0,
   "ofertas_exports_sifaco": 3,
-  "ofertas_medicion": -1,
+  "ofertas_medicion": 326,
   "ofertas_medicion_resumen": 4,
   "ofertas_por_forma": 6,
   "ofertas_por_rotacion": 3,
@@ -317,6 +319,7 @@
   "zz_deprecated_precios_historico": 0
  },
  "desconocidas": [
-  "ofertas_medicion"
+  "compras_global",
+  "decisiones_pendientes"
  ]
 }

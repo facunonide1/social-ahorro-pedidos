@@ -188,6 +188,11 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Análisis', ruta: '/admin/operaciones/analisis' },
       { nombre: 'Reposición', ruta: '/admin/operaciones/reposicion' },
       { nombre: 'Irregularidades', ruta: '/admin/operaciones/irregularidades' },
+      // v1.3 · lo que el sistema encuentra solo, ordenado por plata. Va acá y
+      // no en una sub-app nueva: los doce detectores cruzan compras, caja,
+      // catálogo y ventas, así que no son de nadie en particular — y lo que
+      // encuentran se acciona desde Operaciones, al lado de Irregularidades.
+      { nombre: 'Lo que el sistema encontró', ruta: '/admin/deteccion' },
       { nombre: 'NORA (asistente)', ruta: '/admin/operaciones/asistente' },
     ],
     badge: async (sb, _userId, _rol, params) => {
@@ -213,6 +218,7 @@ export const SUBAPPS: SubAppManifest[] = [
       { id: 'recartelado', nombre: 'Recartelado del día', icono: 'Tag', destino: '/admin/operaciones/recartelado', modulo: 'operaciones', accion: 'ver', primary: true },
       { id: 'conteo-zona', nombre: 'Conteo por zona', icono: 'ClipboardList', destino: '/admin/operaciones/control-zonas', modulo: 'operaciones', accion: 'crear' },
       { id: 'irregularidad', nombre: 'Reportar irregularidad', icono: 'AlertTriangle', destino: '/admin/operaciones/irregularidades', modulo: 'operaciones', accion: 'ver' },
+      { id: 'deteccion', nombre: 'Lo que el sistema encontró', icono: 'Radar', destino: '/admin/deteccion', modulo: 'operaciones', accion: 'ver', primary: true },
       { id: 'stock-cargar', nombre: 'Cargar producto', icono: 'PackagePlus', destino: '/admin/operaciones/stock/nuevo', modulo: 'operaciones', accion: 'crear' },
       { id: 'stock-alertas', nombre: 'Alertas de stock', icono: 'AlertCircle', destino: '/admin/operaciones/alertas', modulo: 'operaciones', accion: 'ver' },
       { id: 'exportar-dif', nombre: 'Exportar dif. SIFACO', icono: 'Download', destino: '/admin/centro-datos/exportar', modulo: 'centro_datos', accion: 'ver' },
