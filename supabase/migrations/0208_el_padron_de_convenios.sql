@@ -340,3 +340,8 @@ drop policy if exists convenio_historico_borrar on public.convenio_historico;
 -- con EXECUTE para PUBLIC y `create or replace` conserva la ACL vieja.
 revoke all on function public.convenios_estado() from public, anon;
 grant execute on function public.convenios_estado() to authenticated, service_role;
+
+-- La función de trigger no se llama por RPC nunca, y nació con EXECUTE para
+-- PUBLIC porque un `create or replace function` nuevo lo hace. Es la quinta
+-- vez que pasa en este proyecto; el linter de Supabase lo reportó.
+revoke all on function public.tg_convenio_historico() from public, anon, authenticated;
