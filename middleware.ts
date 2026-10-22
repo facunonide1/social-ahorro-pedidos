@@ -83,6 +83,15 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // ── v1.2 · `sw.js` Y `manifest` QUEDAN AFUERA ────────────────────────────
+    //
+    // El service worker se pedía a través del middleware, que lo redirigía al
+    // login: `curl /sw.js` devolvía «Redirecting...». Sin service worker no
+    // hay modo sin conexión (F.5) — la farmacia que se queda sin internet no
+    // podía ni abrir la pantalla.
+    //
+    // Un service worker no tiene sesión y no debe tenerla: es un archivo
+    // estático que el navegador pide por fuera de la navegación.
+    '/((?!_next/static|_next/image|favicon.ico|sw\\.js|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
