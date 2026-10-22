@@ -23,8 +23,16 @@ type Prod = {
 
 const ORDEN: Relacion[] = ['misma_composicion', 'generico', 'de_marca', 'otra_presentacion']
 
+type Sugerencia = {
+  hay: boolean; por_que: string
+  regla_id?: string; producto_id?: string; nombre?: string; sku?: string
+  precio?: number | null; stock?: number
+  veces_ofrecida?: number; veces_aceptada?: number
+} | null
+
 export function ProductoClient({
   producto: p, equivalentes, porQue, cobertura, sucursalNombre, fotoDelStock, verPlata,
+  sugerencia,
 }: {
   producto: Prod
   equivalentes: Equivalente[]
@@ -33,6 +41,8 @@ export function ProductoClient({
   sucursalNombre: string
   fotoDelStock: string
   verPlata: boolean
+  /** E.4 · UNA, la mejor. Null cuando no hay ninguna regla que aplique. */
+  sugerencia: Sugerencia
 }) {
   const porRelacion = ORDEN
     .map((r) => ({ r, items: equivalentes.filter((e) => e.relacion === r) }))
@@ -135,6 +145,37 @@ export function ProductoClient({
             ))
           )}
         </section>
+
+        {/* ── E.4 · UNA SOLA SUGERENCIA ───────────────────────────────── */}
+        {sugerencia?.hay && (
+          <section className="space-y-1.5">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Lo que suele ir con esto
+            </h2>
+            <div className="rounded-lg border p-3">
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium leading-tight">{sugerencia.nombre}</div>
+                  <div className="text-xs text-muted-foreground">
+                    hay {Math.round(Number(sugerencia.stock ?? 0))}
+                  </div>
+                </div>
+                {sugerencia.precio != null && (
+                  <div className="shrink-0 font-semibold tabular-nums">
+                    {formatARS(Number(sugerencia.precio))}
+                  </div>
+                )}
+              </div>
+              <p className="mt-1 text-xs leading-snug text-muted-foreground">
+                {sugerencia.por_que}
+              </p>
+            </div>
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              Es <b>una sola</b>: tres son ruido y se dejan de mirar. Y es una regla comercial, no
+              una indicación — el sistema no sugiere medicamentos a partir de otros.
+            </p>
+          </section>
+        )}
 
         {/* ── B.5 / E.5 · LA COBERTURA ────────────────────────────────── */}
         <section className="space-y-2">

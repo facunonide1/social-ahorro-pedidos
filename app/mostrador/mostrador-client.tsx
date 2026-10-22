@@ -281,6 +281,9 @@ export function MostradorClient({
                 <Link href="/mostrador/faltante">Registrar un faltante</Link>
               </Button>
               <Button variant="outline" size="lg" className="h-12" asChild>
+                <Link href="/mostrador/cliente">Buscar un cliente</Link>
+              </Button>
+              <Button variant="outline" size="lg" className="col-span-2 h-12" asChild>
                 <Link href="/mostrador/farmaceutico">Llamar al farmacéutico</Link>
               </Button>
             </div>

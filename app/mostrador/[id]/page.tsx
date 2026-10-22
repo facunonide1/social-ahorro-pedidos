@@ -43,13 +43,17 @@ export default async function ProductoMostradorPage({ params }: { params: { id: 
     .select('*').eq('producto_id', params.id).maybeSingle()
   if (!p) notFound()
 
-  const [{ filas: equis, porQue }, cob, { data: si }, { data: estado }] = await Promise.all([
-    equivalencias(adm, params.id, sucursal),
-    cobertura(adm, params.id),
-    adm.from('stock_items').select('cantidad')
-      .eq('producto_id', params.id).eq('sucursal_id', sucursal).maybeSingle(),
-    adm.rpc('mostrador_que_no_se_puede_ordenar', { p_sucursal: sucursal }),
-  ])
+  const [{ filas: equis, porQue }, cob, { data: si }, { data: estado }, { data: sug }] =
+    await Promise.all([
+      equivalencias(adm, params.id, sucursal),
+      cobertura(adm, params.id),
+      adm.from('stock_items').select('cantidad')
+        .eq('producto_id', params.id).eq('sucursal_id', sucursal).maybeSingle(),
+      adm.rpc('mostrador_que_no_se_puede_ordenar', { p_sucursal: sucursal }),
+      // E.4 · UNA sugerencia. Se pide acá y no en el cliente para que el
+      // registro de «se ofreció» lo haga el servidor, no un click.
+      adm.rpc('mostrador_sugerencia', { p_producto: params.id, p_sucursal: sucursal }),
+    ])
 
   const pi = p as any
   const verPlata = VEN_PLATA.includes(me.rol)
@@ -74,6 +78,7 @@ export default async function ProductoMostradorPage({ params }: { params: { id: 
       sucursalNombre={((suc ?? []) as any[]).find((s) => s.id === sucursal)?.nombre ?? ''}
       fotoDelStock={cuandoSeLeyoElStock((estado as any)?.stock_leido_at ?? null)}
       verPlata={verPlata}
+      sugerencia={(sug ?? null) as any}
     />
   )
 }
