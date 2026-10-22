@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T01:29:59.498Z",
-  "commit": "75d1e965fa218318fe8d71285f2530ffe0e2a877",
-  "mensaje": "feat: la barra, el panel y el deshacer",
+  "construido_at": "2026-10-22T01:33:52.407Z",
+  "commit": "a091911438b0794298201d19182a31ee81217770",
+  "mensaje": "fix: cerrar lo que quedó abierto",
   "rama": "main"
 }
