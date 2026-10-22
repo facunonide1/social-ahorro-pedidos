@@ -74,8 +74,49 @@ async function run() {
     narrativa = `## Reporte semanal\n\n${sucursales.map((s) => `- **${s.nombre}**: ${s.cumplimiento}% de cumplimiento (${s.total} tareas)`).join('\n')}`
   }
 
+  // ── v1.3 · E · EL INFORME ESCRITO DEL NEGOCIO ─────────────────────────────
+  //
+  // Va pegado al reporte de tareas y NO lo reemplaza: son dos cosas. El de
+  // tareas dice cómo cumplió el equipo; éste dice qué encontró el sistema en
+  // el negocio.
+  //
+  // ── Y NO LO ESCRIBE EL MODELO ─────────────────────────────────────────────
+  //
+  // El reporte de tareas de acá arriba sí usa el modelo, y está bien: su
+  // trabajo es resumir porcentajes. Este no, por una razón concreta: «sin
+  // adjetivos» es el requisito, y un modelo escribe «preocupante» porque así
+  // se escribe un informe. Y un adjetivo es una opinión — «una caída
+  // preocupante» ya dice que hay que hacer algo, y eso el sistema no lo sabe.
+  //
+  // Los hechos ya están escritos por los doce detectores, con la plata al
+  // lado y con lo que no dicen. Pasarlos por un modelo es reescribir lo que
+  // ya está bien escrito, con el riesgo de que cambie un número.
+  //
+  // Se guarda uno por rol: un informe con secciones que no son de uno se deja
+  // de leer entero.
+  const ROLES_QUE_LEEN = ['super_admin', 'gerente', 'comprador', 'tesoreria', 'encargado_sucursal']
+  const informes: Record<string, number> = {}
+  let informeMd = ''
+  for (const rol of ROLES_QUE_LEEN) {
+    const { data: parrafos, error } = await adm.rpc('informe_semanal', {
+      p_sucursal: null, p_rol: rol,
+    })
+    if (error) { informes[rol] = -1; continue }
+    const ps = (parrafos ?? []) as { orden: number; seccion: string; texto: string }[]
+    informes[rol] = ps.length
+    if (rol === 'super_admin') {
+      informeMd = ps.map((x) => `### ${x.seccion}\n\n${x.texto}`).join('\n\n')
+    }
+  }
+
   const hoy = new Date().toISOString().slice(0, 10)
-  await adm.from('ai_resumenes_diarios').insert({ fecha: hoy, resumen_markdown: narrativa, metricas: datos })
+  await adm.from('ai_resumenes_diarios').insert({
+    fecha: hoy,
+    resumen_markdown: informeMd
+      ? `${narrativa}\n\n---\n\n## Lo que el sistema encontró\n\n${informeMd}`
+      : narrativa,
+    metricas: { ...datos, informe_por_rol: informes },
+  })
 
   const { data: supers } = await adm.from('users_admin').select('id').eq('rol', 'super_admin').eq('activo', true)
   if (supers?.length) {
@@ -84,5 +125,5 @@ async function run() {
     )
   }
 
-  return NextResponse.json({ ok: true, sucursales: sucursales.length })
+  return NextResponse.json({ ok: true, sucursales: sucursales.length, informes })
 }

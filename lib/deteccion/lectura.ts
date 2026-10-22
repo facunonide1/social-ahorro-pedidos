@@ -42,6 +42,8 @@ export type Marcador = {
   se_puede_juzgar: boolean; veredicto: string
 }
 
+export type Parrafo = { orden: number; seccion: string; texto: string }
+
 export type Motivo = {
   clave: string; nombre: string; silencia: boolean; no_era_real: boolean
   ayuda: string; orden: number
@@ -98,4 +100,24 @@ export async function cuantosEsperan(adm: Adm): Promise<number | null> {
     .in('estado', ['abierta', 'reaparecio'])
   if (error) { console.error(`[deteccion] cuantosEsperan: ${error.message}`); return null }
   return count ?? null
+}
+
+/**
+ * E · EL INFORME ESCRITO.
+ *
+ * ── POR QUÉ POR ROL Y NO UNO SOLO ───────────────────────────────────────────
+ *
+ * Porque un informe con secciones que no son de uno se deja de leer entero.
+ * Cada detector declara quién lo lee (`detectores.roles`), y el informe de un
+ * comprador no trae las diferencias de caja.
+ *
+ * Y porque un informe que le dice a un cajero «el sistema no encontró nada»
+ * cuando encontró 1.235 cosas que lee otra gente le está diciendo que el
+ * negocio está tranquilo. Eso no se sabe desde ese rol.
+ */
+export function informe(adm: Adm, opts: { sucursal?: string | null; rol?: string } = {}) {
+  return rpc<Parrafo>(adm, 'informe_semanal', {
+    p_sucursal: opts.sucursal ?? null,
+    p_rol: opts.rol ?? 'gerente',
+  })
 }

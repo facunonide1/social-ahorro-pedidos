@@ -2,7 +2,7 @@ import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 import {
-  hallazgos, estadoDetectores, marcador, motivos, cuantosEsperan,
+  hallazgos, estadoDetectores, marcador, motivos, cuantosEsperan, informe,
 } from '@/lib/deteccion/lectura'
 
 import { DeteccionClient } from './deteccion-client'
@@ -30,7 +30,7 @@ export const metadata = { title: 'Lo que el sistema encontró' }
 export default async function DeteccionPage({ searchParams }: {
   searchParams: { familia?: string; larga?: string }
 }) {
-  await requireAdminHubAccess({
+  const yo = await requireAdminHubAccess({
     allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo', 'auditor'],
   })
   const adm = createAdminClient()
@@ -39,12 +39,15 @@ export default async function DeteccionPage({ searchParams }: {
     ? String(searchParams.familia) : null
   const larga = searchParams?.larga === '1'
 
-  const [lista, estados, marcadores, cats, esperan] = await Promise.all([
+  const [lista, estados, marcadores, cats, esperan, parrafos] = await Promise.all([
     hallazgos(adm, { familia, soloPublicados: !larga, limite: larga ? 200 : 60 }),
     estadoDetectores(adm),
     marcador(adm),
     motivos(adm),
     cuantosEsperan(adm),
+    // E · el informe escrito, con el rol de quien mira y su sucursal si la
+    // tiene. El mismo texto que llega el lunes.
+    informe(adm, { rol: yo.rol, sucursal: yo.sucursal_id }),
   ])
 
   return (
@@ -56,6 +59,7 @@ export default async function DeteccionPage({ searchParams }: {
       <DeteccionClient
         lista={lista} estados={estados} marcadores={marcadores}
         motivos={cats} esperan={esperan} familia={familia} larga={larga}
+        parrafos={parrafos}
       />
     </div>
   )

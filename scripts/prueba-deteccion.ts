@@ -337,6 +337,95 @@ async function main() {
   const juzgables = ((mk ?? []) as any[]).filter((m) => m.se_puede_juzgar).length
   ok(`los ${(mk ?? []).length} detectores tienen veredicto; ${juzgables} ya se pueden juzgar`)
 
+  // ── E · EL INFORME ESCRITO ──────────────────────────────────────────────
+  //
+  // ── POR QUÉ ESTA PRUEBA EXISTE ──────────────────────────────────────────
+  //
+  // «Sin adjetivos» sólo se puede verificar si el texto es determinista. Por
+  // eso el informe se arma en la base y no con un modelo: con un modelo la
+  // salida cambia cada vez y esta prueba no se podría escribir.
+  console.log('\n── E · el informe escrito ──')
+
+  /**
+   * Los adjetivos que no van, y por qué cada grupo.
+   *
+   * Los de JUICIO dicen si algo es bueno o malo: eso es una opinión y el
+   * sistema no la tiene. «Una caída preocupante» ya dice que hay que hacer
+   * algo.
+   *
+   * Los de INTENSIDAD inflan un número que ya está escrito: «una caída
+   * fuerte del 31%» no agrega nada al 31% y sí agrega una sensación.
+   *
+   * «Menos» y «más» NO están en la lista: son comparativos de una cantidad
+   * medida, no adjetivos de opinión. «Un 31% menos» es el hecho.
+   */
+  const JUICIO = [
+    'preocupante', 'grave', 'alarmante', 'crítico', 'critico', 'excelente',
+    'malo', 'mala', 'bueno', 'buena', 'terrible', 'lamentable', 'sospechoso',
+    'sospechosa', 'inaceptable', 'irregular', 'anómalo', 'anomalo',
+  ]
+  const INTENSIDAD = [
+    'fuerte', 'enorme', 'importante', 'significativo', 'significativa',
+    'notable', 'drástico', 'drastico', 'dramático', 'dramatico', 'marcado',
+    'considerable', 'llamativo', 'llamativa',
+  ]
+
+  const ROLES = ['super_admin', 'gerente', 'comprador', 'tesoreria',
+                 'encargado_sucursal', 'cajero', 'repartidor']
+  let adjetivos = 0
+
+  for (const rol of ROLES) {
+    const { data, error } = await adm.rpc('informe_semanal', { p_sucursal: null, p_rol: rol })
+    if (error) { mal(`el informe de ${rol} falló: ${error.message}`); continue }
+    const ps = (data ?? []) as { orden: number; seccion: string; texto: string }[]
+    if (!ps.length) { mal(`el informe de ${rol} vino vacío: tendría que decir que no hay nada tuyo`); continue }
+
+    const entero = ps.map((p) => p.texto).join(' ').toLowerCase()
+    for (const a of [...JUICIO, ...INTENSIDAD]) {
+      // Con límites de palabra: «marcado» no debe pegar con «demarcado».
+      if (new RegExp(`\\b${a}\\b`).test(entero)) {
+        mal(`«${a}» aparece en el informe de ${rol}`); adjetivos++
+      }
+    }
+
+    // Y que ningún párrafo venga vacío: una sección con título y sin texto es
+    // peor que no tener la sección.
+    for (const p of ps) {
+      if (!p.texto?.trim()) mal(`la sección «${p.seccion}» del informe de ${rol} no dice nada`)
+    }
+
+    nd(`${rol}: ${ps.length} secciones, ${entero.length} caracteres`)
+  }
+  if (!adjetivos) ok(`ninguno de los ${ROLES.length} informes usa un adjetivo de juicio ni de intensidad`)
+
+  // ── «NO ENCUENTRO EL MOTIVO», LITERAL ─────────────────────────────────
+  //
+  // Es la frase más importante del informe. Si hay cambios arriba, el informe
+  // tiene que admitir que no puede explicarlos — ni callarlo ni inventar una
+  // causa plausible, que es lo que hace que después no se le crea a nada.
+  const { data: infG } = await adm.rpc('informe_semanal', { p_sucursal: null, p_rol: 'gerente' })
+  const secciones = (infG ?? []) as { seccion: string; texto: string }[]
+  const hayCambios = secciones.some((x) => x.seccion === 'Lo que cambió' && x.texto.length > 80)
+  const explica = secciones.find((x) => x.seccion === 'Lo que no puedo explicar')
+  if (hayCambios && !explica) {
+    mal('el informe trae cambios y no tiene la sección de lo que no puede explicar')
+  } else if (explica && !/no puedo decir el motivo|no encuentro el motivo|no tengo con qué buscarlo/.test(explica.texto)) {
+    mal('la sección de lo que no se puede explicar no lo admite en ninguna parte')
+  } else if (explica) {
+    ok('el informe admite que no puede decir el motivo, y aclara que no es que lo haya buscado')
+  }
+
+  // ── «NADA PARA VOS» NO ES «NADA» ──────────────────────────────────────
+  const { data: infC } = await adm.rpc('informe_semanal', { p_sucursal: null, p_rol: 'repartidor' })
+  const cab = ((infC ?? []) as { orden: number; texto: string }[]).find((x) => x.orden === 1)
+  if (!cab) {
+    mal('el informe de un rol sin detectores no tiene encabezado')
+  } else if (/no encontró nada esta semana/.test(cab.texto) && c.encontrados > 0) {
+    mal('a un rol sin detectores el informe le dice que el sistema no encontró nada')
+  } else {
+    ok('a un rol sin detectores el informe dice que no hay nada suyo, no que no haya nada')
+  }
+
   console.log(`\n${fallas === 0 ? 'TODO BIEN' : `${fallas} FALLA(S)`} · ${todos.length} hallazgos mirados`)
   process.exit(fallas === 0 ? 0 : 1)
 }

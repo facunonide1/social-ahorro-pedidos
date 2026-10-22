@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, Loader2, EyeOff, Info, Gauge } from 'lucide-react'
+import { AlertTriangle, Loader2, EyeOff, Info, Gauge, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { formatARS } from '@/lib/utils/format'
@@ -15,7 +15,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog'
 import type {
-  Hallazgo, EstadoDetector, Marcador, Motivo,
+  Hallazgo, EstadoDetector, Marcador, Motivo, Parrafo,
 } from '@/lib/deteccion/lectura'
 
 const FAMILIAS = [
@@ -25,7 +25,9 @@ const FAMILIAS = [
   { clave: 'catalogo', nombre: 'El catálogo' },
 ]
 
-export function DeteccionClient({ lista, estados, marcadores, motivos, esperan, familia, larga }: {
+export function DeteccionClient({
+  lista, estados, marcadores, motivos, esperan, familia, larga, parrafos,
+}: {
   lista: Hallazgo[] | null
   estados: EstadoDetector[] | null
   marcadores: Marcador[] | null
@@ -33,6 +35,7 @@ export function DeteccionClient({ lista, estados, marcadores, motivos, esperan, 
   esperan: number | null
   familia: string | null
   larga: boolean
+  parrafos: Parrafo[] | null
 }) {
   const router = useRouter()
   const [descartando, setDescartando] = useState<Hallazgo | null>(null)
@@ -130,6 +133,42 @@ export function DeteccionClient({ lista, estados, marcadores, motivos, esperan, 
           </Button>
         </div>
       </section>
+
+      {/* ── E · EL INFORME ESCRITO ─────────────────────────────────────── */}
+      {/*
+        Va arriba de la lista a propósito. Un párrafo se lee; una lista de 27
+        filas se escanea y se abandona. La lista sigue abajo para quien quiera
+        ir a una cosa en particular.
+      */}
+      {parrafos === null ? (
+        <Alert variant="destructive">
+          <AlertTriangle className="size-4" />
+          <AlertDescription className="text-sm leading-snug">
+            No se pudo armar el informe. No significa que no haya nada: significa que no se sabe.
+          </AlertDescription>
+        </Alert>
+      ) : !!parrafos.length && (
+        <section className="rounded-lg border bg-card p-4">
+          <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <FileText className="size-3.5" /> El informe de la semana
+          </h2>
+          <div className="mt-3 space-y-4">
+            {parrafos.map((p) => (
+              <div key={p.orden}>
+                <h3 className="text-sm font-semibold">{p.seccion}</h3>
+                {p.texto.split('\n\n').map((t, i) => (
+                  <p key={i} className="mt-1 whitespace-pre-line text-sm leading-relaxed">{t}</p>
+                ))}
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 border-t pt-2 text-[11px] leading-snug text-muted-foreground">
+            Está escrito con los hechos tal como los escribieron los detectores, sin pasar por un
+            modelo. Por eso no hay adjetivos: «una caída preocupante» ya dice que hay que hacer
+            algo, y eso el sistema no lo sabe.
+          </p>
+        </section>
+      )}
 
       {/* ── C.7 · LO QUE NO PUEDE CORRER, Y POR QUÉ ─────────────────────── */}
       {!!noCorren.length && (
