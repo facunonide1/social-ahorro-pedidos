@@ -12,6 +12,8 @@
  * en `vencimientos`, las de lote NO se “resuelven” en la tabla (son derivadas);
  * la acción que las toca (devolución/baja) deja su rastro en su propio registro.
  */
+
+import { paginar } from '@/lib/supabase/paginar'
 type Adm = any
 
 export type AccionVenc = 'devolver' | 'reponer' | 'transferir' | 'liquidar' | 'baja' | 'vigilar'
@@ -132,8 +134,14 @@ export async function getVencimientos(adm: Adm, f: { sucursalId: string | null; 
 
   // Stock góndola/depósito de todos los productos involucrados.
   const prodIds = Array.from(new Set([...manual, ...lotes].map((v) => v.producto_id).filter(Boolean)))
-  const { data: stock } = await adm.from('stock_items').select('producto_id, sucursal_id, cantidad_gondola, cantidad_deposito')
-    .in('producto_id', prodIds.length ? prodIds : ['00000000-0000-0000-0000-000000000000'])
+  // Cuatro filas por producto desde la v0.96 (192.464 en total): con mil
+  // productos involucrados esto devolvia 1.000 de 4.000, y el stock de los
+  // ultimos quedaba en cero — justo lo que decide si un vencimiento es grave.
+  const { filas: stock } = await paginar<any>(
+    adm.from('stock_items').select('producto_id, sucursal_id, cantidad_gondola, cantidad_deposito')
+      .in('producto_id', prodIds.length ? prodIds : ['00000000-0000-0000-0000-000000000000']),
+    { maximo: 200_000 },
+  )
   const stockMap = new Map<string, { g: number; d: number }>()
   for (const s of (stock ?? []) as any[]) stockMap.set(`${s.producto_id}|${s.sucursal_id}`, { g: Number(s.cantidad_gondola ?? 0), d: Number(s.cantidad_deposito ?? 0) })
 

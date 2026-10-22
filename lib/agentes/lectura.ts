@@ -60,7 +60,18 @@ const ars = (x: number) => `$${Math.round(x).toLocaleString('es-AR')}`
  * hay $33,5 M. No fallaba — daba un número más chico, que es la forma de
  * fallar que no se nota.
  */
-export async function leerEquipo(sucursalId: string | null): Promise<LecturaDeAgente[]> {
+export async function leerEquipo(sucursalId: string | null): Promise<{
+  agentes: LecturaDeAgente[]
+  /**
+   * De cuándo son los números. Null = nunca se calculó el snapshot.
+   *
+   * La pantalla TIENE que mostrarlo. Ver el encabezado de la migración 0204:
+   * el resumen tarda ~20 s, se calcula una vez por día, y un número de ayer
+   * que se presenta como de ahora es una mentira chica que se vuelve grande
+   * el día que alguien compra con él.
+   */
+  calculadoAt: string | null
+}> {
   const sb = createClient()
   const alcance: Alcance = sucursalId ? 'sucursal' : 'cadena'
   const agentes = elencoDe(alcance)
@@ -70,7 +81,15 @@ export async function leerEquipo(sucursalId: string | null): Promise<LecturaDeAg
     sb.from('agente_config').select('agente, accion, nivel, sucursal_id'),
     sb.from('agente_bitacora').select('agente, estado, acerto'),
   ])
+  // ── NULL NO ES CERO ────────────────────────────────────────────────────
+  //
+  // `agentes_resumen` devuelve NULL cuando el snapshot nunca se calculó. Si
+  // acá se tapara con `?? {}`, cada agente leería cero en todo y diría «no hay
+  // nada» — que es lo que estuvo diciendo Abasto mientras la función se
+  // cancelaba por timeout, hasta que lo encontró la verificación de coherencia.
+  const hayResumen = resumen != null
   const r = (resumen ?? {}) as Record<string, any>
+  const calculadoAt = (r.calculado_at as string | undefined) ?? null
 
   const nivelDe = (id: string): Nivel => {
     const filas = ((config ?? []) as any[]).filter(
@@ -93,7 +112,33 @@ export async function leerEquipo(sucursalId: string | null): Promise<LecturaDeAg
     }
   }
 
-  return agentes.map((a) => leerUno(a, r[a.id] ?? {}, nivelDe(a.id), marcadorDe(a.id)))
+  return {
+    calculadoAt,
+    agentes: agentes.map((a) =>
+      hayResumen
+        ? leerUno(a, r[a.id] ?? {}, nivelDe(a.id), marcadorDe(a.id))
+        : sinCalcular(a, nivelDe(a.id), marcadorDe(a.id))),
+  }
+}
+
+/**
+ * Lo que dice un agente cuando los números todavía no se calcularon.
+ *
+ * No es «no hay nada»: es «no lo puedo saber todavía».
+ */
+function sinCalcular(
+  agente: Agente, nivel: Nivel, marcador: LecturaDeAgente['marcador'],
+): LecturaDeAgente {
+  return {
+    agente, nivel, marcador,
+    encendido: false,
+    frase: null,
+    motivoApagado: 'los números de hoy todavía no se calcularon',
+    queLoEnciende: 'la corrida diaria, a las 5 de la mañana. También se puede ' +
+      'forzar importando un maestro de SIFACO.',
+    href: '/admin/agentes',
+    puedeHacer: [],
+  }
 }
 
 function leerUno(

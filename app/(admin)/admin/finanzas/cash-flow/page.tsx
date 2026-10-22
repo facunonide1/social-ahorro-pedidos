@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { paginar } from '@/lib/supabase/paginar'
 
 import { createClient } from '@/lib/supabase/server'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
@@ -53,12 +54,15 @@ export default async function CashFlowPage({
 
   const [cuentasRes, facturasRes, ventasRes] = await Promise.all([
     sb.from('cuentas_bancarias_con_saldo').select('saldo_actual, moneda, activa'),
-    sb
+    // 4.976 comprobantes: sin paginar esto devolvia 1.000 y el flujo de caja
+    // proyectaba sobre una quinta parte de la deuda.
+    paginar<any>(sb
       .from('facturas_proveedor')
       .select('fecha_vencimiento, total, estado')
       .gte('fecha_vencimiento', isoDate(hoy))
       .lte('fecha_vencimiento', isoDate(fin))
       .not('estado', 'in', '(pagada,anulada,rechazada)'),
+      { maximo: 20_000 }).then((r: { filas: any[] }) => ({ data: r.filas })),
     sb
       .from('orders')
       .select('total, status, created_at')

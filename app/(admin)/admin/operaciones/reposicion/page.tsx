@@ -1,4 +1,5 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
+import { paginar } from '@/lib/supabase/paginar'
 import { createClient } from '@/lib/supabase/server'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { PageHeader } from '@/components/shared/page-header'
@@ -23,7 +24,9 @@ export default async function ReposicionPage() {
   const venceISO = new Date(Date.now() + 45 * 86400000).toISOString().slice(0, 10)
   const [{ data: rot }, { data: stock }, { data: prods }, { data: sucs }, { data: lotes }] = await Promise.all([
     scope(sb.from('producto_rotacion').select('producto_id, sucursal_id, venta_diaria_prom_30d, dias_stock_restante')),
-    scope(sb.from('stock_items').select('producto_id, sucursal_id, cantidad, stock_maximo')),
+    // 192.464 filas desde la v0.96.
+    paginar<any>(scope(sb.from('stock_items').select('producto_id, sucursal_id, cantidad, stock_maximo')),
+      { maximo: 200_000 }).then((r: { filas: any[] }) => ({ data: r.filas })),
     paginarProductos(sb, 'id, sku, nombre, laboratorio, precio_costo_promedio, droguerias_preferidas'),
     sb.from('sucursales').select('id, nombre, codigo').eq('activa', true).order('nombre'),
     scope(sb.from('lotes_productos').select('producto_id, sucursal_id, fecha_vencimiento').eq('es_demo', false).gt('cantidad_actual', 0).not('fecha_vencimiento', 'is', null).lte('fecha_vencimiento', venceISO)),

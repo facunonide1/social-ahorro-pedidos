@@ -5,12 +5,19 @@ import { isCronRequest } from '@/lib/cron/auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-export const maxDuration = 60
+export const maxDuration = 300
 
 /**
  * B.7 · EL CRON DEL MEDIDOR.
  *
- * Cierra las propuestas que cumplieron el plazo. Corre todos los días y deja
+ * Cierra las propuestas que cumplieron el plazo, y de paso recalcula el
+ * resumen que leen las pantallas de agentes (migración 0204): ese cálculo
+ * tarda ~20 s por alcance y no puede correr adentro de una pantalla.
+ *
+ * Van juntos en un cron porque el plan Hobby no da para uno más, y porque
+ * tienen el mismo dueño: los dos son «lo que el equipo sabe al empezar el
+ * día». Si alguna vez se separan, el resumen va primero: el medidor mide
+ * contra números, y medir contra números viejos es peor que no medir. Corre todos los días y deja
  * dicho cuándo corrió: un medidor que no se sabe si corrió es un marcador en
  * el que no se puede confiar.
  *
@@ -30,6 +37,18 @@ export async function GET(req: NextRequest) {
     }>()
     if (error) throw new Error(error.message)
 
+    // El resumen de agentes. Si falla, no se tumba el medidor: son dos
+    // trabajos distintos y uno roto no justifica perder el otro.
+    let resumen: unknown = null
+    let resumenError: string | null = null
+    try {
+      const { data: rs, error: er } = await adm.rpc('agentes_resumen_refrescar')
+      if (er) throw new Error(er.message)
+      resumen = rs
+    } catch (e: any) {
+      resumenError = e?.message ?? 'error'
+    }
+
     // Queda dicho cuándo corrió y con qué resultado. Sin esto, «el marcador
     // está vacío» no se puede distinguir de «el medidor nunca corrió».
     await adm.from('agente_bitacora').insert({
@@ -45,7 +64,7 @@ export async function GET(req: NextRequest) {
       clave: `medidor:${new Date().toISOString().slice(0, 10)}`,
     })
 
-    return NextResponse.json({ ok: true, ...data })
+    return NextResponse.json({ ok: true, ...data, resumen, resumen_error: resumenError })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? 'error' }, { status: 500 })
   }

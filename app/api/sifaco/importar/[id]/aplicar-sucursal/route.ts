@@ -103,5 +103,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     .eq('id', params.id)
     .is('subido_por', null)
 
-  return NextResponse.json({ ok: true, resultado: data })
+  // ── LOS AGENTES MIRAN EL MAESTRO NUEVO ────────────────────────────────
+  //
+  // El resumen que leen las pantallas de agentes es un snapshot diario
+  // (migración 0204). Entrar un maestro cambia stock y precios de 48.000
+  // productos: si no se recalcula acá, hasta mañana a las 5 los agentes
+  // siguen hablando del maestro viejo.
+  //
+  // Si tarda o falla, la importación igual salió bien: son cosas separadas.
+  let resumen: string | null = null
+  const { error: eRes } = await adm.rpc('agentes_resumen_refrescar')
+  if (eRes) resumen = `El maestro entró, pero los números de los agentes no se recalcularon (${eRes.message}). Se recalculan solos mañana a las 5.`
+
+  return NextResponse.json({ ok: true, resultado: data, aviso_agentes: resumen })
 }

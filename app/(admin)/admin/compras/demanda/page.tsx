@@ -1,4 +1,5 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
+import { paginar } from '@/lib/supabase/paginar'
 import { createAdminClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { DemandaClient, type ExisteRow, type LibreRow } from './demanda-client'
@@ -33,7 +34,10 @@ export default async function DemandaPage({ searchParams }: { searchParams: { di
   if (existeIds.length) {
     const [{ data: prods }, { data: stock }] = await Promise.all([
       lente(adm.from('productos_catalogo').select('id, nombre, sku').in('id', existeIds)),
-      lente(adm.from('stock_items').select('producto_id, cantidad_gondola, cantidad_deposito').in('producto_id', existeIds)),
+      // Acotado por `existeIds`, pero esa lista puede pasar de mil y
+      // `stock_items` tiene 192.464 filas: cuatro por producto.
+      paginar<any>(lente(adm.from('stock_items').select('producto_id, cantidad_gondola, cantidad_deposito').in('producto_id', existeIds)),
+        { maximo: 200_000 }).then((r: { filas: any[] }) => ({ data: r.filas })),
     ])
     for (const p of (prods ?? []) as any[]) prodMap.set(p.id, p)
     for (const s of (stock ?? []) as any[]) stockMap.set(s.producto_id, (stockMap.get(s.producto_id) ?? 0) + Number(s.cantidad_gondola ?? 0) + Number(s.cantidad_deposito ?? 0))

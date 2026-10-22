@@ -1,4 +1,5 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
+import { paginar } from '@/lib/supabase/paginar'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
 import { RubroFilter } from '@/components/compras/rubro-filter'
@@ -37,7 +38,12 @@ export default async function FaltantesPage({ searchParams }: { searchParams: { 
   const prodIds = [...new Set(((avisos ?? []) as any[]).map((a) => a.producto_id).filter(Boolean))]
   let stockByProd = new Map<string, { sucursal_id: string; cantidad: number }[]>()
   if (prodIds.length) {
-    const { data: stk } = await sb.from('stock_items').select('producto_id, sucursal_id, cantidad').in('producto_id', prodIds).gt('cantidad', 0)
+    // `stock_items` paso de 480 filas (demostracion) a 192.464 cuando llego
+    // la apertura por sucursal en la v0.96. Sin paginar, esto devolvia 1.000.
+    const { filas: stk } = await paginar<any>(
+      sb.from('stock_items').select('producto_id, sucursal_id, cantidad').in('producto_id', prodIds).gt('cantidad', 0),
+      { maximo: 200_000 },
+    )
     for (const s of (stk ?? []) as any[]) {
       const arr = stockByProd.get(s.producto_id) ?? []
       arr.push({ sucursal_id: s.sucursal_id, cantidad: Number(s.cantidad) })

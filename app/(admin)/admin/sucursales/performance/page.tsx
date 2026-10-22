@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { paginar } from '@/lib/supabase/paginar'
 import { ArrowRight, Building, TrendingUp } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/server'
@@ -41,10 +42,11 @@ export default async function PerformanceSucursalesPage() {
       .from('caja_turnos')
       .select('sucursal_id, estado, contado, diferencia, fecha')
       .gte('fecha', inicioMes),
-    lente(sb
+    // Sin paginar devolvia 1.000 de 192.464 desde la v0.96.
+    paginar<any>(lente(sb
       .from('stock_items')
       .select('sucursal_id, cantidad, stock_minimo')
-      .gt('stock_minimo', 0)),
+      .gt('stock_minimo', 0)), { maximo: 200_000 }).then((r: { filas: any[] }) => ({ data: r.filas })),
   ])
 
   if (sucRes.error) {

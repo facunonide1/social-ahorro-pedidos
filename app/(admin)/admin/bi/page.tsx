@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { paginar } from '@/lib/supabase/paginar'
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
 import { CATEGORIA_GASTO_LABELS } from '@/lib/types/admin'
 import { STATUS_LABELS, TIPO_ENVIO_LABELS } from '@/lib/types'
@@ -34,10 +35,12 @@ export default async function BIPage() {
       .select('total, status, tipo_envio, created_at')
       .gte('created_at', isoDaysAgo(DIAS_VENTAS)),
     sb.from('gastos_operativos').select('monto, categoria').eq('periodo', periodoActual),
-    sb
+    // 4.976 comprobantes: sin paginar, el tablero sumaba 1.000.
+    paginar<any>(sb
       .from('facturas_proveedor')
       .select('total, estado, proveedores(razon_social)')
       .not('estado', 'in', '("pagada","anulada","rechazada")'),
+      { maximo: 20_000 }).then((r: { filas: any[] }) => ({ data: r.filas })),
   ])
 
   const orders = (ordersRes.data ?? []) as any[]

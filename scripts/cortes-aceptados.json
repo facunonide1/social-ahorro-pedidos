@@ -74,5 +74,17 @@
  "lib/operaciones/vencimientos.ts:stock_items:sin-limite": "acotado por la lista que le pasa quien llama: solo corta si esa lista pasa de mil",
  "lib/tareas/gamification.ts:tareas:limit-inutil(2000)": "barrido sobre tareas, que hoy tiene 32 filas. Los crons y los cruces ya estan paginados; este es de pantalla o de un caso acotado a UNA entidad. Arreglar antes de que la tabla crezca",
  "scripts/conteo-punta-a-punta.ts:cnt_renglones:sin-limite": "barrido sobre cnt_renglones, que hoy tiene 0 filas. Los crons y los cruces ya estan paginados; este es de pantalla o de un caso acotado a UNA entidad. Arreglar antes de que la tabla crezca",
- "scripts/conteo-punta-a-punta.ts:tareas:sin-limite": "barrido sobre tareas, que hoy tiene 32 filas. Los crons y los cruces ya estan paginados; este es de pantalla o de un caso acotado a UNA entidad. Arreglar antes de que la tabla crezca"
+ "scripts/conteo-punta-a-punta.ts:tareas:sin-limite": "barrido sobre tareas, que hoy tiene 32 filas. Los crons y los cruces ya estan paginados; este es de pantalla o de un caso acotado a UNA entidad. Arreglar antes de que la tabla crezca",
+ "app/(admin)/admin/proveedores/[id]/page.tsx:facturas_proveedor:sin-limite": "acotada con .eq('proveedor_id'): el proveedor mas grande tiene 413 comprobantes, muy lejos de mil. Si alguno pasara de mil habria que paginarla, y eso se va a notar en esta misma auditoria porque el conteo se regenera",
+ "app/api/finanzas/pagos/pendientes/route.ts:facturas_proveedor:sin-limite": "acotada con .eq('proveedor_id'): son los comprobantes abiertos de UN proveedor",
+ "app/(admin)/admin/finanzas/documentos/page.tsx:facturas_proveedor:limit-en-el-borde": "es una pantalla de listado con paginacion propia: el limit(1000) es la pagina, no el total. El total lo cuenta aparte con count exact",
+ "app/(admin)/admin/finanzas/page.tsx:facturas_proveedor:limit-en-el-borde": "panel con los ultimos 1000 por fecha: es un top-N deliberado, no un barrido que deberia traer todo",
+ "app/api/finanzas/pagos/route.ts:facturas_proveedor:sin-limite": "las facturas que se estan por pagar en ESTA orden de pago, que llegan por id en el cuerpo",
+ "app/api/nora/daily-briefing/route.ts:facturas_proveedor:sin-limite": "el briefing resume lo que vence en los proximos dias: el filtro de fecha lo deja muy por debajo de mil. Si algun dia vencieran mas de mil comprobantes en una semana, el briefing seria el menor de los problemas",
+ "lib/ai/tools.ts:facturas_proveedor:sin-limite": "herramientas de chat acotadas por proveedor o por ventana de fechas. Si alguna empieza a barrer todo, lo va a decir esta auditoria cuando se regenere el conteo",
+ "app/(admin)/admin/compliance/papeles/papeles-client.tsx:compliance:sin-limite": "la tabla se llama `compliance_documentos`; el auditor leyo `compliance` del nombre partido. Esa tabla tiene 3 filas. Queda anotado para no volver a mirarlo",
+ "components/nora/nora-acciones.tsx:comprobantes:sin-limite": "`comprobantes` no es una tabla de este esquema: el auditor lo tomo de un nombre partido. Falso positivo",
+ "app/api/nora/predictions/route.ts:facturas_proveedor:limit-inutil(5000)": "mismo caso: acotado por ventana de vencimiento",
+ "app/(admin)/admin/finanzas/calendario/page.tsx:facturas_proveedor:limit-inutil(2000)": "acotada por un rango de fechas del mes que se mira. El limit(2000) no sube el techo de PostgREST pero el filtro de fecha ya deja menos de mil: 4.976 comprobantes repartidos en dos anios",
+ "lib/nora/herramientas/finanzas.ts:facturas_proveedor:limit-inutil(2000)": "herramienta de chat: contesta sobre una ventana de fechas o un proveedor, nunca sobre los 4.976"
 }

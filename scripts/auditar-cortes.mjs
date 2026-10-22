@@ -32,30 +32,51 @@
 import { readFileSync, existsSync } from 'fs'
 import { execSync } from 'child_process'
 
-/** Tablas que pueden pasar las 1000 filas. Con sus filas al 31-ago-2026. */
-export const TABLAS_GRANDES = {
-  producto_ventas_mensuales: 598117,
-  producto_codigos_barras: 49339,
-  productos_catalogo: 46129,
-  sifaco_maestro_staging: 46035,
-  producto_stock_sifaco: 46009,
-  ventas_diarias: 7620,
-  anomalias: 6567,
-  producto_promedios_sifaco: 5108,
-  proveedor_producto: 3960,
-  stock_items: 480,
-  offers_gestion: 215,
-  oferta_items: 21,
-  lotes_productos: 0,
-  movimientos_stock: 0,
-  doc_lineas: 0,
-  cnt_renglones: 0,
-  listas_precios_items: 0,
-  stock_sucursal: 0,
-  irregularidades_stock: 108,
-  vencimientos: 26,
-  clientes: 150,
-  tareas: 32,
+/**
+ * Cuántas filas tiene cada tabla y cada vista, CONTADO EN LA BASE.
+ *
+ * ── POR QUÉ ESTO YA NO ES UNA LISTA ESCRITA A MANO ──────────────────────────
+ *
+ * Lo era, con los conteos del 31 de agosto. `transferir_antes_de_comprar` es
+ * una vista creada en la v0.96 con 2.909 filas: no estaba en la lista, así que
+ * este auditor la ignoró y el corte silencioso de la v0.98 pasó entero —
+ * Abasto mostró 635 productos donde hay 1.687.
+ *
+ * Al generarlo aparecieron **25 relaciones más** que podían cortar y que el
+ * auditor no miraba, incluidas `stock_disponible` (48.217),
+ * `stock_disponible_sucursal` (192.868) y `reco_compras` (48.206).
+ *
+ * Se regenera con `npm run contar:relaciones` y se versiona, para que el build
+ * no dependa de poder consultar la base.
+ */
+const CONTEO = 'scripts/conteo-relaciones.json'
+const conteo = existsSync(CONTEO)
+  ? JSON.parse(readFileSync(CONTEO, 'utf8'))
+  : { relaciones: {}, desconocidas: [], contado_at: null }
+
+export const TABLAS_GRANDES = conteo.relaciones
+
+/**
+ * Cuánto puede devolver una relación, para decidir si hay que mirarla.
+ *
+ * ── FALLA POR OMISIÓN ───────────────────────────────────────────────────────
+ *
+ * Una relación que NO está en el conteo devuelve Infinity: se trata como
+ * grande y la consulta se marca. Antes, lo que no estaba en la lista pasaba —
+ * y es exactamente así como se coló el corte.
+ *
+ * Una relación que está pero no se pudo contar (-1) también: no saber cuántas
+ * filas tiene no es saber que tiene pocas.
+ */
+function filasDe(tabla) {
+  // La fábrica es otro producto, con su propia frontera (docs/fabrica/FRONTERA.md).
+  // No está en el conteo porque no se cuenta, no porque se haya olvidado: eso
+  // es una exclusión declarada y no una omisión.
+  if (tabla.startsWith('fab_')) return 0
+  const n = TABLAS_GRANDES[tabla]
+  if (n === undefined) return Infinity
+  if (n < 0) return Infinity
+  return n
 }
 
 /** Archivos que son la solución, no el problema. */
@@ -113,7 +134,9 @@ export function auditar() {
       const m = linea.match(/\.from\('([a-z_]+)'\)/)
       if (!m) return
       const tabla = m[1]
-      if (!(tabla in TABLAS_GRANDES)) return
+      // Antes: `if (!(tabla in TABLAS_GRANDES)) return` — lo que no estaba en
+      // la lista pasaba. Ahora lo que no se conoce se mira igual.
+      if (filasDe(tabla) <= 1000) return
 
       // Tambien hacia atras: en `paginar(sb.from(...).select(...).order(...))`
       // la envoltura esta ANTES del .from, y mirando solo hacia adelante la
@@ -153,8 +176,11 @@ export function auditar() {
         linea: i + 1,
         clase: acotadoPorLista ? 'acotado-por-lista' : 'barrido',
         tabla,
-        filas: TABLAS_GRANDES[tabla],
-        miente_hoy: TABLAS_GRANDES[tabla] > 1000,
+        filas: TABLAS_GRANDES[tabla] ?? null,
+        // `null` = no se sabe cuántas filas tiene. No es cero y no es «pocas»:
+        // es una relación que el conteo no conoce o no pudo contar, y por eso
+        // se mira igual.
+        miente_hoy: filasDe(tabla) > 1000,
         patron,
         // `.length` sobre el resultado es un conteo en memoria: lo peor.
         cuenta_en_memoria: /\.length\b/.test(lineas.slice(i, i + 20).join('\n')),

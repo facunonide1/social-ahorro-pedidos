@@ -36,8 +36,10 @@ function Icono({ nombre, className }: { nombre: string; className?: string }) {
   return <C className={className} />
 }
 
-export function EquipoClient({ equipo, decisiones, alcanceNombre, esCadena }: {
+export function EquipoClient({ equipo, decisiones, alcanceNombre, esCadena, calculadoAt }: {
   equipo: Lectura[]; decisiones: Decision[]; alcanceNombre: string; esCadena: boolean
+  /** De cuándo son los números de los agentes. Null = nunca se calcularon. */
+  calculadoAt: string | null
 }) {
   const [abierta, setAbierta] = useState<Decision | null>(null)
   const [haciendo, setHaciendo] = useState<string | null>(null)
@@ -198,6 +200,24 @@ export function EquipoClient({ equipo, decisiones, alcanceNombre, esCadena }: {
               ? 'Los que trabajan para las cuatro sucursales. Eligiendo una sucursal aparecen otros.'
               : 'Los que trabajan acá. Abasto y Tesoro son de cadena y se ven eligiendo «todas».'}
           </p>
+        </div>
+
+        {/* ── DE CUÁNDO SON ESTOS NÚMEROS ──────────────────────────────────
+            El resumen tarda ~20 s sobre 598.117 ventas: se calcula una vez por
+            día. Eso está bien, pero no decirlo no: alguien puede comprar con
+            un número de ayer creyendo que es de recién. */}
+        <div className="text-xs text-muted-foreground">
+          {calculadoAt ? (
+            <>Números calculados el{' '}
+              {new Date(calculadoAt).toLocaleString('es-AR', {
+                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+              })}
+              . Se recalculan solos cada mañana y cada vez que entra un maestro de SIFACO.</>
+          ) : (
+            <>Los números de los agentes <b>todavía no se calcularon</b>. No es que no haya
+              nada: es que no se sabe. Se calculan en la corrida de las 5, o importando un
+              maestro.</>
+          )}
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">

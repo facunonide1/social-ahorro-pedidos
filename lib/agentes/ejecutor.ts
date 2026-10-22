@@ -79,19 +79,50 @@ async function quiebresAhora(c: ContextoEjecucion): Promise<number> {
   return count ?? 0
 }
 
-/** Monto en juego de una acción, para contrastarlo con el tope. */
-async function montoDe(c: ContextoEjecucion): Promise<number | null> {
+/**
+ * Monto en juego de una acción, para contrastarlo con el tope.
+ *
+ * Devuelve `{ monto: null }` cuando la acción no tiene un monto asociado, y
+ * `{ vencido: true }` cuando el número existe pero es viejo.
+ *
+ * ── POR QUÉ IMPORTA LA FECHA ────────────────────────────────────────────────
+ *
+ * El monto sale del snapshot diario (migración 0204). Para mostrar en pantalla
+ * un número de ayer está bien, y la pantalla dice de cuándo es. Para decidir
+ * si un agente actúa SOLO, no: el tope es lo único que separa «hace y avisa»
+ * de «hace lo que quiera», y compararlo contra un número viejo es compararlo
+ * contra otra cosa.
+ *
+ * Si el snapshot está vencido, el agente no ejecuta: deja preparado y lo dice.
+ * Es la misma regla que el tope sin definir — ante la duda, no actúa.
+ */
+const HORAS_DE_VIDA_DEL_MONTO = 36
+
+async function montoDe(c: ContextoEjecucion): Promise<
+  { monto: number | null; vencido: false } | { monto: null; vencido: true; calculadoAt: string | null }
+> {
   switch (`${c.agenteId}:${c.accion}`) {
     case 'abasto:sacar_de_otra_sucursal':
     case 'abasto:proponer_transferencia':
     case 'reparto:proponer_movimiento': {
-      let q = c.adm.from('transferir_antes_de_comprar').select('plata_que_no_hay_que_gastar')
-      if (c.sucursalId) q = q.eq('destino_id', c.sucursalId)
-      const { data } = await q.limit(1000)
-      return (data ?? []).reduce((a: number, r: any) => a + Number(r.plata_que_no_hay_que_gastar ?? 0), 0)
+      // ESTO LO ESCRIBÍ MAL EN ESTE MISMO BLOQUE: traía las filas y sumaba en
+      // memoria, con `limit(1000)` sobre una vista de 2.909. El monto salía
+      // más chico que el real, y el tope es justamente lo que decide si el
+      // agente ejecuta solo: un monto subestimado lo habría dejado actuar
+      // cuando no correspondía.
+      //
+      // Lo cazó el auditor extendido de este mismo bloque, diez minutos
+      // después de extenderlo.
+      const { data } = await c.adm.rpc('agentes_resumen', { p_sucursal: c.sucursalId })
+      const r = data as any
+      const calculadoAt: string | null = r?.calculado_at ?? null
+      if (!r || !calculadoAt) return { monto: null, vencido: true, calculadoAt }
+      const horas = (Date.now() - new Date(calculadoAt).getTime()) / 3_600_000
+      if (horas > HORAS_DE_VIDA_DEL_MONTO) return { monto: null, vencido: true, calculadoAt }
+      return { monto: Number(r?.abasto?.plata_a_transferir ?? 0), vencido: false }
     }
     default:
-      return null
+      return { monto: null, vencido: false }
   }
 }
 
@@ -364,7 +395,18 @@ export async function ejecutar(c: ContextoEjecucion): Promise<ResultadoEjecucion
 
   // Y si lo tiene, que el monto en juego no lo pase.
   if (nivel === 'hace_y_avisa' && c.limiteMonto != null) {
-    const monto = await montoDe(c)
+    const m = await montoDe(c)
+    if (m.vencido) {
+      nivel = 'prepara'
+      degradado = m.calculadoAt
+        ? `El tope es de ${ars(c.limiteMonto)}, pero el monto en juego está calculado ` +
+          `desde el ${new Date(m.calculadoAt).toLocaleString('es-AR')} y ya pasaron más de ` +
+          `${HORAS_DE_VIDA_DEL_MONTO} horas. Contra un número viejo el tope no significa nada, ` +
+          `así que deja preparado.`
+        : 'El tope está puesto, pero el monto en juego todavía no se calculó nunca. ' +
+          'Deja preparado: sin ese número el tope no se puede verificar.'
+    }
+    const monto = m.monto
     if (monto != null && monto > c.limiteMonto) {
       nivel = 'prepara'
       degradado = `Lo que está en juego son ${ars(monto)} y el tope es ${ars(c.limiteMonto)}. Deja preparado.`

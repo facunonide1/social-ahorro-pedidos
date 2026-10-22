@@ -287,7 +287,8 @@ export default async function MissionControlPage() {
           que una persona pueda hacer su día sin bajar a los listados — si para
           operar hay que ir ahí, esta capa está mal armada. */}
       <EquipoClient
-        equipo={equipo as any}
+        equipo={equipo.agentes as any}
+        calculadoAt={equipo.calculadoAt}
         decisiones={decisiones as any}
         alcanceNombre={nombreAlcance}
         esCadena={esTodas}

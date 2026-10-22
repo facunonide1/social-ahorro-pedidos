@@ -1,4 +1,5 @@
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
+import { paginar } from '@/lib/supabase/paginar'
 import { getSucursalActiva } from '@/lib/sucursal/server'
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/shared/page-header'
@@ -30,7 +31,9 @@ export default async function AnalisisPage() {
 
   const [{ data: ventas }, { data: stock }, { data: rot }, { data: sucs }] = await Promise.all([
     real(scope(sb.from('movimientos_stock').select('producto_id, sucursal_id, cantidad, fecha').eq('tipo', 'venta').gte('fecha', d90).limit(50000))),
-    real(scope(sb.from('stock_items').select('producto_id, sucursal_id, cantidad'))),
+    // 192.464 filas desde la v0.96: sin paginar esto era 1.000.
+    paginar<any>(real(scope(sb.from('stock_items').select('producto_id, sucursal_id, cantidad'))),
+      { maximo: 200_000 }).then((r: { filas: any[] }) => ({ data: r.filas })),
     real(scope(sb.from('producto_rotacion').select('producto_id, sucursal_id, ultima_venta, clasificacion_abc, dias_stock_restante'))),
     sb.from('sucursales').select('id, nombre, codigo').eq('activa', true).order('nombre'),
   ])

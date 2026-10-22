@@ -141,12 +141,14 @@ export async function quiebresQueSeResuelvenTransfiriendo(): Promise<{
   const { data } = await sb.rpc('compras_transferir_se_puede').maybeSingle<{ se_puede: boolean }>()
   if (!data?.se_puede) return null
 
-  const { data: filas } = await sb
-    .from('transferir_antes_de_comprar')
-    .select('producto_id, plata_que_no_hay_que_gastar')
-  if (!filas) return null
-
-  const productos = new Set((filas as any[]).map((f) => f.producto_id)).size
-  const plata = (filas as any[]).reduce((a, f) => a + Number(f.plata_que_no_hay_que_gastar ?? 0), 0)
-  return { productos, plata }
+  // Se cuenta EN LA BASE. La primera version traia las filas y contaba en
+  // memoria: esa vista tiene 2.909 filas y PostgREST devuelve 1.000, asi que
+  // daba 635 productos donde hay 1.687 (v0.98).
+  const { data: resumen } = await sb.rpc('agentes_resumen', { p_sucursal: null })
+  const a = (resumen as any)?.abasto
+  if (!a) return null
+  return {
+    productos: Number(a.productos_a_transferir ?? 0),
+    plata: Number(a.plata_a_transferir ?? 0),
+  }
 }

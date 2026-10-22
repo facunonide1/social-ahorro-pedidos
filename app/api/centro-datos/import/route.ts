@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { paginar } from '@/lib/supabase/paginar'
 import { createHash } from 'crypto'
 
 import { createAdminClient } from '@/lib/supabase/server'
@@ -114,9 +115,11 @@ export async function POST(req: NextRequest) {
 async function generarRecartelado(adm: any, importJobId: string, cambios: { producto_id: string; sku: string | null; nombre: string; precio_anterior: number; precio_nuevo: number }[]) {
   const cambioMap = new Map(cambios.map((c) => [c.producto_id, c]))
   const prodIds = cambios.map((c) => c.producto_id)
-  const { data: stock } = await adm.from('stock_items')
+  // `stock_items` tiene 192.464 filas desde la v0.96: sin paginar, un import
+  // grande comparaba contra 1.000 y daba de baja lo que no habia mirado.
+  const { filas: stock } = await paginar<any>(adm.from('stock_items')
     .select('producto_id, sucursal_id, cantidad_gondola').eq('es_demo', false)
-    .in('producto_id', prodIds).gt('cantidad_gondola', 0)
+    .in('producto_id', prodIds).gt('cantidad_gondola', 0), { maximo: 200_000 })
   const bySuc = new Map<string, { producto_id: string; sku: string | null; nombre: string; precio_anterior: number; precio_nuevo: number }[]>()
   for (const s of (stock ?? []) as any[]) {
     const c = cambioMap.get(s.producto_id)
