@@ -1,0 +1,75 @@
+-- 0195 · v0.97-caja · BLOQUE A · aplicada vía MCP
+--
+-- ════════════════════════════════════════════════════════════════════════════
+-- LAS CORRECCIONES DEL CUESTIONARIO
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- A.1 · EL ENCARGADO NO VE LAS FINANZAS
+--
+-- `finanzas: VER` estuvo en su matriz desde la v0.26 y la RLS por rol de la
+-- v0.95 lo hizo real. La auditoría lo reportó en vez de cambiarlo porque era
+-- una decisión del dueño. Facundo contestó: no la ve. Se fue de
+-- `encargado_sucursal` y de `sucursal`, que son el mismo rol con dos nombres.
+--
+-- `caja: VCEA` se queda: el encargado cierra la caja de SU sucursal todos los
+-- días. Lo que no ve es la plata de la cadena.
+--
+-- ── Y LO QUE APARECIÓ AL PROBARLO ───────────────────────────────────────────
+--
+-- Probando que tampoco viera los arqueos de las demás sucursales, los veía.
+-- Los 48, con la política de lectura por sucursal puesta y correcta.
+--
+-- `arqueos_caja` tenía dos políticas permisivas:
+--   arqueos_caja_hub_ver   for select · hub_puede_ver('caja') AND la sucursal
+--   arqueos_caja_write     FOR ALL    · el rol está en una lista
+--
+-- Las permisivas se combinan con OR y `FOR ALL` incluye SELECT: la segunda
+-- alcanzaba sola. **Eran 130 tablas así**, heredadas de antes de que existiera
+-- la matriz, y anulaban casi todo el trabajo de RLS de la v0.95 sin que nada
+-- fallara. El auditor no las cazó porque prueba 14 tablas y en ésas las listas
+-- de roles no incluían al rol probado; en `arqueos_caja` sí.
+--
+-- Se partió cada `FOR ALL` en tres —insert, update, delete— con la misma
+-- expresión: nadie pierde permiso de escribir y la lectura queda gobernada sólo
+-- por la política que sabe de rol y sucursal. Quedaron afuera 6 tablas sin
+-- política de lectura, donde quitarle el SELECT las dejaría ilegibles.
+--
+-- Y `rls_escrituras_que_dan_lectura()` entró al auditor, para que la próxima no
+-- dependa de que a alguien se le ocurra probarlo.
+--
+-- A.2 · IMPAGO ES MÁS DE UN MES
+--
+-- El umbral de 21 días que el prompt pedía cambiar NO EXISTÍA, ni en el código
+-- ni en la base. Lo que existía es peor: `deuda_proveedores` marcaba `vencida`
+-- el día siguiente al vencimiento, sin un día de gracia.
+--
+-- El parámetro `compras.dias_impago` = 30 introduce la distinción que faltaba:
+-- vencida pasa todo el tiempo, impaga es un problema. Resultado: las 412 abiertas
+-- son TODAS impagas — no quedó ninguna en «vencida». Toda la deuda abierta tiene
+-- más de un mes.
+--
+-- A.3 · LAS NOTAS DE CRÉDITO RESTAN
+--
+-- La vista excluía `tipo_documento = 'nota_credito'` por completo: 294 notas por
+-- −$24.228.249 no restaban de ningún saldo. Entran 216 por −$16.692.399.
+-- Las 37 en cuarentena no entran y no es una excepción: están ahí porque no se
+-- les puede leer la fecha o el monto. Una nota sin monto legible no resta nada
+-- porque no se sabe cuánto.
+--
+-- A.4 · LOS DESCUENTOS SIN FECHA SÍ SON OFERTAS
+--
+-- 6.441 anomalías cerradas con el motivo, no borradas: una anomalía cerrada con
+-- «esto es así» es información, y borrarla haría que el detector la levante de
+-- nuevo.
+--
+-- A.5 · SACADA LA ADVERTENCIA DEL MAESTRO FILTRADO
+--
+-- En lib/sifaco/verificacion.ts. Describía una sospecha nuestra y no un hecho
+-- del archivo: «Farmacia Normal» en las 48.127 filas es el catálogo completo.
+--
+-- A.6 · LOS MEDICAMENTOS DE VENTA LIBRE, CON LA DECISIÓN REGISTRADA
+--
+-- `decisiones_comerciales`. Y hay que decirlo: los 10.977 medicamentos de venta
+-- libre ya estaban habilitados —SIFACO los declara `S` y la regla 9 nunca los
+-- bloqueó—. Lo que faltaba no era el permiso: era el registro de quién decidió
+-- publicarlos y cuándo, porque es terreno en disputa judicial.

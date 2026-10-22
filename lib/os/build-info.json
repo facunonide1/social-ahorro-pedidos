@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-21T21:59:27.817Z",
-  "commit": "3b8e655c3eaae008d15ec87684fe10d2cd270c58",
-  "mensaje": "feat: recalcular con el stock por sucursal",
+  "construido_at": "2026-10-22T00:07:16.865Z",
+  "commit": "cbc6effd0daedadf973cda14141e45c49a3d0b62",
+  "mensaje": "fix: la tabla nueva tenía RLS sin política y la función de aplicar estaba abierta",
   "rama": "main"
 }

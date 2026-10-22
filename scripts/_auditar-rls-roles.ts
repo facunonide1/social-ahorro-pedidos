@@ -58,6 +58,28 @@ async function main() {
     ok(`la matriz de la base coincide con el TypeScript (${delTs.length} celdas)`)
   }
 
+  // ── 1.b · NINGUNA POLÍTICA DE ESCRITURA PUEDE DAR LECTURA ─────────────────
+  //
+  // Una política `FOR ALL` permisiva incluye SELECT, y las permisivas se
+  // combinan con OR: alcanza una para que la política de lectura por rol y
+  // sucursal no haga falta. En la v0.97 había **130 tablas así**, heredadas de
+  // antes de que existiera la matriz, y anulaban casi todo el trabajo de RLS de
+  // la v0.95 sin que nada fallara.
+  //
+  // Se encontró de casualidad —probando que un encargado no viera los arqueos de
+  // otra sucursal— y por eso esto está acá: para que la próxima no dependa de
+  // que a alguien se le ocurra probarlo.
+  const { data: fugas } = await adm.rpc('rls_escrituras_que_dan_lectura')
+  const fuga = (fugas ?? []) as { tabla: string; politica: string }[]
+  if (fuga.length) {
+    falla(`${fuga.length} política(s) de escritura FOR ALL también dan SELECT y anulan la lectura por rol: ` +
+      fuga.slice(0, 5).map((f) => `${f.tabla}.${f.politica}`).join(', ') +
+      (fuga.length > 5 ? ` y ${fuga.length - 5} más` : '') +
+      '. Partirlas en insert/update/delete.')
+  } else {
+    ok('ninguna política de escritura da lectura de arrastre')
+  }
+
   // ── 2 · LAS TABLAS SENSIBLES, MAPEADAS ────────────────────────────────────
   const { data: mapeo } = await adm.from('tabla_modulo').select('tabla, modulo')
   const modulos = new Map(((mapeo ?? []) as any[]).map((m) => [m.tabla, m.modulo]))

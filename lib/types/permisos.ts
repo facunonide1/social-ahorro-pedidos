@@ -104,9 +104,22 @@ export const PRESET_POR_ROL: Record<AdminRole, MatrizPermisos> = {
 
   gerente: matriz({ configuracion: VER, auditoria: VER }, TODO),
 
+  // ── EL ENCARGADO NO VE LAS FINANZAS ──────────────────────────────────────
+  //
+  // `finanzas: VER` estuvo acá desde la v0.26 y la RLS por rol de la v0.95 lo
+  // hizo real: un encargado leía la deuda de toda la cadena y los arqueos de
+  // las otras tres sucursales. La auditoría del 14 de octubre lo reportó en vez
+  // de cambiarlo, porque es una decisión del dueño y no un arreglo.
+  //
+  // Facundo contestó: NO la ve. Se saca.
+  //
+  // `caja: VCEA` se queda, y no es una contradicción: el encargado cierra la
+  // caja de SU sucursal todos los días. Lo que no ve es la plata de la cadena —
+  // la deuda con los proveedores y la caja fuerte—, que son de los dueños. La
+  // RLS por sucursal se encarga de que «su caja» sea la suya.
   encargado_sucursal: matriz({
     mission_control: VER, comunicacion: VCE, tareas: VCEA,
-    operaciones: VCE, compras: VC, finanzas: VER, caja: VCEA,
+    operaciones: VCE, compras: VC, caja: VCEA,
     ofertas: VER, clientes: VCE, pedidos: VCE, sucursales: VER,
     rrhh: VER, aprobaciones: VER, bi: VER, ia: VER, centro_datos: VER,
   }, NADA),
@@ -156,9 +169,12 @@ export const PRESET_POR_ROL: Record<AdminRole, MatrizPermisos> = {
 
   auditor: matriz({}, VER),
 
+  // Idéntico a `encargado_sucursal`, incluido el `finanzas` que se fue: son el
+  // mismo rol con dos nombres y si uno de los dos se queda con el permiso, la
+  // corrección no sirve para nada.
   sucursal: matriz({   // = encargado_sucursal
     mission_control: VER, comunicacion: VCE, tareas: VCEA,
-    operaciones: VCE, compras: VC, finanzas: VER, caja: VCEA,
+    operaciones: VCE, compras: VC, caja: VCEA,
     ofertas: VER, clientes: VCE, pedidos: VCE, sucursales: VER,
     rrhh: VER, aprobaciones: VER, bi: VER, ia: VER, centro_datos: VER,
   }, NADA),

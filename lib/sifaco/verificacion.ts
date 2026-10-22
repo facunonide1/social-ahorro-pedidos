@@ -3,13 +3,16 @@
  *
  * ── POR QUÉ EXISTE ESTE ARCHIVO ─────────────────────────────────────────────
  *
- * Dos veces nos engañó el mismo archivo. `pla_3d_24` traía un solo valor en
- * `NOM_GRU` —«Farmacia Normal»— y se tomó como el catálogo completo: era un
- * export filtrado por grupo. Y `ago25` entró como mes normal con 3.509 unidades
- * contra 28.000 de los demás, que no era un mes flojo sino un mes cortado.
+ * `ago25` entró como mes normal con 3.509 unidades contra 28.000 de los demás,
+ * que no era un mes flojo sino un mes cortado. Y el maestro de agosto traía el
+ * stock de una sola sucursal y se leyó como el de la cadena.
  *
  * Las dos veces el archivo no estaba roto. Estaba incompleto, y un archivo
  * incompleto se lee igual que uno completo: por eso no se nota.
+ *
+ * (Hubo un tercer chequeo, el de «puede venir filtrado por grupo», que se sacó
+ * en la v0.97: describía una sospecha nuestra y no un hecho del archivo. Ver el
+ * comentario donde estaba.)
  *
  * ── LA DISTINCIÓN QUE ORDENA TODO ───────────────────────────────────────────
  *
@@ -101,33 +104,31 @@ export function verificarMaestro(d: DatosParaVerificar): Chequeo[] {
     })
   }
 
-  // ── 3 · ¿VIENE FILTRADO? ──────────────────────────────────────────────────
+  // ── 3 · EL GRUPO, QUE YA NO ES UNA SOSPECHA ───────────────────────────────
   //
-  // Un solo valor en NOM_GRU es la señal que ya nos engañó dos veces. No prueba
-  // que esté filtrado —puede ser que la cadena tenga un solo grupo— y por eso
-  // avisa en vez de cortar. Pero se dice, y se dice fuerte.
+  // Esto avisaba «puede venir filtrado por grupo» cuando `NOM_GRU` traía un solo
+  // valor, y lo decía fuerte: un export filtrado por laboratorio nos había
+  // engañado antes y la señal parecía la misma.
+  //
+  // No era la misma. Facundo lo confirmó el 21 de octubre de 2026: «Farmacia
+  // Normal» en las 48.127 filas **es** el catálogo completo, porque la cadena
+  // tiene un solo grupo. El aviso describía una sospecha nuestra, no un hecho
+  // del archivo — y una regla describe el hecho, no la sospecha.
+  //
+  // Queda el conteo de grupos, sin veredicto: es información sobre el archivo y
+  // le sirve a quien mire. Lo que se fue es la alarma.
   const grupos = d.gruposNomGru.filter((g) => g.valor.trim() !== '')
-  if (grupos.length === 1) {
-    r.push({
-      clave: 'filtrado',
-      titulo: 'Puede venir filtrado por grupo',
-      nivel: 'avisa',
-      dice: `Las ${d.filas.toLocaleString('es-AR')} filas dicen el mismo grupo: «${grupos[0].valor}». Esto ya nos engañó dos veces: un export filtrado se lee igual que el catálogo completo.`,
-      queHacer: 'En SIFACO, verificá si hay otros grupos además de ése. Si hay, este archivo es una parte del catálogo y no el catálogo: lo que falte NO está dado de baja, está afuera del export.',
-    })
-  } else if (grupos.length === 0) {
-    r.push({
-      clave: 'filtrado', titulo: 'Sin grupo declarado', nivel: 'avisa',
-      dice: 'Ninguna fila declara grupo, así que no se puede saber si el archivo está filtrado.',
-      queHacer: 'No es un error del archivo: es una verificación que no se puede hacer. Queda anotado.',
-    })
-  } else {
-    r.push({
-      clave: 'filtrado', titulo: 'Trae más de un grupo', nivel: 'pasa',
-      dice: `Hay ${grupos.length} grupos distintos: no parece un export filtrado.`,
-      queHacer: null,
-    })
-  }
+  r.push({
+    clave: 'grupos',
+    titulo: 'El grupo del catálogo',
+    nivel: 'pasa',
+    dice: grupos.length === 0
+      ? 'Ninguna fila declara grupo.'
+      : grupos.length === 1
+        ? `Las ${d.filas.toLocaleString('es-AR')} filas son del grupo «${grupos[0].valor}», que es el único que tiene la cadena.`
+        : `El archivo trae ${grupos.length} grupos distintos.`,
+    queHacer: null,
+  })
 
   // ── 4 · CUÁNTAS FILAS, CONTRA LA IMPORTACIÓN ANTERIOR ─────────────────────
   if (!d.anterior) {
