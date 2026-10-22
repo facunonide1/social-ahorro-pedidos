@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T00:10:54.134Z",
-  "commit": "d21ca8447eae80177f7705a4db0519936568cc15",
-  "mensaje": "fix: las correcciones del cuestionario",
+  "construido_at": "2026-10-22T00:22:05.188Z",
+  "commit": "eeb5a80bba3836344011298e7acee6b2fc169fb4",
+  "mensaje": "feat: exportar a SIFACO precios, ofertas y bajas",
   "rama": "main"
 }

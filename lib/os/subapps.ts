@@ -271,6 +271,10 @@ export const SUBAPPS: SubAppManifest[] = [
     modulos: [
       { nombre: 'Tablero', ruta: '/admin/finanzas' },
       { nombre: 'Caja / arqueos', ruta: '/admin/finanzas/caja' },
+      // v0.97 · el paso 5 del circuito que describio Facundo: administracion
+      // verifica los totales contra las ventas y los tickets. Era lo que
+      // faltaba, y es donde esta la plata sin controlar.
+      { nombre: 'Control de caja', ruta: '/admin/finanzas/caja/control' },
       { nombre: 'Qué se debe', ruta: '/admin/finanzas/deuda' },
       { nombre: 'Documentos a pagar', ruta: '/admin/finanzas/documentos' },
       { nombre: 'Pagos', ruta: '/admin/finanzas/pagos' },

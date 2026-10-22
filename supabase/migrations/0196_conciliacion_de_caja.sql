@@ -1,0 +1,79 @@
+-- 0196 · v0.97-caja · BLOQUE C · aplicada vía MCP
+--
+-- ════════════════════════════════════════════════════════════════════════════
+-- CONCILIACIÓN DE CAJA
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- El circuito que describió Facundo, y lo que ya había construido:
+--
+--   1. al cerrar se saca foto del cierre de SIFACO   → arqueos_caja.captura_url
+--   2. los totales del día van a un Drive            → caja_general (la fuerte)
+--   3. de ahí salen los retiros para pagar           → caja_general_movimientos
+--   4. en ese Excel se cuentan los totales           → caja_importaciones
+--   5. administración verifica contra ventas/tickets → caja_controlar()
+--
+-- Los pasos 1 a 3 tenían tabla desde la v0.20 y nadie los usó. El 5 no existía,
+-- y es donde está la plata sin controlar.
+--
+-- ── C.3 · LOS TRES CRUCES ───────────────────────────────────────────────────
+--
+-- `caja_controlar(sucursal, fecha)`:
+--
+--   cierre_vs_tickets   lo declarado contra lo que dicen los tickets. POR
+--                       ARQUEO, no por día: con dos turnos, uno que sobra y
+--                       otro que falta se compensan y el día cierra bien.
+--   fuerte_vs_cierres   lo que los cierres dicen que mandaron contra lo que
+--                       entró a la fuerte.
+--   retiros_vs_pagos    por el VÍNCULO y no por la suma: `pagos.caja_movimiento_id`
+--                       ya existía. Un retiro sin pago que lo apunte y un pago
+--                       en efectivo sin movimiento son dos problemas distintos,
+--                       y una resta de sumas los habría tapado.
+--
+-- Cada cruce devuelve `sin_dato` cuando no se pudo hacer. Sin el archivo de
+-- tickets, «0 diferencias» diría que se miró y estaba bien.
+--
+-- El umbral (`caja_diferencia_minima` = $100) existe para no producir el ruido
+-- de la v0.95: una diferencia de $3 es un redondeo.
+--
+-- Probado con datos de prueba antes de seguir: un cierre que declara $150.000
+-- contra tickets por $147.500 marcó $2.500 con el nombre de quien cerró, y un
+-- cierre que dijo mandar $80.000 a la fuerte sin que entrara nada marcó
+-- $80.000. Las dos filas se borraron después.
+--
+-- ── LO QUE `caja_diferencias` NO TIENE ──────────────────────────────────────
+--
+-- Columna de culpa, de sospecha o de gravedad. Tiene el monto, el turno y quién
+-- cerró —para poder ir a preguntar— y un motivo que lo llena una persona. Una
+-- diferencia de caja tiene diez explicaciones y nueve son inocentes: un vuelto
+-- mal dado, un ticket anulado que quedó en el archivo, una venta cobrada en dos
+-- medios. El sistema no sabe cuál es.
+--
+-- ── C.5 · QUIÉN VE QUÉ ──────────────────────────────────────────────────────
+--
+-- Textual: «los totales de la cadena y la caja fuerte, solo los dueños».
+--
+-- `caja_general` y sus movimientos estaban en el módulo `caja`, que el encargado
+-- tiene con VCEA: veía la caja fuerte de su sucursal y podía moverla. Pasan a
+-- `finanzas`, que es el módulo que el encargado perdió en A.1.
+--
+-- Y borrar un movimiento de la caja fuerte NO se habilita a nadie: se anula con
+-- `estado`, que deja rastro. Plata que desaparece de la tabla no se audita
+-- (regla de oro 7).
+--
+-- ── C.6 · EL TOPE DE EFECTIVO ───────────────────────────────────────────────
+--
+-- `config_caja_sucursal.tope_efectivo`, en NULL. Null y no cero: cero querría
+-- decir que no puede quedar ni un peso en caja, y lo que pasa es que nadie lo
+-- definió. Mientras esté en null no se avisa, y la pantalla lo dice.
+--
+-- ── C.4 · EL ARQUEO CIEGO ───────────────────────────────────────────────────
+--
+-- Está construido desde la v0.20: `caja_turnos.arqueo_ciego`,
+-- `arqueos_caja.conteo_confirmado_at`, `secuencia_alterada`, `carga_posterior`.
+--
+-- Y hoy no se hace: no está en los cinco pasos que describió Facundo. No se
+-- exige como paso obligatorio de un circuito que no lo tiene — exigirlo haría
+-- que nadie cierre una caja, y una caja sin cerrar no se controla de ninguna
+-- forma. Queda declarado en `decisiones_comerciales` con el motivo.
+--
+-- La regla de oro 3 NO se toca: sigue siendo el objetivo.
