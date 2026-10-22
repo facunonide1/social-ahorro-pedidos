@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T01:21:20.621Z",
-  "commit": "48c2457b2c73cb9d206722d3c2492828c7a4f60f",
-  "mensaje": "feat: permisos por acción de cada agente",
+  "construido_at": "2026-10-22T01:25:24.395Z",
+  "commit": "4cbf06bf5a8ac7b33b1d056bcf4c168dc6e195f4",
+  "mensaje": "feat: las decisiones, con el costo de la demora",
   "rama": "main"
 }

@@ -50,3 +50,22 @@
 -- «todavía sin antecedentes» — que es como empieza cualquier empleado.
 --
 -- `acerto` en NULL no es falso: es que todavía no se sabe.
+
+-- ── D · LA BARRA ────────────────────────────────────────────────────────────
+--
+-- El ⌘K ya existía desde la v0.37 y buscaba entidades, acciones y navegación.
+-- Lo que se agregó son los dos tipos que faltaban, y el orden en que aparecen:
+--
+--   bloqueado  PRIMERO. Quien escribe «cambiar precio» lee por que no se puede
+--              ahi mismo, no despues de apretar.
+--   regla      «pedime para 1 mes» CAMBIA `cobertura_objetivo_meses`. Es una
+--              escritura sobre la configuracion, asi que: solo claves
+--              declaradas, queda registrado en `agente_bitacora` quien lo
+--              cambio y de que a que, y se puede deshacer.
+--
+-- La interpretacion NO es un modelo de lenguaje: es un emparejador de frases
+-- contra una lista declarada en `lib/os/interpretar.ts`. Un modelo que
+-- interpreta una frase y cambia un parametro sin que nadie revise la lista de
+-- parametros que puede tocar es un modelo con permiso de escritura sobre la
+-- configuracion. Lo que no esta en la lista se le ofrece a NORA, que contesta
+-- sin escribir.

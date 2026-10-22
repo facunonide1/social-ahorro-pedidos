@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Sparkles, Package, Users, Truck, ListChecks, CornerDownLeft, MessageSquare } from 'lucide-react'
+import { Sparkles, Package, Users, Truck, ListChecks, CornerDownLeft, MessageSquare, Lock, SlidersHorizontal, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Dialog, DialogContent } from '@/components/ui/dialog'
@@ -15,6 +15,7 @@ import {
   type QuickAction,
 } from '@/lib/os/subapps'
 import type { OsSearchHit } from '@/app/api/os/search/route'
+import { interpretar, type Interpretacion } from '@/lib/os/interpretar'
 
 const TIPO_ICON = { producto: Package, cliente: Users, proveedor: Truck, tarea: ListChecks, mensaje: MessageSquare } as const
 
@@ -29,6 +30,11 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   const { rol, permisosCustom } = usePermissions()
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<OsSearchHit[]>([])
+
+  // D.2 · lo que se escribió puede ser una cosa, una acción, un cambio de
+  // regla o algo que la constitución no deja. Se interpreta en el cliente
+  // contra una lista declarada: ver lib/os/interpretar.ts.
+  const lecturas = useMemo(() => interpretar(q), [q])
 
   const apps = useMemo(() => subAppsVisibles(rol, permisosCustom), [rol, permisosCustom])
   const acciones = useMemo(() => quickActionsVisibles(rol, permisosCustom), [rol, permisosCustom])
@@ -77,13 +83,93 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
     window.dispatchEvent(new CustomEvent('nora:open', { detail: { text: q.trim() } }))
   }
 
+  /**
+   * D.2 · cambiar cómo funciona el sistema.
+   *
+   * D.5 · con deshacer: se guarda el valor anterior y el toast lo ofrece unos
+   * segundos. Es lo que permite que alguien nuevo pruebe en vez de preguntar.
+   */
+  async function cambiarRegla(i: Interpretacion) {
+    if (!i.cambio) return
+    onOpenChange(false)
+    try {
+      const r = await fetch('/api/os/regla', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clave: i.cambio.clave, valor: i.cambio.valor }),
+      })
+      const j = await r.json()
+      if (!r.ok) { toast.error(j?.error ?? 'No se pudo cambiar.'); return }
+      toast.success(`Cambiado: ${i.cambio.clave.replace(/_/g, ' ')} = ${j.ahora} ${i.cambio.unidad}`, {
+        description: i.cambio.queCambia,
+        duration: 10000,
+        action: {
+          label: 'Deshacer',
+          onClick: async () => {
+            await fetch('/api/os/regla', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ clave: i.cambio!.clave, valor: j.antes }),
+            })
+            toast.message(`Volvió a ${j.antes}.`)
+          },
+        },
+      })
+    } catch {
+      toast.error('No se pudo cambiar.')
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="overflow-hidden p-0 sm:max-w-xl">
         <Command shouldFilter={false} className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-bold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-muted-foreground">
-          <CommandInput value={q} onValueChange={setQ} placeholder="Buscar acciones, sub-apps, productos, clientes…" />
+          <CommandInput value={q} onValueChange={setQ} placeholder="Un producto, un proveedor, una acción, o cómo querés que funcione…" />
           <CommandList className="max-h-[60vh]">
             <CommandEmpty>Sin resultados. Probá preguntarle a NORA.</CommandEmpty>
+
+            {/* ── D.3 · LO QUE LA CONSTITUCIÓN NO DEJA ─────────────────────
+                Va PRIMERO y en el mismo lugar donde aparecería la acción: quien
+                escribe «cambiar precio» tiene que leer por qué no se puede ahí,
+                no descubrirlo después de apretar. */}
+            {lecturas.filter((l) => l.tipo === 'bloqueado').map((l, k) => (
+              <CommandGroup key={`bloq-${k}`} heading="No se puede">
+                <CommandItem value={`bloq-${k}`} disabled className="items-start gap-2 opacity-100">
+                  <Lock className="mt-0.5 size-4 shrink-0 text-destructive" />
+                  <div className="min-w-0">
+                    <div className="font-medium text-destructive">{l.titulo}</div>
+                    <p className="text-xs leading-snug text-muted-foreground">{l.porQueNo}</p>
+                  </div>
+                </CommandItem>
+              </CommandGroup>
+            ))}
+
+            {/* ── D.2 · CAMBIAR CÓMO FUNCIONA ──────────────────────────── */}
+            {lecturas.filter((l) => l.tipo === 'regla').map((l, k) => (
+              <CommandGroup key={`regla-${k}`} heading="Cambiar cómo funciona">
+                <CommandItem value={`regla-${k}`} onSelect={() => cambiarRegla(l)} className="items-start gap-2">
+                  <SlidersHorizontal className="mt-0.5 size-4 shrink-0 text-primary" />
+                  <div className="min-w-0">
+                    <div className="font-medium">{l.titulo}</div>
+                    <p className="text-xs leading-snug text-muted-foreground">{l.detalle}</p>
+                    <p className="mt-0.5 text-[10px] text-muted-foreground">
+                      Queda registrado quién lo cambió, y se puede deshacer.
+                    </p>
+                  </div>
+                </CommandItem>
+              </CommandGroup>
+            ))}
+
+            {lecturas.filter((l) => l.tipo === 'accion').length > 0 && (
+              <CommandGroup heading="Hacer">
+                {lecturas.filter((l) => l.tipo === 'accion').map((l, k) => (
+                  <CommandItem key={`acc-${k}`} value={`acc-${k}`}
+                    onSelect={() => go(l.ruta ?? '#')} className="gap-2">
+                    <Zap className="size-4 text-primary" />
+                    <span>{l.titulo}</span>
+                    <CornerDownLeft className="ml-auto size-3.5 text-muted-foreground" />
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
 
             {accionesFiltradas.length > 0 && (
               <CommandGroup heading="Acciones">
