@@ -3,7 +3,11 @@ import { createClient } from '@/lib/supabase/server'
 import { paginar } from '@/lib/supabase/paginar'
 import { PageHeader } from '@/components/shared/page-header'
 
+import { estadoDeCanales } from '@/lib/canales/lectura'
+import { createAdminClient } from '@/lib/supabase/server'
+
 import { CanalesClient } from './canales-client'
+import { CanalesEstado } from './canales-estado'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Canales de venta' }
@@ -18,6 +22,11 @@ export const metadata = { title: 'Canales de venta' }
 export default async function CanalesPage() {
   await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo'] })
   const sb = createClient()
+
+  // v1.4 · A.5 y A.6 · el estado de los cinco canales. Va con el cliente de
+  // servicio porque `canales_estado()` es de servicio: la pantalla ya pasó por
+  // `requireAdminHubAccess`.
+  const estados = await estadoDeCanales(createAdminClient())
 
   const [{ data: canales }, { data: problemas }, { count: publicados }, { count: candidatos }] =
     await Promise.all([
@@ -52,7 +61,8 @@ export default async function CanalesPage() {
         description="Lo que hay publicado en cada canal, contra lo que dice SIFACO. NORA propone; publicar y despublicar lo confirma una persona."
         breadcrumbs={[{ label: 'Canales' }]}
       />
-      <div className="p-4 md:p-6">
+      <div className="space-y-6 p-4 md:p-6">
+        <CanalesEstado estados={estados} />
         <CanalesClient
           canales={(canales ?? []) as any[]}
           problemas={(problemas ?? []) as any[]}
