@@ -15,6 +15,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 
 type Lectura = {
   agente: { id: string; nombre: string; queHace: string; alcance: string; deDondeLee: string; icono: string }
+  /** Qué acciones tiene conectadas a un ejecutor. */
+  puedeHacer?: { clave: string; nombre: string; nivel: Nivel }[]
   encendido: boolean
   frase: string | null
   motivoApagado: string | null
@@ -38,6 +40,7 @@ export function EquipoClient({ equipo, decisiones, alcanceNombre, esCadena }: {
   equipo: Lectura[]; decisiones: Decision[]; alcanceNombre: string; esCadena: boolean
 }) {
   const [abierta, setAbierta] = useState<Decision | null>(null)
+  const [haciendo, setHaciendo] = useState<string | null>(null)
   const [decidiendo, setDecidiendo] = useState(false)
   const [resueltas, setResueltas] = useState<string[]>([])
 
@@ -81,6 +84,47 @@ export function EquipoClient({ equipo, decisiones, alcanceNombre, esCadena }: {
     } catch (e: any) {
       toast.error(e?.message ?? 'Falló.')
     } finally { setDecidiendo(false) }
+  }
+
+  /**
+   * A · El agente hace. El nivel lo resuelve el servidor: acá no se decide
+   * nada — si se decidiera en el cliente, cualquiera podría pedir ejecutar
+   * algo que su nivel no permite.
+   */
+  async function hacer(agenteId: string, accion: string, nombre: string) {
+    const k = `${agenteId}:${accion}`
+    setHaciendo(k)
+    try {
+      const r = await fetch('/api/agentes/ejecutar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agente: agenteId, accion }),
+      })
+      const j = await r.json()
+      if (!r.ok || !j.ok) {
+        // A.6 · si falla, lo dice. Y no reintenta.
+        toast.error(`${nombre}: no pudo`, { description: j?.error ?? j?.texto ?? 'Sin detalle.' })
+        return
+      }
+      toast.success(j.texto, {
+        description: j.degradado ?? undefined,
+        duration: 12000,
+        // A.5 · deshacer mientras sea reversible.
+        action: j.bitacora_id && j.entidad ? {
+          label: 'Deshacer',
+          onClick: async () => {
+            const d = await fetch('/api/agentes/ejecutar', {
+              method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ bitacora_id: j.bitacora_id }),
+            })
+            const dj = await d.json()
+            if (!d.ok) toast.error(dj?.error ?? 'No se pudo deshacer.')
+            else toast.message('Deshecho.')
+          },
+        } : undefined,
+      })
+    } catch {
+      toast.error('No se pudo ejecutar.')
+    } finally { setHaciendo(null) }
   }
 
   return (
@@ -158,25 +202,44 @@ export function EquipoClient({ equipo, decisiones, alcanceNombre, esCadena }: {
 
         <div className="grid gap-3 sm:grid-cols-2">
           {encendidos.map((a) => (
-            <Link key={a.agente.id} href={a.href}
-              className="rounded-lg border bg-card p-4 hover:border-primary/40">
-              <div className="flex items-center gap-2">
-                <Icono nombre={a.agente.icono} className="size-4 text-muted-foreground" />
-                <span className="font-medium">{a.agente.nombre}</span>
-                <Badge variant="outline" className="text-[10px]">
-                  {NIVEL_TEXTO[a.nivel].t}
-                </Badge>
-                <span className="ml-auto text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {a.agente.alcance === 'cadena' ? 'cadena' : alcanceNombre}
-                </span>
-              </div>
-              <p className="mt-2 text-sm leading-snug">{a.frase}</p>
+            <div key={a.agente.id} className="rounded-lg border bg-card p-4">
+              <Link href={a.href} className="block hover:underline">
+                <div className="flex items-center gap-2">
+                  <Icono nombre={a.agente.icono} className="size-4 text-muted-foreground" />
+                  <span className="font-medium">{a.agente.nombre}</span>
+                  <Badge variant="outline" className="text-[10px]">
+                    {NIVEL_TEXTO[a.nivel].t}
+                  </Badge>
+                  <span className="ml-auto text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {a.agente.alcance === 'cadena' ? 'cadena' : alcanceNombre}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-snug">{a.frase}</p>
+              </Link>
+
+              {/* A · lo que puede hacer, según su nivel */}
+              {!!a.puedeHacer?.length && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {a.puedeHacer.map((ac) => (
+                    <Button key={ac.clave} size="sm" variant="outline"
+                      disabled={haciendo === `${a.agente.id}:${ac.clave}`}
+                      onClick={() => hacer(a.agente.id, ac.clave, a.agente.nombre)}
+                      className="h-7 gap-1 text-[11px]">
+                      {haciendo === `${a.agente.id}:${ac.clave}`
+                        ? <Loader2 className="size-3 animate-spin" />
+                        : null}
+                      {ac.nombre}
+                    </Button>
+                  ))}
+                </div>
+              )}
+
               <p className="mt-2 text-[11px] text-muted-foreground">
                 {a.marcador
                   ? `${a.marcador.propuestas} propuestas · ${a.marcador.aceptadas} aceptadas · ${a.marcador.acertadas} dieron el resultado calculado`
                   : 'Todavía sin antecedentes: no propuso nada que se haya decidido.'}
               </p>
-            </Link>
+            </div>
           ))}
         </div>
 

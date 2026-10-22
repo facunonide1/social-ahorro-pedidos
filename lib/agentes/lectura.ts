@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 
 import { ELENCO, elencoDe, type Agente, type Alcance, type Nivel } from './elenco'
+import { hayEjecutor } from './ejecutor'
 
 /**
  * QUÉ TIENE PARA DECIR HOY CADA AGENTE.
@@ -33,6 +34,13 @@ export interface LecturaDeAgente {
   href: string
   /** El marcador. Hoy, vacío. */
   marcador: { propuestas: number; aceptadas: number; acertadas: number } | null
+  /**
+   * Las acciones que tienen un ejecutor conectado y no están apagadas.
+   *
+   * Una acción declarada sin ejecutor NO se ofrece: un botón que no hace nada
+   * es peor que no tener botón.
+   */
+  puedeHacer: { clave: string; nombre: string; nivel: Nivel }[]
 }
 
 const n = (x: unknown) => Number(x ?? 0)
@@ -92,7 +100,12 @@ function leerUno(
   agente: Agente, d: Record<string, any>, nivel: Nivel,
   marcador: LecturaDeAgente['marcador'],
 ): LecturaDeAgente {
-  const base = { agente, nivel, marcador }
+  const base = {
+    agente, nivel, marcador,
+    puedeHacer: agente.acciones
+      .filter((a) => hayEjecutor(agente.id, a.clave) && nivel !== 'nunca')
+      .map((a) => ({ clave: a.clave, nombre: a.nombre, nivel })),
+  }
   const on = (frase: string, href: string): LecturaDeAgente => ({
     ...base, encendido: true, frase, motivoApagado: null, queLoEnciende: null, href,
   })

@@ -1,0 +1,44 @@
+-- 0201 · v0.99-ejecutar · BLOQUE A · sin DDL nuevo
+--
+-- ════════════════════════════════════════════════════════════════════════════
+-- QUE LOS AGENTES HAGAN
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- Este bloque no agrega tablas: todo lo que hacía falta estaba desde la v0.98
+-- (`agente_config`, `agente_bitacora`, `constitucion_acciones`). Lo que faltaba
+-- era el ejecutor, y vive en `lib/agentes/ejecutor.ts`.
+--
+-- Queda acá lo que hay que saber para leer esa base.
+--
+-- ── A.1 · NINGÚN EJECUTOR CONSTRUYE ALGO NUEVO ──────────────────────────────
+--
+-- Abasto escribe en `ordenes_compra` igual que la pantalla de compras; Reparto
+-- en `transferencias_sucursal` igual que la de transferencias. Si un agente
+-- creara su propia versión de una orden, en tres semanas habría dos órdenes de
+-- compra distintas y ninguna sería la buena.
+--
+-- ── A.3 · EL TOPE SIN DEFINIR NO ES INFINITO ────────────────────────────────
+--
+-- En la v0.98 era una advertencia al guardar la configuración. Ahora es el
+-- comportamiento: un agente en «hace y avisa» sin `limite_monto` degrada a
+-- «prepara» y lo dice. El tope es lo único que acota el daño de un ejecutor
+-- con un error de cálculo; sin tope, «hace y avisa» es «hace lo que sea».
+--
+-- Y si el tope existe pero el monto en juego lo pasa, también degrada.
+--
+-- ── A.4 · EL TECHO POR ACCIÓN NO DEPENDE DE LA CONFIGURACIÓN ────────────────
+--
+-- Si la acción no declara `hace_y_avisa` entre sus niveles, no llega ahí
+-- aunque alguien lo haya guardado en `agente_config`. Emitir una orden, pagar
+-- y mover stock tienen techo en «prepara».
+--
+-- ── EL DEFECTO QUE ENCONTRÓ LA VERIFICACIÓN ─────────────────────────────────
+--
+-- La primera versión dejaba que cada ejecutor declarara qué nivel había
+-- aplicado. Uno degradado a «prepara» informaba «hace y avisa»: la bitácora
+-- habría guardado un nivel que no fue el usado, y el medidor del bloque B lo
+-- habría leído como si el agente hubiera actuado solo.
+--
+-- Ahora el nivel informado lo fija `ejecutar()` y ningún ejecutor lo puede
+-- cambiar. Verificado en los seis casos: sugiere, sin tope, tope chico, tope
+-- suficiente, techo por acción, y nunca.
