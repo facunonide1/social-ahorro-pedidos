@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T06:19:57.792Z",
-  "commit": "b66bf48a181b92cc4479da8f77caa168df94d687",
-  "mensaje": "feat: importar débitos y liquidaciones",
+  "construido_at": "2026-10-22T08:03:18.308Z",
+  "commit": "cb4cb09a024a96ab417117ad6714aebe737b2b23",
+  "mensaje": "fix: la función de trigger del histórico no se llama por RPC",
   "rama": "main"
 }

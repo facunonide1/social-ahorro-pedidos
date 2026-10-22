@@ -1,0 +1,29 @@
+-- 0217 · La búsqueda del mostrador, movida a `mostrador_indice`.
+--
+-- Mismo contrato que la primera versión: lo que cambia es de dónde lee. Bajó
+-- de 4,1 s a ~2,0 s, que sigue siendo el borde del requisito — la versión que
+-- entra de verdad en los 2 s es la de 0218, que saca las dos piedras que
+-- quedaban (`convenio_normalizar` al vuelo y `stock_disponible_sucursal`).
+--
+-- El cuerpo final está en 0218: ésta quedó reemplazada por un
+-- `create or replace` y se deja como registro del paso intermedio, porque el
+-- orden de A.2 se escribió acá y no cambió después.
+--
+-- ── A.2 · EL ORDEN, QUE NO CAMBIÓ ───────────────────────────────────────────
+--
+-- Cada criterio aporta un número al puntaje, y **cada término es cero cuando
+-- el dato no está**, no un valor por defecto:
+--
+--   vence pronto     1000 − días×10   si vence en ≤60 días
+--   deja más margen  margen% × 4      sólo si NO pidieron marca y hay costo
+--   sobra            (meses−3) × 20   si hay más de 3 meses de cobertura
+--   en oferta        150              el descuento ya está dado
+--   se vende más     unidades/mes     el desempate
+--   parecido         similitud × 100  para que lo que más se parece no quede
+--                                     sepultado por un margen alto
+--
+-- Y dos cosas pasan por encima del puntaje, en el ORDER BY:
+--
+--   · **la marca pedida va primero** (A.3): el sistema sugiere, no reemplaza
+--     lo que el cliente pidió;
+--   · lo que hay antes de lo que no hay: ofrecer lo que no está es el bloque C.

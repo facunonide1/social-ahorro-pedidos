@@ -37,6 +37,18 @@ export async function GET(req: NextRequest) {
     }>()
     if (error) throw new Error(error.message)
 
+    // v1.2 · El índice del mostrador. Se rearma de noche porque el catálogo
+    // cambia cuando entra un maestro, no cuando alguien busca — y la búsqueda
+    // tiene que contestar en menos de dos segundos con alguien esperando.
+    let mostrador: unknown = null
+    try {
+      const { data: mi, error: em } = await adm.rpc('mostrador_indice_refrescar')
+      if (em) throw new Error(em.message)
+      mostrador = mi
+    } catch (e: any) {
+      mostrador = { error: e?.message ?? 'error' }
+    }
+
     // El resumen de agentes. Si falla, no se tumba el medidor: son dos
     // trabajos distintos y uno roto no justifica perder el otro.
     let resumen: unknown = null
@@ -64,7 +76,7 @@ export async function GET(req: NextRequest) {
       clave: `medidor:${new Date().toISOString().slice(0, 10)}`,
     })
 
-    return NextResponse.json({ ok: true, ...data, resumen, resumen_error: resumenError })
+    return NextResponse.json({ ok: true, ...data, resumen, resumen_error: resumenError, mostrador })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message ?? 'error' }, { status: 500 })
   }

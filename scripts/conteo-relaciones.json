@@ -18,7 +18,7 @@
   "aprobaciones": 0,
   "arqueos_caja": 48,
   "auditoria_logs": 0,
-  "auth_trigger_errors": 253,
+  "auth_trigger_errors": 270,
   "automatizaciones": 0,
   "avisos_al_cliente": 13,
   "avisos_faltante": 10,
@@ -26,7 +26,7 @@
   "b2b_pedidos_recurrentes": 0,
   "baja_con_stock_para_decidir": 203,
   "bloqueos_publicacion": 40617,
-  "bloqueos_resumen": 6,
+  "bloqueos_resumen": -1,
   "caja_diferencias": 0,
   "caja_general": 0,
   "caja_general_movimientos": 0,
@@ -79,7 +79,7 @@
   "config_import_stock": 0,
   "constitucion_acciones": 4,
   "control_zona_items": 0,
-  "controles_zona": 72,
+  "controles_zona": 76,
   "convenio_cierres_proximos": 0,
   "convenio_cobertura": 0,
   "convenio_comprobante_items": 0,
@@ -165,6 +165,7 @@
   "mensaje_reacciones": 0,
   "mensajes": 0,
   "mostrador_destacados": 0,
+  "mostrador_indice": 48217,
   "movimientos_bancarios": 0,
   "movimientos_caja": 0,
   "movimientos_stock": 0,
@@ -274,7 +275,7 @@
   "supervisores_metricas_diarias": 0,
   "supervisores_tareas": 0,
   "tabla_modulo": 185,
-  "tareas": 272,
+  "tareas": 276,
   "tareas_adjuntos": 0,
   "tareas_comentarios": 0,
   "tareas_historial": 193,
@@ -308,5 +309,7 @@
   "zz_deprecated_matcheos_aprendidos_compras": 0,
   "zz_deprecated_precios_historico": 0
  },
- "desconocidas": []
+ "desconocidas": [
+  "bloqueos_resumen"
+ ]
 }

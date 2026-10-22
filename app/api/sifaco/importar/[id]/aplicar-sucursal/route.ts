@@ -115,5 +115,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const { error: eRes } = await adm.rpc('agentes_resumen_refrescar')
   if (eRes) resumen = `El maestro entró, pero los números de los agentes no se recalcularon (${eRes.message}). Se recalculan solos mañana a las 5.`
 
-  return NextResponse.json({ ok: true, resultado: data, aviso_agentes: resumen })
+  // v1.2 · Y el índice del mostrador: un maestro nuevo cambia precios y
+  // nombres de 48.000 productos. Si no se rearma acá, el mostrador busca
+  // sobre el catálogo de ayer hasta la madrugada.
+  let mostrador: string | null = null
+  const { error: eMos } = await adm.rpc('mostrador_indice_refrescar')
+  if (eMos) mostrador = `El índice del mostrador no se rearmó (${eMos.message}). Hasta que se rearme, la búsqueda del mostrador usa los precios anteriores.`
+
+  return NextResponse.json({ ok: true, resultado: data, aviso_agentes: resumen, aviso_mostrador: mostrador })
 }
