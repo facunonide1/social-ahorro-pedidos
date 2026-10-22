@@ -1,0 +1,33 @@
+-- 0197 · v0.97-caja · BLOQUE D · aplicada vía MCP
+--
+-- TRANSFERENCIAS COMO SON DE VERDAD.
+--
+-- D.1 · El stock se mueve EN SIFACO. Facundo lo aclaró y el sistema ya se
+-- comportaba así: `transferencias_sucursal` no tiene ni un trigger que escriba
+-- stock. Lo que faltaba era DECIRLO — una tabla que se llama «transferencias» y
+-- tiene cantidades invita a suponer que mueve algo, y la pantalla llegó a decir
+-- «sale (descuenta origen) → se recibe (suma destino)», que era falso.
+--
+-- Si NORA no mueve el stock, la cantidad recibida no se puede dar por cierta
+-- sola: tiene que venir de la foto de la pantalla de SIFACO de lo que entró.
+--
+-- D.2 y D.3 · El estado `solicitada` y `solicitado_por` ya existían: el pedido
+-- estaba. Lo que faltaba es de dónde salió, y eso cambia cómo se lee una fila:
+-- `origen_pedido` distingue la que pidió la sucursal (alguien necesita algo) de
+-- la que propuso NORA (una sugerencia sobre 5.595 productos) de la que es el
+-- reparto de una recepción.
+--
+-- D.4 · `foto_creacion`, `foto_salida` y `foto_recepcion` ya estaban: son las
+-- tres de la regla de oro 2. Lo que cambia es QUÉ son las dos últimas — la foto
+-- de la PANTALLA DE SIFACO de lo que sale y de lo que entra, no de la
+-- mercadería. Es lo que permite comparar: el papel de los dos lados.
+--
+-- D.5 · `transferencias_diferencias`: lo que figura como salida y no llegó, con
+-- la plata y si falta alguna de las dos fotos. `diferencia_detectada` era un
+-- booleano y no alcanzaba — hay que poder decir CUÁNTO y cerrarla con un
+-- motivo. Queda abierta hasta que alguien lo escriba: que falte no es una
+-- acusación, puede ser un error de conteo, un bulto que quedó, o una carga mal
+-- hecha en SIFACO.
+--
+-- D.6 · `recepcion_id`: la transferencia que nace de una recepción. Entra todo
+-- a un local y se reparte, que según Facundo pasa seguido.

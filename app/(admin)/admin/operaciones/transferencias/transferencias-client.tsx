@@ -19,6 +19,10 @@ export type TransferRow = {
   id: string; estado: string; origen: string; destino: string; nItems: number
   fecha_solicitud: string; fecha_envio: string | null; fecha_recepcion: string | null
   diferencia_detectada: boolean; horas_transito: number | null
+  /** De dónde salió: la pidió la sucursal, la propuso NORA, o es reparto de una recepción. */
+  origen_pedido: string | null
+  /** Las dos fotos de pantalla de SIFACO: la de lo que sale y la de lo que entra. */
+  tiene_fotos: boolean
 }
 type Suc = { id: string; nombre: string }
 type Linea = { producto_id: string; nombre: string; sku: string | null; cantidad: string; ubicacion: 'gondola' | 'deposito' }
@@ -42,9 +46,8 @@ export async function subirFoto(bucket: string, file: File, prefix: string): Pro
   return path
 }
 
-export function TransferenciasClient({ rows, sucursales, sucursalActiva, sinRecibir }: {
-  rows: TransferRow[]; sucursales: Suc[]; sucursalActiva: string | null; sinRecibir: number
-}) {
+export function TransferenciasClient({ rows, sucursales, sucursalActiva, sinRecibir, diferencias}: {
+  rows: TransferRow[]; sucursales: Suc[]; sucursalActiva: string | null; sinRecibir: number; diferencias: any[]}) {
   const [crear, setCrear] = useState(false)
   return (
     <div className="space-y-4">
@@ -53,6 +56,53 @@ export function TransferenciasClient({ rows, sucursales, sucursalActiva, sinReci
           <AlertTriangle className="size-4 shrink-0" /> <b>{sinRecibir}</b> transferencia(s) en tránsito sin recibir hace más de 48hs. Revisá que hayan llegado.
         </div>
       )}
+      {/* ── D.1 · QUÉ HACE NORA ACÁ, Y QUÉ NO ──────────────────────────── */}
+      <div className="rounded-lg border bg-card p-3 text-xs leading-snug text-muted-foreground">
+        <b className="text-foreground">El stock se mueve en SIFACO.</b> Acá queda el pedido, el
+        seguimiento y las dos fotos de pantalla —la de lo que sale y la de lo que entra—, que son las
+        que permiten comparar los dos lados. NORA no descuenta ni suma nada: si lo hiciera, el stock
+        de NORA y el de SIFACO dirían cosas distintas sobre la misma mercadería.
+      </div>
+
+      {/* ── D.5 · LAS DIFERENCIAS, PRIMERO ─────────────────────────────── */}
+      {diferencias.length > 0 && (
+        <div className="space-y-2 rounded-lg border border-rose-500/40 bg-rose-500/5 p-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <AlertTriangle className="size-4 text-rose-600" />
+            {diferencias.length} transferencia(s) con diferencia sin explicar
+          </div>
+          <p className="text-xs leading-snug text-muted-foreground">
+            Figura como salida y no llegó. Que falte no es una acusación: puede ser un error de
+            conteo, un bulto que quedó, o un producto que se cargó mal en SIFACO. Queda abierta hasta
+            que alguien escriba el motivo.
+          </p>
+          <div className="space-y-1">
+            {diferencias.slice(0, 10).map((d: any) => (
+              <Link key={d.id} href={`/admin/operaciones/transferencias/${d.id}`}
+                className="flex flex-wrap items-center gap-2 rounded border bg-background p-2 text-xs hover:border-primary/40">
+                <span className="font-medium">{d.origen_nombre} → {d.destino_nombre}</span>
+                <span className="text-muted-foreground">
+                  salieron {Number(d.enviadas ?? 0)} · llegaron {Number(d.recibidas ?? 0)} ·{' '}
+                  <b className="text-rose-600">faltan {Number(d.faltan ?? 0)}</b>
+                  {d.plata ? <> · ${Number(d.plata).toLocaleString('es-AR')}</> : null}
+                </span>
+                {!d.tiene_foto_de_salida && (
+                  <Badge variant="outline" className="text-[10px]">sin foto de salida</Badge>
+                )}
+                {!d.tiene_foto_de_entrada && (
+                  <Badge variant="outline" className="text-[10px]">sin foto de entrada</Badge>
+                )}
+              </Link>
+            ))}
+          </div>
+          {diferencias.length > 10 && (
+            <p className="text-[11px] text-muted-foreground">
+              y {diferencias.length - 10} más.
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">{rows.length} transferencias</div>
         <Button onClick={() => setCrear(true)}><Plus className="size-4" /> Nueva transferencia</Button>
@@ -66,7 +116,12 @@ export function TransferenciasClient({ rows, sucursales, sucursalActiva, sinReci
             <Link key={t.id} href={`/admin/operaciones/transferencias/${t.id}`} className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 hover:border-primary/40">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 text-sm font-medium"><span>{t.origen}</span><ArrowRight className="size-3.5 text-muted-foreground" /><span>{t.destino}</span></div>
-                <div className="mt-0.5 text-xs text-muted-foreground">{t.nItems} producto(s) · creada {new Date(t.fecha_solicitud).toLocaleDateString('es-AR')}</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  {t.nItems} producto(s) · creada {new Date(t.fecha_solicitud).toLocaleDateString('es-AR')}
+                  {t.origen_pedido === 'pidio_la_sucursal' && <> · la pidió {t.destino}</>}
+                  {t.origen_pedido === 'propuso_nora' && <> · la propuso NORA</>}
+                  {t.origen_pedido === 'reparto_de_recepcion' && <> · reparto de una recepción</>}
+                </div>
               </div>
               {t.diferencia_detectada && <Badge variant="outline" className="border-rose-500/40 text-[10px] text-rose-600">con diferencia</Badge>}
               {t.estado === 'en_transito' && t.horas_transito != null && t.horas_transito > 48 && <Clock className="size-4 text-amber-600" />}
