@@ -102,3 +102,50 @@ export async function problemasDeCanal(adm: Adm, canal: string) {
   if (error) { console.error(`[canales] problemas ${canal}: ${error.message}`); return null }
   return (data ?? []) as { problema: string; casos: number }[]
 }
+
+/**
+ * B · LOS ERRORES DEL CATÁLOGO.
+ *
+ * ── POR QUÉ NO HAY UNA LISTA PROPIA ────────────────────────────────────────
+ *
+ * Porque los seis errores del bloque B son exactamente lo que la v1.3
+ * construyó: un hecho, con plata al lado, ordenado por plata, con tope para
+ * que no sea ruido, con descarte que le enseña al detector y con marcador.
+ *
+ * Entraron al catálogo de `detectores` en la familia `canal`. Dos listas de
+ * errores del catálogo serían dos lugares donde mirar lo mismo, y la que esté
+ * desactualizada va a ser siempre la que menos se mira.
+ */
+export type ErrorDeCanal = {
+  id: string; detector: string; nombre_detector: string; familia: string
+  clave: string; sucursal_id: string | null; sucursal: string | null
+  producto_id: string | null
+  hecho: string; plata: number | null; como_se_calculo: string | null
+  que_no_dice: string; estado: string
+  visto_primero: string; visto_ultimo: string; publicado_at: string | null
+  veces_reaparecio: number; aviso_href: string | null
+}
+
+export function erroresDeCanal(adm: Adm, opts: {
+  soloPublicados?: boolean; limite?: number
+} = {}) {
+  return rpc<ErrorDeCanal>(adm, 'deteccion_hallazgos', {
+    p_familia: 'canal',
+    p_sucursal: null,
+    p_solo_publicados: opts.soloPublicados ?? false,
+    p_limite: opts.limite ?? 300,
+  })
+}
+
+export async function conflictoLegal(adm: Adm) {
+  const { data, error } = await adm.rpc('canal_campos_legales_en_conflicto')
+  if (error) { console.error(`[canales] conflicto legal: ${error.message}`); return null }
+  return data as {
+    en_conflicto: number
+    publicados_si_se_mira_el_booleano: number
+    publicados_si_se_mira_la_condicion: number
+    publicados_con_el_criterio_conservador: number
+    que_criterio_se_usa: string
+    por_que_no_se_arregla: string
+  } | null
+}

@@ -81,9 +81,9 @@ async function main() {
   const { data: probs } = await adm.from('canal_problemas')
     .select('problema, casos').eq('canal_id', 'woo').limit(50)
   const porProblema = Object.fromEntries(((probs ?? []) as any[]).map((p) => [p.problema, p.casos]))
-  const legales = Number(porProblema['no_deberia_estar_publicado'] ?? 0)
-  legales > 0
-    ? nd(`${legales} publicados que no deberían estarlo (el enunciado decía 11)`)
+  const legalesEnLaVista = Number(porProblema['no_deberia_estar_publicado'] ?? 0)
+  legalesEnLaVista > 0
+    ? nd(`${legalesEnLaVista} publicados que no deberían estarlo (el enunciado decía 11)`)
     : ok('ninguno publicado que no deba estarlo')
 
   // La contradicción entre los dos campos legales, que decide el número.
@@ -136,6 +136,150 @@ async function main() {
       conMotivo.length > 0
         ? ok(`${conMotivo.length} canales dicen por qué no se puede saber si está publicado ahí`)
         : nd('ningún canal necesitó declarar que no se puede saber')
+    }
+  }
+
+  // ── B · LOS ERRORES DEL CATÁLOGO ─────────────────────────────────────────
+  console.log('\n── B · los errores del catálogo ──')
+
+  const { data: corrida, error: eCorr } = await adm.rpc('deteccion_correr')
+  if (eCorr) { mal(`la corrida falló: ${eCorr.message}`) }
+  const c = (corrida ?? {}) as any
+
+  const { data: errs, error: eErr } = await adm.rpc('deteccion_hallazgos',
+    { p_familia: 'canal', p_sucursal: null, p_solo_publicados: false, p_limite: 500 })
+  if (eErr) { mal(`no se pudieron leer los errores: ${eErr.message}`); process.exit(1) }
+  const errores = (errs ?? []) as any[]
+
+  const porDetector = errores.reduce<Record<string, number>>((a, e) => {
+    a[e.detector] = (a[e.detector] ?? 0) + 1; return a
+  }, {})
+  for (const [d, n] of Object.entries(porDetector)) nd(`${d}: ${n}`)
+
+  // ── B.1 · LO LEGAL, ARRIBA Y SIN EXCEPCIÓN ──────────────────────────────
+  const legales = errores.filter((e) => e.detector === 'canal_legal_publicado')
+  const legalesAbajo = legales.filter((e) => e.publicado_at === null)
+  if (!legales.length) {
+    ok('ninguno de condición legal publicado en un canal abierto')
+  } else if (legalesAbajo.length) {
+    mal(`${legalesAbajo.length} de los ${legales.length} legales quedaron en la lista larga: ` +
+        'la regla de oro 9 está por encima del presupuesto de interrupción')
+  } else {
+    ok(`los ${legales.length} de condición legal están todos arriba, sin tope`)
+  }
+  if (legales.some((e) => e.plata !== null)) {
+    mal('un hallazgo legal trae plata estimada: una sanción no tiene número')
+  } else if (legales.length) {
+    ok('ninguno trae plata: una sanción no tiene número y poner uno inventado sería peor')
+  }
+
+  // Y que la excepción la use UNO solo: si la usan varios, el presupuesto
+  // de interrupción deja de existir.
+  const { data: dets } = await adm.from('detectores')
+    .select('clave, siempre_arriba').eq('siempre_arriba', true).eq('activo', true).limit(20)
+  const conExcepcion = (dets ?? []) as any[]
+  conExcepcion.length === 1
+    ? ok(`un solo detector se saltea el presupuesto: ${conExcepcion[0].clave}`)
+    : mal(`${conExcepcion.length} detectores se saltean el presupuesto`)
+
+  if (Number(c.publicados_por_encima_del_presupuesto_porque_son_legales ?? -1) < 0) {
+    mal('la corrida no informa cuántos se publicaron por encima del presupuesto')
+  } else {
+    ok(`la corrida informa aparte los ${c.publicados_por_encima_del_presupuesto_porque_son_legales} ` +
+       'que subieron por encima del presupuesto')
+  }
+
+  // ── TODO HALLAZGO DICE LO QUE NO DICE, Y DE DÓNDE SALE LA PLATA ─────────
+  let sinQueNoDice = 0, sinProcedencia = 0
+  for (const e of errores) {
+    if (!e.que_no_dice?.trim()) sinQueNoDice++
+    if (e.plata !== null && !e.como_se_calculo?.trim()) sinProcedencia++
+    if (e.plata === null && !/no se puede costear|no se estima plata/i.test(e.como_se_calculo ?? '')) {
+      mal(`${e.clave} no tiene plata y no dice si falta el dato o si es cero`)
+    }
+  }
+  sinQueNoDice ? mal(`${sinQueNoDice} errores no dicen lo que NO dicen`)
+               : ok(`los ${errores.length} errores declaran lo que NO dicen`)
+  sinProcedencia ? mal(`${sinProcedencia} traen plata sin procedencia`)
+                 : ok('todo error con plata dice de dónde sale')
+
+  // ── B.4 · «NADIE INFORMA» NO ES «FALTA HISTORIA» ────────────────────────
+  const { data: est2 } = await adm.rpc('deteccion_estado', { p_detector: 'canal_rechazado' })
+  const rech = ((est2 ?? []) as any[])[0]
+  if (!rech) {
+    mal('el detector de rechazos no está en el catálogo')
+  } else if (rech.puede_correr) {
+    nd(`los rechazos ya se pueden leer: ${rech.lo_que_hay}`)
+  } else if (!/informando/i.test(rech.por_que_no ?? '')) {
+    mal('el detector de rechazos no distingue «nadie informa» de «falta historia»')
+  } else {
+    ok('el de rechazos dice que no corre porque nadie informa, no porque falte historia')
+  }
+
+  // ── B.7 · RESOLVER GENERA TAREA DE CONTROL ──────────────────────────────
+  console.log('\n── B.7 · resolver genera tarea de control ──')
+  const { data: sinSesion } = await adm.rpc('canal_error_resolver',
+    { p_anomalia: errores[0]?.id ?? null, p_que_se_hizo: 'prueba' })
+  const ss = sinSesion as any
+  ss?.ok === false
+    ? ok('el cliente de servicio no puede cerrar un error: un cierre sin dueño no sirve')
+    : mal('el cliente de servicio cerró un error sin dueño')
+
+  if (errores[0]) {
+    const email = 'prueba.canales.gerente@social-ahorro.test'
+    const pass = 'Prueba-can-ger-12!'
+    const { data: previos } = await adm.auth.admin.listUsers({ page: 1, perPage: 200 })
+    for (const u of previos?.users ?? []) if (u.email === email) await adm.auth.admin.deleteUser(u.id)
+    const { data: nuevo } = await adm.auth.admin.createUser({ email, password: pass, email_confirm: true })
+    if (!nuevo?.user) {
+      mal('no se pudo crear el usuario de prueba')
+    } else {
+      await adm.from('users_admin').upsert(
+        { id: nuevo.user.id, rol: 'gerente', activo: true }, { onConflict: 'id' })
+      const suyo = createClient(env('NEXT_PUBLIC_SUPABASE_URL'), env('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+        { auth: { persistSession: false } })
+      const { error: eLogin } = await suyo.auth.signInWithPassword({ email, password: pass })
+      if (eLogin) {
+        mal(`el gerente de prueba no pudo entrar: ${eLogin.message}`)
+      } else {
+        // Sin decir qué se hizo, no cierra.
+        const { data: vacio } = await suyo.rpc('canal_error_resolver',
+          { p_anomalia: errores[0].id, p_que_se_hizo: '   ' })
+        const v = vacio as any
+        v?.ok === false && /qué se hizo|que se hizo/.test(String(v?.por_que ?? ''))
+          ? ok('no cierra sin decir qué se hizo')
+          : mal('cerró un error sin decir qué se hizo')
+
+        // Y con el motivo, cierra y genera la tarea.
+        const { data: cerrado } = await suyo.rpc('canal_error_resolver',
+          { p_anomalia: errores[0].id, p_que_se_hizo: 'PRUEBA · lo despubliqué en el canal' })
+        const cc = cerrado as any
+        if (cc?.ok !== true) {
+          mal(`no pudo cerrar: ${cc?.por_que}`)
+        } else if (!cc.tarea_de_control) {
+          mal('cerró y no generó tarea de control (regla de oro 5)')
+        } else {
+          ok('cierra y genera la tarea de control, con qué se hizo adentro')
+          const { data: t } = await adm.from('tareas')
+            .select('titulo, descripcion, fecha_vencimiento, responsable_id, estado')
+            .eq('id', cc.tarea_de_control).maybeSingle()
+          if (!t) mal('la tarea de control no existe')
+          else {
+            /despubliqu/i.test(String((t as any).descripcion ?? ''))
+              ? ok('la tarea lleva adentro qué dijo que hizo')
+              : mal('la tarea no dice qué se hizo')
+            nd(`la tarea vence el ${(t as any).fecha_vencimiento} · estado ${(t as any).estado}`)
+          }
+          // Se deshace: era una prueba, no una decisión de nadie.
+          await adm.from('tareas').delete().eq('id', cc.tarea_de_control)
+          await adm.from('anomalias').update({
+            estado: 'abierta', que_se_hizo: null, resuelta_por: null, resuelta_at: null,
+            cerrada_at: null, cerrada_por: null,
+          }).eq('id', errores[0].id)
+        }
+      }
+      await adm.from('users_admin').delete().eq('id', nuevo.user.id)
+      await adm.auth.admin.deleteUser(nuevo.user.id)
     }
   }
 

@@ -3,11 +3,12 @@ import { createClient } from '@/lib/supabase/server'
 import { paginar } from '@/lib/supabase/paginar'
 import { PageHeader } from '@/components/shared/page-header'
 
-import { estadoDeCanales } from '@/lib/canales/lectura'
+import { estadoDeCanales, erroresDeCanal, conflictoLegal } from '@/lib/canales/lectura'
 import { createAdminClient } from '@/lib/supabase/server'
 
 import { CanalesClient } from './canales-client'
 import { CanalesEstado } from './canales-estado'
+import { CanalesErrores } from './canales-errores'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Canales de venta' }
@@ -26,7 +27,14 @@ export default async function CanalesPage() {
   // v1.4 · A.5 y A.6 · el estado de los cinco canales. Va con el cliente de
   // servicio porque `canales_estado()` es de servicio: la pantalla ya pasó por
   // `requireAdminHubAccess`.
-  const estados = await estadoDeCanales(createAdminClient())
+  const adm = createAdminClient()
+  const [estados, errores, conflicto] = await Promise.all([
+    estadoDeCanales(adm),
+    // B · los seis errores entraron al catálogo de detectores de la v1.3, en la
+    // familia `canal`. Se leen de ahí y no de una lista propia.
+    erroresDeCanal(adm, { soloPublicados: false, limite: 300 }),
+    conflictoLegal(adm),
+  ])
 
   const [{ data: canales }, { data: problemas }, { count: publicados }, { count: candidatos }] =
     await Promise.all([
@@ -63,6 +71,7 @@ export default async function CanalesPage() {
       />
       <div className="space-y-6 p-4 md:p-6">
         <CanalesEstado estados={estados} />
+        <CanalesErrores errores={errores} conflicto={conflicto} />
         <CanalesClient
           canales={(canales ?? []) as any[]}
           problemas={(problemas ?? []) as any[]}
