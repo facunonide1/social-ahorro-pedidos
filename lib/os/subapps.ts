@@ -288,6 +288,7 @@ export const SUBAPPS: SubAppManifest[] = [
     permisosRequeridos: ['convenios'],
     modulos: [
       { nombre: 'Tablero', ruta: '/admin/convenios' },
+      { nombre: 'Presentaciones', ruta: '/admin/convenios/presentaciones' },
       { nombre: 'Padrón', ruta: '/admin/convenios/padron' },
     ],
     // Construido y sin un solo dato real. Se marca en el menú para que no se
@@ -298,6 +299,8 @@ export const SUBAPPS: SubAppManifest[] = [
     quickActions: [
       { id: 'convenio-nuevo', nombre: 'Cargar convenio', icono: 'FileSignature',
         destino: '/admin/convenios/padron', modulo: 'convenios', accion: 'crear', primary: true },
+      { id: 'presentacion-nueva', nombre: 'Armar presentación', icono: 'Send',
+        destino: '/admin/convenios/presentaciones', modulo: 'convenios', accion: 'crear', primary: true },
     ],
   },
   {
