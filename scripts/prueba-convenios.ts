@@ -421,9 +421,116 @@ async function main() {
     ? ok(`convenios_resumen contesta (hoy: ${padronHoy} convenios en el padrón)`)
     : mal('convenios_resumen no contestó')
 
+  // ── F.2 · LOS PERMISOS, CON SESIONES DE VERDAD ──────────────────────────
+  //
+  // Con RLS, «no puede» NO da error: devuelve cero filas. Por eso cada cosa
+  // que no se tiene que ver se compara contra lo que ve `service_role`. Sin
+  // esa comparación, una tabla vacía se lee igual que una tabla protegida.
+  console.log('\n── F.2 · los permisos ──')
+  await probarPermisos(conv.id, suc.id, otra.id)
+
   await limpiar()
   console.log(fallas === 0 ? '\nTODO BIEN' : `\n${fallas} COSA(S) QUE NO ANDAN`)
   if (fallas > 0) process.exitCode = 1
+}
+
+/**
+ * F.2 · Que un encargado vea lo de su sucursal y nada mas, y que un rol sin el
+ * modulo no vea nada. Con usuarios de prueba que se borran al terminar.
+ */
+async function probarPermisos(convenioId: string, miSuc: string, otraSuc: string) {
+  const URL = env('NEXT_PUBLIC_SUPABASE_URL')
+  const ANON = env('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+  const creados: string[] = []
+
+  // Un debito en cada sucursal, para poder distinguir «no lo ve» de «no hay».
+  const ids: string[] = []
+  for (const [i, sc] of [miSuc, otraSuc].entries()) {
+    const { data } = await adm.from('convenio_debitos').insert({
+      convenio_id: convenioId, sucursal_id: sc, motivo: 'fuera_de_plazo',
+      importe: 1000 + i, fecha_liquidacion: hoy(), notas: MARCA,
+    }).select('id').maybeSingle()
+    if (data) ids.push(data.id)
+  }
+
+  try {
+    for (const [rol, deberiaVer] of [
+      ['encargado_sucursal', true],
+      ['repartidor', false],
+    ] as const) {
+      const email = `prueba.conv.${rol}@social-ahorro.test`
+      const pass = `Prueba-conv-${rol}-99!`
+
+      const { data: previos } = await adm.auth.admin.listUsers({ page: 1, perPage: 200 })
+      for (const u of previos?.users ?? []) if (u.email === email) await adm.auth.admin.deleteUser(u.id)
+
+      const { data: nuevo } = await adm.auth.admin.createUser({
+        email, password: pass, email_confirm: true,
+      })
+      if (!nuevo?.user) { mal(`no se pudo crear el usuario de prueba ${rol}`); continue }
+      creados.push(nuevo.user.id)
+      await adm.from('users_admin').upsert({
+        id: nuevo.user.id, rol, sucursal_id: miSuc, activo: true,
+      }, { onConflict: 'id' })
+
+      const suyo = createClient(URL, ANON, { auth: { persistSession: false } })
+      const { error: eLogin } = await suyo.auth.signInWithPassword({ email, password: pass })
+      if (eLogin) { mal(`${rol} no pudo entrar: ${eLogin.message}`); continue }
+
+      const { data: ve } = await suyo.from('convenio_debitos')
+        .select('id, sucursal_id').in('id', ids)
+      const vistos = (ve ?? []) as any[]
+
+      if (!deberiaVer) {
+        vistos.length === 0
+          ? ok(`${rol} no ve ningún débito: hay ${ids.length} y recibe 0 (no tiene el módulo)`)
+          : mal(`${rol} ve ${vistos.length} débito(s) y no tiene el módulo convenios`)
+        // Y tampoco el padrón.
+        const { data: vePadron } = await suyo.from('convenios').select('id').eq('id', convenioId)
+        ;(vePadron ?? []).length === 0
+          ? ok(`${rol} tampoco ve el padrón`)
+          : mal(`${rol} ve el padrón de convenios`)
+        continue
+      }
+
+      const propios = vistos.filter((d) => d.sucursal_id === miSuc)
+      const ajenos = vistos.filter((d) => d.sucursal_id !== miSuc)
+      propios.length === 1 && ajenos.length === 0
+        ? ok(`${rol} ve el débito de su sucursal y NO el de la otra (hay 2, recibe 1)`)
+        : mal(`${rol} ve ${propios.length} propio(s) y ${ajenos.length} ajeno(s)`)
+
+      // Ve el padrón: las obras sociales son de la empresa.
+      const { data: vePadron } = await suyo.from('convenios').select('id').eq('id', convenioId)
+      ;(vePadron ?? []).length === 1
+        ? ok(`${rol} ve el padrón: las obras sociales son de la empresa, no de una sucursal`)
+        : mal(`${rol} no ve el padrón y lo necesita para armar una presentación`)
+
+      // Y NO puede armar una presentación en otra sucursal.
+      const { error: eAjena } = await suyo.from('convenio_presentaciones').insert({
+        convenio_id: convenioId, sucursal_id: otraSuc,
+        periodo_desde: hace(10), periodo_hasta: hoy(),
+      })
+      eAjena
+        ? ok(`${rol} no puede armar una presentación de otra sucursal`)
+        : mal(`${rol} armó una presentación en una sucursal que no es la suya`)
+
+      // Un débito NO se puede borrar, ni siquiera el propio.
+      const { error: eBorrar, count } = await suyo.from('convenio_debitos')
+        .delete({ count: 'exact' }).eq('id', propios[0]?.id ?? ids[0])
+      const { data: sigue } = await adm.from('convenio_debitos')
+        .select('id').eq('id', propios[0]?.id ?? ids[0]).maybeSingle()
+      sigue
+        ? ok(`${rol} no puede borrar un débito: se cierran como perdidos, no se tapan`)
+        : mal(`${rol} borró un débito (error: ${eBorrar?.message ?? 'ninguno'}, filas: ${count})`)
+    }
+  } finally {
+    for (const id of creados) {
+      await adm.from('users_admin').delete().eq('id', id)
+      await adm.auth.admin.deleteUser(id)
+    }
+    if (ids.length) await adm.from('convenio_debitos').delete().in('id', ids)
+    console.log('     --    usuarios de prueba borrados')
+  }
 }
 
 /** Todo lo de prueba se borra, pase lo que pase. */

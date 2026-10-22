@@ -3,10 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, Loader2, CalendarClock, AlertTriangle } from 'lucide-react'
+import { Plus, Loader2, CalendarClock, AlertTriangle, FileDown } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { formatARS } from '@/lib/utils/format'
+import { exportExcel } from '@/lib/utils/export-excel'
 import { type PresentacionFila, ESTADO_LABEL, estadoDeTroqueles } from '@/lib/convenios/presentaciones'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -112,11 +113,29 @@ export function PresentacionesClient({
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Presentaciones
           </h2>
-          {puedeCrear && (
-            <Button onClick={() => setAbierto(true)}>
-              <Plus className="size-4" /> Armar una presentación
+          <div className="flex gap-2">
+            {/* F.3 · con todo lo que hace falta para reclamar. Sin paciente ni
+                médico: lo que se reclama es un comprobante. */}
+            <Button size="sm" variant="outline" disabled={!presentaciones.length}
+              onClick={() => exportExcel('presentaciones-obras-sociales', presentaciones.map((p) => ({
+                'Obra social': p.convenio, Sucursal: p.sucursal,
+                Desde: p.periodo_desde, Hasta: p.periodo_hasta,
+                Estado: ESTADO_LABEL[p.estado],
+                'Enviada el': p.fecha_envio ?? '',
+                Comprobantes: p.cantidad_comprobantes ?? '',
+                Total: p.total_declarado ?? '',
+                'Quedaron afuera': p.excluidos,
+                'Troqueles mandados': p.troqueles ? (p.troqueles.enviados ? 'sí' : 'no') : 'sin registro',
+                'Acuse guardado': p.troqueles ? (p.troqueles.con_acuse ? 'sí' : 'no') : 'sin registro',
+              })), { sheet: 'Presentaciones' })}>
+              <FileDown className="size-4" /> Exportar .xlsx
             </Button>
-          )}
+            {puedeCrear && (
+              <Button onClick={() => setAbierto(true)}>
+                <Plus className="size-4" /> Armar una presentación
+              </Button>
+            )}
+          </div>
         </div>
 
         {!presentaciones.length ? (

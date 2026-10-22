@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T06:10:57.868Z",
-  "commit": "ce2ea8c8e9d4f883c32c01227cc5043f58ed501d",
-  "mensaje": "feat: el agente Convenio",
+  "construido_at": "2026-10-22T06:19:57.792Z",
+  "commit": "b66bf48a181b92cc4479da8f77caa168df94d687",
+  "mensaje": "feat: importar débitos y liquidaciones",
   "rama": "main"
 }

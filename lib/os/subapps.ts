@@ -290,6 +290,9 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Tablero', ruta: '/admin/convenios' },
       { nombre: 'Presentaciones', ruta: '/admin/convenios/presentaciones' },
       { nombre: 'Débitos', ruta: '/admin/convenios/debitos' },
+      // F.1 · se usa de pie, con el sobre en la mano: va en el menú y no
+      // escondida adentro de la presentación.
+      { nombre: 'Troqueles', ruta: '/admin/convenios/troqueles' },
       { nombre: 'Liquidaciones', ruta: '/admin/convenios/liquidaciones' },
       { nombre: 'Padrón', ruta: '/admin/convenios/padron' },
     ],
@@ -305,6 +308,8 @@ export const SUBAPPS: SubAppManifest[] = [
         destino: '/admin/convenios/presentaciones', modulo: 'convenios', accion: 'crear', primary: true },
       { id: 'liquidacion-foto', nombre: 'Liquidación por foto', icono: 'Camera',
         destino: '/admin/convenios/liquidaciones/foto', modulo: 'convenios', accion: 'crear', primary: true },
+      { id: 'troqueles-mandar', nombre: 'Mandé los troqueles', icono: 'Ticket',
+        destino: '/admin/convenios/troqueles', modulo: 'convenios', accion: 'crear', primary: true },
     ],
   },
   {

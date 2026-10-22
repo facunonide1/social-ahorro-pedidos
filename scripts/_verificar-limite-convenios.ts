@@ -1,0 +1,74 @@
+/**
+ * LA REGLA DE ORO 9, VERIFICADA EN EL BUILD.
+ *
+ * ── POR QUÉ ESTO EXISTE ─────────────────────────────────────────────────────
+ *
+ * NORA no registra al paciente, ni al médico, ni el contenido de la receta.
+ * Es la constitución del sistema, no una preferencia.
+ *
+ * Y es la clase de regla que se rompe sin querer: la próxima persona que
+ * trabaje en obras sociales va a necesitar «sólo el apellido, para poder
+ * cruzar». Va a parecer razonable. Entonces no alcanza con haberlo escrito en
+ * un comentario: se le pregunta al catálogo de Postgres y, si aparece una
+ * columna así, el build se rompe.
+ *
+ * ── Y EL SEGUNDO CHEQUEO ────────────────────────────────────────────────────
+ *
+ * Que no haya forma de borrar un débito. Un débito es lo que la obra social te
+ * sacó; borrarlo es taparlo, y la plata que se pierde es justamente la que
+ * nadie cuenta. Se cierran como `perdido`, con el motivo.
+ */
+import { createClient } from '@supabase/supabase-js'
+
+function env(n: string): string {
+  const v = process.env[n]
+  if (!v) throw new Error(`Falta ${n}`)
+  return v
+}
+
+const adm = createClient(env('NEXT_PUBLIC_SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
+  auth: { persistSession: false },
+})
+
+async function main() {
+  let fallas = 0
+
+  const { data: cols, error: e1 } = await adm.rpc('convenios_columnas_prohibidas')
+  if (e1) throw new Error(`no se pudo revisar las columnas: ${e1.message}`)
+  const prohibidas = (cols ?? []) as { tabla: string; columna: string; por_que: string }[]
+  if (!prohibidas.length) {
+    console.log('  ok    ninguna tabla convenio* tiene columna de paciente, médico, afiliado ni diagnóstico')
+  } else {
+    fallas += prohibidas.length
+    for (const c of prohibidas) {
+      console.log(`  FALLA ${c.tabla}.${c.columna}`)
+      console.log(`        ${c.por_que}.`)
+      console.log('        Una presentación es un hecho administrativo: número, fecha, obra social,')
+      console.log('        sucursal e importe. Qué le recetaron a quién es terreno clínico y no entra')
+      console.log('        al sistema, ni de paso. Si hace falta para «completar el circuito», no hace')
+      console.log('        falta.')
+    }
+  }
+
+  const { data: pols, error: e2 } = await adm.rpc('convenios_politicas_de_borrado')
+  if (e2) throw new Error(`no se pudieron revisar las políticas: ${e2.message}`)
+  const borrado = (pols ?? []) as { tabla: string; politica: string }[]
+  if (!borrado.length) {
+    console.log('  ok    no hay forma de borrar un débito ni el histórico de un convenio')
+  } else {
+    fallas += borrado.length
+    for (const p of borrado) {
+      console.log(`  FALLA la política ${p.politica} permite borrar filas de ${p.tabla}`)
+      console.log('        Un débito es lo que la obra social te sacó: borrarlo es taparlo, y la plata')
+      console.log('        que se pierde es la que nadie cuenta. Se cierra como «perdido», con el motivo.')
+    }
+  }
+
+  console.log(fallas === 0 ? '\nTODO BIEN' : `\nFALLA · ${fallas} cosa(s) que violan el límite del sector`)
+  if (fallas > 0) process.exit(1)
+}
+
+main().catch((e) => {
+  console.error('FALLA · la verificación del límite no pudo correr:', e?.message ?? e)
+  process.exit(1)
+})
