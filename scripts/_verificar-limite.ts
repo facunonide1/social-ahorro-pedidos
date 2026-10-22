@@ -1,5 +1,5 @@
 /**
- * LA REGLA DE ORO 9, VERIFICADA EN EL BUILD.
+ * LA REGLA DE ORO 9 Y EL LIMITE DEL MOSTRADOR, VERIFICADOS EN EL BUILD.
  *
  * ── POR QUÉ ESTO EXISTE ─────────────────────────────────────────────────────
  *
@@ -47,6 +47,28 @@ async function main() {
       console.log('        sucursal e importe. Qué le recetaron a quién es terreno clínico y no entra')
       console.log('        al sistema, ni de paso. Si hace falta para «completar el circuito», no hace')
       console.log('        falta.')
+    }
+  }
+
+  // v1.2 · El mismo chequeo, sobre el mostrador. «El sistema ayuda con el
+  // producto. No ayuda con el tratamiento», y nunca guarda paciente,
+  // diagnóstico, síntoma ni el motivo por el que alguien compra algo.
+  //
+  // Es la clase de regla que se rompe con buena intención: la frase que la
+  // rompe —«para mejorar la sugerencia»— está escrita en el propio prompt.
+  const { data: mos, error: eM } = await adm.rpc('mostrador_columnas_prohibidas')
+  if (eM) throw new Error(`no se pudo revisar el mostrador: ${eM.message}`)
+  const mostrador = (mos ?? []) as { tabla: string; columna: string; por_que: string }[]
+  if (!mostrador.length) {
+    console.log('  ok    ninguna tabla del mostrador guarda paciente, síntoma ni diagnóstico')
+  } else {
+    fallas += mostrador.length
+    for (const c of mostrador) {
+      console.log(`  FALLA ${c.tabla}.${c.columna}`)
+      console.log(`        ${c.por_que}.`)
+      console.log('        El mostrador contesta sobre el PRODUCTO. Si el empleado le pregunta a')
+      console.log('        una pantalla qué darle a alguien, el responsable dejó de ser una')
+      console.log('        persona. Y si hace falta «para mejorar la sugerencia», no hace falta.')
     }
   }
 

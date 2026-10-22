@@ -18,7 +18,7 @@
   "aprobaciones": 0,
   "arqueos_caja": 48,
   "auditoria_logs": 0,
-  "auth_trigger_errors": 290,
+  "auth_trigger_errors": 304,
   "automatizaciones": 0,
   "avisos_al_cliente": 13,
   "avisos_faltante": 10,
@@ -26,7 +26,7 @@
   "b2b_pedidos_recurrentes": 0,
   "baja_con_stock_para_decidir": 203,
   "bloqueos_publicacion": 40617,
-  "bloqueos_resumen": 6,
+  "bloqueos_resumen": -1,
   "caja_diferencias": 0,
   "caja_general": 0,
   "caja_general_movimientos": 0,
@@ -35,7 +35,7 @@
   "campania_envios": 0,
   "campanias": 0,
   "campanias_crm": 0,
-  "canal_candidatos": 371,
+  "canal_candidatos": -1,
   "canal_estado": 7737,
   "canal_miembros": 0,
   "canal_problemas": 7,
@@ -68,7 +68,7 @@
   "compliance_recalls": 0,
   "compliance_sops": 1,
   "compras_estado_producto": 0,
-  "compras_global": 1,
+  "compras_global": -1,
   "compras_parametros": 13,
   "compras_quien_provee": 3960,
   "compras_salud_stock": 4,
@@ -170,6 +170,7 @@
   "mensajes": 0,
   "mostrador_destacados": 0,
   "mostrador_indice": 48217,
+  "mostrador_indice_costos": 48217,
   "mostrador_reglas_cruzada": 0,
   "mostrador_sugerencias_log": 0,
   "movimientos_bancarios": 0,
@@ -315,5 +316,9 @@
   "zz_deprecated_matcheos_aprendidos_compras": 0,
   "zz_deprecated_precios_historico": 0
  },
- "desconocidas": []
+ "desconocidas": [
+  "bloqueos_resumen",
+  "canal_candidatos",
+  "compras_global"
+ ]
 }

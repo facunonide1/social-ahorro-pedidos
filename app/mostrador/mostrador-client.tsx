@@ -2,9 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { ScanLine, Mic, Loader2, AlertTriangle, Info, X } from 'lucide-react'
+import {
+  ScanLine, Mic, Loader2, AlertTriangle, Info, X, WifiOff, RefreshCw, CloudUpload,
+} from 'lucide-react'
+
+import { toast } from 'sonner'
 
 import { formatARS } from '@/lib/utils/format'
+import {
+  guardarSnapshot, leerMeta, buscarLocal, cuantosPendientes, sincronizarCola,
+  type Meta, type FilaLocal,
+} from '@/lib/mostrador/offline'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -92,8 +100,61 @@ export function MostradorClient({
   const campo = useRef<HTMLInputElement>(null)
   const ultimo = useRef(0)
 
+  // ── F.5 · SIN CONEXION ──────────────────────────────────────────────────
+  const [enLinea, setEnLinea] = useState(true)
+  const [meta, setMeta] = useState<Meta | null>(null)
+  const [sincronizando, setSincronizando] = useState(false)
+  const [pendientes, setPendientes] = useState(0)
+  // true cuando la lista que se está mostrando salió del dispositivo y no del
+  // servidor. La pantalla lo dice: el orden local es más pobre.
+  const [esLocal, setEsLocal] = useState(false)
+
   const hayDictado = typeof window !== 'undefined' &&
     ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)
+
+  // Al entrar: qué hay guardado, cuántos faltantes esperan, y si hay red.
+  useEffect(() => {
+    setEnLinea(navigator.onLine)
+    void leerMeta().then(setMeta)
+    void cuantosPendientes().then(setPendientes)
+
+    const arriba = () => {
+      setEnLinea(true)
+      // Volvió la conexión: lo que quedó en la cola se manda solo.
+      void sincronizarCola().then(({ enviados }) => {
+        if (enviados > 0) {
+          toast.success(`Se sincronizaron ${enviados} faltante(s) que habían quedado sin mandar.`)
+        }
+        void cuantosPendientes().then(setPendientes)
+      })
+    }
+    const abajo = () => setEnLinea(false)
+    window.addEventListener('online', arriba)
+    window.addEventListener('offline', abajo)
+    return () => {
+      window.removeEventListener('online', arriba)
+      window.removeEventListener('offline', abajo)
+    }
+  }, [])
+
+  async function sincronizar() {
+    setSincronizando(true)
+    try {
+      const r = await fetch('/api/mostrador/offline')
+      const j = await r.json()
+      if (!r.ok) throw new Error(j?.error ?? 'No se pudo bajar el catálogo.')
+      await guardarSnapshot(j.filas as FilaLocal[], {
+        sucursal_id: j.sucursal_id, sucursal_nombre: j.sucursal_nombre,
+        productos: j.productos, stock_leido_at: j.stock_leido_at,
+      })
+      setMeta(await leerMeta())
+      toast.success(`${j.productos.toLocaleString('es-AR')} productos guardados en el dispositivo.`, {
+        description: 'Con esto se puede buscar y registrar faltantes sin internet.',
+      })
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Falló.')
+    } finally { setSincronizando(false) }
+  }
 
   const correr = useCallback(async (texto: string, codigo?: string) => {
     const t = texto.trim()
@@ -109,6 +170,23 @@ export function MostradorClient({
     const pedido = ++ultimo.current
     setBuscando(true); setError(null)
     const t0 = performance.now()
+
+    // Sin conexión: se busca en lo que hay guardado. Si no hay nada guardado,
+    // se dice — no se muestra una lista vacía.
+    if (!navigator.onLine) {
+      try {
+        const locales = await buscarLocal(t, 20)
+        if (pedido !== ultimo.current) return
+        setEsLocal(true)
+        setFilas(locales.map(aFila))
+        setTardo(Math.round(performance.now() - t0))
+      } finally {
+        if (pedido === ultimo.current) setBuscando(false)
+      }
+      return
+    }
+    setEsLocal(false)
+
     try {
       const r = await fetch('/api/mostrador', {
         method: 'POST', headers: { 'content-type': 'application/json' },
@@ -182,6 +260,49 @@ export function MostradorClient({
           )}
         </div>
 
+        {/* ── F.5 · EL ESTADO DE LA SINCRONIZACION, ARRIBA ──────────── */}
+        {!enLinea && (
+          <div className="flex items-start gap-2 border-l-2 border-amber-600 bg-amber-500/10 p-2.5">
+            <WifiOff className="mt-0.5 size-4 shrink-0" />
+            <div className="min-w-0 text-[11px] leading-snug">
+              <p className="font-medium">Sin internet.</p>
+              {meta ? (
+                <p>
+                  Se está buscando en los {meta.productos.toLocaleString('es-AR')} productos
+                  guardados el{' '}
+                  {new Date(meta.sincronizado_at).toLocaleString('es-AR', {
+                    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+                  })}
+                  . Se puede buscar y registrar faltantes. <b>No</b> se puede ver el stock de las
+                  otras sucursales, la cobertura de los convenios ni tomar un pedido.
+                </p>
+              ) : (
+                <p>
+                  <b>No hay nada guardado en este dispositivo.</b> Con internet, tocá
+                  «Guardar para usar sin conexión» y queda disponible.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {pendientes > 0 && (
+          <button onClick={async () => {
+            const { enviados } = await sincronizarCola()
+            setPendientes(await cuantosPendientes())
+            toast.success(enviados > 0
+              ? `Se mandaron ${enviados}.`
+              : 'No se pudo mandar ninguno todavía.')
+          }}
+            className="flex w-full items-center gap-2 border-l-2 border-foreground/60 bg-muted/40 p-2.5 text-left text-[11px] leading-snug">
+            <CloudUpload className="size-4 shrink-0" />
+            <span>
+              Hay <b>{pendientes}</b> faltante(s) registrados sin conexión que todavía no se
+              mandaron. Tocá para intentarlo ahora.
+            </span>
+          </button>
+        )}
+
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
           {!miSucursal && sucursales.length > 1 ? (
             <select value={sucursal} onChange={(e) => setSucursal(e.target.value)}
@@ -194,6 +315,7 @@ export function MostradorClient({
           {/* C.6 · el stock es una foto diaria, y se dice siempre. */}
           <span>{fotoDelStock}</span>
           {tardo != null && <span>{tardo} ms</span>}
+          {esLocal && <span className="font-medium">desde el dispositivo</span>}
         </div>
       </header>
 
@@ -276,6 +398,40 @@ export function MostradorClient({
               Escribí lo que piden, o escaneá el envase. Funciona con el nombre, la marca o la
               droga, y tolera cómo se escribe de verdad: «ibu», «ibuprofeno 600», «ibupirac».
             </p>
+
+            {/* ── F.6 · EL EMPLEADO NUEVO ──────────────────────────────────
+                Es quien más lo necesita: no conoce el catálogo ni sabe qué
+                marca equivale a cuál. La capacitación es el sistema, no un
+                manual — por eso cada fila dice por qué está ahí y cada ficha
+                dice qué tiene la misma composición.
+
+                Esto son cuatro líneas, no un tutorial: un tutorial se cierra
+                y no se vuelve a abrir. */}
+            <details className="rounded-lg border px-3 py-2">
+              <summary className="cursor-pointer text-sm font-medium">
+                Si es tu primer día
+              </summary>
+              <div className="mt-2 space-y-1.5 text-xs leading-snug text-muted-foreground">
+                <p>
+                  <b>Cada producto dice por qué está en ese orden.</b> «Vence en 38 días», «deja
+                  más», «hay 14». Si no entendés por qué uno está primero, el motivo está escrito
+                  al lado.
+                </p>
+                <p>
+                  <b>Tocá un producto y vas a ver qué otro tiene la misma composición</b>, con la
+                  diferencia de precio. Eso es lo que te va a preguntar el cliente.
+                </p>
+                <p>
+                  <b>Si dice «requiere receta», pedila antes de buscarlo.</b> Y los controlados no
+                  salen en la lista: se buscan escaneando el envase.
+                </p>
+                <p>
+                  <b>Lo que no sepas, no lo adivines.</b> Qué tomar, cuánto o si se puede combinar
+                  lo contesta el farmacéutico, y está a un botón de acá. No es que el sistema no
+                  quiera: es que eso lo decide alguien con matrícula.
+                </p>
+              </div>
+            </details>
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" size="lg" className="h-12" asChild>
                 <Link href="/mostrador/faltante">Registrar un faltante</Link>
@@ -291,6 +447,39 @@ export function MostradorClient({
               Lo que el sistema <b>no</b> contesta: qué tomar, cuánto, por cuántos días, si se puede
               combinar con otra cosa, ni nada sobre una persona. Eso lo contesta el farmacéutico.
             </p>
+
+            {/* ── F.5 · GUARDAR PARA SIN CONEXION ─────────────────────── */}
+            <div className="space-y-1.5 border-t pt-3">
+              <Button variant="outline" size="lg" className="h-12 w-full"
+                disabled={sincronizando || !enLinea} onClick={sincronizar}>
+                {sincronizando
+                  ? <Loader2 className="size-5 animate-spin" />
+                  : <RefreshCw className="size-5" />}
+                {meta ? 'Actualizar lo guardado' : 'Guardar para usar sin conexión'}
+              </Button>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                {meta ? (
+                  <>
+                    Hay {meta.productos.toLocaleString('es-AR')} productos de {meta.sucursal_nombre}{' '}
+                    guardados en este dispositivo, de{' '}
+                    <b>
+                      {new Date(meta.sincronizado_at).toLocaleString('es-AR', {
+                        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+                      })}
+                    </b>
+                    . Conviene actualizarlo cada vez que entra un maestro: los precios de esa copia
+                    son los de ese momento.
+                  </>
+                ) : (
+                  <>
+                    Guarda en el dispositivo los productos con stock de tu sucursal. Si se cae
+                    internet, se puede seguir buscando y registrando faltantes. No guarda el stock
+                    de las otras sucursales: una copia de un stock ajeno prometería algo que capaz
+                    ya se vendió.
+                  </>
+                )}
+              </p>
+            </div>
           </div>
         )}
       </main>
@@ -349,4 +538,39 @@ function ItemProducto({ f, verPlata }: { f: Fila; verPlata: boolean }) {
       </Link>
     </li>
   )
+}
+
+/**
+ * Una fila guardada en el dispositivo, traducida a lo que muestra la lista.
+ *
+ * ── POR QUÉ LOS MOTIVOS SON OTROS ───────────────────────────────────────────
+ *
+ * Sin conexión no hay fecha de vencimiento, ni margen, ni cuánto se vende: eso
+ * no se guarda en el dispositivo. Entonces el motivo que se puede decir es uno
+ * solo —cuántas hay— y el orden es por parecido, no por el de A.2.
+ *
+ * Decir «deja más» con un margen que no se bajó sería inventarlo.
+ */
+function aFila(f: FilaLocal): Fila {
+  return {
+    producto_id: f.producto_id,
+    sku: f.sku,
+    nombre: f.nombre,
+    nombre_comercial: null,
+    laboratorio: f.laboratorio,
+    presentacion: f.presentacion,
+    droga_principal: f.droga_principal,
+    precio: f.precio,
+    stock: f.stock,
+    disponible: f.stock,
+    requiere_receta: f.requiere_receta,
+    condicion_venta: null,
+    marca_pedida: false,
+    en_oferta: false,
+    dias_para_vencer: null,
+    motivos: [f.stock > 0 ? `hay ${Math.round(f.stock)}` : 'no hay acá'],
+    no_se_sabe: [
+      'sin conexión: no se puede saber el vencimiento, el margen ni cuánto se vende',
+    ],
+  }
 }

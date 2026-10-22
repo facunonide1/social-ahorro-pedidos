@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, Loader2, Check, UserX, Repeat, Truck } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { encolar } from '@/lib/mostrador/offline'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -53,18 +54,52 @@ export function FaltanteClient({ textoInicial, producto, sucursales, miSucursal 
   async function registrar(desenlace: string) {
     if (!texto.trim() && !producto) { toast.error('Falta qué pidieron.'); return }
     setBusy(desenlace)
+
+    const cuerpo = {
+      texto: texto.trim(), producto_id: producto?.producto_id ?? null,
+      sucursal_id: sucursal, desenlace,
+    }
+
+    // F.5 · Sin conexión se encola. Es lo único que se puede registrar sin
+    // servidor sin prometerle nada a nadie: si se perdiera, se perdería un
+    // dato; si se perdiera un pedido, se perdería un cliente.
+    if (!navigator.onLine) {
+      try {
+        await encolar({ tipo: 'faltante', cuerpo })
+        setHecho({
+          se_matcheo: !!producto,
+          que_significa:
+            'Quedó guardado en el dispositivo. Se va a mandar solo cuando vuelva internet: ' +
+            'no hace falta acordarse.',
+        })
+      } catch {
+        toast.error('No se pudo guardar en el dispositivo.')
+      } finally { setBusy(null) }
+      return
+    }
+
     try {
       const r = await fetch('/api/mostrador/faltante', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          texto: texto.trim(), producto_id: producto?.producto_id ?? null,
-          sucursal_id: sucursal, desenlace,
-        }),
+        body: JSON.stringify(cuerpo),
       })
       const j = await r.json()
       if (!r.ok) throw new Error(j?.error ?? 'No se pudo registrar.')
       setHecho(j)
-    } catch (e: any) { toast.error(e?.message ?? 'Falló.') } finally { setBusy(null) }
+    } catch (e: any) {
+      // Se cayó la red en el medio: se encola en vez de perderlo.
+      try {
+        await encolar({ tipo: 'faltante', cuerpo })
+        setHecho({
+          se_matcheo: !!producto,
+          que_significa:
+            'No se pudo mandar ahora, así que quedó guardado en el dispositivo y se va a ' +
+            'sincronizar solo. No se perdió.',
+        })
+      } catch {
+        toast.error(e?.message ?? 'Falló.')
+      }
+    } finally { setBusy(null) }
   }
 
   if (hecho) {

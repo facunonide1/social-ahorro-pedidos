@@ -86,5 +86,6 @@
  "components/nora/nora-acciones.tsx:comprobantes:sin-limite": "`comprobantes` no es una tabla de este esquema: el auditor lo tomo de un nombre partido. Falso positivo",
  "app/api/nora/predictions/route.ts:facturas_proveedor:limit-inutil(5000)": "mismo caso: acotado por ventana de vencimiento",
  "app/(admin)/admin/finanzas/calendario/page.tsx:facturas_proveedor:limit-inutil(2000)": "acotada por un rango de fechas del mes que se mira. El limit(2000) no sube el techo de PostgREST pero el filtro de fecha ya deja menos de mil: 4.976 comprobantes repartidos en dos anios",
- "lib/nora/herramientas/finanzas.ts:facturas_proveedor:limit-inutil(2000)": "herramienta de chat: contesta sobre una ventana de fechas o un proveedor, nunca sobre los 4.976"
+ "lib/nora/herramientas/finanzas.ts:facturas_proveedor:limit-inutil(2000)": "herramienta de chat: contesta sobre una ventana de fechas o un proveedor, nunca sobre los 4.976",
+ "app/api/mostrador/offline/route.ts:mostrador_indice:sin-limite": "acotada por un `in()` de 500 ids como maximo, en un bucle: cada request pide 500 y nunca puede devolver mas. Los ids salen de stock_items, que si esta paginado y reporta `truncado`"
 }

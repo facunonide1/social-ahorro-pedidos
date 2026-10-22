@@ -43,6 +43,15 @@ export default async function ProductoMostradorPage({ params }: { params: { id: 
     .select('*').eq('producto_id', params.id).maybeSingle()
   if (!p) notFound()
 
+  // F.7 · El margen vive en otra tabla con su propia RLS (migración 0227), y
+  // sólo se pide si este rol lo puede ver. Antes estaba en el mismo índice y
+  // un cajero podía leerlo directo desde su sesión — lo encontró la prueba.
+  const verPlataAhora = VEN_PLATA.includes(me.rol)
+  const { data: costos } = verPlataAhora
+    ? await adm.from('mostrador_indice_costos')
+        .select('margen_pct').eq('producto_id', params.id).maybeSingle()
+    : { data: null }
+
   const [{ filas: equis, porQue }, cob, { data: si }, { data: estado }, { data: sug }] =
     await Promise.all([
       equivalencias(adm, params.id, sucursal),
@@ -56,7 +65,7 @@ export default async function ProductoMostradorPage({ params }: { params: { id: 
     ])
 
   const pi = p as any
-  const verPlata = VEN_PLATA.includes(me.rol)
+  const verPlata = verPlataAhora
 
   return (
     <ProductoClient
@@ -66,8 +75,8 @@ export default async function ProductoMostradorPage({ params }: { params: { id: 
         presentacion: pi.presentacion, droga_principal: pi.droga_principal,
         concentracion: pi.concentracion,
         precio: pi.precio == null ? null : Number(pi.precio),
-        // F.7 · el margen no viaja si no lo puede ver.
-        margen_pct: verPlata && pi.margen_pct != null ? Number(pi.margen_pct) : null,
+        // F.7 · el margen no viaja si no lo puede ver. Y ni siquiera se pide.
+        margen_pct: (costos as any)?.margen_pct == null ? null : Number((costos as any).margen_pct),
         requiere_receta: pi.requiere_receta,
         condicion_venta: pi.condicion_venta,
         stock: (si as any)?.cantidad == null ? 0 : Number((si as any).cantidad),

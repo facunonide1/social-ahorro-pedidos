@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "node scripts/build-info.mjs && npm run auditar:cortes && npm run auditar:rls && npm run auditar:lente && npm run probar:permisos && npm run auditar:rls-roles && npm run verificar:coherencia && npm run verificar:limite-convenios && next build",
+    "build": "node scripts/build-info.mjs && npm run auditar:cortes && npm run auditar:rls && npm run auditar:lente && npm run probar:permisos && npm run auditar:rls-roles && npm run verificar:coherencia && npm run verificar:limite && next build",
     "start": "next start -p 3001",
     "lint": "next lint",
     "auditar:cortes": "node scripts/auditar-cortes.mjs",
@@ -18,7 +18,8 @@
     "verificar:coherencia": "node scripts/verificar-coherencia.mjs",
     "probar:dia-encargado": "npx tsx --env-file=.env.local scripts/prueba-dia-encargado.ts",
     "probar:convenios": "npx tsx --env-file=.env.local scripts/prueba-convenios.ts",
-    "verificar:limite-convenios": "node scripts/verificar-limite-convenios.mjs"
+    "verificar:limite": "node scripts/verificar-limite.mjs",
+    "probar:mostrador": "npx tsx --env-file=.env.local scripts/prueba-mostrador.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",
