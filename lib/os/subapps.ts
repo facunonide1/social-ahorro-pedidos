@@ -268,6 +268,38 @@ export const SUBAPPS: SubAppManifest[] = [
       { id: 'listas', nombre: 'Importar lista de precios', icono: 'Upload', destino: '/admin/compras/listas-precios', modulo: 'compras', accion: 'crear' },
     ],
   },
+  // ── v1.1 · OBRAS SOCIALES ─────────────────────────────────────────────────
+  //
+  // El hueco más grande del sistema hasta la v1.1: entre el 50% y el 70% de lo
+  // que despacha la farmacia pasa por una obra social. SIFACO factura; lo que
+  // viene después —presentar, que te debiten, reclamar— no lo cubría nadie.
+  //
+  // Va como sub-app y no como pestaña de Finanzas por la regla de oro 10: un
+  // encargado arma la presentación de SU sucursal sin que eso le abra la deuda
+  // de la cadena.
+  {
+    id: 'convenios',
+    nombre: 'Obras sociales',
+    icono: 'FileSignature',
+    acento: '#8B5CF6',
+    descripcion: 'Presentación, troqueles y débitos',
+    rutaHome: '/admin/convenios',
+    navInterna: 'tabs',
+    permisosRequeridos: ['convenios'],
+    modulos: [
+      { nombre: 'Tablero', ruta: '/admin/convenios' },
+      { nombre: 'Padrón', ruta: '/admin/convenios/padron' },
+    ],
+    // Construido y sin un solo dato real. Se marca en el menú para que no se
+    // vea igual que los sectores que sí andan: la auditoría de octubre
+    // encontró ocho tablas con 8.880 filas y cero reales, y en el menú se
+    // veían idénticas a las que funcionan.
+    sinDatosReales: 'convenios',
+    quickActions: [
+      { id: 'convenio-nuevo', nombre: 'Cargar convenio', icono: 'FileSignature',
+        destino: '/admin/convenios/padron', modulo: 'convenios', accion: 'crear', primary: true },
+    ],
+  },
   {
     id: 'finanzas',
     nombre: 'Finanzas',

@@ -22,6 +22,13 @@ export interface SectorVacio {
 }
 
 export const SECTORES_VACIOS: Record<string, SectorVacio> = {
+  // v1.1 · nace vacío a propósito: el padrón lo carga el dueño, y los débitos
+  // vienen de un archivo de liquidación que todavía no llegó.
+  convenios: {
+    que: 'No se puede presentar a ninguna obra social ni decir cuánto te debitaron',
+    porque: 'No hay ningún convenio cargado y ninguna liquidación importada. Entre el 50% y el 70% de lo que se despacha pasa por una obra social, así que lo que falta acá no es un detalle.',
+    destraba: 'La lista de obras sociales con las que trabajan —con el plazo de presentación de cada una— y un archivo de débitos de un trimestre.',
+  },
   ventas: {
     que: 'No se puede decir cuánto se vendió ni con qué margen',
     porque: 'Las 7.620 filas de ventas cargadas son de demostración: ni una pasó por el negocio.',

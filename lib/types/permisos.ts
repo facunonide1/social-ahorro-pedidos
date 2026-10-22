@@ -1,7 +1,7 @@
 /**
  * Permisos finos por sector de NORA HQ (v2 · v0.26).
  *
- * Modelo: **18 módulos × 5 acciones**. El permiso efectivo de un usuario es:
+ * Modelo: **19 módulos × 5 acciones**. El permiso efectivo de un usuario es:
  *
  *     preset del rol  ⊕  overrides de `users_admin.permisos_custom`
  *
@@ -14,7 +14,7 @@
 
 import type { AdminRole } from '@/lib/types/admin'
 
-// ───────────────────────── Módulos (18) ─────────────────────────
+// ───────────────────────── Módulos (19) ─────────────────────────
 export const PERMISO_MODULOS = [
   'mission_control',
   'comunicacion',
@@ -34,6 +34,17 @@ export const PERMISO_MODULOS = [
   'ia',
   'auditoria',
   'configuracion',
+  // ── v1.1 · OBRAS SOCIALES ─────────────────────────────────────────────────
+  //
+  // Módulo propio y no una esquina de `finanzas`, por la regla de oro 10:
+  // permisos por rol × sucursal × sub-app. Un encargado tiene que poder armar
+  // la presentación de SU sucursal sin que eso le abra la deuda de la cadena;
+  // y la decisión de qué convenio conviene es de los dueños.
+  //
+  // Agregar un módulo cambia la matriz que la RLS lee (`permisos_matriz`): hay
+  // que correr `scripts/sincronizar-permisos.ts` o el build falla, que es
+  // exactamente lo que tiene que pasar.
+  'convenios',
 ] as const
 export type PermisoModulo = (typeof PERMISO_MODULOS)[number]
 
@@ -59,13 +70,14 @@ export const PERMISO_MODULO_LABELS: Record<PermisoModulo, string> = {
   ia:              'Inteligencia / NORA',
   auditoria:       'Auditoría',
   configuracion:   'Configuración',
+  convenios:       'Obras sociales',
 }
 
 /** Agrupación de módulos para la matriz de la UI. */
 export const PERMISO_MODULO_GRUPOS: { grupo: string; modulos: PermisoModulo[] }[] = [
   { grupo: 'General', modulos: ['mission_control', 'comunicacion', 'tareas'] },
   { grupo: 'Operación', modulos: ['operaciones', 'compras', 'centro_datos'] },
-  { grupo: 'Dinero', modulos: ['finanzas', 'caja', 'aprobaciones'] },
+  { grupo: 'Dinero', modulos: ['finanzas', 'caja', 'aprobaciones', 'convenios'] },
   { grupo: 'Comercial', modulos: ['ofertas', 'clientes', 'pedidos'] },
   { grupo: 'Organización', modulos: ['sucursales', 'rrhh'] },
   { grupo: 'Inteligencia', modulos: ['bi', 'ia'] },
@@ -122,6 +134,9 @@ export const PRESET_POR_ROL: Record<AdminRole, MatrizPermisos> = {
     operaciones: VCE, compras: VC, caja: VCEA,
     ofertas: VER, clientes: VCE, pedidos: VCE, sucursales: VER,
     rrhh: VER, aprobaciones: VER, bi: VER, ia: VER, centro_datos: VER,
+    // v1.1 · arma y manda la presentación de su sucursal. No aprueba ni
+    // borra: una presentación enviada no se deshace, y un débito no se tapa.
+    convenios: VCE,
   }, NADA),
 
   comprador: matriz({
@@ -134,6 +149,9 @@ export const PRESET_POR_ROL: Record<AdminRole, MatrizPermisos> = {
     mission_control: VER, comunicacion: VCE, tareas: VC,
     finanzas: TODO, caja: VCEA, aprobaciones: VCEA, compras: VER,
     centro_datos: VER, bi: VER,
+    // v1.1 · tesorería carga las liquidaciones y sigue los reclamos: es plata
+    // que entra. Lo que no hace es decidir qué convenio conviene.
+    convenios: VCEA,
   }, NADA),
 
   cajero: matriz({
@@ -165,6 +183,7 @@ export const PRESET_POR_ROL: Record<AdminRole, MatrizPermisos> = {
   administrativo: matriz({
     mission_control: VER, comunicacion: VCE, tareas: VC,
     finanzas: VCE, clientes: VCE, rrhh: VCE, operaciones: VER, compras: VER, bi: VER,
+    convenios: VCE,
   }, NADA),
 
   auditor: matriz({}, VER),
@@ -177,6 +196,7 @@ export const PRESET_POR_ROL: Record<AdminRole, MatrizPermisos> = {
     operaciones: VCE, compras: VC, caja: VCEA,
     ofertas: VER, clientes: VCE, pedidos: VCE, sucursales: VER,
     rrhh: VER, aprobaciones: VER, bi: VER, ia: VER, centro_datos: VER,
+    convenios: VCE,
   }, NADA),
 }
 
