@@ -289,6 +289,7 @@ export const SUBAPPS: SubAppManifest[] = [
     modulos: [
       { nombre: 'Tablero', ruta: '/admin/convenios' },
       { nombre: 'Presentaciones', ruta: '/admin/convenios/presentaciones' },
+      { nombre: 'Débitos', ruta: '/admin/convenios/debitos' },
       { nombre: 'Padrón', ruta: '/admin/convenios/padron' },
     ],
     // Construido y sin un solo dato real. Se marca en el menú para que no se

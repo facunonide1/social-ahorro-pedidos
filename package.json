@@ -16,7 +16,8 @@
     "contar:demo": "node --env-file=.env.local scripts/contar-demo.mjs",
     "contar:relaciones": "node --env-file=.env.local scripts/contar-relaciones.mjs",
     "verificar:coherencia": "node scripts/verificar-coherencia.mjs",
-    "probar:dia-encargado": "npx tsx --env-file=.env.local scripts/prueba-dia-encargado.ts"
+    "probar:dia-encargado": "npx tsx --env-file=.env.local scripts/prueba-dia-encargado.ts",
+    "probar:convenios": "npx tsx --env-file=.env.local scripts/prueba-convenios.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",

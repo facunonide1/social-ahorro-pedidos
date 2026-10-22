@@ -285,15 +285,20 @@ begin
     entidad_relacionada, entidad_id, entidad_url,
     verificacion_humana, fecha_vencimiento, creado_por_nombre, es_demo
   ) values (
-    v_codigo, 'auto_sistema',
+    v_codigo, 'auto_sistema'::tarea_origen,
     'Controlar la presentacion de ' || v_conv || ' — ' || v_suc,
     'Se envio la presentacion de ' || v_conv || ' de ' || v_suc ||
     ' por el periodo ' || p.periodo_desde || ' a ' || p.periodo_hasta ||
     ': ' || v_cant || ' comprobantes por $' || to_char(round(v_total), 'FM999G999G999') || '.' ||
     E'\n\nQue hay que controlar: que los troqueles se hayan mandado con remito y que el acuse ' ||
     'este guardado. Sin acuse, un debito por troquel faltante no se puede reclamar.',
-    'alta', case when v_resp is null then 'pendiente' else 'asignada' end,
-    case when v_resp is null then 'pool_sucursal' else 'usuario_especifico' end,
+    -- Los casts son obligatorios: `estado`, `prioridad` y `asignacion_tipo`
+    -- son enums, y un `case ... end` devuelve text. Sin esto el insert falla
+    -- con «column estado is of type tarea_estado but expression is of type
+    -- text» — lo encontró scripts/prueba-convenios.ts en su primera corrida.
+    'alta'::tarea_prioridad,
+    (case when v_resp is null then 'pendiente' else 'asignada' end)::tarea_estado,
+    (case when v_resp is null then 'pool_sucursal' else 'usuario_especifico' end)::tarea_asignacion,
     v_resp,
     case when v_resp is null then 'encargado_sucursal' else null end,
     p.sucursal_id,
