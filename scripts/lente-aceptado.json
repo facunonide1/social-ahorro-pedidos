@@ -55,5 +55,7 @@
  "app/(admin)/admin/tareas/[id]/page.tsx": "ficha de UNA entidad: muestra lo que abriste, no agrega ni afirma sobre el conjunto",
  "app/(admin)/admin/tareas/mi-dia-mobile.tsx": "solo ESCRIBE sobre esa tabla (insert/update): no muestra ni cuenta nada, asi que no puede afirmar sobre datos de demostracion",
  "app/brief/[token]/page.tsx": "ficha de UNA entidad: muestra lo que abriste, no agrega ni afirma sobre el conjunto",
- "components/centro-datos/centro-datos-mc-card.tsx": "lee import_jobs, items_sin_match, perfiles_datos: hoy ninguna tiene filas de demostracion. Ponerle el lente antes de que las tenga."
+ "components/centro-datos/centro-datos-mc-card.tsx": "lee import_jobs, items_sin_match, perfiles_datos: hoy ninguna tiene filas de demostracion. Ponerle el lente antes de que las tenga.",
+ "app/(admin)/admin/tareas/turno/reparto-client.tsx": "escribe en tareas y en turno_reparto; no las lee ni las cuenta. Las que muestra las trae la pantalla ya filtradas con es_demo=false: el lente esta puesto del lado del server",
+ "app/(admin)/admin/configuracion/documentos-empresa/documentos-client.tsx": "escribe en compliance_documentos; las que muestra las trae la pantalla ya filtradas con es_demo=false. Una habilitacion inventada que «vence en 10 dias» haria que alguien salga a renovar un papel que no existe, y por eso el filtro esta del lado del server"
 }
