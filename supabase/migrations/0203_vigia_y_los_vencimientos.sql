@@ -1,0 +1,41 @@
+-- 0203 · v0.99-ejecutar · BLOQUE C · aplicada vía MCP
+--
+-- ════════════════════════════════════════════════════════════════════════════
+-- ENCENDER A VIGÍA
+-- ════════════════════════════════════════════════════════════════════════════
+--
+-- Vigía es el agente que más valor agrega y está apagado por un dato que nadie
+-- podía cargar: no hay ni una fecha de vencimiento en 10.256 productos con
+-- stock. La tarea diaria existe desde la v0.97, pero la carga se hacía en una
+-- pantalla de escritorio — era el único hueco del día del encargado.
+--
+-- ── C.3 · LA LISTA DE 200, Y POR QUÉ ESOS ───────────────────────────────────
+--
+-- `vencimientos_a_cargar` ordena por rotación × plata parada. Los dos juntos:
+-- lo que rota mucho y vale poco se repone solo, y lo que vale mucho y no rota
+-- ya está contado en el sobrestock. Lo que duele es lo que rota Y tiene plata.
+--
+-- ── C.4 · VIGÍA DICE SOBRE CUÁNTOS MIRA ─────────────────────────────────────
+--
+-- `vencimientos_avance()` y los dos campos nuevos en `agentes_resumen`. Un
+-- agente que dice «3 lotes vencen este mes» cuando tiene fecha en 47 de 10.256
+-- productos afirma algo que no puede sostener: lo que sabe es que de los 47
+-- que mira, 3 vencen. Los otros 10.209 no se sabe.
+--
+-- Se enciende con el primero. No espera a los 200.
+--
+-- ── C.5 · QUÉ PROPONE, QUE NO ES LO MISMO QUE AVISAR ────────────────────────
+--
+-- `vigia_propone` clasifica cada lote en cuatro acciones distintas:
+--
+--   se vende solo        lo que hay se vende antes de que venza
+--   transferir           otra sucursal lo vende más: va para allá
+--   devolver             queda ventana con el proveedor
+--   ofertar              no se vende solo, no hay a dónde moverlo, no se puede
+--                        devolver
+--
+-- Un «vence en 20 días» sin decir qué hacer es un recordatorio, y los
+-- recordatorios se ignoran.
+--
+-- `meses_para_venderlo` va en NULL cuando el producto no se vende en esa
+-- sucursal: no es «cero meses», es que no se va a vender ahí.

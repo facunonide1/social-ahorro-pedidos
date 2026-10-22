@@ -177,6 +177,9 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Pendientes con proveedores', ruta: '/admin/recepciones/pendientes' },
       { nombre: 'Transferencias', ruta: '/admin/operaciones/transferencias' },
       { nombre: 'Vencimientos', ruta: '/admin/operaciones/vencimientos' },
+      // v0.99 · C.1 · se hace parado en el deposito, escaneando. Era el unico
+      // hueco del dia del encargado.
+      { nombre: 'Cargar vencimientos', ruta: '/admin/operaciones/vencimientos/cargar' },
       { nombre: 'Recartelado', ruta: '/admin/operaciones/recartelado' },
       { nombre: 'Control por zonas', ruta: '/admin/operaciones/control-zonas' },
       // Reemplaza a «Inventarios» (v0.77). La ruta vieja redirige acá.

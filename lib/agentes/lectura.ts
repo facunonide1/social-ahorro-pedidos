@@ -179,11 +179,17 @@ function leerUno(
       if (!n(d.lotes_con_fecha)) {
         return off(
           `no hay ni una fecha de vencimiento cargada en los ${n(d.productos).toLocaleString('es-AR')} productos`,
-          'cargar las fechas de los 200 que más rotan. Con eso ya puede avisar lo que está por vencer; ' +
-          'el resto se completa con la tarea diaria de vencimientos',
-          '/admin/operaciones/vencimientos')
+          'cargar las fechas de los 200 que más rotan, desde el celular en Operaciones → ' +
+          'Vencimientos → Cargar. Se enciende con los primeros: no hay que esperar a los 200',
+          '/admin/operaciones/vencimientos/cargar')
       }
-      return on(`${n(d.vencen_30)} lote(s) vencen en los próximos 30 días.`,
+      // C.4 · dice sobre cuántos productos mira. Un agente que dice «3 vencen
+      // este mes» sin aclarar que mira 47 de 10.256 afirma algo que no puede
+      // sostener.
+      return on(
+        `${n(d.vencen_30)} lote(s) vencen en los próximos 30 días. ` +
+        `Está mirando ${n(d.productos_mirados).toLocaleString('es-AR')} productos de los ` +
+        `${n(d.productos_con_stock).toLocaleString('es-AR')} que tienen stock: el resto todavía no tiene fecha cargada.`,
         '/admin/operaciones/vencimientos')
     }
 
