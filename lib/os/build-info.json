@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-10-22T23:00:58.720Z",
-  "commit": "a4901fb0b54e3f8afb3e2ab04a7ed05be25f03f8",
-  "mensaje": "feat: alta y administración de canales",
+  "construido_at": "2026-10-23T05:12:43.836Z",
+  "commit": "bc1da84e815cd17a1011b0288d8fc323afe91d9e",
+  "mensaje": "chore: el auditor de cortes cuenta las tablas nuevas de la v1.4",
   "rama": "main"
 }

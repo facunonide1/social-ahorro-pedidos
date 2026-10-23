@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/shared/page-header'
 import { estadoDeCanales, erroresDeCanal, conflictoLegal } from '@/lib/canales/lectura'
 import { createAdminClient } from '@/lib/supabase/server'
 
+import { TABS_CANALES } from './_nav'
 import { CanalesClient } from './canales-client'
 import { CanalesEstado } from './canales-estado'
 import { CanalesErrores } from './canales-errores'
@@ -68,6 +69,7 @@ export default async function CanalesPage() {
         title="Canales de venta"
         description="Lo que hay publicado en cada canal, contra lo que dice SIFACO. NORA propone; publicar y despublicar lo confirma una persona."
         breadcrumbs={[{ label: 'Canales' }]}
+        tabs={TABS_CANALES}
       />
       <div className="space-y-6 p-4 md:p-6">
         <CanalesEstado estados={estados} />
