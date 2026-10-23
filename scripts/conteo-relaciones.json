@@ -21,7 +21,7 @@
   "archivo_importaciones": 0,
   "arqueos_caja": 48,
   "auditoria_logs": 0,
-  "auth_trigger_errors": 395,
+  "auth_trigger_errors": 400,
   "automatizaciones": 0,
   "avisos_al_cliente": 13,
   "avisos_faltante": 10,
@@ -29,7 +29,7 @@
   "b2b_pedidos_recurrentes": 0,
   "baja_con_stock_para_decidir": 203,
   "bloqueos_publicacion": 40617,
-  "bloqueos_resumen": 6,
+  "bloqueos_resumen": -1,
   "caja_diferencias": 0,
   "caja_general": 0,
   "caja_general_movimientos": 0,
@@ -207,7 +207,7 @@
   "ofertas_por_rotacion": 3,
   "ofertas_por_vigencia": 2,
   "ofertas_sifaco": 6461,
-  "ofertas_trabajo": -1,
+  "ofertas_trabajo": 6461,
   "ofertas_versiones": 0,
   "ofertas_x_rotacion": 6461,
   "offers": 3,
@@ -221,6 +221,7 @@
   "orders": 21,
   "pago_facturas": 0,
   "pagos": 0,
+  "panel_visitas": 0,
   "panico_eventos": 0,
   "pedido_bulto": 21,
   "pedidos_sin_sucursal": 18,
@@ -326,6 +327,6 @@
   "zz_deprecated_precios_historico": 0
  },
  "desconocidas": [
-  "ofertas_trabajo"
+  "bloqueos_resumen"
  ]
 }

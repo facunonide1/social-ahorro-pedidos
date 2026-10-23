@@ -639,6 +639,30 @@ export const SUBAPPS: SubAppManifest[] = [
     ],
   },
 
+  // v1.5 · la capa de direccion. Va primera en el registry porque es la que
+  // alguien abre cuando entra una vez por dia: el resto son los sectores.
+  {
+    id: 'direccion',
+    nombre: 'Dirección',
+    icono: 'LayoutDashboard',
+    acento: '#6E3CDB',
+    descripcion: 'Lo que está en juego, qué cambió y cuánto deja cada sucursal',
+    rutaHome: '/admin/direccion',
+    navInterna: 'tabs',
+    permisosRequeridos: ['mission_control'],
+    modulos: [
+      { nombre: 'Tablero', ruta: '/admin/direccion' },
+      { nombre: 'Comparar sucursales', ruta: '/admin/direccion/sucursales' },
+      { nombre: 'Lo que espera', ruta: '/admin/direccion/bandeja' },
+      { nombre: 'Bitácora de decisiones', ruta: '/admin/decisiones' },
+    ],
+    quickActions: [
+      { id: 'direccion-tablero', nombre: 'El tablero', icono: 'LayoutDashboard', destino: '/admin/direccion', modulo: 'mission_control', accion: 'ver', primary: true },
+      { id: 'direccion-bandeja', nombre: 'Lo que espera', icono: 'Inbox', destino: '/admin/direccion/bandeja', modulo: 'mission_control', accion: 'ver', primary: true },
+      { id: 'direccion-sucursales', nombre: 'Comparar sucursales', icono: 'Store', destino: '/admin/direccion/sucursales', modulo: 'mission_control', accion: 'ver' },
+    ],
+  },
+
   // ── Registradas pero NO mostradas (proximamente / app aparte) ──
   {
     id: 'decisiones',
