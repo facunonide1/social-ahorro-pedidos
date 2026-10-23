@@ -134,3 +134,67 @@ export const queCambio = (adm: Adm, desde: string | null) =>
   desde === null
     ? Promise.resolve<Cambio[] | null>([])
     : rpc<Cambio>(adm, 'panel_que_cambio', { p_desde: desde })
+
+/* ── D · COMPARAR LAS SUCURSALES ───────────────────────────────────────────
+ *
+ * Dos comparaciones y no una. Arabia tiene el 3,8% del stock de la cadena y
+ * Guzmán el 57,4%: un ranking por volumen dice todos los meses lo mismo y no
+ * informa nada. Lo que informa es cada una contra sí misma, y entre ellas sólo
+ * los ratios — que es donde aparece que Guzmán rota primera y tiene el tercer
+ * margen, y Arabia rota última con el segundo.
+ */
+
+export type MesDeSucursal = {
+  sucursal_id: string; codigo: string; sucursal: string
+  periodo: string
+  /** Un mes a medio cargar no se compara: la caída sería del archivo. */
+  parcial: boolean
+  unidades: number
+  venta_estimada: number; costo_estimado: number
+  deja_estimado: number; margen_pct: number | null
+  unidades_mes_anterior: number | null; venta_mes_anterior: number | null
+  variacion_unidades_pct: number | null; variacion_venta_pct: number | null
+  mejor_o_peor: 'mejor' | 'peor' | 'igual' | null
+  que_no_se_puede_comparar: string | null
+}
+
+export const contraSiMismas = (adm: Adm, meses = 6) =>
+  rpc<MesDeSucursal>(adm, 'sucursales_contra_si_mismas', { p_meses: meses })
+
+export type SucursalComparable = {
+  sucursal_id: string; codigo: string; sucursal: string
+  /** Los tres ratios: no dependen del tamaño del local. */
+  cobertura_meses: number | null; margen_pct: number | null
+  venta_por_persona: number | null
+  /** Contexto, NO comparación: están para que se entienda la escala. */
+  pct_del_stock: number | null; pct_del_consumo: number | null
+  venta_estimada: number; empleados: number | null
+  posicion_rotacion: number; posicion_margen: number
+  que_no_se_puede_comparar: string | null
+}
+
+export const comparables = (adm: Adm) =>
+  rpc<SucursalComparable>(adm, 'sucursales_comparables')
+
+export type MalRepartido = {
+  producto_id: string; sku: string | null; nombre: string
+  destino_id: string; destino: string; faltan_en_destino: number
+  origen_id: string; origen: string; sobran_en_origen: number
+  transferir: number
+  /** Null si el producto no tiene costo: no se sabe cuánta plata, no es cero. */
+  plata_que_no_hay_que_gastar: number | null
+  sin_costo: boolean; el_origen_no_lo_vende: boolean
+  de_cuantos_es_este: number; cuanta_plata_en_total: number
+}
+
+export const malRepartido = (adm: Adm, limite = 200) =>
+  rpc<MalRepartido>(adm, 'sucursales_mal_repartido', { p_limite: limite })
+
+export type FaltaParaComparar = {
+  que: string; cuantos: number
+  sin_esto_no_se_puede: string
+  que_lo_enciende: string; href: string
+}
+
+export const loQueFaltaParaComparar = (adm: Adm) =>
+  rpc<FaltaParaComparar>(adm, 'sucursales_lo_que_falta')
