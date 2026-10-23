@@ -1,10 +1,10 @@
 {
- "contado_at": "2026-10-22",
+ "contado_at": "2026-10-23",
  "relaciones": {
   "acciones_export": 3,
   "adjuntos": 0,
   "agendas_dia": 0,
-  "agente_bitacora": 1,
+  "agente_bitacora": 2,
   "agente_cambio_de_nivel": 0,
   "agente_config": 0,
   "agente_marcador": 1,
@@ -21,7 +21,7 @@
   "archivo_importaciones": 0,
   "arqueos_caja": 48,
   "auditoria_logs": 0,
-  "auth_trigger_errors": 380,
+  "auth_trigger_errors": 395,
   "automatizaciones": 0,
   "avisos_al_cliente": 13,
   "avisos_faltante": 10,
@@ -29,7 +29,7 @@
   "b2b_pedidos_recurrentes": 0,
   "baja_con_stock_para_decidir": 203,
   "bloqueos_publicacion": 40617,
-  "bloqueos_resumen": -1,
+  "bloqueos_resumen": 6,
   "caja_diferencias": 0,
   "caja_general": 0,
   "caja_general_movimientos": 0,
@@ -112,7 +112,7 @@
   "cuentas_bancarias_propias": 0,
   "customers": 9,
   "decisiones_comerciales": 2,
-  "decisiones_pendientes": -1,
+  "decisiones_pendientes": 10,
   "dedup_pendientes": 0,
   "demanda_invisible": 0,
   "demanda_invisible_resumen": 0,
@@ -207,7 +207,7 @@
   "ofertas_por_rotacion": 3,
   "ofertas_por_vigencia": 2,
   "ofertas_sifaco": 6461,
-  "ofertas_trabajo": 6461,
+  "ofertas_trabajo": -1,
   "ofertas_versiones": 0,
   "ofertas_x_rotacion": 6461,
   "offers": 3,
@@ -326,7 +326,6 @@
   "zz_deprecated_precios_historico": 0
  },
  "desconocidas": [
-  "bloqueos_resumen",
-  "decisiones_pendientes"
+  "ofertas_trabajo"
  ]
 }

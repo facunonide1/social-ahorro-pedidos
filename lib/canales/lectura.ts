@@ -491,3 +491,74 @@ export async function erroresConSeguimiento(adm: Adm, opts: {
     return null
   }
 }
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * v1.5 · B · LOS 57,7 MILLONES.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/** Una razón posible. **Posible**: el canal no informa por qué se apagó algo. */
+export type Hipotesis = {
+  que: string
+  /** El hecho verificable que la sostiene. Sin esto sería una corazonada. */
+  el_hecho: string
+  /** Qué hacer si resulta ser esta. */
+  si_es_esto: string
+  peso: number
+}
+
+export type ApagadoConStock = {
+  anomalia_id: string; canal_id: string; canal: string
+  producto_id: string; sku: string | null; nombre: string
+  stock: number | null; costo: number | null; plata_quieta: number | null
+  precio_mostrador: number | null; precio_en_el_canal: number | null
+  queda_para_el_negocio: number | null; resultado_mostrador: number | null
+  diferencia: number | null
+  /** true conviene · false deja menos que el mostrador · **null no se sabe**. */
+  conviene: boolean | null
+  pierde_plata: boolean | null
+  por_que_no_se_puede_saber: string | null
+  hipotesis: Hipotesis[]
+  /** false = no hay ningún hecho que explique el apagado. Y se dice. */
+  se_sabe_por_que: boolean
+  hecho: string; como_se_calculo: string | null
+  vence_at: string | null
+  de_cuantos_es_este: number
+}
+
+export type ApagadosResumen = {
+  productos: number
+  plata_declarada: number
+  productos_con_plata: number
+  productos_sin_plata: number
+  /** B.6 · el número que importa, no el titular. */
+  oportunidad_real: number
+  productos_de_la_oportunidad: number
+  pierden_igual: number
+  plata_de_los_que_pierden: number
+  dejan_menos_que_el_mostrador: number
+  plata_de_los_que_dejan_menos: number
+  no_se_puede_juzgar: number
+  se_sabe_por_que_estan_apagados: number
+  no_se_sabe_por_que: number
+  de_donde_sale_la_plata: string
+  por_que_el_total_no_es_de_todos: string
+  como_se_calculo_la_oportunidad: string
+  que_no_dice: string
+}
+
+/**
+ * B.1 y B.2 · la lista, ordenada por plata y acotada a propósito.
+ *
+ * Son 1.790 y PostgREST entrega 1.000 sin avisar — el corte silencioso que
+ * este proyecto persigue desde la v0.98. El límite está del lado de la base y
+ * cada fila dice de cuántos es.
+ */
+export const apagadosConStock = (adm: Adm, canal?: string | null, limite = 300) =>
+  rpc<ApagadoConStock>(adm, 'canal_apagados_con_stock',
+    { p_canal: canal ?? null, p_limite: limite })
+
+export async function apagadosResumen(adm: Adm, canal?: string | null) {
+  const { data, error } = await adm.rpc('canal_apagados_resumen', { p_canal: canal ?? null })
+  if (error) { console.error(`[canales] apagados resumen: ${error.message}`); return null }
+  return data as ApagadosResumen | null
+}

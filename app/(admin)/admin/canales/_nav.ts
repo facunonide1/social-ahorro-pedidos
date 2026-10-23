@@ -12,6 +12,7 @@ import type { PageHeaderTab } from '@/components/shared/page-header'
  */
 export const TABS_CANALES: PageHeaderTab[] = [
   { label: 'Estado', href: '/admin/canales' },
+  { label: 'Apagados con stock', href: '/admin/canales/apagados' },
   { label: 'Cuánto deja', href: '/admin/canales/resultado' },
   { label: 'Salud', href: '/admin/canales/salud' },
   { label: 'Lotes', href: '/admin/canales/lotes' },

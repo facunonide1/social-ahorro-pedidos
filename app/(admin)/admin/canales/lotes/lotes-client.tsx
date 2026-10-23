@@ -82,8 +82,11 @@ export function LotesClient({ lotes, items }: {
     return (
       <p className="rounded-lg border border-dashed p-6 text-sm leading-snug text-muted-foreground">
         <b>No hay ningún lote armado.</b> Este cero es de verdad: se miró y no hay. Los lotes se
-        arman marcando productos y poniendo el motivo, desde las pantallas que listan qué conviene
-        publicar y qué conviene bajar.
+        arman desde{' '}
+        <a href="/admin/canales/apagados" className="underline decoration-dotted">
+          los apagados con stock
+        </a>
+        , marcando productos y poniendo el motivo.
       </p>
     )
   }

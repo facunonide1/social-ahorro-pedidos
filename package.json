@@ -23,7 +23,8 @@
     "probar:deteccion": "npx tsx --env-file=.env.local scripts/prueba-deteccion.ts",
     "probar:descripciones": "npx tsx --env-file=.env.local scripts/prueba-descripciones.ts",
     "probar:canales": "npx tsx --env-file=.env.local scripts/prueba-canales.ts",
-    "probar:importador": "npx tsx --env-file=.env.local scripts/prueba-importador.ts"
+    "probar:importador": "npx tsx --env-file=.env.local scripts/prueba-importador.ts",
+    "probar:apagados": "npx tsx --env-file=.env.local scripts/prueba-apagados.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",

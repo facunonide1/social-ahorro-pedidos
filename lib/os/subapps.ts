@@ -446,7 +446,8 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Rendimiento', ruta: '/admin/ofertas/rendimiento' },
       { nombre: 'Para ofrecer', ruta: '/admin/ofertas/panel' },
       { nombre: 'Canales de venta', ruta: '/admin/canales' },
-      // v1.5 · A · las pantallas que la v1.4 calculó y no mostraba.
+      // v1.5 · A y B · las pantallas que la v1.4 calculó y no mostraba.
+      { nombre: 'Apagados con stock', ruta: '/admin/canales/apagados' },
       { nombre: 'Cuánto deja cada canal', ruta: '/admin/canales/resultado' },
       { nombre: 'Salud de los canales', ruta: '/admin/canales/salud' },
       { nombre: 'Lotes de publicar', ruta: '/admin/canales/lotes' },
@@ -463,6 +464,7 @@ export const SUBAPPS: SubAppManifest[] = [
       { id: 'oferta-calendario', nombre: 'Calendario de ofertas', icono: 'CalendarDays', destino: '/admin/ofertas/calendario', modulo: 'ofertas', accion: 'ver', primary: true },
       { id: 'oferta-propuestas', nombre: 'Propuestas de NORA', icono: 'Sparkles', destino: '/admin/ofertas/propuestas', modulo: 'ofertas', accion: 'ver' },
       { id: 'canales', nombre: 'Canales de venta', icono: 'Store', destino: '/admin/canales', modulo: 'ofertas', accion: 'ver', primary: true },
+      { id: 'canales-apagados', nombre: 'Apagados con stock', icono: 'PackageX', destino: '/admin/canales/apagados', modulo: 'ofertas', accion: 'ver', primary: true },
       { id: 'canales-errores', nombre: 'Errores de catálogo', icono: 'AlertTriangle', destino: '/admin/canales/errores', modulo: 'ofertas', accion: 'ver' },
       { id: 'regla-9', nombre: 'Regla 9: qué revisar', icono: 'ShieldAlert', destino: '/admin/canales/regla-9', modulo: 'ofertas', accion: 'ver' },
       { id: 'oferta-panel', nombre: 'Para ofrecer', icono: 'Store', destino: '/admin/ofertas/panel', modulo: 'ofertas', accion: 'ver' },
