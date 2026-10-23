@@ -198,3 +198,62 @@ export type FaltaParaComparar = {
 
 export const loQueFaltaParaComparar = (adm: Adm) =>
   rpc<FaltaParaComparar>(adm, 'sucursales_lo_que_falta')
+
+/* ── E · LA BANDEJA ÚNICA ──────────────────────────────────────────────────
+ *
+ * Seis fuentes en una lista: decisiones, hallazgos, errores de catálogo,
+ * tareas vencidas, firmas pendientes y débitos.
+ *
+ * ── LAS DOS COLUMNAS DE PLATA ─────────────────────────────────────────────
+ *
+ * Las decisiones cuestan **por día** y el resto es un **total**. Sumarlos
+ * sería sumar un stock con un caudal: $57 M quietos no son lo mismo que
+ * $61.151 por día de venta que no se hace. El número junto sería más grande,
+ * y por eso alguien lo usaría.
+ */
+
+export type Espera = {
+  /** `decision` · `hallazgo` · `error_de_canal` · `tarea` · `firma` · `debito`. */
+  fuente: string
+  clave: string; titulo: string; que_pasa: string
+  /** Un total. Null cuando el renglón no se puede costear. */
+  plata: number | null
+  /** Por día. Sólo las decisiones lo tienen. */
+  costo_por_dia: number | null
+  se_puede_costear: boolean
+  por_que_no_se_puede_costear: string | null
+  sucursal_id: string | null; sucursal: string | null
+  responsable_user_id: string | null
+  mio: boolean
+  desde: string | null; vence_at: string | null; vencido: boolean
+  accion: string; href: string
+  /** Lo legal no espera su turno en la fila de la plata: regla de oro 9. */
+  riesgo: boolean
+}
+
+export type BandejaResumen = {
+  cuantos: number
+  /** E.5 · cuando no queda nada, lo dice. */
+  vacia: boolean
+  plata_total: number
+  costo_por_dia: number
+  se_pueden_costear: number
+  no_se_pueden_costear: number
+  mios: number
+  vencidos: number
+  de_riesgo: number
+  por_fuente: Record<string, number>
+  /** E.6 · cuántos hallazgos esperan detrás del presupuesto de interrupción. */
+  esperando_turno: number
+  como_funciona_el_presupuesto: string
+  que_parte_no_se_puede_costear: string
+  por_que_hay_dos_columnas_de_plata: string
+}
+
+export const bandeja = (adm: Adm, user?: string | null, sucursal?: string | null, limite = 300) =>
+  rpc<Espera>(adm, 'bandeja_unica',
+    { p_user: user ?? null, p_sucursal: sucursal ?? null, p_limite: limite })
+
+export const bandejaResumen = (adm: Adm, user?: string | null, sucursal?: string | null) =>
+  rpcUno<BandejaResumen>(adm, 'bandeja_resumen',
+    { p_user: user ?? null, p_sucursal: sucursal ?? null })

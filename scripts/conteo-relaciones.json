@@ -28,7 +28,7 @@
   "b2b_cuenta_corriente": 0,
   "b2b_pedidos_recurrentes": 0,
   "baja_con_stock_para_decidir": 203,
-  "bloqueos_publicacion": -1,
+  "bloqueos_publicacion": 40617,
   "bloqueos_resumen": -1,
   "caja_diferencias": 0,
   "caja_general": 0,
@@ -38,12 +38,12 @@
   "campania_envios": 0,
   "campanias": 0,
   "campanias_crm": 0,
-  "canal_candidatos": -1,
+  "canal_candidatos": 371,
   "canal_estado": 7737,
   "canal_lote_items": 0,
   "canal_lotes": 0,
   "canal_miembros": 0,
-  "canal_problemas": -1,
+  "canal_problemas": 7,
   "canal_publicaciones": 7737,
   "canal_rechazos": 0,
   "canal_stock_concentrado": 1,
@@ -74,7 +74,7 @@
   "compliance_recalls": 0,
   "compliance_sops": 1,
   "compras_estado_producto": 0,
-  "compras_global": -1,
+  "compras_global": 1,
   "compras_parametros": 13,
   "compras_quien_provee": 3960,
   "compras_salud_stock": 4,
@@ -201,7 +201,7 @@
   "ofertas_confirmaciones": 0,
   "ofertas_experimentos": 0,
   "ofertas_exports_sifaco": 3,
-  "ofertas_medicion": -1,
+  "ofertas_medicion": 326,
   "ofertas_medicion_resumen": 4,
   "ofertas_por_forma": 6,
   "ofertas_por_rotacion": 3,
@@ -258,8 +258,8 @@
   "recepcion_pendientes": 0,
   "recepciones_mercaderia": 0,
   "reco_compras": 48206,
-  "reco_compras_urgencia": -1,
-  "reco_ofertas": -1,
+  "reco_compras_urgencia": 3,
+  "reco_ofertas": 3749,
   "reco_ofertas_resumen": 3,
   "recordatorios_programados": 0,
   "reglas_recomendacion": 9,
@@ -327,13 +327,10 @@
   "zz_deprecated_precios_historico": 0
  },
  "desconocidas": [
-  "bloqueos_publicacion",
-  "bloqueos_resumen",
-  "canal_candidatos",
-  "canal_problemas",
-  "compras_global",
-  "ofertas_medicion",
-  "reco_compras_urgencia",
-  "reco_ofertas"
+  "bloqueos_resumen"
+ ],
+ "sin_recontar": [
+  "compras_salud_stock",
+  "compras_sin_calcular"
  ]
 }
