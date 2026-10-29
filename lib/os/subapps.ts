@@ -652,6 +652,8 @@ export const SUBAPPS: SubAppManifest[] = [
     permisosRequeridos: ['mission_control'],
     modulos: [
       { nombre: 'Tablero', ruta: '/admin/direccion' },
+      // v1.5-cerebro · solo super_admin; la página lo vuelve a mirar.
+      { nombre: 'El cerebro', ruta: '/admin/direccion/cerebro' },
       { nombre: 'Comparar sucursales', ruta: '/admin/direccion/sucursales' },
       { nombre: 'Lo que espera', ruta: '/admin/direccion/bandeja' },
       { nombre: 'Bitácora de decisiones', ruta: '/admin/decisiones' },
