@@ -11,6 +11,30 @@ import './cerebro.css'
 
 type Capa = 'todo' | 'agentes' | 'sucursales'
 
+/**
+ * C.1 · Los seis estados de la entidad. Cada uno cambia el color y el ritmo:
+ * el color del velo y del foco, y cuánto respira.
+ */
+export type EstadoEntidad = 'calma' | 'pensando' | 'hablando' | 'trabajando' | 'escuchando' | 'alerta'
+const EST: Record<EstadoEntidad, { c: string; velo: string; t: string | null; ritmo: number }> = {
+  calma: { c: '#8B5CF6', velo: '#C4B5FD', t: null, ritmo: 1 },
+  pensando: { c: '#A78BFA', velo: '#DDD6FE', t: 'pensando', ritmo: 1.8 },
+  hablando: { c: '#C4B5FD', velo: '#EDE9FE', t: null, ritmo: 1.3 },
+  trabajando: { c: '#5B8DEF', velo: '#93C5FD', t: 'revisando', ritmo: 1.4 },
+  escuchando: { c: '#2EE1A8', velo: '#86EFAC', t: 'te escucho', ritmo: 0.6 },
+  alerta: { c: '#E8921F', velo: '#FDBA74', t: 'algo cambió', ritmo: 2.2 },
+}
+
+const hora = (iso: string) => new Date(iso).toLocaleTimeString('es-AR', {
+  hour: '2-digit', minute: '2-digit', timeZone: 'America/Argentina/Buenos_Aires',
+})
+const fechaCorta = (iso: string) => {
+  const d = new Date(iso)
+  const hoy = new Date().toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })
+  const dia = d.toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })
+  return dia === hoy ? hora(iso) : `${d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', timeZone: 'America/Argentina/Buenos_Aires' })} ${hora(iso)}`
+}
+
 const SVGNS = 'http://www.w3.org/2000/svg'
 const TZ = 'America/Argentina/Buenos_Aires'
 
@@ -44,6 +68,25 @@ export function CerebroClient({ inicial }: { inicial: LecturaCerebro }) {
   const svg = useRef<SVGSVGElement>(null)
   /** Amplitud de la voz, 0..1. La alimenta el audio real (bloque E). */
   const amp = useRef(0)
+
+  // ── C.1 · el estado de la entidad ───────────────────────────────────────
+  const [ent, setEnt] = useState<{ e: EstadoEntidad; texto: string | null }>({ e: 'calma', texto: null })
+  const entRef = useRef<EstadoEntidad>('calma')
+  const poner = useCallback((e: EstadoEntidad, texto?: string | null) => {
+    entRef.current = e
+    setEnt({ e, texto: texto ?? EST[e].t })
+  }, [])
+
+  // ── C.3 · la bitácora: lo que de verdad pasó, con su hora ───────────────
+  const [bitacora, setBitacora] = useState<{ at: string; texto: string; ya?: boolean }[]>([])
+  const anotar = useCallback((texto: string, at = new Date().toISOString(), ya = false) => {
+    setBitacora((b) => [...b, { at, texto, ya }].slice(-7))
+  }, [])
+
+  const [texto, setTexto] = useState('')
+  const input = useRef<HTMLInputElement>(null)
+  /** Lo que corta la voz. Lo completa el bloque E; hasta entonces, no hay voz que cortar. */
+  const callar = useRef<() => void>(() => {})
 
   const estado: EstadoCerebro | null = lectura.ok ? lectura.estado : null
 
@@ -79,6 +122,142 @@ export function CerebroClient({ inicial }: { inicial: LecturaCerebro }) {
     const [x, y] = xySucursal(p.a, p.r)
     return { ...s, x, y }
   }), [estado])
+
+  /** Las coordenadas de un nódulo, sea agente o sucursal. */
+  const dondeEsta = useCallback((id: string | null | undefined) => {
+    if (!id) return null
+    const a = agentes.find((x) => x.id === id)
+    if (a) return { x: a.x, y: a.y, path: `sin-${a.id}`, grande: false }
+    const s = sucursales.find((x) => x.id === id || x.codigo === id)
+    if (s) return { x: s.x, y: s.y, path: `sins-${s.id}`, grande: true }
+    return null
+  }, [agentes, sucursales])
+
+  // ── las ondas del núcleo ────────────────────────────────────────────────
+  const onda = useCallback(() => {
+    const s = svg.current
+    if (!s) return
+    ;['o1', 'o2'].forEach((id, i) => {
+      const e = s.querySelector<SVGCircleElement>(`#${id}`)
+      if (!e) return
+      const t1 = performance.now() + i * 240
+      const p = (t: number) => {
+        if (t < t1) { requestAnimationFrame(p); return }
+        const k = Math.min(1, (t - t1) / 1200)
+        e.setAttribute('r', String(38 + k * 170))
+        e.setAttribute('opacity', String((1 - k) * 0.28))
+        e.setAttribute('stroke-width', String(1.5 - k))
+        if (k < 1) requestAnimationFrame(p); else e.setAttribute('opacity', '0')
+      }
+      requestAnimationFrame(p)
+    })
+  }, [])
+
+  // ── C.2 · el foco que viaja hasta el nódulo que revisa ──────────────────
+  const enfocar = useCallback((id: string | null | undefined, ms = 1800) => {
+    const s = svg.current
+    const f = s?.querySelector<SVGCircleElement>('#foco')
+    const d = dondeEsta(id)
+    if (!f) return
+    f.style.transition = 'cx .8s cubic-bezier(.3,.9,.3,1),cy .8s cubic-bezier(.3,.9,.3,1),opacity .4s,r .5s'
+    f.setAttribute('cx', String(d?.x ?? CX)); f.setAttribute('cy', String(d?.y ?? CY))
+    f.setAttribute('r', String(d?.grande ? 40 : d ? 24 : 34))
+    f.style.opacity = '.55'
+    setTimeout(() => { f.style.opacity = '0' }, ms)
+  }, [dondeEsta])
+
+  // ── C.4 · mira hacia donde habla ────────────────────────────────────────
+  //
+  // Si menciona Arabia, la entidad se desplaza hacia Arabia y la sinapsis se
+  // enciende. Es lo que hace que la frase tenga un lugar.
+  const mirar = useCallback((id: string | null | undefined) => {
+    const s = svg.current
+    const d = dondeEsta(id)
+    const e = s?.querySelector<SVGGElement>('#ent')
+    if (!s || !d || !e) return
+    e.style.transition = 'transform .7s cubic-bezier(.3,.9,.3,1)'
+    e.style.transform = `translate(${((d.x - CX) * 0.07).toFixed(1)}px,${((d.y - CY) * 0.07).toFixed(1)}px)`
+    const p = s.querySelector<SVGPathElement>(`#${d.path}`)
+    if (p) { p.style.opacity = '.85'; p.style.strokeWidth = '2.4' }
+    setTimeout(() => {
+      e.style.transform = 'translate(0px,0px)'
+      if (p) { p.style.opacity = ''; p.style.strokeWidth = '' }
+    }, 3200)
+  }, [dondeEsta])
+
+  // ── C.6 · lo que firmás cambia el cerebro ───────────────────────────────
+  //
+  // No es un mensaje: el nódulo cambia de color con una onda, y después se
+  // vuelve a leer el estado para que el dibujo quede como está la base.
+  const firmar = useCallback((id: string | null | undefined, texto: string) => {
+    const s = svg.current
+    const d = dondeEsta(id)
+    anotar(`✓ ${texto}`, new Date().toISOString(), true)
+    onda()
+    if (!s || !d) { void refrescar(); return }
+    const cuerpo = s.querySelector<SVGElement>(id && agentes.some((a) => a.id === id) ? `#n-${id} .cuerpo` : `#s-${d.path.slice(5)} .caja2`)
+    cuerpo?.setAttribute('stroke', '#2EE1A8')
+    const o = document.createElementNS(SVGNS, 'circle')
+    o.setAttribute('cx', String(d.x)); o.setAttribute('cy', String(d.y))
+    o.setAttribute('fill', 'none'); o.setAttribute('stroke', '#2EE1A8'); o.setAttribute('stroke-width', '2')
+    s.querySelector('#pul')?.appendChild(o)
+    const t0 = performance.now()
+    const ex = (t: number) => {
+      const k = Math.min(1, (t - t0) / 900)
+      o.setAttribute('r', String(16 + k * 40)); o.setAttribute('opacity', String((1 - k) * 0.8))
+      if (k < 1) requestAnimationFrame(ex); else o.remove()
+    }
+    requestAnimationFrame(ex)
+    s.querySelector<SVGPathElement>(`#${d.path}`)?.setAttribute('stroke', '#2EE1A8')
+    setTimeout(() => { void refrescar() }, 1200)
+  }, [dondeEsta, agentes, anotar, onda, refrescar])
+
+  // ── C.3 · la bitácora arranca con lo último que pasó de verdad ──────────
+  const vistos = useRef<Set<string>>(new Set())
+  useEffect(() => {
+    const act = estado?.actividad ?? []
+    const clave = (e: { at: string; texto: string }) => `${e.at}|${e.texto}`
+    if (!vistos.current.size) {
+      act.forEach((e) => vistos.current.add(clave(e)))
+      setBitacora(act.slice(0, 6).reverse().map((e) => ({ at: e.at, texto: e.texto })))
+      return
+    }
+    // Lo que apareció desde la última lectura: alerta, y a la bitácora.
+    const nuevos = act.filter((e) => !vistos.current.has(clave(e)))
+    nuevos.forEach((e) => vistos.current.add(clave(e)))
+    if (nuevos.length && entRef.current !== 'hablando' && entRef.current !== 'escuchando') {
+      const n = nuevos[0]
+      poner('alerta', n.texto)
+      enfocar(n.nodo, 2200)
+      nuevos.slice(0, 3).reverse().forEach((e) => anotar(e.texto, e.at))
+      setTimeout(() => { if (entRef.current === 'alerta') poner('calma') }, 2600)
+    }
+  }, [estado, poner, enfocar, anotar])
+
+  // ── C.2 · trabaja entre pregunta y pregunta ─────────────────────────────
+  //
+  // Cada tanto revisa algo: el foco viaja al nódulo y el estado lo dice
+  // abajo. Lo que revisa es real —las corridas de los crons, los detectores,
+  // las importaciones, las propuestas de los agentes— y se dice con la hora
+  // en que pasó, no con la de ahora.
+  useEffect(() => {
+    const act = estado?.actividad ?? []
+    if (!act.length) return
+    let i = 0
+    const trabajar = () => {
+      if (entRef.current !== 'calma') return
+      const e = act[i++ % Math.min(act.length, 12)]
+      poner('trabajando', `revisando · ${e.texto}`)
+      enfocar(e.nodo, 1800)
+      setBitacora((b) => (b.some((x) => x.at === e.at && x.texto === e.texto) ? b
+        : [...b, { at: e.at, texto: e.texto }].slice(-7)))
+      setTimeout(() => { if (entRef.current === 'trabajando') poner('calma') }, 2600)
+    }
+    const cada = (noche ? 15 : 7) * 1000
+    const t0 = setTimeout(trabajar, 3500)
+    const t = setInterval(trabajar, cada)
+    return () => { clearTimeout(t0); clearInterval(t) }
+  }, [estado, noche, poner, enfocar])
 
   // ── B.3 · los pulsos ────────────────────────────────────────────────────
   //
@@ -155,12 +334,26 @@ export function CerebroClient({ inicial }: { inicial: LecturaCerebro }) {
     const nu = s.querySelector<SVGCircleElement>('#nu')!
     const vel = s.querySelector<SVGCircleElement>('#vel1')!
     const chi = s.querySelector<SVGCircleElement>('#chispa')!
-    let giro = 0, raf = 0
-    const t0 = performance.now()
-    const ritmo = noche ? 0.55 : 1
+    const veloC = s.querySelector<SVGStopElement>('#gv-c')!
+    const nucleoC = s.querySelector<SVGStopElement>('#gn-c')!
+    const foco = s.querySelector<SVGCircleElement>('#foco')!
+    let giro = 0, raf = 0, k = 0, antes = performance.now(), ultimo: EstadoEntidad | null = null
+    // C.7 · de noche, menos actividad.
+    const base = noche ? 0.55 : 1
 
     const vivir = (t: number) => {
-      const k = ((t - t0) / 1000) * ritmo
+      const e = EST[entRef.current]
+      // C.1 · el estado cambia el ritmo: se integra el tiempo para que
+      // cambiar de estado no haga saltar la animación.
+      const ritmo = base * e.ritmo
+      k += ((t - antes) / 1000) * ritmo
+      antes = t
+      if (ultimo !== entRef.current) {
+        ultimo = entRef.current
+        veloC.setAttribute('stop-color', e.velo)
+        nucleoC.setAttribute('stop-color', e.velo)
+        foco.setAttribute('stroke', e.c)
+      }
       const a = amp.current
       const resp = Math.sin(k * 0.9) * 0.5 + 0.5
       nu.setAttribute('r', (22 + resp * 2.2 + a * 11).toFixed(1))
@@ -175,6 +368,7 @@ export function CerebroClient({ inicial }: { inicial: LecturaCerebro }) {
         o.el.setAttribute('rx', (o.rx * esc).toFixed(1))
         o.el.setAttribute('ry', (o.ry * esc * (1 - a * 0.25)).toFixed(1))
         o.el.setAttribute('transform', `rotate(${(o.rot + giro * o.sp).toFixed(1)} ${CX} ${CY})`)
+        if (i === 0) o.el.setAttribute('stroke', e.c)
         o.el.setAttribute('opacity', (o.o * (0.75 + a * 0.7)).toFixed(2))
       })
       parts.forEach((p) => {
@@ -224,7 +418,7 @@ export function CerebroClient({ inicial }: { inicial: LecturaCerebro }) {
 
       <svg ref={svg} className="lienzo" viewBox={VIEWBOX} preserveAspectRatio="xMidYMid meet">
         <defs>
-          <radialGradient id="gn"><stop offset="0%" stopColor="#A78BFA" /><stop offset="58%" stopColor="#6D3DD4" /><stop offset="100%" stopColor="#3B1F7A" /></radialGradient>
+          <radialGradient id="gn"><stop id="gn-c" offset="0%" stopColor="#A78BFA" /><stop offset="58%" stopColor="#6D3DD4" /><stop offset="100%" stopColor="#3B1F7A" /></radialGradient>
           <radialGradient id="ga"><stop offset="0%" stopColor="#8B5CF6" stopOpacity=".30" /><stop offset="45%" stopColor="#6D3DD4" stopOpacity=".10" /><stop offset="100%" stopColor="#6D3DD4" stopOpacity="0" /></radialGradient>
           <radialGradient id="gv"><stop id="gv-c" offset="0%" stopColor="#C4B5FD" stopOpacity=".5" /><stop offset="70%" stopColor="#7C3AED" stopOpacity=".16" /><stop offset="100%" stopColor="#7C3AED" stopOpacity="0" /></radialGradient>
           <filter id="br2" x="-150%" y="-150%" width="400%" height="400%"><feGaussianBlur stdDeviation="9" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
@@ -338,6 +532,35 @@ export function CerebroClient({ inicial }: { inicial: LecturaCerebro }) {
             {k === 'todo' ? 'Todo' : k === 'agentes' ? 'Agentes' : 'Sucursales'}
           </button>
         ))}
+      </div>
+
+      {/* C.1 · lo que está haciendo, dicho abajo */}
+      <div className={`estado ${ent.texto ? 'on' : ''}`}>
+        <i style={{ background: EST[ent.e].c }} /><span>{ent.texto}</span>
+      </div>
+
+      {/* C.3 · la bitácora: lo que de verdad pasó, con la hora en que pasó */}
+      <div className="bitac" aria-label="Bitácora">
+        {[...bitacora].reverse().map((b, i) => (
+          <div key={`${b.at}-${i}`} className={`bit ${b.ya ? 'ya' : ''}`}>
+            <span className="h2">{fechaCorta(b.at)}</span><span>{b.texto}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="voz">
+        <div className="caja">
+          <span className="mic off" title="El micrófono llega con la voz">🎙</span>
+          <input ref={input} value={texto} placeholder="Preguntale a NORA, o pedile algo…" autoComplete="off"
+            onFocus={() => { if (entRef.current !== 'hablando') poner('escuchando') }}
+            onBlur={() => { if (entRef.current === 'escuchando') poner('calma') }}
+            onChange={(e) => {
+              // C.5 · escribís mientras habla: deja de hablar.
+              if (entRef.current === 'hablando') callar.current()
+              setTexto(e.target.value)
+              poner('escuchando')
+            }} />
+        </div>
       </div>
 
       <div className="leyc">

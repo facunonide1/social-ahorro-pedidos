@@ -96,3 +96,29 @@
   .cbr .leyc{display:none}
   .cbr .jefe{max-width:70%;font-size:11.5px}
 }
+
+/* ── C · que esté viva ─────────────────────────────────────────────────── */
+.cbr .estado{position:absolute;left:50%;transform:translateX(-50%);bottom:84px;z-index:22;display:flex;align-items:center;gap:9px;font-size:12px;color:#7A7390;opacity:0;transition:opacity .4s;pointer-events:none;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cbr .estado.on{opacity:1}
+.cbr .estado i{width:6px;height:6px;border-radius:50%;font-style:normal;flex:none;animation:cbr-ep 1.6s ease-in-out infinite}
+@keyframes cbr-ep{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:1;transform:scale(1.5)}}
+.cbr .bitac{position:absolute;left:20px;bottom:40px;width:min(30%,300px);z-index:21;display:flex;flex-direction:column-reverse;gap:5px;pointer-events:none;
+  -webkit-mask-image:linear-gradient(to top,#000 45%,transparent);mask-image:linear-gradient(to top,#000 45%,transparent)}
+.cbr .bit{font-size:11.5px;color:#5F5873;display:flex;gap:8px;animation:cbr-bsale .5s both;line-height:1.4}
+.cbr .bit .h2{color:#3E3850;flex:none;font-variant-numeric:tabular-nums}
+.cbr .bit.ya{color:#9A93AE}
+@keyframes cbr-bsale{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+.cbr .voz{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);width:min(82%,560px);z-index:26}
+.cbr .voz .caja{display:flex;align-items:center;gap:12px;background:rgba(20,16,32,.92);backdrop-filter:blur(22px);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:9px 16px;box-shadow:0 12px 40px rgba(0,0,0,.45)}
+.cbr .voz .caja:focus-within{border-color:#8B5CF6;box-shadow:0 12px 40px rgba(0,0,0,.45),0 0 0 4px rgba(139,92,246,.14)}
+.cbr .voz .caja.hab{border-color:#8B5CF6}
+.cbr .voz .mic{width:29px;height:29px;border-radius:50%;background:#6D3DD4;display:flex;align-items:center;justify-content:center;font-size:13px;flex:none}
+.cbr .voz .mic.esc{animation:cbr-latm 1.5s ease-in-out infinite;background:#2EE1A8;color:#063}
+.cbr .voz .mic.off{background:#2A2438;color:#5F5873;cursor:not-allowed}
+@keyframes cbr-latm{0%,100%{box-shadow:0 0 0 0 rgba(46,225,168,.5)}50%{box-shadow:0 0 0 10px rgba(46,225,168,0)}}
+.cbr .voz input{flex:1;background:none;border:none;outline:none;font:inherit;font-size:15px;color:#F2F0F7;min-width:0}
+.cbr .voz input::placeholder{color:#5F5873}
+.cbr .voz .sug{display:flex;gap:6px;margin-bottom:9px;flex-wrap:wrap;justify-content:center}
+.cbr .voz .sug button{border:1px solid rgba(255,255,255,.1);background:rgba(20,16,32,.8);border-radius:999px;padding:5px 12px;font-size:12px;color:#9A93AE}
+.cbr .voz .sug button:hover{border-color:#8B5CF6;color:#F2F0F7}
+@media(max-width:900px){.cbr .bitac{display:none}.cbr .voz{width:94%}}
