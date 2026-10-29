@@ -122,3 +122,41 @@
 .cbr .voz .sug button{border:1px solid rgba(255,255,255,.1);background:rgba(20,16,32,.8);border-radius:999px;padding:5px 12px;font-size:12px;color:#9A93AE}
 .cbr .voz .sug button:hover{border-color:#8B5CF6;color:#F2F0F7}
 @media(max-width:900px){.cbr .bitac{display:none}.cbr .voz{width:94%}}
+
+/* ── D · el hilo, al costado para no tapar el cerebro ───────────────────── */
+.cbr .hilo{position:absolute;right:20px;top:96px;bottom:150px;width:min(38%,400px);display:flex;flex-direction:column;justify-content:flex-end;gap:9px;z-index:23;overflow:hidden;pointer-events:none;
+  -webkit-mask-image:linear-gradient(to bottom,transparent,#000 90px);mask-image:linear-gradient(to bottom,transparent,#000 90px)}
+.cbr .msj{max-width:100%;pointer-events:auto;animation:cbr-sale .5s cubic-bezier(.2,.9,.3,1) both;transition:opacity .6s,transform .6s,filter .6s}
+@keyframes cbr-sale{from{opacity:0;transform:translateY(26px) scale(.94)}to{opacity:1;transform:none}}
+.cbr .msj.vieja{opacity:.32;transform:scale(.96);filter:blur(.4px)}
+.cbr .msj.muy{opacity:.12;transform:scale(.92) translateY(-6px)}
+.cbr .msj.va{align-self:flex-end;max-width:84%}
+.cbr .msj .b{background:rgba(22,17,36,.88);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.1);border-radius:15px 15px 15px 4px;padding:12px 15px;font-size:14.5px;line-height:1.52;color:#D8D3E6;letter-spacing:-.015em;box-shadow:0 10px 34px rgba(0,0,0,.4)}
+.cbr .msj .b b{color:#fff;font-weight:600}
+.cbr .msj.va .b{background:rgba(109,61,212,.22);border-color:rgba(139,92,246,.4);border-radius:15px 15px 4px 15px;color:#E6E1F5}
+.cbr .msj .lee{margin-top:8px;font-size:13px;color:#9A93AE}
+.cbr .msj .cif{display:flex;gap:13px;margin-top:11px;padding-top:11px;border-top:1px solid rgba(255,255,255,.1);flex-wrap:wrap}
+.cbr .msj .cif .k{font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#5F5873}
+.cbr .msj .cif .v{font-size:15px;font-weight:600;letter-spacing:-.03em;color:#fff;margin-top:2px}
+.cbr .msj .cif .v.ok{color:#2EE1A8}.cbr .msj .cif .v.ma{color:#E0485F}.cbr .msj .cif .v.al{color:#E8921F}
+.cbr .msj .ax{display:flex;gap:7px;margin-top:12px;flex-wrap:wrap}
+.cbr .msj .ax button,.cbr .msj .ax a{border:1px solid rgba(255,255,255,.16);border-radius:10px;padding:7px 13px;font-size:13px;font-weight:500;color:#F2F0F7;background:rgba(255,255,255,.03)}
+.cbr .msj .ax .pr{background:#6D3DD4;border-color:#8B5CF6}
+.cbr .msj .ax button:hover{border-color:#A78BFA}
+.cbr .msj .ax button:disabled{opacity:.4;cursor:default}
+.cbr .msj .ax .gh{border-color:transparent;background:none;color:#9A93AE;font-weight:400}
+.cbr .msj .pie6{font-size:11.5px;color:#6E6880;margin-top:10px;line-height:1.5}
+.cbr .msj .res{font-size:12px;color:#2EE1A8;margin-top:9px}
+.cbr .msj .res.mal{color:#E0485F}
+.cbr .msj.ent{display:flex;gap:10px;align-items:flex-start}
+.cbr .msj.ent .av7{width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 36% 32%,#C4B5FD,#6D3DD4 62%,#3B1F7A);flex:none;margin-top:5px;box-shadow:0 0 14px rgba(139,92,246,.6)}
+.cbr .msj.ent.hab .av7{animation:cbr-avlat .9s ease-in-out infinite}
+@keyframes cbr-avlat{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+.cbr .msj .cuerpo{flex:1;min-width:0}
+.cbr .nom{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#5F5873;margin-bottom:4px}
+.cbr .pens{display:flex;gap:5px;padding:4px 2px}
+.cbr .pens i{width:6px;height:6px;border-radius:50%;background:#8B5CF6;font-style:normal;animation:cbr-pp 1.25s infinite}
+.cbr .pens i:nth-child(2){animation-delay:.16s}.cbr .pens i:nth-child(3){animation-delay:.32s}
+@keyframes cbr-pp{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
+.cbr .limpiar{position:absolute;right:24px;top:96px;font-size:11px;color:#5F5873;z-index:24;border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:3px 11px}
+@media(max-width:900px){.cbr .hilo{left:12px;right:12px;width:auto;top:70px;bottom:140px}}

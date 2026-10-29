@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 import {
   ars, arsCorto, type EstadoCerebro, type NodoAgente, type NodoSucursal,
-} from '@/lib/cerebro/lectura'
+} from '@/lib/cerebro/tipos'
 import { COLOR } from './geometria'
 
 export type Seleccion =

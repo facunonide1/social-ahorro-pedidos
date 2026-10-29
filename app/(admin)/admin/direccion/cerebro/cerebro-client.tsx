@@ -1,12 +1,15 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
-import { arsCorto, SNAPSHOT_VIEJO_S, type EstadoCerebro, type LecturaCerebro } from '@/lib/cerebro/lectura'
+import { arsCorto, SNAPSHOT_VIEJO_S, type EstadoCerebro, type LecturaCerebro } from '@/lib/cerebro/tipos'
 import {
   COLOR, CX, CY, POS_AGENTE, POS_SUCURSAL, VIEWBOX, curva, esDeNoche, xyAgente, xySucursal,
 } from './geometria'
 import { Panel, deCuando, type Seleccion } from './panel'
+import { Hilo, type Mensaje } from './hilo'
+import { EJEMPLOS, type Accion, type Respuesta } from '@/lib/cerebro/conversacion'
 import './cerebro.css'
 
 type Capa = 'todo' | 'agentes' | 'sucursales'
@@ -89,6 +92,18 @@ export function CerebroClient({ inicial }: { inicial: LecturaCerebro }) {
   const callar = useRef<() => void>(() => {})
 
   const estado: EstadoCerebro | null = lectura.ok ? lectura.estado : null
+  const router = useRouter()
+
+  // ── D · la conversación ─────────────────────────────────────────────────
+  const [mensajes, setMensajes] = useState<Mensaje[]>([])
+  const [hablandoId, setHablandoId] = useState<string | null>(null)
+  /** Cuánto del audio ya sonó, 0..1, o null si no hay audio. Lo da el bloque E. */
+  const progresoVoz = useRef<() => number | null>(() => null)
+  /** Habla una frase. Devuelve false si no hubo audio (sin voz, sin red, sin crédito). */
+  const hablarVoz = useRef<(t: string) => Promise<boolean>>(async () => false)
+  const alTerminarDe = useRef<Record<string, () => void>>({})
+  /** E.6 · el interruptor de voz, por si hay gente alrededor. */
+  const [vozOn, setVozOn] = useState(true)
 
   // ── A · se refresca solo, una vez por minuto, como el cálculo ───────────
   const refrescar = useCallback(async () => {
@@ -211,6 +226,100 @@ export function CerebroClient({ inicial }: { inicial: LecturaCerebro }) {
     s.querySelector<SVGPathElement>(`#${d.path}`)?.setAttribute('stroke', '#2EE1A8')
     setTimeout(() => { void refrescar() }, 1200)
   }, [dondeEsta, agentes, anotar, onda, refrescar])
+
+  // ── D · decir una respuesta ─────────────────────────────────────────────
+  //
+  // Primero mira hacia donde habla y abre el panel; después habla (bloque E)
+  // y el texto se escribe al ritmo del audio. Si hay que ir a otra pantalla,
+  // va cuando terminó de decirlo.
+  const decir = useCallback((id: string, r: Respuesta) => {
+    if (r.mirar) mirar(r.mirar)
+    if (r.abrir) setSel(r.abrir.tipo === 'nucleo' ? { tipo: 'nucleo' } : { tipo: r.abrir.tipo, id: r.abrir.id! })
+    poner('hablando')
+    setHablandoId(id)
+    alTerminarDe.current[id] = () => {
+      setHablandoId((h) => (h === id ? null : h))
+      if (entRef.current === 'hablando') poner('calma')
+      if (r.navegar) router.push(r.navegar)
+    }
+    void hablarVoz.current(r.dicho)
+  }, [mirar, poner, router])
+
+  const enviar = useCallback(async (t: string, via: 'texto' | 'voz' = 'texto') => {
+    const limpio = t.trim()
+    if (!limpio) return
+    callar.current()
+    setTexto('')
+    const yo = `y${Date.now()}`, ella = `e${Date.now()}`
+    setMensajes((m) => [...m, { id: yo, de: 'yo' as const, texto: limpio },
+      { id: ella, de: 'ella' as const, r: null, pensando: true }].slice(-8))
+    poner('pensando')
+    onda()
+    let r: Respuesta
+    try {
+      const res = await fetch('/api/cerebro/hablar', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ texto: limpio, via }),
+      })
+      const j = await res.json()
+      if (!res.ok) throw new Error(j?.error ?? `error ${res.status}`)
+      r = j
+    } catch (e: any) {
+      r = {
+        id: null, cosa: 'no_entendi', dicho: 'No te pude contestar: se cortó la conexión con el sistema.',
+        texto: null, cifras: [], acciones: [], pie: e?.message ?? null, mirar: null, abrir: null,
+        navegar: null, voz: null, propone: false,
+      }
+    }
+    setMensajes((m) => m.map((x) => (x.id === ella ? { ...x, r, pensando: false } : x)))
+    if (r.voz) setVozOn(r.voz === 'on')
+    decir(ella, r)
+  }, [poner, onda, decir])
+
+  /** Lo que pasa al tocar un botón de un mensaje. Confirmar es un toque, nunca la voz. */
+  const accionar = useCallback(async (m: Mensaje & { de: 'ella' }, a: Accion) => {
+    if (a.tipo === 'preguntar' && a.texto) { void enviar(a.texto); return }
+    if (a.tipo === 'navegar' && a.href) { router.push(a.href); return }
+    if (a.tipo === 'abrir') { setSel({ tipo: 'nucleo' }); return }
+    if (!m.r?.id) return
+    const marcar = (resultado: { ok: boolean; texto: string }) =>
+      setMensajes((ms) => ms.map((x) => (x.id === m.id ? { ...x, resultado } : x)))
+    try {
+      const res = await fetch('/api/cerebro/confirmar', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: m.r.id, descartar: a.tipo === 'descartar' }),
+      })
+      const j = await res.json()
+      marcar({ ok: !!j.ok, texto: j.texto ?? (j.ok ? 'Hecho.' : 'No se pudo.') })
+      // C.6 · lo que firmás cambia el cerebro.
+      if (j.ok && a.tipo === 'confirmar') firmar(j.nodo ?? null, j.texto ?? 'hecho')
+    } catch {
+      marcar({ ok: false, texto: 'No se pudo: se cortó la conexión. No se hizo nada.' })
+    }
+  }, [enviar, router, firmar])
+
+  // B.4 · se expande cuando habla. Con audio, la amplitud es la del audio
+  // real (bloque E). Sin audio, se abre parejo mientras escribe: no se
+  // simula un latido que no hay.
+  useEffect(() => {
+    if (!hablandoId) { amp.current = 0; return }
+    let raf = 0
+    const f = () => {
+      if (progresoVoz.current() == null) amp.current += (0.22 - amp.current) * 0.08
+      raf = requestAnimationFrame(f)
+    }
+    raf = requestAnimationFrame(f)
+    return () => { cancelAnimationFrame(raf); amp.current = 0 }
+  }, [hablandoId])
+
+  // ⌘K enfoca la caja.
+  useEffect(() => {
+    const f = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); input.current?.focus() }
+    }
+    document.addEventListener('keydown', f)
+    return () => document.removeEventListener('keydown', f)
+  }, [])
 
   // ── C.3 · la bitácora arranca con lo último que pasó de verdad ──────────
   const vistos = useRef<Set<string>>(new Set())
@@ -548,10 +657,23 @@ export function CerebroClient({ inicial }: { inicial: LecturaCerebro }) {
         ))}
       </div>
 
+      {/* D.1 · el hilo, al costado para no tapar el cerebro */}
+      <Hilo mensajes={mensajes} hablandoId={hablandoId}
+        progreso={() => progresoVoz.current()}
+        alTerminar={(id) => alTerminarDe.current[id]?.()}
+        alAccionar={accionar} />
+      {mensajes.length ? <button className="limpiar" onClick={() => setMensajes([])}>limpiar</button> : null}
+
       <div className="voz">
-        <div className="caja">
+        {!mensajes.length ? (
+          <div className="sug">
+            {EJEMPLOS.slice(0, 5).map((t) => <button key={t} onClick={() => void enviar(t)}>{t}</button>)}
+          </div>
+        ) : null}
+        <div className={`caja ${hablandoId ? 'hab' : ''}`}>
           <span className="mic off" title="El micrófono llega con la voz">🎙</span>
           <input ref={input} value={texto} placeholder="Preguntale a NORA, o pedile algo…" autoComplete="off"
+            onKeyDown={(e) => { if (e.key === 'Enter') void enviar(texto) }}
             onFocus={() => { if (entRef.current !== 'hablando') poner('escuchando') }}
             onBlur={() => { if (entRef.current === 'escuchando') poner('calma') }}
             onChange={(e) => {
