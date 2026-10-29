@@ -9,6 +9,7 @@ import {
 } from './geometria'
 import { Panel, deCuando, type Seleccion } from './panel'
 import { Hilo, type Mensaje } from './hilo'
+import { useMicrofono, useVoz } from './voz'
 import { EJEMPLOS, type Accion, type Respuesta } from '@/lib/cerebro/conversacion'
 import './cerebro.css'
 
@@ -312,6 +313,25 @@ export function CerebroClient({ inicial }: { inicial: LecturaCerebro }) {
     return () => { cancelAnimationFrame(raf); amp.current = 0 }
   }, [hablandoId])
 
+  // ── E · la voz ──────────────────────────────────────────────────────────
+  const voz = useVoz(amp, vozOn)
+  hablarVoz.current = voz.hablar
+  progresoVoz.current = voz.progreso
+  callar.current = voz.callar
+  const mic = useMicrofono(
+    (t) => { void enviar(t, 'voz') },
+    (p) => setTexto(p),
+  )
+  const tocarMic = () => {
+    if (hablandoId) { voz.callar(); return }
+    if (mic.escuchando) { mic.parar(); return }
+    poner('escuchando')
+    mic.escuchar()
+  }
+  useEffect(() => {
+    if (!mic.escuchando && entRef.current === 'escuchando' && document.activeElement !== input.current) poner('calma')
+  }, [mic.escuchando, poner])
+
   // ⌘K enfoca la caja.
   useEffect(() => {
     const f = (e: KeyboardEvent) => {
@@ -525,7 +545,8 @@ export function CerebroClient({ inicial }: { inicial: LecturaCerebro }) {
         ) : null}
       </div>
 
-      <svg ref={svg} className="lienzo" viewBox={VIEWBOX} preserveAspectRatio="xMidYMid meet">
+      <svg ref={svg} className="lienzo" viewBox={VIEWBOX} preserveAspectRatio="xMidYMid meet"
+        onClickCapture={() => { if (hablandoId) voz.callar() }}>
         <defs>
           <radialGradient id="gn"><stop id="gn-c" offset="0%" stopColor="#A78BFA" /><stop offset="58%" stopColor="#6D3DD4" /><stop offset="100%" stopColor="#3B1F7A" /></radialGradient>
           <radialGradient id="ga"><stop offset="0%" stopColor="#8B5CF6" stopOpacity=".30" /><stop offset="45%" stopColor="#6D3DD4" stopOpacity=".10" /><stop offset="100%" stopColor="#6D3DD4" stopOpacity="0" /></radialGradient>
@@ -635,6 +656,21 @@ export function CerebroClient({ inicial }: { inicial: LecturaCerebro }) {
         </div>
       ) : null}
 
+      {/* E.6 · se puede cortar, y hay un interruptor. E.4 · el gasto, a la vista. */}
+      <div className="ctl">
+        {voz.gasto ? (
+          <button className={voz.gasto.cerca ? 'al' : ''} onClick={() => setSel({ tipo: 'nucleo' })}
+            title={`${voz.gasto.usados.toLocaleString('es-AR')} de ${voz.gasto.tope.toLocaleString('es-AR')} caracteres este mes`}>
+            {voz.gasto.agotado ? 'voz: tope agotado' : `voz: ${voz.gasto.pct ?? 0}% del mes`}
+          </button>
+        ) : null}
+        <button className={vozOn ? 'on' : ''} onClick={() => setVozOn((v) => !v)}>
+          {vozOn ? '🔊 voz' : '🔇 sin voz'}
+        </button>
+      </div>
+      {voz.aviso ? <div className="aviso-voz" onClick={() => voz.setAviso(null)}>{voz.aviso} ✕</div> : null}
+      {hablandoId && vozOn ? <button className="cortar" onClick={() => voz.callar()}>tocá para que pare</button> : null}
+
       <div className="cap" role="group" aria-label="Capas">
         {(['todo', 'agentes', 'sucursales'] as Capa[]).map((k) => (
           <button key={k} className={capa === k ? 'on' : ''} onClick={() => setCapa(k)}>
@@ -671,7 +707,10 @@ export function CerebroClient({ inicial }: { inicial: LecturaCerebro }) {
           </div>
         ) : null}
         <div className={`caja ${hablandoId ? 'hab' : ''}`}>
-          <span className="mic off" title="El micrófono llega con la voz">🎙</span>
+          <button className={`mic ${mic.escuchando ? 'esc' : ''} ${mic.soportado ? '' : 'off'}`}
+            disabled={!mic.soportado}
+            title={mic.soportado ? (mic.escuchando ? 'Te escucho: tocá para terminar' : 'Hablarle') : 'Este navegador no reconoce la voz: escribí'}
+            onClick={tocarMic}>🎙</button>
           <input ref={input} value={texto} placeholder="Preguntale a NORA, o pedile algo…" autoComplete="off"
             onKeyDown={(e) => { if (e.key === 'Enter') void enviar(texto) }}
             onFocus={() => { if (entRef.current !== 'hablando') poner('escuchando') }}
@@ -692,7 +731,10 @@ export function CerebroClient({ inicial }: { inicial: LecturaCerebro }) {
         <span><i style={{ border: '1px solid #5F5873' }} />apagado o sin datos</span>
       </div>
 
-      {estado ? <Panel estado={estado} sel={sel} onCerrar={() => setSel(null)} /> : null}
+      {estado ? (
+        <Panel estado={estado} sel={sel} onCerrar={() => setSel(null)}
+          voz={{ gasto: voz.gasto, hayClave: voz.hayClave, refrescar: voz.refrescarGasto }} />
+      ) : null}
     </div>
   )
 }

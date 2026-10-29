@@ -160,3 +160,11 @@
 @keyframes cbr-pp{0%,60%,100%{opacity:.25;transform:translateY(0)}30%{opacity:1;transform:translateY(-3px)}}
 .cbr .limpiar{position:absolute;right:24px;top:96px;font-size:11px;color:#5F5873;z-index:24;border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:3px 11px}
 @media(max-width:900px){.cbr .hilo{left:12px;right:12px;width:auto;top:70px;bottom:140px}}
+
+/* ── E · la voz ─────────────────────────────────────────────────────────── */
+.cbr .ctl button.al{border-color:#E8921F;color:#E8921F}
+.cbr .cortar{position:absolute;left:50%;transform:translateX(-50%);bottom:100px;font-size:12px;color:#7A7390;z-index:27;border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:3px 12px;background:rgba(20,16,32,.7)}
+.cbr .aviso-voz{position:absolute;left:50%;transform:translateX(-50%);top:46px;z-index:27;font-size:12px;color:#E8921F;background:rgba(232,146,31,.1);border:1px solid rgba(232,146,31,.35);border-radius:999px;padding:4px 13px;cursor:pointer;max-width:80%}
+.cbr .tope{display:flex;gap:6px;margin-top:10px}
+.cbr .tope input{flex:1;min-width:0;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:6px 9px;color:#F2F0F7;font:inherit;font-size:13px}
+.cbr .tope button{border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:6px 11px;font-size:12.5px}

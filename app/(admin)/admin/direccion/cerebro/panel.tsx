@@ -1,11 +1,47 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 
 import {
   ars, arsCorto, type EstadoCerebro, type NodoAgente, type NodoSucursal,
 } from '@/lib/cerebro/tipos'
 import { COLOR } from './geometria'
+import type { Gasto } from './voz'
+
+export type VozPanel = { gasto: Gasto; hayClave: boolean | null; refrescar: () => Promise<void> }
+
+/** E.4 · el tope de gasto de la voz, configurable, con su aviso. */
+function TopeVoz({ v }: { v: VozPanel }) {
+  const [tope, setTope] = useState('')
+  const [msj, setMsj] = useState<string | null>(null)
+  const g = v.gasto
+  const guardar = async () => {
+    const n = Number(tope.replace(/\./g, ''))
+    if (!Number.isFinite(n) || n < 0) { setMsj('Tiene que ser un número de caracteres.'); return }
+    const r = await fetch('/api/cerebro/voz', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tope: n }),
+    })
+    const j = await r.json()
+    setMsj(j.ok ? 'Tope guardado.' : (j.texto ?? j.por_que ?? 'No se pudo.'))
+    if (j.ok) { setTope(''); await v.refrescar() }
+  }
+  return (
+    <>
+      <div className="sp" />
+      <div className="kk">la voz este mes</div>
+      {v.hayClave === false ? <div className="nd">No hay clave de ElevenLabs en el servidor: la entidad escribe y no habla.</div> : null}
+      <Lin l="Usados" r={g ? `${g.usados.toLocaleString('es-AR')} caracteres` : null} tono={g?.cerca ? 'al' : ''} />
+      <Lin l="Tope del mes" r={g ? `${g.tope.toLocaleString('es-AR')} caracteres` : null} />
+      <Lin l="Aviso" r={g ? `al ${g.pct ?? 0}% · avisa desde el 80%` : null} tono={g?.cerca ? 'al' : ''} />
+      <div className="tope">
+        <input value={tope} onChange={(e) => setTope(e.target.value)} placeholder="nuevo tope en caracteres" inputMode="numeric" />
+        <button onClick={guardar}>Guardar</button>
+      </div>
+      {msj ? <div className="nd">{msj}</div> : null}
+    </>
+  )
+}
 
 export type Seleccion =
   | { tipo: 'agente'; id: string }
@@ -110,7 +146,7 @@ function PanelSucursal({ s }: { s: NodoSucursal }) {
   )
 }
 
-function PanelNucleo({ e }: { e: EstadoCerebro }) {
+function PanelNucleo({ e, voz }: { e: EstadoCerebro; voz?: VozPanel }) {
   const ag = e.agentes
   const cuenta = (t: string) => ag.filter((a) => a.estado === t).length
   const f = e.espera.por_fuente ?? {}
@@ -145,14 +181,16 @@ function PanelNucleo({ e }: { e: EstadoCerebro }) {
         {ag.filter((a) => !a.construido).length} de los {ag.length} no están construidos: el dibujo los muestra
         para que no parezca que el sector está cubierto.
       </div>
+      {voz ? <TopeVoz v={voz} /> : null}
     </>
   )
 }
 
-export function Panel({ estado, sel, onCerrar }: {
+export function Panel({ estado, sel, onCerrar, voz }: {
   estado: EstadoCerebro
   sel: Seleccion | null
   onCerrar: () => void
+  voz?: VozPanel
 }) {
   let titulo = '—'
   let color: string | null = '#6D3DD4'
@@ -169,7 +207,7 @@ export function Panel({ estado, sel, onCerrar }: {
       href = '/admin/direccion/sucursales'
     }
   } else if (sel?.tipo === 'nucleo') {
-    titulo = 'Toda la cadena'; cuerpo = <PanelNucleo e={estado} />; href = '/admin/direccion/bandeja'
+    titulo = 'Toda la cadena'; cuerpo = <PanelNucleo e={estado} voz={voz} />; href = '/admin/direccion/bandeja'
   }
 
   return (
