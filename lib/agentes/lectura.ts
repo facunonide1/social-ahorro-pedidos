@@ -146,7 +146,7 @@ export async function leerEquipo(sucursalId: string | null): Promise<{
  *
  * No es «no hay nada»: es «no lo puedo saber todavía».
  */
-function sinCalcular(
+export function sinCalcular(
   agente: Agente, nivel: Nivel, marcador: LecturaDeAgente['marcador'],
 ): LecturaDeAgente {
   return {
@@ -161,7 +161,7 @@ function sinCalcular(
   }
 }
 
-function leerUno(
+export function leerUno(
   agente: Agente, d: Record<string, any>, nivel: Nivel,
   marcador: LecturaDeAgente['marcador'],
 ): LecturaDeAgente {
@@ -295,7 +295,7 @@ function leerUno(
  * decir que el recargo del 19% no cubre una comisión del 24%, que es cierto
  * con los números que hay.
  */
-function leerCanal(
+export function leerCanal(
   agente: Agente, d: Record<string, any> | null, nivel: Nivel,
   marcador: LecturaDeAgente['marcador'],
 ): LecturaDeAgente {
@@ -388,7 +388,7 @@ function leerCanal(
  * estaría diciendo que la obra social no te debitó nada, que es exactamente lo
  * contrario de lo que pasa.
  */
-function leerConvenio(
+export function leerConvenio(
   agente: Agente, d: Record<string, any> | null, nivel: Nivel,
   marcador: LecturaDeAgente['marcador'],
 ): LecturaDeAgente {
