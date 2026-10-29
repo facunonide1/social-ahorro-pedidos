@@ -82,8 +82,10 @@ function contameEspera(e: EstadoCerebro): Respuesta {
   const r = base('contame',
     `Hay ${e.espera.cuantos}. Lo primero es: ${p[0].titulo.replace(/\$[\d.,]+/g, '').trim()}. ` +
     'Ninguna se ejecuta sola: cada una la firmás en su pantalla.')
+  const repetidos = new Set(p.slice(0, 4).map((x) => x.titulo)).size < Math.min(4, p.length)
+  const corto = (t: string) => (t.length > 38 ? `${t.slice(0, 36)}…` : t)
   r.cifras = p.slice(0, 4).map((x) => ({
-    k: x.titulo.length > 38 ? `${x.titulo.slice(0, 36)}…` : x.titulo,
+    k: corto(repetidos ? `${x.sucursal ? `${x.sucursal} · ` : ''}${x.que_pasa}` : x.titulo),
     v: x.plata != null ? arsCorto(x.plata)! : x.costo_por_dia != null ? `${arsCorto(x.costo_por_dia)}/día` : 'sin plata',
     tono: (x.riesgo ? 'ma' : 'al') as Tono,
   }))
@@ -124,7 +126,7 @@ function contameSucursal(s: NodoSucursal): Respuesta {
     { k: 'Stock al costo', v: arsCorto(s.stock.valor) ?? 'no sé' },
     { k: 'Cobertura', v: cob != null ? `${cob.toLocaleString('es-AR')} meses` : 'no sé' },
     { k: 'Tareas abiertas', v: String(s.tareas.abiertas), tono: s.tareas.vencidas ? 'al' : '' },
-    { k: 'Último cierre', v: s.caja.ultimo_cierre ? fecha(s.caja.ultimo_cierre)! : 'no hay', tono: s.caja.ultimo_cierre ? '' : 'al' },
+    { k: 'Último cierre', v: (s.caja.ultimo_cierre ?? s.caja.turno_fecha) ? fecha(s.caja.ultimo_cierre ?? s.caja.turno_fecha)! : 'no hay', tono: (s.caja.ultimo_cierre ?? s.caja.turno_fecha) ? '' : 'al' },
   ]
   r.pie = [
     s.stock.de_cuando ? `El stock es del maestro de SIFACO del ${fecha(s.stock.de_cuando)}.` : s.stock.por_que_no,
@@ -185,6 +187,19 @@ async function verificar(sb: Sb, e: EstadoCerebro, cat: Catalogo, i: Extract<Int
       return r
     }
     const c = suc.caja
+    if (!c.ultimo_cierre && !c.turno_fecha && c.turno_abierto_desde) {
+      // Un turno abierto que nunca se cerró SÍ responde: no, no la cerraron.
+      const r = base('verificar',
+        `No. ${suc.nombre} tiene un turno de caja abierto desde el ${fecha(c.turno_abierto_desde)} que nunca se cerró.`)
+      r.cifras = [
+        { k: 'Abierto desde', v: fecha(c.turno_abierto_desde)!, tono: 'ma' },
+        { k: 'Efectivo', v: 'no se puede saber', tono: 'al' },
+      ]
+      r.pie = 'Sin cierre no hay número de efectivo: no puedo decirte cuánto quedó.'
+      r.acciones = [{ label: 'Ir a la caja', tipo: 'navegar', href: '/admin/finanzas/caja' }]
+      r.mirar = suc.id
+      return r
+    }
     if (!c.ultimo_cierre && !c.turno_fecha) {
       const r = base('verificar', `No lo puedo saber: ${suc.nombre} no tiene ningún cierre de caja real en el sistema.`)
       r.pie = c.por_que_no ?? null
@@ -262,23 +277,27 @@ async function hacerTarea(sb: Sb, e: EstadoCerebro, cat: Catalogo, i: Extract<In
     const p = pal.filter((w) => n.includes(w)).length
     if (p > puntos) { mejor = t; puntos = p }
   }
-  const evidencia: string[] = mejor?.evidencia_requerida?.length ? mejor.evidencia_requerida : ['foto']
+  // La evidencia la exige el TIPO de tarea: sin tipo, el flujo no pide foto,
+  // y decir «con foto» sería prometer algo que no se va a controlar.
+  const evidencia: string[] = mejor?.evidencia_requerida?.length ? mejor.evidencia_requerida : []
+  const conFoto = evidencia.some((x) => x.startsWith('foto'))
   const titulo = mejor ? mejor.nombre : i.tarea[0].toUpperCase() + i.tarea.slice(1)
   const suc = e.sucursales.find((s) => s.id === persona.sucursal_id) ?? null
 
-  const r = base('hace', `Se la dejo a ${persona.nombre} para ${i.cuando === 'hoy' ? 'hoy' : 'mañana'}, con evidencia por foto. Confirmala vos.`)
+  const r = base('hace', `Se la dejo a ${persona.nombre} para ${i.cuando === 'hoy' ? 'hoy' : 'mañana'}` +
+    `${conFoto ? ', con evidencia por foto' : ''}. Confirmala vos.`)
   r.cifras = [
     { k: 'Quién', v: persona.nombre },
     { k: 'Qué', v: titulo },
     { k: 'Cuándo', v: i.cuando === 'hoy' ? 'hoy, antes de cerrar' : 'mañana' },
-    { k: 'Evidencia', v: evidencia.join(' + ') },
+    { k: 'Evidencia', v: evidencia.length ? evidencia.join(' + ') : 'ninguna obligatoria', tono: conFoto ? '' : 'al' },
   ]
   r.acciones = [
     { label: 'Asignarla', tipo: 'confirmar', primaria: true },
     { label: 'Mejor no', tipo: 'descartar' },
   ]
   r.pie = 'Cuando la complete pasa a verificación: el control de la regla 5 lo hacés vos. ' +
-    (mejor ? '' : 'No encontré un tipo de tarea así en el catálogo: va como tarea suelta.')
+    (mejor ? '' : 'No encontré un tipo de tarea así en el catálogo: va como tarea suelta, y sin tipo el sistema no exige foto.')
   r.propone = true
   r.mirar = suc?.id ?? null
   return {
@@ -360,6 +379,14 @@ function hacerTransferencia(e: EstadoCerebro, i: Extract<Intencion, { cosa: 'hac
 
 /* ══ CAMBIÁ · con registro y reversible ════════════════════════════════════ */
 
+/** «1 mes», «2 meses», «0,5 meses». */
+function conUnidad(v: number, unidad: string): string {
+  const n = String(v).replace('.', ',')
+  if (v === 1 && unidad === 'meses') return '1 mes'
+  if (v === 1 && unidad === 'dias') return '1 día'
+  return `${n} ${unidad === 'dias' ? 'días' : unidad}`
+}
+
 async function cambiar(sb: Sb, i: Extract<Intencion, { cosa: 'cambia'; clave: string }>) {
   const { data: p } = await sb.from('compras_parametros').select('clave, valor, unidad, que_decide')
     .eq('clave', i.clave).maybeSingle<any>()
@@ -369,12 +396,12 @@ async function cambiar(sb: Sb, i: Extract<Intencion, { cosa: 'cambia'; clave: st
     return { r: base('cambia', `No lo cambio: ${String(v).replace('.', ',')} ${p.unidad} no es un valor posible para esto.`), propuesta: null }
   }
   if (Number(p.valor) === v) {
-    return { r: base('cambia', `Ya está en ${String(v).replace('.', ',')} ${p.unidad}. No cambio nada.`), propuesta: null }
+    return { r: base('cambia', `Ya está en ${conUnidad(v, p.unidad)}. No cambio nada.`), propuesta: null }
   }
-  const r = base('cambia', `Cambio ${p.clave.replace(/_/g, ' ')} de ${String(p.valor).replace('.', ',')} a ${String(v).replace('.', ',')} ${p.unidad}. Confirmalo y queda registrado, con el botón de volver atrás.`)
+  const r = base('cambia', `Cambio ${p.clave.replace(/_/g, ' ')} de ${conUnidad(Number(p.valor), p.unidad)} a ${conUnidad(v, p.unidad)}. Confirmalo y queda registrado, con el botón de volver atrás.`)
   r.cifras = [
-    { k: 'Antes', v: `${String(p.valor).replace('.', ',')} ${p.unidad}` },
-    { k: 'Después', v: `${String(v).replace('.', ',')} ${p.unidad}`, tono: 'al' },
+    { k: 'Antes', v: conUnidad(Number(p.valor), p.unidad) },
+    { k: 'Después', v: conUnidad(v, p.unidad), tono: 'al' },
   ]
   r.texto = null
   r.pie = p.que_decide

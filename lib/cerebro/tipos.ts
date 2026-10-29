@@ -63,7 +63,7 @@ export type NodoSucursal = {
   rotacion: { cobertura_meses: number | null; margen_pct: number | null; de_cuando: string | null; por_que_no: string | null }
   caja: {
     ultimo_cierre: string | null; quien: string | null; diferencia: number | null
-    turno_estado: string | null; turno_fecha: string | null
+    turno_estado: string | null; turno_fecha: string | null; turno_abierto_desde?: string | null
     de_cuando: string | null; por_que_no: string | null
   }
   personas: { lista: Persona[]; presencia_registrada: boolean; por_que_no: string | null }
