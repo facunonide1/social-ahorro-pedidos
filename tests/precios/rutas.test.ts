@@ -59,3 +59,14 @@ test('bandera prendida y clave configurada: la clave equivocada da 401, y un cue
   delete process.env[BANDERA]
   delete process.env.PRECIOS_INGEST_CLAVE
 })
+
+test('mejor: un uuid hecho de guiones o días fraccionarios dan 400 antes de la sesión y de la base', async () => {
+  process.env[BANDERA] = 'on'
+  const mejor = await import('../../app/api/precios/mejor/route')
+  const uuid = '3fa85f64-5717-4562-b3fc-2c963f66afa6'
+  assert.equal((await mejor.GET(pedido('/api/precios/mejor?producto=' + '-'.repeat(36)))).status, 400)
+  assert.equal((await mejor.GET(pedido(`/api/precios/mejor?producto=${uuid}&dias=1.5`))).status, 400)
+  assert.equal((await mejor.GET(pedido(`/api/precios/mejor?producto=${uuid}&dias=0`))).status, 400)
+  assert.equal((await mejor.GET(pedido(`/api/precios/mejor?producto=${uuid}&dias=91`))).status, 400)
+  delete process.env[BANDERA]
+})

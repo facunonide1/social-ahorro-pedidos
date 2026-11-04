@@ -18,7 +18,7 @@ export const runtime = 'nodejs'
  * el bot llegue hace falta una excepción ahí, que es autenticación y espera el
  * OK de Facundo (PENDIENTE.md §7).
  *
- * Cuerpo: { fuente: 'grok_bot', filas: [{ proveedor, cuit?, codigo_barras | sku,
+ * Cuerpo: { fuente: 'grok_bot', filas: [{ proveedor, cuit?, codigo_barras, sku?,
  *           descripcion?, precio, capturado_at }] }, hasta 5000 filas.
  */
 export async function POST(req: NextRequest) {

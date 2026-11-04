@@ -88,7 +88,9 @@ export function leerIngesta(body: unknown): LecturaDeIngesta {
     const x = f.data
     const codigo = x.codigo_barras == null ? null : soloDigitos(String(x.codigo_barras))
     const sku = x.sku_proveedor ?? x.sku ?? null
-    if (!codigo && !sku) { descartadas.push({ indice, motivo: 'no tiene código de barras ni sku: no hay con qué reconocer el producto' }); return }
+    // El producto se reconoce por código de barras. El sku del proveedor se guarda, pero no alcanza:
+    // no hay una tabla que diga qué sku de cada droguería es qué producto.
+    if (!codigo) { descartadas.push({ indice, motivo: 'no tiene código de barras: no hay con qué reconocer el producto (el sku solo no alcanza)' }); return }
     if (!x.proveedor && !x.cuit) { descartadas.push({ indice, motivo: 'no dice de qué proveedor es' }); return }
     filas.push({
       proveedor: x.proveedor ?? '',

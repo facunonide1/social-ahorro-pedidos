@@ -43,8 +43,17 @@ echo "== las reglas, el ingreso y la comparación =="
 sql <<'SQL'
 create function pg_temp.esperar(cond boolean, que text) returns void language plpgsql as $$
 begin
-  if not cond then raise exception 'FALLA: %', que; end if;
+  -- IS DISTINCT FROM TRUE: un NULL (falta un proveedor, falta una clave del json) es FALLA, no ok.
+  if cond is distinct from true then raise exception 'FALLA: %', que; end if;
   raise notice 'ok    %', que;
+end $$;
+
+-- el helper no deja pasar NULL
+do $$ begin
+  perform pg_temp.esperar(null, 'esto tiene que fallar');
+  raise exception 'el helper dejó pasar un NULL';
+exception when raise_exception then
+  if sqlerrm like 'FALLA:%' then raise notice 'ok    el helper rechaza NULL'; else raise; end if;
 end $$;
 
 -- plausibilidad
@@ -74,10 +83,27 @@ select pg_temp.esperar((precios_ingestar('grok_bot', 'prueba', jsonb_build_array
 select pg_temp.esperar((select aceptadas = 3 and rechazadas = 1 and sin_reconocer = 1 from precios_ingestas), '3 aceptadas, 1 rechazada, 1 sin reconocer');
 select pg_temp.esperar((select motivos[1] from precios_proveedores where proveedor_texto = 'Nadie SA') like 'no reconozco al proveedor%', 'el proveedor desconocido dice por qué');
 
+-- precisión y rango: se evalúa lo que se guarda, y una fila fuera de rango no tira el lote
+select pg_temp.esperar((precios_ingestar('grok_bot', 'prueba', jsonb_build_array(
+  jsonb_build_object('proveedor', 'Del Sud', 'cuit', '30123456789', 'codigo_barras', '7790001000028', 'precio', 0.001, 'capturado_at', now()::text),
+  jsonb_build_object('proveedor', 'Del Sud', 'cuit', '30123456789', 'codigo_barras', '7790001000028', 'precio', 1000000000000, 'capturado_at', now()::text)
+)) ->> 'rechazadas')::int = 2, '0,001 y un billón: rechazados, y el lote entra igual');
+select pg_temp.esperar((select motivos[1] from precios_proveedores where precio is null and motivos[1] like '%billón%') is not null, 'el billón dice por qué');
+
+-- un proveedor activo que no es droguería no se reconoce
+insert into proveedores (razon_social, nombre_comercial, cuit, es_drogueria) values ('LIBRERIA SA', 'Librería', '30-11111111-1', false);
+select pg_temp.esperar((precios_ingestar('grok_bot', 'prueba', jsonb_build_array(
+  jsonb_build_object('proveedor', 'Librería', 'cuit', '30111111111', 'codigo_barras', '7790001000011', 'precio', 100, 'capturado_at', now()::text)
+)) ->> 'sin_reconocer')::int = 1, 'un proveedor que no es droguería queda sin reconocer');
+
 -- comparación
 select pg_temp.esperar((select mejor_proveedor(id) -> 'mejor' ->> 'proveedor' from productos_catalogo where codigo_barras = '7790001000011') = 'Del Sud', 'el mejor es Del Sud');
 select pg_temp.esperar((select (mejor_proveedor(id) ->> 'ahorro_contra_el_segundo')::numeric from productos_catalogo where codigo_barras = '7790001000011') = 89.50, 'ahorro contra el segundo: 89,50');
 select pg_temp.esperar((select mejor_proveedor(id) ->> 'por_que_no' from productos_catalogo where codigo_barras = '7790001000028') like 'hay un solo proveedor%', 'con un solo proveedor lo dice');
+select pg_temp.esperar((select mejor_proveedor(id) -> 'mejor' = 'null'::jsonb and jsonb_array_length(mejor_proveedor(id) -> 'todos') = 1 from productos_catalogo where codigo_barras = '7790001000028'), 'con un solo proveedor, mejor es null y está en todos');
+update proveedores set activo = false where nombre_comercial = 'Del Sud';
+select pg_temp.esperar((select mejor_proveedor(id) -> 'mejor' = 'null'::jsonb from productos_catalogo where codigo_barras = '7790001000011'), 'una droguería desactivada deja de competir');
+update proveedores set activo = true where nombre_comercial = 'Del Sud';
 select pg_temp.esperar((select mejor_proveedor(gen_random_uuid()) -> 'mejor' = 'null'::jsonb and mejor_proveedor(gen_random_uuid()) ->> 'por_que_no' like 'no hay precios%'), 'sin lecturas: mejor null con el motivo, no cero');
 
 -- un precio 4 veces más caro que la última lectura aceptada no entra a la comparación
@@ -102,7 +128,7 @@ do $$ begin
      or to_regprocedure('public.precios_plausibilidad(numeric,timestamptz,numeric,numeric,timestamptz)') is not null then
     raise exception 'FALLA: el down dejó objetos de la 0294';
   end if;
-  if (select count(*) from public.proveedores) <> 2 then raise exception 'FALLA: el down tocó proveedores'; end if;
+  if (select count(*) from public.proveedores) <> 3 then raise exception 'FALLA: el down tocó proveedores'; end if;
   raise notice 'ok    el down saca todo lo de la 0294 y no toca lo que existía';
 end $$;
 SQL

@@ -9,20 +9,27 @@ export const runtime = 'nodejs'
 /**
  * GET /api/precios/mejor?producto=<uuid>&dias=7 · mejor_proveedor(producto).
  *
- * Con un solo proveedor no dice «el mejor»: dice que no hay con qué comparar.
+ * Con un solo proveedor `mejor` es null: está en `todos` y no hay con qué comparar.
  * Sin lecturas aceptadas recientes, `mejor` es null con el motivo, no cero.
  */
 export async function GET(req: NextRequest) {
   const apagada = siApagada()
   if (apagada) return apagada
 
-  const quien = await quienPuedeVer(createClient())
-  if (quien instanceof NextResponse) return quien
-
   const url = new URL(req.url)
   const producto = url.searchParams.get('producto') ?? ''
-  if (!/^[0-9a-f-]{36}$/i.test(producto)) return NextResponse.json({ error: 'falta producto (uuid)' }, { status: 400 })
-  const dias = Math.min(90, Math.max(1, Number(url.searchParams.get('dias') ?? 7) || 7))
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(producto)) {
+    return NextResponse.json({ error: 'producto tiene que ser un uuid' }, { status: 400 })
+  }
+  const diasTexto = url.searchParams.get('dias') ?? '7'
+  if (!/^\d{1,2}$/.test(diasTexto) || Number(diasTexto) < 1 || Number(diasTexto) > 90) {
+    return NextResponse.json({ error: 'dias tiene que ser un entero entre 1 y 90' }, { status: 400 })
+  }
+  const dias = Number(diasTexto)
+
+  // Los parámetros se validan antes de la sesión: un pedido mal armado no llega ni a la base.
+  const quien = await quienPuedeVer(createClient())
+  if (quien instanceof NextResponse) return quien
 
   const { data, error } = await createAdminClient().rpc('mejor_proveedor', { p_producto: producto, p_dias: dias })
   if (error) {

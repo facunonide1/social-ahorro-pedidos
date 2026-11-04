@@ -60,9 +60,9 @@ test('ingesta: un precio con coma decimal argentina se lee bien; uno con miles a
   if (amb.ok) assert.equal(amb.filas[0].precio, null)
 })
 
-test('ingesta: sin código de barras ni sku, o sin proveedor, la fila se rechaza con el motivo', () => {
+test('ingesta: sin código de barras (aunque traiga sku), o sin proveedor, la fila se rechaza con el motivo', () => {
   const r = leerIngesta({ fuente: 'grok_bot', filas: [
-    { proveedor: 'X', precio: 10, capturado_at: '2026-11-04T10:00:00Z' },
+    { proveedor: 'X', sku: 'ABC-1', precio: 10, capturado_at: '2026-11-04T10:00:00Z' },
     { codigo_barras: '1', precio: 10, capturado_at: '2026-11-04T10:00:00Z' },
   ] })
   assert.equal(r.ok, true)

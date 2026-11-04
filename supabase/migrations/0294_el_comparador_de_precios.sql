@@ -15,8 +15,8 @@
 --
 -- ── NULL NO ES CERO ─────────────────────────────────────────────────────────
 --
--- `mejor_proveedor` con un solo proveedor no dice «el mejor»: dice que hay uno
--- y que no hay con qué compararlo. Sin lecturas aceptadas recientes, devuelve
+-- `mejor_proveedor` con un solo proveedor no dice «el mejor» (`mejor: null`):
+-- lo muestra en `todos` y dice que no hay con qué compararlo. Sin lecturas aceptadas recientes, devuelve
 -- `mejor: null` con el motivo.
 --
 -- ── QUIÉN LA PUEDE LEER ─────────────────────────────────────────────────────
@@ -145,6 +145,7 @@ declare
   v_cap timestamptz;
   v_estado text;
   v_motivos text[];
+  v_fuera boolean;
 begin
   insert into precios_ingestas (fuente, origen, creado_por)
   values (p_fuente, p_origen, p_por) returning id into v_ingesta;
@@ -152,11 +153,10 @@ begin
   for f in select * from jsonb_array_elements(coalesce(p_filas, '[]'::jsonb)) loop
     -- El proveedor: por CUIT, y si no viene, por nombre entre las droguerías activas.
     select p.id into v_prov from proveedores p
-     where not coalesce(p.es_demo, false) and p.activo
+     where not coalesce(p.es_demo, false) and p.activo and p.es_drogueria
        and ((nullif(f ->> 'cuit', '') is not null and regexp_replace(coalesce(p.cuit, ''), '\D', '', 'g') = f ->> 'cuit')
          or (nullif(f ->> 'cuit', '') is null and nullif(f ->> 'proveedor', '') is not null
              and (lower(p.nombre_comercial) = lower(f ->> 'proveedor') or lower(p.razon_social) = lower(f ->> 'proveedor'))))
-     order by p.es_drogueria desc nulls last
      limit 1;
 
     -- El producto: por código de barras contra el catálogo.
@@ -165,11 +165,19 @@ begin
        and c.codigo_barras = f ->> 'codigo_barras'
      limit 1;
 
+    -- Se evalúa el mismo número que se guarda: redondeado a centavos, y dentro de lo que entra en
+    -- numeric(14,2). Un 0,001 que se guardaría como 0,00 es «no positivo»; uno de un billón no entra
+    -- y se rechaza esa fila sola, sin tirar abajo el lote.
+    v_fuera := false;
     begin
-      v_precio := nullif(f ->> 'precio', '')::numeric;
+      v_precio := round(nullif(f ->> 'precio', '')::numeric, 2);
     exception when others then
       v_precio := null;
     end;
+    if v_precio is not null and abs(v_precio) >= 1000000000000 then
+      v_precio := null;
+      v_fuera := true;
+    end if;
     begin
       v_cap := nullif(f ->> 'capturado_at', '')::timestamptz;
     exception when others then
@@ -187,6 +195,10 @@ begin
        order by pp.capturado_at desc limit 1;
       select r.estado, r.motivos into v_estado, v_motivos
         from precios_plausibilidad(v_precio, v_cap, v_costo, v_ultimo) r;
+      if v_fuera then
+        v_estado := 'rechazado';
+        v_motivos := array['el precio es de un billón o más: no entra en lo que se guarda'];
+      end if;
     end if;
 
     insert into precios_proveedores (ingesta_id, proveedor_id, proveedor_texto, producto_id, codigo_barras,
@@ -227,6 +239,7 @@ as $$
            pp.precio, pp.capturado_at
       from precios_proveedores pp
       join proveedores p on p.id = pp.proveedor_id
+                       and p.activo and p.es_drogueria and not coalesce(p.es_demo, false)
      where pp.producto_id = p_producto and pp.estado = 'aceptado'
        and pp.capturado_at > now() - make_interval(days => p_dias)
      order by pp.proveedor_id, pp.capturado_at desc
@@ -237,9 +250,10 @@ as $$
     'producto_id', p_producto,
     'ventana_dias', p_dias,
     'comparados', (select count(*) from orden),
+    -- Con un solo proveedor no hay «mejor»: está en `todos`, y `por_que_no` dice por qué.
     'mejor', (select jsonb_build_object('proveedor_id', proveedor_id, 'proveedor', proveedor,
                                          'precio', precio, 'capturado_at', capturado_at)
-                from orden where n = 1),
+                from orden where n = 1 and (select count(*) from orden) >= 2),
     'segundo', (select jsonb_build_object('proveedor_id', proveedor_id, 'proveedor', proveedor,
                                            'precio', precio, 'capturado_at', capturado_at)
                   from orden where n = 2),
