@@ -9,5 +9,7 @@
  "demo_origen_ref": "libreta de equivalencias que usa un trigger, no una pantalla",
  "sifaco_maestro_staging": "pila de origen del importador: solo la escribe y lee el cargador con service_role",
  "sifaco_mapeo_columnas": "mapeo de columnas del importador; nadie lo lee desde una pantalla",
- "cerebro_snapshot": "v1.5-cerebro: una fila que escribe pg_cron; la unica puerta es cerebro_estado(), que mira el rol adentro"
+ "cerebro_snapshot": "v1.5-cerebro: una fila que escribe pg_cron; la unica puerta es cerebro_estado(), que mira el rol adentro",
+ "precios_ingestas": "0294: la escribe y lee el servidor con service_role tras verificar la clave del bot o el rol; quién ve precios de proveedores lo decide Facundo (PENDIENTE.md)",
+ "precios_proveedores": "0294: la escribe y lee el servidor con service_role tras verificar la clave del bot o el rol; quién ve precios de proveedores lo decide Facundo (PENDIENTE.md)"
 }
