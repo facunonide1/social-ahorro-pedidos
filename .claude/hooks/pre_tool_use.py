@@ -153,6 +153,12 @@ def check_heredocs(norm, ctx):
         opener, body = norm[line_start:m.end(3)], m.group(4)
         if DB_CLIENT.search(opener) and DESTRUCTIVE_DDL.search(body):
             deny("DDL destructivo en heredoc (truncate / drop schema / drop database)")
+        # Si lo consume un shell (bash <<EOF), el cuerpo no es dato: es lo que se ejecuta.
+        # La línea de apertura puede tener comillas que cierran después del heredoc (git commit -m "$(cat <<EOF):
+        # se separa por palabras, sin tokenizar.
+        opener_names = {name_of(w) for w in re.split(r"[\s;&|()\"'`$<>]+", opener) if w}
+        if opener_names & (SHELL_WRAPPERS - {"ssh", "su", "watch", "eval"}):
+            scan_bash(body, ctx, 1)
         if not m.group(1):
             for sub in SUBSTITUTION.finditer(body):
                 scan_bash(sub.group(1) if sub.group(1) is not None else sub.group(2), ctx, 1)
@@ -347,7 +353,7 @@ def repo_config_pushes_protected():
     return False
 
 
-def check_push_to_protected(tokens, names):
+def check_push_to_protected(tokens, names, ctx=None):
     """Un push a main despliega producción en Vercel: no se hace nunca desde acá."""
     sub = git_subcommand(tokens, names)
     if sub is None or tokens[sub] != "push":
@@ -368,11 +374,13 @@ def check_push_to_protected(tokens, names):
     positional = [t for t in rest if not t.startswith("-")]
     for r in positional:
         dest = r.split(":", 1)[-1].replace("refs/heads/", "")
-        if dest in PROTECTED_BRANCHES or (dest == "head" and current_branch() in PROTECTED_BRANCHES | {None}):
+        if dest in PROTECTED_BRANCHES or (dest == "head" and ((ctx or {}).get("cambio_de_rama")
+                                                               or current_branch() in PROTECTED_BRANCHES | {None})):
             deny(f"git push a {dest}: main despliega producción; se trabaja en una rama y se abre un PR")
     # Estando en main (o sin poder saberlo), el push tiene que nombrar una rama local que no sea protegida.
     # Contar posicionales no alcanza: en `git push -o x origin` el `x` es el valor de -o, no una rama.
-    branch = current_branch()
+    # Si el mismo comando cambió de rama antes (git switch main && git push), HEAD en disco ya no dice nada.
+    branch = None if (ctx or {}).get("cambio_de_rama") else current_branch()
     tags_only = "--tags" in rest and len(positional) <= 1
     if (branch is None or branch in PROTECTED_BRANCHES) and not tags_only:
         if not any(is_local_branch(r.split(":", 1)[0]) for r in positional):
@@ -439,7 +447,10 @@ def scan_bash(text, ctx, depth=0):
         check_copy_move(tokens, names, ctx)
         check_db_push(tokens, names)
         check_read_only_refs(tokens)
-        check_push_to_protected(tokens, names)
+        check_push_to_protected(tokens, names, ctx)
+        sub = git_subcommand(tokens, names)
+        if sub is not None and tokens[sub] in ("checkout", "switch"):
+            ctx["cambio_de_rama"] = True
         check_branch_delete(tokens, names)
         check_merge(tokens, names)
         check_vercel(tokens, names)
@@ -454,7 +465,11 @@ def evaluate_bash(tool_input):
     if not isinstance(cmd, str) or not cmd.strip():
         deny("comando vacío o ausente (fail-closed)")
     norm = normalize(cmd)
-    ctx = {"in_migrations": False}
+    ctx = {"in_migrations": False, "cambio_de_rama": False}
+    # El DDL puede llegar al cliente por un pipe (printf "truncate …" | psql): se mira el comando entero.
+    sin_heredocs = HEREDOC.sub(lambda m: "<< heredoc" + m.group(3), norm)
+    if "|" in sin_heredocs and DB_CLIENT.search(sin_heredocs) and DESTRUCTIVE_DDL.search(sin_heredocs):
+        deny("DDL destructivo que llega a un cliente de base por un pipe")
     check_heredocs(norm, ctx)
     scan_bash(HEREDOC.sub(lambda m: "<< heredoc" + m.group(3), norm), ctx)
 

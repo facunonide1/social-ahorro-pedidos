@@ -91,6 +91,15 @@ run bloquea "push -o x origin estando en main" "git push -o ci.skip origin"
 run bloquea "push --signed origin main"      "git push --signed origin main"
 run pasa    "push de una rama desde main"    "git push -u origin feat/x"
 run bloquea "git -c remote.origin.push=HEAD:main" "git -c remote.origin.push=HEAD:main push origin"
+( cd "$FIXTURE" && git checkout -q feat/x )
+run bloquea "switch a main y push"           "git switch main && git push origin"
+run bloquea "checkout main y push HEAD"      "git checkout main && git push origin HEAD"
+run pasa    "switch a otra rama y push explícito" "git switch feat/x && git push -u origin feat/x"
+( cd "$FIXTURE" && git checkout -q main )
+run bloquea "truncate por pipe a psql"       "printf 'TRUNCATE work_orders;' | psql \"\$DATABASE_URL\""
+run bloquea "heredoc a bash con rm -rf"      $'bash <<EOF\nrm -rf build\nEOF'
+run bloquea "heredoc citado a sh con rm -rf" $'sh <<\'EOF\'\nrm -rf build\nEOF'
+run pasa    "heredoc a cat que menciona rm -rf" $'cat > notas.txt <<\'EOF\'\nno usar rm -rf\nEOF'
 run bloquea "--db-url= con variable y URL local en comentario" "supabase db push --db-url=\"\$PROD_URL\" # postgresql://postgres:postgres@localhost/postgres"
 run bloquea "cd migrations y > ./archivo existente" "cd supabase/migrations && > ./0001_core.sql"
 run bloquea "cd migrations y cp a ./archivo existente" "cd supabase/migrations && cp /tmp/x ./0001_core.sql"

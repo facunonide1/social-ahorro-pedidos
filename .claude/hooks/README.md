@@ -103,6 +103,23 @@ sobre allow, no se puede expresar "push solo a staging". El filtro fino es este 
 - Un commit cuyo mensaje mencione a la vez un cliente de base y `truncate`/`drop schema` *en el mismo segmento*
   se bloquea. Usá `git commit -F archivo`.
 
+### Lo que se sumó después de tres rondas de revisión cruzada (Astra)
+
+- `git push`: se bloquea cualquier posicional con destino protegido (`--repo=origin HEAD:main`), `-c remote.*.push`,
+  un push refspec hacia main en `.git/config`, y un push sin rama explícita si el mismo comando cambió de rama
+  (`git switch main && git push`).
+- `execute_sql`: literales, identificadores y comentarios en una sola pasada; comentarios de bloque, `SELECT INTO`,
+  barras invertidas y nombres de función entre comillas, bloqueados.
+- DDL destructivo que llega a un cliente de base por un pipe; heredocs que consume un shell (`bash <<EOF`) se
+  inspeccionan como comandos.
+- Si el comando no se puede tokenizar (comillas sin cerrar), bloquea.
+
+### Falsos positivos conocidos (del lado seguro)
+
+- `echo rm -rf` y cualquier comando que *mencione* un borrado recursivo forzado como argumento.
+- Un comando con un pipe que nombre a la vez un cliente de base y `truncate`/`drop schema`.
+- Estando en `main`, `git push origin <rama>` solo pasa si `<rama>` existe localmente.
+
 ## Tests
 
 ```bash
