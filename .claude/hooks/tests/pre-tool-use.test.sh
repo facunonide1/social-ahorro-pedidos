@@ -84,6 +84,8 @@ run pasa    "push de una rama de trabajo"    "git push -u origin feat/x"
 run pasa    "push sin rama en una rama"      "git push"
 ( cd "$FIXTURE" && git checkout -q main )
 run bloquea "vercel --prod"                  "vercel --prod"
+run bloquea "vercel --prod=true"             "vercel deploy --prod=true"
+run bloquea "git push --all"                 "git push --all origin"
 run bloquea "vercel deploy --prod"           "vercel deploy --prebuilt --prod"
 run bloquea "vercel promote"                 "vercel promote https://x.vercel.app"
 run bloquea "vercel alias"                   "vercel alias set a b"
@@ -118,6 +120,8 @@ mcp bloquea "update"                         execute_sql "{$P,\"query\":\"update
 mcp bloquea "do block"                       execute_sql "{$P,\"query\":\"do \$\$ begin perform 1; end \$\$\"}"
 mcp bloquea "explain analyze ejecuta"        execute_sql "{$P,\"query\":\"explain analyze delete from t\"}"
 mcp pasa    "palabra prohibida en un literal" execute_sql "{$P,\"query\":\"select count(*) from t where nota = 'drop table'\"}"
+mcp bloquea "función con nombre entre comillas" execute_sql "{$P,\"query\":\"select \\\"cerebro_calcular\\\"()\"}"
+mcp bloquea "E-string que esconde una llamada" execute_sql "{$P,\"query\":\"select E'\\\\'', cerebro_calcular(), '\\\\''\"}"
 mcp pasa    "list_tables"                    list_tables "{$P}"
 mcp pasa    "get_advisors"                   get_advisors "{$P,\"type\":\"security\"}"
 

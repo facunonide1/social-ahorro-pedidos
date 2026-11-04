@@ -300,6 +300,8 @@ def check_push_to_protected(tokens, names):
     sub = git_subcommand(tokens, names)
     if sub is None or tokens[sub] != "push":
         return
+    if {"--all", "--branches"} & set(tokens[sub + 1:]):
+        deny("git push --all empuja también main, que despliega producción")
     args = [t for t in tokens[sub + 1:] if not t.startswith("-")]
     refspecs = args[1:]  # el primero es el remoto
     if not refspecs:
@@ -334,7 +336,7 @@ def check_vercel(tokens, names):
     if "vercel" not in names:
         return
     rest = tokens[names.index("vercel") + 1:]
-    if VERCEL_PROD_FLAGS & set(rest) or any(t.startswith("--target=prod") for t in rest):
+    if VERCEL_PROD_FLAGS & set(rest) or any(t.startswith(("--target=prod", "--prod")) for t in rest):
         deny("deploy a producción en Vercel")
     if rest and rest[0] in VERCEL_DENY_SUBCOMMANDS:
         deny(f"vercel {rest[0]} toca producción (dominio, alias o deploy)")
@@ -524,7 +526,12 @@ def strip_sql(sql):
 def check_read_only_sql(query):
     if not isinstance(query, str) or not query.strip():
         deny("execute_sql sin query (fail-closed)")
+    if "\\" in query:
+        # Con E'…' la barra invertida cambia dónde termina un literal y se puede esconder una llamada adentro.
+        deny("execute_sql con barra invertida: no se puede verificar dónde terminan los literales")
     sql = strip_sql(query)
+    if re.search(r'"\s*\(', sql):
+        deny("execute_sql llama a una función con el nombre entre comillas: no se puede verificar")
     if "$$" in sql or "$" in re.sub(r"\$\d+", "", sql):
         deny("execute_sql con dollar-quoting o parámetros: no se puede verificar que sea solo lectura")
     if ";" in sql.rstrip("; \n\t"):

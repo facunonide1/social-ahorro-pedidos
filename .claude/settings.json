@@ -50,7 +50,8 @@
       "Bash(chmod 777 *)",
       "Bash(chmod -R 777 *)",
       "Bash(ssh *)",
-      "Bash(* > /dev/*)"
+      "Bash(* > /dev/sd*)",
+      "Bash(* > /dev/disk*)"
     ]
   },
   "hooks": {
