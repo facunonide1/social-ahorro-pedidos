@@ -51,13 +51,24 @@
       "Bash(chmod -R 777 *)",
       "Bash(ssh *)",
       "Bash(* > /dev/sd*)",
-      "Bash(* > /dev/disk*)"
+      "Bash(* > /dev/disk*)",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "mcp__claude_ai_Supabase__deploy_edge_function",
+      "mcp__claude_ai_Supabase__create_edge_function_secret",
+      "mcp__claude_ai_Supabase__create_project",
+      "mcp__claude_ai_Supabase__pause_project",
+      "mcp__claude_ai_Supabase__restore_project",
+      "mcp__claude_ai_Supabase__create_branch",
+      "mcp__claude_ai_Supabase__delete_branch",
+      "mcp__claude_ai_Supabase__merge_branch",
+      "mcp__claude_ai_Supabase__rebase_branch",
+      "mcp__claude_ai_Supabase__reset_branch"
     ]
   },
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash|Write|Edit|MultiEdit|mcp__supabase__.*",
+        "matcher": "Bash|Write|Edit|MultiEdit|mcp__supabase__.*|mcp__claude_ai_Supabase__.*",
         "hooks": [
           {
             "type": "command",

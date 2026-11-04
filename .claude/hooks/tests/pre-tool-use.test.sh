@@ -74,7 +74,7 @@ run bloquea "pull encadenado con otra cosa"  "supabase db pull --project-ref hrj
 run pasa    "link para poder hacer pull"     "supabase link --project-ref hrjxjbirajbsurobqdca"
 
 echo "== producción de NORA: deploy, entorno, dominio =="
-( cd "$FIXTURE" && git init -q -b main )
+( cd "$FIXTURE" && git init -q -b main && git -c user.email=t@t -c user.name=t commit -q --allow-empty -m init && git branch wo/hook-hardening )
 run bloquea "push a main"                    "git push origin main"
 run bloquea "push HEAD:main"                 "git push origin HEAD:main"
 run bloquea "push refs/heads/main"           "git push origin feature:refs/heads/main"
@@ -86,6 +86,16 @@ run pasa    "push sin rama en una rama"      "git push"
 run bloquea "vercel --prod"                  "vercel --prod"
 run bloquea "vercel --prod=true"             "vercel deploy --prod=true"
 run bloquea "git push --all"                 "git push --all origin"
+run bloquea "push --repo=origin HEAD:main"   "git push --repo=origin HEAD:main"
+run bloquea "push -o x origin estando en main" "git push -o ci.skip origin"
+run bloquea "push --signed origin main"      "git push --signed origin main"
+run pasa    "push de una rama desde main"    "git push -u origin feat/x"
+run bloquea "vercel --target production"     "vercel deploy --target production"
+run bloquea "vercel --yes promote"           "vercel --yes promote https://x.vercel.app"
+run bloquea "vercel --scope x env rm"        "vercel --scope x env rm CLAVE production"
+run bloquea "gh --repo x pr merge"           "gh --repo a/b pr merge 12 --squash"
+run bloquea "continuación dentro de rm"      $'r\\\nm -rf build'
+run bloquea "comillas sin cerrar"            "echo 'hola"
 run bloquea "vercel deploy --prod"           "vercel deploy --prebuilt --prod"
 run bloquea "vercel promote"                 "vercel promote https://x.vercel.app"
 run bloquea "vercel alias"                   "vercel alias set a b"
@@ -122,6 +132,10 @@ mcp bloquea "explain analyze ejecuta"        execute_sql "{$P,\"query\":\"explai
 mcp pasa    "palabra prohibida en un literal" execute_sql "{$P,\"query\":\"select count(*) from t where nota = 'drop table'\"}"
 mcp bloquea "función con nombre entre comillas" execute_sql "{$P,\"query\":\"select \\\"cerebro_calcular\\\"()\"}"
 mcp bloquea "E-string que esconde una llamada" execute_sql "{$P,\"query\":\"select E'\\\\'', cerebro_calcular(), '\\\\''\"}"
+mcp bloquea "-- dentro de un literal"        execute_sql "{$P,\"query\":\"select '--', public.cerebro_calcular()\"}"
+mcp bloquea "select into crea una tabla"     execute_sql "{$P,\"query\":\"select 1 into public.guardrail_probe\"}"
+mcp pasa    "comentario con comillas"        execute_sql "{$P,\"query\":\"select 1 -- it's fine\"}"
+check bloquea "namespace claude_ai_Supabase" "$(python3 -c 'import json; print(json.dumps({"tool_name":"mcp__claude_ai_Supabase__apply_migration","tool_input":{"name":"x","query":"select 1"}}))')"
 mcp pasa    "list_tables"                    list_tables "{$P}"
 mcp pasa    "get_advisors"                   get_advisors "{$P,\"type\":\"security\"}"
 
@@ -299,7 +313,7 @@ sys.exit(0 if eval(sys.argv[2]) else 1)
 PY
   then echo "ok    $1"; else echo "FALLA $1"; FAILS=$((FAILS+1)); fi
 }
-config "matcher cubre Bash, Write, Edit, MultiEdit y el MCP de Supabase" 'set(h["matcher"].split("|")) >= {"Bash","Write","Edit","MultiEdit","mcp__supabase__.*"}'
+config "matcher cubre Bash, Write, Edit, MultiEdit y los dos MCP de Supabase" 'set(h["matcher"].split("|")) >= {"Bash","Write","Edit","MultiEdit","mcp__supabase__.*","mcp__claude_ai_Supabase__.*"}'
 config "ruta con \$CLAUDE_PROJECT_DIR"               '"$CLAUDE_PROJECT_DIR" in h["hooks"][0]["command"]'
 config "onFailure: block"                            'h["hooks"][0].get("onFailure") == "block"'
 config "deny de rm -rf, push --force y db push"      'all(r in s["permissions"]["deny"] for r in ("Bash(rm -rf *)","Bash(git push --force *)","Bash(supabase db push)"))'

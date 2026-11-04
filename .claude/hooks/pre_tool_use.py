@@ -76,7 +76,8 @@ def ask(reason):
 # ---------- Bash: lexing ----------
 
 def normalize(cmd):
-    joined = cmd.replace("\\\n", " ")  # continuación con barra invertida: `rm \⏎ -rf` es un solo comando
+    # Continuación con barra invertida: bash borra «\⏎» entero (`r\⏎m -rf` es `rm -rf`), no lo cambia por un espacio.
+    joined = cmd.replace("\\\n", "")
     return re.sub(r"[ \t]+", " ", joined.lower()).strip()
 
 
@@ -89,7 +90,7 @@ def lex(text):
         lexer.commenters = ""
         return list(lexer)
     except ValueError:
-        return text.split()
+        deny("no se pudo tokenizar el comando (comillas sin cerrar): fail-closed")
 
 
 def is_separator(token):
@@ -295,24 +296,43 @@ def current_branch():
     return head.rsplit("/", 1)[-1] if head.startswith("ref:") else None
 
 
+def is_local_branch(name):
+    """¿Existe esta rama local y no es protegida? Lee .git/refs/heads y packed-refs."""
+    name = name.replace("refs/heads/", "")
+    if not name or name in PROTECTED_BRANCHES or name == "head":
+        return False
+    git = os.path.join(project_dir(), ".git")
+    if os.path.isfile(os.path.join(git, "refs", "heads", *name.split("/"))):
+        return True
+    try:
+        with open(os.path.join(git, "packed-refs"), encoding="utf-8") as f:
+            return any(line.rstrip().endswith(f" refs/heads/{name}") for line in f)
+    except OSError:
+        return False
+
+
 def check_push_to_protected(tokens, names):
     """Un push a main despliega producción en Vercel: no se hace nunca desde acá."""
     sub = git_subcommand(tokens, names)
     if sub is None or tokens[sub] != "push":
         return
-    if {"--all", "--branches"} & set(tokens[sub + 1:]):
+    rest = tokens[sub + 1:]
+    if {"--all", "--branches"} & set(rest):
         deny("git push --all empuja también main, que despliega producción")
-    args = [t for t in tokens[sub + 1:] if not t.startswith("-")]
-    refspecs = args[1:]  # el primero es el remoto
-    if not refspecs:
-        branch = current_branch()
-        if branch is None or branch in PROTECTED_BRANCHES:
-            deny("git push sin rama explícita estando en main (o sin poder saberlo): main despliega producción")
-        return
-    for r in refspecs:
+    # Ante la duda, bloquea: cualquier posicional cuyo destino sea una rama protegida, esté donde esté. Así no
+    # importa qué opción tome un valor (`--repo=origin HEAD:main`, `-o x`): no hay que adivinar cuál es el remoto.
+    positional = [t for t in rest if not t.startswith("-")]
+    for r in positional:
         dest = r.split(":", 1)[-1].replace("refs/heads/", "")
         if dest in PROTECTED_BRANCHES or (dest == "head" and current_branch() in PROTECTED_BRANCHES | {None}):
             deny(f"git push a {dest}: main despliega producción; se trabaja en una rama y se abre un PR")
+    # Estando en main (o sin poder saberlo), el push tiene que nombrar una rama local que no sea protegida.
+    # Contar posicionales no alcanza: en `git push -o x origin` el `x` es el valor de -o, no una rama.
+    branch = current_branch()
+    tags_only = "--tags" in rest and len(positional) <= 1
+    if (branch is None or branch in PROTECTED_BRANCHES) and not tags_only:
+        if not any(is_local_branch(r.split(":", 1)[0]) for r in positional):
+            deny("git push sin una rama de trabajo explícita estando en main (o sin poder saberlo): main despliega producción")
 
 
 def check_branch_delete(tokens, names):
@@ -328,7 +348,8 @@ def check_merge(tokens, names):
     if "gh" in names:
         i = names.index("gh")
         rest = tokens[i + 1:]
-        if rest[:2] == ["pr", "merge"] or (rest[:1] == ["api"] and any("/merge" in t for t in rest)):
+        pares = list(zip(rest, rest[1:]))
+        if ("pr", "merge") in pares or ("api" in rest and any("/merge" in t for t in rest)):
             deny("nunca se mergea: el merge lo hace una persona")
 
 
@@ -338,9 +359,15 @@ def check_vercel(tokens, names):
     rest = tokens[names.index("vercel") + 1:]
     if VERCEL_PROD_FLAGS & set(rest) or any(t.startswith(("--target=prod", "--prod")) for t in rest):
         deny("deploy a producción en Vercel")
-    if rest and rest[0] in VERCEL_DENY_SUBCOMMANDS:
-        deny(f"vercel {rest[0]} toca producción (dominio, alias o deploy)")
-    if rest[:1] == ["env"] and len(rest) > 1 and rest[1] in VERCEL_ENV_WRITES:
+    for a, b in zip(rest, rest[1:]):
+        if a in ("--target", "-t") and b.startswith("prod"):
+            deny("deploy a producción en Vercel (--target production)")
+    # Las opciones globales pueden ir antes del subcomando: se mira cualquier posicional.
+    positional = [t for t in rest if not t.startswith("-")]
+    hit = VERCEL_DENY_SUBCOMMANDS & set(positional)
+    if hit:
+        deny(f"vercel {sorted(hit)[0]} toca producción (dominio, alias o deploy)")
+    if "env" in positional and VERCEL_ENV_WRITES & set(positional[positional.index("env") + 1:]):
         deny("no se tocan variables de entorno de Vercel")
 
 
@@ -487,7 +514,7 @@ MCP_ALWAYS_DENY = {
 SQL_WRITE = re.compile(
     r"\b(?:insert|update|delete|merge|upsert|create|alter|drop|truncate|grant|revoke|comment|copy|call|do|"
     r"vacuum|analyze|refresh|lock|cluster|reindex|listen|notify|prepare|execute|set|reset|begin|commit|"
-    r"rollback|savepoint|security|import|nextval|setval|pg_sleep|dblink|lo_import|lo_export)\b")
+    r"rollback|savepoint|security|import|nextval|setval|pg_sleep|dblink|lo_import|lo_export|into)\b")
 SQL_FUNC = re.compile(r"([a-z_][a-z0-9_$.]*)\s*\(")
 SQL_KEYWORDS_BEFORE_PAREN = {
     "select", "from", "where", "and", "or", "not", "in", "as", "on", "join", "using", "exists", "any", "all",
@@ -516,11 +543,36 @@ SQL_READ_FUNCS = {
 
 
 def strip_sql(sql):
-    sql = re.sub(r"--[^\n]*", " ", sql)
-    sql = re.sub(r"/\*.*?\*/", " ", sql, flags=re.DOTALL)
-    sql = re.sub(r"'(?:[^']|'')*'", "''", sql)       # literales: lo que dicen no se ejecuta
-    sql = re.sub(r'"(?:[^"]|"")*"', '"x"', sql)        # identificadores entre comillas
-    return sql.lower().strip()
+    """Un recorrido: literales → '', identificadores entre comillas → "x", comentarios → espacio.
+
+    Hacerlo en pasadas separadas es lo que permitía esconder una llamada detrás de un '--' dentro de un literal.
+    """
+    out, i, n = [], 0, len(sql)
+    while i < n:
+        c = sql[i]
+        if c == "'":
+            j = i + 1
+            while j < n and not (sql[j] == "'" and (j + 1 >= n or sql[j + 1] != "'")):
+                j += 2 if sql[j] == "'" else 1
+            if j >= n:
+                deny("execute_sql con un literal sin cerrar (fail-closed)")
+            out.append("''"); i = j + 1
+        elif c == '"':
+            j = sql.find('"', i + 1)
+            if j < 0:
+                deny("execute_sql con un identificador sin cerrar (fail-closed)")
+            out.append('"x"'); i = j + 1
+        elif sql.startswith("--", i):
+            j = sql.find("\n", i)
+            out.append(" "); i = n if j < 0 else j
+        elif sql.startswith("/*", i):
+            j = sql.find("*/", i + 2)
+            if j < 0:
+                deny("execute_sql con un comentario sin cerrar (fail-closed)")
+            out.append(" "); i = j + 2
+        else:
+            out.append(c); i += 1
+    return "".join(out).lower().strip()
 
 
 def check_read_only_sql(query):
