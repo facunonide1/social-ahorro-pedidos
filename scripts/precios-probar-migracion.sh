@@ -119,6 +119,13 @@ select precios_ingestar('grok_bot', 'prueba', jsonb_build_array(
   jsonb_build_object('proveedor', 'Monroe', 'codigo_barras', '7790001000035', 'precio', 120, 'capturado_at', date_trunc('minute', now())::text)));
 select pg_temp.esperar((select (mejor_proveedor(id) -> 'todos' -> 0 ->> 'precio')::numeric from productos_catalogo where codigo_barras = '7790001000035') = 120, 'con empate de hora gana la lectura que entró último (la corrección)');
 
+-- un código de barras que está en dos productos no se le asigna a ninguno
+insert into productos_catalogo (nombre, codigo_barras, precio_costo_promedio) values ('DUP A', '7790001000042', 100), ('DUP B', '7790001000042', 1000);
+select pg_temp.esperar((precios_ingestar('grok_bot', 'prueba', jsonb_build_array(
+  jsonb_build_object('proveedor', 'Monroe', 'codigo_barras', '7790001000042', 'precio', 110, 'capturado_at', now()::text)
+)) ->> 'sin_reconocer')::int = 1, 'código de barras en dos productos: sin reconocer');
+select pg_temp.esperar((select motivos[1] from precios_proveedores where codigo_barras = '7790001000042') = 'el código de barras está en 2 productos del catálogo: no sé de cuál es', 'y dice en cuántos está');
+
 -- permisos: authenticated no puede ejecutar nada de esto, aunque el default privilege se lo dé
 select pg_temp.esperar(not has_function_privilege('authenticated', 'public.precios_ingestar(text,text,jsonb,uuid)', 'execute'), 'authenticated no ejecuta precios_ingestar');
 select pg_temp.esperar(not has_function_privilege('authenticated', 'public.mejor_proveedor(uuid,integer)', 'execute'), 'authenticated no ejecuta mejor_proveedor');
@@ -136,7 +143,7 @@ do $$ begin
      or to_regprocedure('public.precios_plausibilidad(numeric,timestamptz,numeric,numeric,timestamptz)') is not null then
     raise exception 'FALLA: el down dejó objetos de la 0294';
   end if;
-  if (select count(*) from public.proveedores) <> 3 then raise exception 'FALLA: el down tocó proveedores'; end if;
+  if (select count(*) from public.proveedores) <> 3 or (select count(*) from public.productos_catalogo) <> 5 then raise exception 'FALLA: el down tocó proveedores o productos_catalogo'; end if;
   raise notice 'ok    el down saca todo lo de la 0294 y no toca lo que existía';
 end $$;
 SQL

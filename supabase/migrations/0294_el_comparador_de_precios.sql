@@ -146,6 +146,7 @@ declare
   v_estado text;
   v_motivos text[];
   v_fuera boolean;
+  v_coincidencias integer;
 begin
   insert into precios_ingestas (fuente, origen, creado_por)
   values (p_fuente, p_origen, p_por) returning id into v_ingesta;
@@ -159,11 +160,16 @@ begin
              and (lower(p.nombre_comercial) = lower(f ->> 'proveedor') or lower(p.razon_social) = lower(f ->> 'proveedor'))))
      limit 1;
 
-    -- El producto: por código de barras contra el catálogo.
-    select c.id, c.precio_costo_promedio into v_prod, v_costo from productos_catalogo c
+    -- El producto: por código de barras contra el catálogo. El código NO es único en el catálogo
+    -- (hay un detector de duplicados): si está en más de un producto, no se elige uno.
+    select count(*), (array_agg(c.id))[1], (array_agg(c.precio_costo_promedio))[1]
+      into v_coincidencias, v_prod, v_costo
+      from productos_catalogo c
      where not coalesce(c.es_demo, false) and nullif(f ->> 'codigo_barras', '') is not null
-       and c.codigo_barras = f ->> 'codigo_barras'
-     limit 1;
+       and c.codigo_barras = f ->> 'codigo_barras';
+    if v_coincidencias > 1 then
+      v_prod := null; v_costo := null;
+    end if;
 
     -- Se evalúa el mismo número que se guarda: redondeado a centavos, y dentro de lo que entra en
     -- numeric(14,2). Un 0,001 que se guardaría como 0,00 es «no positivo»; uno de un billón no entra
@@ -188,7 +194,9 @@ begin
       v_estado := 'sin_reconocer';
       v_motivos := array_remove(array[
         case when v_prov is null then 'no reconozco al proveedor: no coincide el CUIT ni el nombre con una droguería activa' end,
-        case when v_prod is null then 'no reconozco el producto: el código de barras no está en el catálogo' end], null);
+        case when v_prod is null and v_coincidencias > 1
+               then format('el código de barras está en %s productos del catálogo: no sé de cuál es', v_coincidencias)
+             when v_prod is null then 'no reconozco el producto: el código de barras no está en el catálogo' end], null);
     else
       select pp.precio into v_ultimo from precios_proveedores pp
        where pp.producto_id = v_prod and pp.proveedor_id = v_prov and pp.estado = 'aceptado'
