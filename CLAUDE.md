@@ -57,6 +57,14 @@ verificar con `ls` antes de crear).
 5. **PR** (en borrador si falta staging o algo de `PENDIENTE.md`), con la evidencia: comandos corridos, salida
    de los tests, prueba de humo. **Nunca mergear.**
 
+## Cuidado: los tests de este repo escriben en producción
+
+`.env.local` apunta a producción. **`npm run build` escribe ahí**: `auditar:rls-roles` crea y borra usuarios en
+auth, y `verificar:coherencia` recalcula `agentes_resumen`. Casi todos los `npm run probar:*` insertan y borran datos
+de prueba. El hook bloquea esas invocaciones. Mientras no haya staging, la línea base se corre con lo que es de
+solo lectura: `npx tsc --noEmit`, `npx next build`, `npm run auditar:cortes`, `auditar:rls`, `auditar:lente`,
+`probar:permisos`, `verificar:limite`, `probar:cerebro` y los tests del hook.
+
 ## Línea base que tiene que seguir verde
 
 - `npm run build` corre siete auditores antes de compilar (cortes, RLS, lente, permisos, RLS por rol,

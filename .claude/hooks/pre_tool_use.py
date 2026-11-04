@@ -423,6 +423,25 @@ def check_vercel(tokens, names):
         deny("no se tocan variables de entorno de Vercel")
 
 
+# Scripts del repo que ESCRIBEN en la base que diga .env.local, que hoy es producción. Medido el 2026-11-04:
+# `npm run build` corre dos auditores que crean y borran usuarios en auth y recalculan agentes_resumen, y casi
+# todos los `probar:*` insertan y borran datos de prueba. El hook no ve lo que hace un script por dentro, así que
+# se bloquea la invocación. Los de solo lectura (permisos, cerebro, cortes, rls, lente, límite) pasan.
+SCRIPTS_QUE_ESCRIBEN = re.compile(
+    r"(?:scripts/(?:prueba-(?!cerebro)[\w-]+|_auditar-rls-roles|_verificar-coherencia|probar-nora-tres-roles"
+    r"|cargar-[\w-]+|importar-[\w-]+|sincronizar-permisos|bootstrap-admin|fabrica-[\w-]+|pesos-desde-woo"
+    r"|recuperar-fechas[\w-]*|espejo-canal-woo)\b"
+    r"|\bnpm run (?:build|probar:(?!cerebro\b|permisos\b)[\w:-]+|auditar:rls-roles|verificar:coherencia"
+    r"|permisos:sincronizar|contar:[\w-]+)\b)")
+
+
+def check_scripts_que_escriben(text):
+    m = SCRIPTS_QUE_ESCRIBEN.search(text)
+    if m:
+        deny(f"«{m.group(0)}» escribe en la base de .env.local, que es producción. Typecheck: npx tsc --noEmit; "
+             "compilar: npx next build")
+
+
 def nested_commands(tokens, names):
     """Texto que el shell va a ejecutar adentro de este segmento: $(…), `…` y argumentos de bash -c/eval/ssh."""
     for t in tokens:
@@ -454,6 +473,7 @@ def scan_bash(text, ctx, depth=0):
         check_branch_delete(tokens, names)
         check_merge(tokens, names)
         check_vercel(tokens, names)
+        check_scripts_que_escriben(" ".join(tokens))
         if names[0] in ("cd", "pushd") and any(mentions_migrations(t) for t in tokens):
             ctx["in_migrations"] = True
         for inner in nested_commands(tokens, names):

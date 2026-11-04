@@ -125,6 +125,19 @@ run bloquea "git branch -d"                  "git branch -d feat/de-otro"
 run pasa    "git branch nueva"               "git branch feat/nueva"
 run bloquea "curl a la API de producción"    "curl https://hrjxjbirajbsurobqdca.supabase.co/rest/v1/tareas"
 
+echo "== scripts del repo que escriben en producción =="
+run bloquea "npm run build"                  "npm run build"
+run bloquea "npm run probar:canales"         "npm run probar:canales"
+run bloquea "auditor que crea usuarios"      "npm run auditar:rls-roles"
+run bloquea "verificar:coherencia"           "npm run verificar:coherencia"
+run bloquea "tsx directo a una prueba"       "npx tsx --env-file=.env.local scripts/prueba-convenios.ts"
+run bloquea "contar:relaciones"              "npm run contar:relaciones"
+run pasa    "probar:cerebro (solo lectura)"  "npm run probar:cerebro"
+run pasa    "probar:permisos (solo lectura)" "npm run probar:permisos"
+run pasa    "auditar:cortes"                 "npm run auditar:cortes"
+run pasa    "next build sin auditores"       "npx next build"
+run pasa    "typecheck"                      "npx tsc --noEmit -p ."
+
 echo "== MCP de Supabase =="
 mcp_json() { python3 -c 'import json,sys; print(json.dumps({"tool_name":"mcp__supabase__"+sys.argv[1],"tool_input":json.loads(sys.argv[2])}))' "$1" "$2"; }
 mcp() { check "$1" "$2" "$(mcp_json "$3" "$4")"; }
