@@ -192,7 +192,7 @@ begin
     else
       select pp.precio into v_ultimo from precios_proveedores pp
        where pp.producto_id = v_prod and pp.proveedor_id = v_prov and pp.estado = 'aceptado'
-       order by pp.capturado_at desc limit 1;
+       order by pp.capturado_at desc, pp.created_at desc, pp.id desc limit 1;
       select r.estado, r.motivos into v_estado, v_motivos
         from precios_plausibilidad(v_precio, v_cap, v_costo, v_ultimo) r;
       if v_fuera then
@@ -242,9 +242,10 @@ as $$
                        and p.activo and p.es_drogueria and not coalesce(p.es_demo, false)
      where pp.producto_id = p_producto and pp.estado = 'aceptado'
        and pp.capturado_at > now() - make_interval(days => p_dias)
-     order by pp.proveedor_id, pp.capturado_at desc
+     -- Si dos lecturas tienen la misma hora, gana la que entró último: es la corrección.
+     order by pp.proveedor_id, pp.capturado_at desc, pp.created_at desc, pp.id desc
   ), orden as (
-    select u.*, row_number() over (order by u.precio asc, u.capturado_at desc) as n from ultimas u
+    select u.*, row_number() over (order by u.precio asc, u.capturado_at desc, u.proveedor_id) as n from ultimas u
   )
   select jsonb_build_object(
     'producto_id', p_producto,

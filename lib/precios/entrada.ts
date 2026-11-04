@@ -70,6 +70,25 @@ export function leerPrecio(v: unknown): number | null {
   return Number.isFinite(x) ? x : null
 }
 
+/**
+ * La fecha de lectura, absoluta y sin ambigüedad: ISO 8601 con hora. Una fecha
+ * relativa («now», «today») rejuvenecería un precio viejo en cada importación,
+ * y una como «04/11/2026» depende de cómo la lea la base. Las dos son null, y
+ * la base rechaza la fila diciendo que no sabe cuándo se leyó.
+ *
+ * Sin zona horaria: el bot tiene que mandarla (null); la hoja de Sheets se lee
+ * como hora de Buenos Aires, que es la que escribe una persona en Ituzaingó.
+ */
+export function leerFecha(v: string | undefined, zonaPorDefecto: string | null): string | null {
+  const t = (v ?? '').trim()
+  const m = t.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)\s*(Z|[+-]\d{2}:?\d{2})?$/i)
+  if (!m) return null
+  const zona = m[3] ?? zonaPorDefecto
+  if (!zona) return null
+  const iso = `${m[1]}T${m[2]}${zona.toUpperCase() === 'Z' ? 'Z' : zona.replace(/^([+-]\d{2})(\d{2})$/, '$1:$2')}`
+  return Number.isNaN(Date.parse(iso)) ? null : iso
+}
+
 const soloDigitos = (s: string | undefined) => {
   const d = (s ?? '').replace(/\D/g, '')
   return d || null
@@ -99,7 +118,7 @@ export function leerIngesta(body: unknown): LecturaDeIngesta {
       sku_proveedor: sku,
       descripcion: x.descripcion ?? null,
       precio: leerPrecio(x.precio),
-      capturado_at: x.capturado_at ?? null,
+      capturado_at: leerFecha(x.capturado_at, c.data.fuente === 'sheets' ? '-03:00' : null),
     })
   })
   return { ok: true, fuente: c.data.fuente, filas, descartadas }

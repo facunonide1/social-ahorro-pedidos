@@ -31,7 +31,12 @@ type SesionMinima = {
 export async function quienPuedeVer(sb: SesionMinima): Promise<{ id: string } | NextResponse> {
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return NextResponse.json({ error: 'no hay sesión' }, { status: 401 })
-  const { data: perfil } = await sb.from('users_admin').select('rol, activo').eq('id', user.id).maybeSingle()
+  const { data: perfil, error } = await sb.from('users_admin').select('rol, activo').eq('id', user.id).maybeSingle()
+  if (error) {
+    // Un error al leer el perfil no es «tu rol no puede»: es «no lo pude saber».
+    console.error('[precios] no se pudo leer el perfil:', error.message)
+    return NextResponse.json({ error: 'no se pudo verificar tu rol' }, { status: 503 })
+  }
   if (!perfil?.activo || !(ROLES_QUE_VEN_PRECIOS as readonly string[]).includes(perfil.rol)) {
     return NextResponse.json({ error: 'tu rol no ve precios de proveedores' }, { status: 403 })
   }

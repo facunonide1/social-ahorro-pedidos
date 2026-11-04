@@ -108,3 +108,24 @@ test('sheets: el CSV se lee por nombre de columna, con comillas y comas adentro'
 test('sheets: sin la columna de precio no se adivina cuál es', () => {
   assert.throws(() => leerCsvDeSheets('Proveedor,Código de barras,Importe raro\nX,1,10\n'), /precio/)
 })
+
+test('fecha: ISO con zona pasa; relativa, ambigua o sin zona (del bot) es null', () => {
+  const { leerFecha } = require('../../lib/precios/entrada') as typeof import('../../lib/precios/entrada')
+  assert.equal(leerFecha('2026-11-04T10:00:00-03:00', null), '2026-11-04T10:00:00-03:00')
+  assert.equal(leerFecha('2026-11-04T13:00:00Z', null), '2026-11-04T13:00:00Z')
+  assert.equal(leerFecha('2026-11-04 10:00', '-03:00'), '2026-11-04T10:00-03:00')
+  for (const malo of ['now', 'today', '04/11/2026', '2026-11-04', 'ayer 10:00', '']) {
+    assert.equal(leerFecha(malo, '-03:00'), null, malo)
+  }
+  assert.equal(leerFecha('2026-11-04 10:00', null), null)
+})
+
+test('ingesta: la hoja de Sheets sin zona se lee como hora de Buenos Aires; el bot sin zona, null', () => {
+  const s = leerIngesta({ fuente: 'sheets', filas: [{ proveedor: 'X', codigo_barras: '1', precio: '10', capturado_at: '2026-11-04 10:00' }] })
+  const b = leerIngesta({ fuente: 'grok_bot', filas: [{ proveedor: 'X', codigo_barras: '1', precio: '10', capturado_at: '2026-11-04 10:00' }] })
+  assert.ok(s.ok && b.ok)
+  if (s.ok && b.ok) {
+    assert.equal(s.filas[0].capturado_at, '2026-11-04T10:00-03:00')
+    assert.equal(b.filas[0].capturado_at, null)
+  }
+})

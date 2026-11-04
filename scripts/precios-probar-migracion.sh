@@ -111,6 +111,14 @@ select precios_ingestar('sheets', 'prueba', jsonb_build_array(
   jsonb_build_object('proveedor', 'Monroe', 'codigo_barras', '7790001000011', 'precio', 9000, 'capturado_at', now()::text)));
 select pg_temp.esperar((select mejor_proveedor(id) -> 'segundo' ->> 'precio' from productos_catalogo where codigo_barras = '7790001000011') = '3300.00', 'la lectura sospechosa no reemplaza a la aceptada');
 
+-- dos lecturas con la misma hora: gana la que entró último, siempre
+insert into productos_catalogo (nombre, codigo_barras, precio_costo_promedio) values ('EMPATE', '7790001000035', 100);
+select precios_ingestar('grok_bot', 'prueba', jsonb_build_array(
+  jsonb_build_object('proveedor', 'Monroe', 'codigo_barras', '7790001000035', 'precio', 100, 'capturado_at', date_trunc('minute', now())::text)));
+select precios_ingestar('grok_bot', 'prueba', jsonb_build_array(
+  jsonb_build_object('proveedor', 'Monroe', 'codigo_barras', '7790001000035', 'precio', 120, 'capturado_at', date_trunc('minute', now())::text)));
+select pg_temp.esperar((select (mejor_proveedor(id) -> 'todos' -> 0 ->> 'precio')::numeric from productos_catalogo where codigo_barras = '7790001000035') = 120, 'con empate de hora gana la lectura que entró último (la corrección)');
+
 -- permisos: authenticated no puede ejecutar nada de esto, aunque el default privilege se lo dé
 select pg_temp.esperar(not has_function_privilege('authenticated', 'public.precios_ingestar(text,text,jsonb,uuid)', 'execute'), 'authenticated no ejecuta precios_ingestar');
 select pg_temp.esperar(not has_function_privilege('authenticated', 'public.mejor_proveedor(uuid,integer)', 'execute'), 'authenticated no ejecuta mejor_proveedor');
