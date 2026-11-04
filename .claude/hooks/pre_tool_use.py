@@ -193,6 +193,14 @@ def migration_target_exists(target, in_migrations_dir):
     return os.path.exists(os.path.join(project_dir(), "supabase", "migrations", rest))
 
 
+def local_name(target, ctx):
+    """Dentro de migrations, `./x.sql` y `a/../x.sql` son `x.sql`: bash los resuelve ahí."""
+    if not ctx["in_migrations"] or os.path.isabs(target):
+        return target
+    norm = os.path.normpath(target)
+    return norm if not norm.startswith("..") else target
+
+
 def check_redirects(tokens, ctx):
     for i, t in enumerate(tokens[:-1]):
         if t not in TRUNCATING_REDIRECTS:
@@ -200,6 +208,7 @@ def check_redirects(tokens, ctx):
         target = tokens[i + 1]
         if t == ">&" and (target.isdigit() or target == "-"):
             continue
+        target = local_name(target, ctx)
         in_dir = ctx["in_migrations"] and "/" not in target
         if (mentions_migrations(target) or in_dir) and migration_target_exists(target, in_dir):
             deny("redirección que pisa una migración existente (supabase/migrations/)")
@@ -231,6 +240,7 @@ def check_copy_move(tokens, names, ctx):
         if len(args) < 2:
             continue
         sources, dest = args[:-1], args[-1]
+        dest = local_name(dest, ctx)
         dest_in_dir = ctx["in_migrations"] and "/" not in dest
         if (mentions_migrations(dest) or dest_in_dir) and migration_target_exists(dest, dest_in_dir):
             deny(f"{verb} pisaría una migración existente (supabase/migrations/)")
@@ -261,7 +271,20 @@ def check_db_push(tokens, names):
         return
     if "push" in token_set and "--dry-run" in token_set:
         return
-    urls = URL_IN_CMD.findall(" ".join(tokens))
+    # Lo que viene después de un # es comentario para bash: no cuenta como URL validada.
+    if any(t.startswith("#") for t in tokens):
+        tokens = tokens[:next(i for i, t in enumerate(tokens) if t.startswith("#"))]
+        token_set = set(tokens)
+    # Solo vale el valor efectivo de --db-url (separado o con =); si es dinámico, no se puede verificar.
+    db_urls = []
+    for i, t in enumerate(tokens):
+        if t == "--db-url" and i + 1 < len(tokens):
+            db_urls.append(tokens[i + 1])
+        elif t.startswith("--db-url="):
+            db_urls.append(t.split("=", 1)[1])
+    if any("$" in u or "`" in u for u in db_urls):
+        deny("db push/reset con --db-url en variable: no se puede verificar que sea staging; usá la URL literal")
+    urls = db_urls or URL_IN_CMD.findall(" ".join(tokens))
     has_db_url = any(t.startswith("--db-url") for t in tokens)
     if not urls and has_db_url:
         deny("db push/reset con --db-url en variable: no se puede verificar que sea staging; usá la URL literal")
@@ -311,11 +334,32 @@ def is_local_branch(name):
         return False
 
 
+def repo_config_pushes_protected():
+    """¿.git/config tiene un `push = …:main` (o similar) en algún remoto? Entonces cualquier push puede ir a main."""
+    try:
+        with open(os.path.join(project_dir(), ".git", "config"), encoding="utf-8") as f:
+            for line in f:
+                m = re.match(r"\s*push\s*=\s*(\S+)", line, re.IGNORECASE)
+                if m and m.group(1).split(":", 1)[-1].replace("refs/heads/", "").lower() in PROTECTED_BRANCHES:
+                    return True
+    except OSError:
+        return False
+    return False
+
+
 def check_push_to_protected(tokens, names):
     """Un push a main despliega producción en Vercel: no se hace nunca desde acá."""
     sub = git_subcommand(tokens, names)
     if sub is None or tokens[sub] != "push":
         return
+    # `git -c remote.origin.push=HEAD:main push origin` empuja main sin nombrarlo después de push.
+    for i, t in enumerate(tokens[:sub]):
+        if t == "-c" and i + 1 < sub and re.match(r"(?:remote\.[^=]*\.push|push\.)", tokens[i + 1]):
+            deny("git -c que cambia a dónde empuja el push: no se puede verificar el destino")
+        if t.startswith("-c") and len(t) > 2 and re.match(r"-c(?:remote\.[^=]*\.push|push\.)", t):
+            deny("git -c que cambia a dónde empuja el push: no se puede verificar el destino")
+    if repo_config_pushes_protected():
+        deny("la configuración del repo tiene un push refspec hacia una rama protegida")
     rest = tokens[sub + 1:]
     if {"--all", "--branches"} & set(rest):
         deny("git push --all empuja también main, que despliega producción")
@@ -566,10 +610,9 @@ def strip_sql(sql):
             j = sql.find("\n", i)
             out.append(" "); i = n if j < 0 else j
         elif sql.startswith("/*", i):
-            j = sql.find("*/", i + 2)
-            if j < 0:
-                deny("execute_sql con un comentario sin cerrar (fail-closed)")
-            out.append(" "); i = j + 2
+            # Postgres anida los comentarios de bloque; un recorte que corta en el primer */ se puede engañar.
+            # Una consulta de lectura no los necesita.
+            deny("execute_sql con comentario de bloque: no se puede verificar (usá --)")
         else:
             out.append(c); i += 1
     return "".join(out).lower().strip()
