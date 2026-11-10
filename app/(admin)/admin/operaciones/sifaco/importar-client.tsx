@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { leerMaestro, hashDeArchivo, subirEnLotes, type ArchivoLeido, type Progreso } from '@/lib/sifaco/parseo-cliente'
 import { PALABRAS_TESTIGO } from '@/lib/sifaco/codificacion'
+import { fraseMeses } from '@/lib/sifaco/meses-maestro'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -69,7 +70,11 @@ export function ImportarSifacoClient() {
 
       for await (const p of subirEnLotes(j.importacionId, leido, hechos)) setProg(p)
 
-      const rp = await fetch(`/api/sifaco/importar/${j.importacionId}/previa`, { method: 'POST' })
+      const rp = await fetch(`/api/sifaco/importar/${j.importacionId}/previa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ meses: leido.meses }),
+      })
       const jp = await rp.json()
       if (!rp.ok) throw new Error(jp?.error ?? 'No se pudo calcular la vista previa.')
       setPrevia(jp.previa)
@@ -160,6 +165,29 @@ export function ImportarSifacoClient() {
               {leido!.filasDeDatos.toLocaleString('es-AR')} filas de datos
               {' '}(sin el encabezado ni el renglón de reporte de SIFACO).
             </div>
+
+            <div className="text-sm">{fraseMeses(leido!.meses)}</div>
+
+            {leido!.meses.origen === 'constante' && (
+              <Alert variant="destructive">
+                <AlertTriangle className="size-4" />
+                <AlertDescription>
+                  Sin los nombres de las columnas ni la fecha del reporte, las ventas
+                  quedarían como las de agosto de 2026. Conviene no cargar este archivo
+                  hasta ver de qué meses son.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {!leido!.meses.coherente && (
+              <Alert>
+                <AlertTriangle className="size-4" />
+                <AlertDescription>
+                  La fecha del reporte y los nombres de las columnas no caen en el mismo
+                  mes. Se usaron los nombres de las columnas.
+                </AlertDescription>
+              </Alert>
+            )}
 
             {(paso === 'listo-para-subir' || paso === 'error') && (
               <Button onClick={subir} className="gap-2">

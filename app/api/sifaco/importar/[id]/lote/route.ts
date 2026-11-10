@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { AdminRole } from '@/lib/types/admin'
+import { esMesesDelMaestro } from '@/lib/sifaco/meses-maestro'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -45,6 +46,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const codificacion = typeof body?.codificacion === 'string' ? body.codificacion : null
   const prueba = body?.codificacion_prueba ?? null
   const filasDeclaradas = Number(body?.filas_declaradas)
+  const fechaArchivo = typeof body?.fecha_archivo === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.fecha_archivo)
+    ? body.fecha_archivo
+    : null
+  // Los meses van con la prueba de codificación: es jsonb que esta ruta ya
+  // guarda, y la vista previa se recalcula después y pisaría un campo propio.
+  const pruebaConMeses = esMesesDelMaestro(body?.meses) && prueba && typeof prueba === 'object'
+    ? { ...prueba, meses: body.meses }
+    : prueba
 
   if (!Number.isInteger(lote) || !Number.isInteger(desdeFila) || !filas) {
     return NextResponse.json({ error: 'lote mal formado' }, { status: 400 })
@@ -101,7 +110,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   await adm.from('sifaco_importaciones').update({
     estado: 'cargando',
     filas_cargadas: cargadas,
-    ...(codificacion ? { codificacion, codificacion_prueba: prueba } : {}),
+    ...(codificacion ? { codificacion, codificacion_prueba: pruebaConMeses } : {}),
+    ...(fechaArchivo ? { fecha_archivo: fechaArchivo } : {}),
     ...(Number.isFinite(filasDeclaradas) ? { filas_declaradas: filasDeclaradas } : {}),
   }).eq('id', params.id)
 
