@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx'
 import { detectarCodificacion, type Veredicto } from './codificacion'
 import { FILA_PRIMER_DATO, codigoSifaco, esFilaDeEncabezado } from './columnas'
 import { normalizarFila, type Fila } from './fila'
+import { resolverMesesMaestro, type MesesDelMaestro } from './meses-maestro'
 
 /**
  * EL PARSEO PASA EN EL NAVEGADOR, Y NO ES UN ATAJO.
@@ -35,6 +36,12 @@ export interface ArchivoLeido {
   veredicto: Veredicto
   /** Filas de datos: sin el encabezado ni el renglón de reporte de SIFACO. */
   filasDeDatos: number
+  /**
+   * Qué mes es cada columna de ventas. Sale del encabezado o de la fecha del
+   * reporte, no de una lista fija. Sin esto, un export nuevo se etiqueta con
+   * los meses del archivo de agosto.
+   */
+  meses: MesesDelMaestro
 }
 
 /** Lee el .xls y decide la codificación. No convierte nada todavía. */
@@ -62,7 +69,12 @@ export async function leerMaestro(archivo: File): Promise<ArchivoLeido> {
     filasDeDatos++
   }
 
-  return { filas, veredicto: detectarCodificacion(muestra), filasDeDatos }
+  return {
+    filas,
+    veredicto: detectarCodificacion(muestra),
+    filasDeDatos,
+    meses: resolverMesesMaestro(filas),
+  }
 }
 
 /** SHA-256 del archivo, en el navegador, antes de subir nada. */
@@ -120,6 +132,8 @@ export async function* subirEnLotes(
         filas_declaradas: normalizadas.length,
         codificacion: cod,
         codificacion_prueba: leido.veredicto,
+        fecha_archivo: leido.meses.fechaArchivo,
+        meses: leido.meses,
       }),
     })
     if (!r.ok) {

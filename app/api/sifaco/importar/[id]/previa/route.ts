@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import type { AdminRole } from '@/lib/types/admin'
+import { esMesesDelMaestro } from '@/lib/sifaco/meses-maestro'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -24,7 +25,7 @@ const ROLES: AdminRole[] = ['super_admin', 'gerente', 'comprador', 'administrati
  * Esta ruta no escribe en el catálogo. Escribe la previa en la importación,
  * que es lo que después se muestra al lado del botón de aplicar.
  */
-export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const sb = createClient()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return NextResponse.json({ error: 'no autenticado' }, { status: 401 })
@@ -35,6 +36,9 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   if (!me?.activo || !ROLES.includes(me.rol)) {
     return NextResponse.json({ error: 'sin permiso' }, { status: 403 })
   }
+
+  const body = await req.json().catch(() => null)
+  const meses = esMesesDelMaestro(body?.meses) ? body.meses : null
 
   const adm = createAdminClient()
 
@@ -52,9 +56,13 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  const previaConMeses = meses && previa && typeof previa === 'object' && !Array.isArray(previa)
+    ? { ...(previa as Record<string, unknown>), meses }
+    : previa
+
   await adm.from('sifaco_importaciones')
-    .update({ estado: 'cargado', previa, cargado_at: new Date().toISOString() })
+    .update({ estado: 'cargado', previa: previaConMeses, cargado_at: new Date().toISOString() })
     .eq('id', params.id)
 
-  return NextResponse.json({ previa })
+  return NextResponse.json({ previa: previaConMeses })
 }

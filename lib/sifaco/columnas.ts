@@ -26,7 +26,14 @@
  */
 export const FILA_PRIMER_DATO = 1
 
-/** Índice → nombre del campo. El orden es el del archivo. */
+/**
+ * Índice → nombre del campo. El orden es el del archivo.
+ *
+ * Los nombres de las columnas 2..13 son los del export de agosto de 2026
+ * (jul26..ago25). Un export posterior las renombra en el mismo lugar: el de
+ * Guzmán del 09/11/2026 trae oct26..nov25. Esos nombres NO se leen de acá.
+ * Los resuelve `resolverMesesMaestro`. El índice no cambia.
+ */
 export const MAESTRO: Record<number, string> = {
   0: 'descrip', 1: 'este',
   2: 'jul26', 3: 'jun26', 4: 'may26', 5: 'abr26', 6: 'mar26', 7: 'feb26',
@@ -46,12 +53,16 @@ export const MAESTRO: Record<number, string> = {
 }
 
 /**
- * Los doce meses cerrados, del más nuevo al más viejo, más el mes en curso.
+ * Los doce meses cerrados del export de agosto de 2026, del más nuevo al más
+ * viejo. Es el respaldo de `resolverMesesMaestro` cuando el archivo no dice
+ * sus meses. No es el mapa de un export posterior.
  *
  * `ago25` viene CORTADO: 3.509 unidades contra ~28.000 de los demás. No es un
- * mes flojo, es un mes incompleto — el corte de la serie. Entra marcado como
- * parcial y no se usa para promediar. Si entrara como mes normal, cualquier
- * promedio de doce meses queda mal y nadie lo iba a notar.
+ * mes flojo, es un mes incompleto — el corte de la serie de ESE archivo.
+ * Entra marcado como parcial y no se usa para promediar. Si entrara como mes
+ * normal, cualquier promedio de doce meses queda mal y nadie lo iba a notar.
+ * Un export más nuevo no hereda esa marca: nov25, que acá es un mes entero,
+ * sigue siéndolo cuando pasa a ser el más viejo.
  */
 export const MESES_MAESTRO = [
   { campo: 'jul26', periodo: '2026-07', parcial: false },

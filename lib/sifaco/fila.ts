@@ -12,9 +12,9 @@
 
 import { arreglarTexto } from './codificacion'
 import {
-  MESES_MAESTRO,
   fechaSifaco, numeroSifaco, codigoSifaco, esFilaDeEncabezado,
 } from './columnas'
+import { CANTIDAD_MESES_CERRADOS, INDICE_PRIMER_MES_CERRADO } from './meses-maestro'
 
 export type Fila = Record<string, unknown>
 
@@ -37,8 +37,13 @@ export function normalizarFila(cruda: unknown[], fila: number, cod: string): Fil
   if (!codigo) return null
   if (esFilaDeEncabezado(codigo, descrip)) return null
 
-  // Los doce meses cerrados, del más nuevo al más viejo. El índice 2 es jul26.
-  const vtaMeses = MESES_MAESTRO.map((_, k) => N(2 + k))
+  // Doce meses cerrados, del más nuevo al más viejo, siempre en las columnas
+  // 2..13. El nombre de cada una lo resuelve `resolverMesesMaestro` sobre el
+  // archivo: acá sólo se lee el número, en el mismo lugar de siempre.
+  const vtaMeses = Array.from(
+    { length: CANTIDAD_MESES_CERRADOS },
+    (_, k) => N(INDICE_PRIMER_MES_CERRADO + k),
+  )
 
   return {
     fila,

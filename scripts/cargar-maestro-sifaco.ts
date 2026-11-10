@@ -32,6 +32,7 @@ import * as XLSX from 'xlsx'
 import { detectarCodificacion } from '../lib/sifaco/codificacion'
 import { FILA_PRIMER_DATO } from '../lib/sifaco/columnas'
 import { normalizarFila, type Fila } from '../lib/sifaco/fila'
+import { resolverMesesMaestro } from '../lib/sifaco/meses-maestro'
 
 const LOTE = 500
 
@@ -92,8 +93,10 @@ async function main() {
     if (typeof d === 'string' && d) muestra.push(d)
   }
   const veredicto = detectarCodificacion(muestra)
+  const meses = resolverMesesMaestro(filas)
   console.log(`codificación: ${veredicto.codificacion} — puntajes ${JSON.stringify(veredicto.puntajes)}`)
   console.log(`residuo: ${veredicto.residuo.filas} textos con caracteres imposibles`)
+  console.log(`meses: ${meses.este.campo} (en curso) · ${meses.cerrados[0].campo}…${meses.cerrados[11].campo} · ${meses.origen}${meses.coherente ? '' : ' · la fecha no coincide'}`)
 
   const normalizadas: Fila[] = []
   for (let i = FILA_PRIMER_DATO; i < filas.length; i++) {
@@ -146,7 +149,8 @@ async function main() {
     filas_cargadas: count ?? 0,
     filas_declaradas: normalizadas.length,
     codificacion: veredicto.codificacion,
-    codificacion_prueba: veredicto as any,
+    codificacion_prueba: { ...veredicto, meses } as any,
+    ...(meses.fechaArchivo ? { fecha_archivo: meses.fechaArchivo } : {}),
     cargado_at: new Date().toISOString(),
   }).eq('id', importacionId)
 
@@ -157,7 +161,8 @@ async function main() {
     .rpc('sifaco_previa_maestro', { p_importacion: importacionId })
   if (ePrevia) throw ePrevia
 
-  await adm.from('sifaco_importaciones').update({ previa }).eq('id', importacionId)
+  const previaConMeses = previa && typeof previa === 'object' ? { ...previa, meses } : previa
+  await adm.from('sifaco_importaciones').update({ previa: previaConMeses }).eq('id', importacionId)
   console.log('\n── vista previa ──')
   console.log(JSON.stringify(previa, null, 1))
   console.log(`\nimportación: ${importacionId}`)
