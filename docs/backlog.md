@@ -62,8 +62,7 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Qué: corridas que pasan los 60 s con planillas grandes.
 - Terminado: lote seguro (uno pesado por corrida, corte a los 45 s,
   recuperación de `procesando` colgados). Ya está en el PR #7.
-- Rama: `cursor/compras-match-ingesta-61dc` → B1 · Estado: en PR ·
-  Depende de: B1.
+- Rama: `feat/compras-cruce` · Estado: en PR (#22) · Depende de: B1.
 
 **A6 · nora-auditor y generar-agenda**
 - Qué: el auditor corre `compras_rotacion` de toda la cadena y un
@@ -80,7 +79,7 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   reescribe la rama ajena: se arma una rama nueva con main mergeado.
 - Terminado: rama nueva con CI en verde, preview sin depender de las env,
   0296 con rollback.
-- Rama: `feat/compras-cruce` · Estado: pendiente · Depende de: G1.
+- Rama: `feat/compras-cruce` · Estado: en PR (#22) · Depende de: G1.
 
 **B2 · Proveedores Monroe Americana y OMICRON**
 - Qué: los alias ya están en el PR #7. Falta la fila «MONROE AMERICANA» en
@@ -108,7 +107,7 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Qué: `compras_lineas` no la lee ninguna pantalla.
 - Terminado: listado en compras con filtro de cruzadas y sin cruzar, y
   «Ignorar».
-- Rama: `feat/compras-cruce` · Estado: pendiente · Depende de: B1.
+- Rama: `feat/compras-lineas` · Estado: en curso · Depende de: B1 (#22).
 
 ## C · Maestro por sucursal
 
@@ -118,8 +117,10 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Terminado: función nueva con `p_sucursal`, que toca sólo
   `producto_stock_sifaco` y los precios de esa sucursal. Guarda lo anterior
   en una tabla de deshacer. Migración con rollback.
-- Rama: `feat/maestro-por-sucursal` · Estado: pendiente · Depende de: firma
-  de la migración.
+- Rama: `feat/maestro-por-sucursal` · Estado: bloqueado por humano: ni
+  `producto_stock_sifaco` ni `sifaco_aplicar_sucursales` están en el repo
+  (viven sólo en la base); la función no se escribe a ciegas · Depende de:
+  P2, firma de la migración.
 
 **C2 · Previsualizar → aplicar → deshacer**
 - Qué: UI en `/admin/operaciones/sifaco`. Hoy dice «El paso de aplicar al
@@ -127,21 +128,22 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Terminado: previa por sucursal con altas, bajas y diferencias de precio,
   costo y stock. Aplicar con confirmación. Deshacer la última aplicación.
   Todo detrás de una bandera.
-- Rama: `feat/maestro-por-sucursal` · Estado: pendiente · Depende de: C1.
+- Rama: `feat/maestro-por-sucursal` · Estado: bloqueado por humano (sigue a
+  C1) · Depende de: C1. La bandera `maestro_por_sucursal` ya existe (G4).
 
 ## D · Precios
 
 **D1 · PR #6: historial de precios (0295)**
 - Qué: no mergea limpio contra main.
 - Terminado: rama con main mergeado y CI en verde.
-- Rama: `feat/precios-historial` · Estado: pendiente · Depende de: G1;
-  firma de la 0295.
+- Rama: `feat/precios-historial` · Estado: en PR (#21), esperando firma con
+  la 0295 antes del deploy · Depende de: firma de la 0295.
 
 **D2 · Precio real desde facturas**
 - Qué: ya está en el PR #6 (PDF con texto, la pestaña Compras, fotos
   confirmadas).
 - Terminado: igual que D1.
-- Rama: D1 · Estado: pendiente · Depende de: D1.
+- Rama: `feat/precios-historial` · Estado: en PR (#21) · Depende de: D1.
 
 **D3 · PR #3: comparador detrás de bandera**
 - Qué: trae su propia `0294_el_comparador_de_precios.sql`, que choca con la
@@ -258,7 +260,8 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 **G3 · Tests de la ingesta y del sync Woo**
 - Qué: `lib/drive/correr.ts` y `lib/woo/sync.ts` no tienen tests.
 - Terminado: tests con dobles de Drive, de Woo y de Supabase, sin red.
-- Rama: `chore/tests-ingesta-woo` · Estado: pendiente · Depende de: H1.
+- Rama: `chore/tests-ingesta-woo` · Estado: en PR (Woo); la ingesta va con
+  H1 · Depende de: H1 para la ingesta.
 
 **G4 · Banderas**
 - Qué: un módulo único `lib/banderas.ts`.

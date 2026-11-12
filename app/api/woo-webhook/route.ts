@@ -2,10 +2,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { buscarOCrearCliente } from '@/lib/pedidos/cliente'
 import { sucursalDeCanal } from '@/lib/pedidos/canales'
-import crypto from 'crypto'
 import { createAdminClient } from '@/lib/supabase/server'
 import type { WooOrder } from '@/lib/woo/client'
-import type { OrderItem, TipoEnvio } from '@/lib/types'
+import { fueraDeHorario as isFueraDeHorario, firmaValida, mapearItems as mapItems, tipoEnvio as pickTipoEnvio } from '@/lib/woo/mapear'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -25,35 +24,6 @@ export const runtime = 'nodejs'
  * `x-wc-webhook-signature`. Validamos la firma antes de procesar.
  */
 
-function pickTipoEnvio(o: WooOrder): TipoEnvio {
-  const raw = ((o.shipping_lines ?? [])
-    .map(l => `${l.method_id ?? ''} ${l.method_title ?? ''}`)
-    .join(' ') || '').toLowerCase()
-  if (raw.includes('express')) return 'express'
-  if (raw.includes('pickup') || raw.includes('retiro') || raw.includes('local_pickup')) return 'retiro'
-  return 'programado'
-}
-
-function isFueraDeHorario(iso: string | null | undefined, open: number, close: number): boolean {
-  if (!iso) return false
-  const d = new Date(iso)
-  const hour = Number(d.toLocaleString('en-US', {
-    timeZone: 'America/Argentina/Buenos_Aires', hour: '2-digit', hour12: false,
-  }))
-  return hour < open || hour >= close
-}
-
-function mapItems(items: WooOrder['line_items']): OrderItem[] {
-  return items.map(it => ({
-    product_id: it.product_id,
-    name: it.name,
-    qty: it.quantity,
-    price: Number(it.price) || Number(it.total) / Math.max(1, it.quantity),
-    sku: it.sku || undefined,
-    meta: it.meta_data?.length ? { meta_data: it.meta_data } : undefined,
-  }))
-}
-
 export async function POST(req: NextRequest) {
   const secret = process.env.WOO_WEBHOOK_SECRET
   if (!secret) {
@@ -62,9 +32,7 @@ export async function POST(req: NextRequest) {
 
   // Leemos body como raw para poder calcular la firma exactamente igual
   const raw = await req.text()
-  const sig = req.headers.get('x-wc-webhook-signature') || ''
-  const expected = crypto.createHmac('sha256', secret).update(raw, 'utf8').digest('base64')
-  if (sig !== expected) {
+  if (!firmaValida(raw, req.headers.get('x-wc-webhook-signature'), secret)) {
     return NextResponse.json({ error: 'firma_invalida' }, { status: 401 })
   }
 
