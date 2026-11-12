@@ -98,20 +98,22 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   (`omitido_por_tamano`).
 - Terminado: la pantalla de Drive lista los omitidos con el link a la carga
   manual, y la carga manual acepta el archivo de a hojas.
-- Rama: `feat/ingesta-archivos-grandes` · Estado: pendiente · Depende de: B1.
+- Rama: `feat/ingesta-archivos-grandes` · Estado: en PR (#32) · Depende de:
+  B1 (#22).
 
 **B4 · Ingesta incremental**
 - Qué: hoy mira `modifiedTime > last_sync_at`. Un archivo editado se
   reprocesa entero, y uno que se movió de carpeta no se ve.
 - Terminado: se compara `md5Checksum` o `version` por archivo, y sólo se
   reprocesa lo que cambió. Tests.
-- Rama: `feat/ingesta-incremental` · Estado: pendiente · Depende de: H1.
+- Rama: `feat/ingesta-incremental` · Estado: en PR (#33): ya existía
+  (md5 / modifiedTime por archivo); faltaba leer errores · Depende de: —
 
 **B5 · Las compras ingeridas se ven**
 - Qué: `compras_lineas` no la lee ninguna pantalla.
 - Terminado: listado en compras con filtro de cruzadas y sin cruzar, y
   «Ignorar».
-- Rama: `feat/compras-lineas` · Estado: en curso · Depende de: B1 (#22).
+- Rama: `feat/compras-lineas` · Estado: en PR (#23) · Depende de: B1 (#22).
 
 ## C · Maestro por sucursal
 
@@ -171,7 +173,9 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   decisiones por ella.
 - Terminado: las pantallas de la home respetan la sucursal activa;
   super_admin sin sucursal ve «todas»; tests de `getSucursalActiva`.
-- Rama: `feat/multisucursal-activa` · Estado: pendiente · Depende de: A4.
+- Rama: `feat/multisucursal-activa` · Estado: bloqueado por humano (sigue a
+  A4: la home filtra decisiones por sucursal cuando la vista acepte
+  `p_sucursal`) · Depende de: A4.
 
 **E3 · /pedidos y /admin coherentes**
 - Qué: `users_pedidos` y `users_admin` son dos mundos de permisos.
@@ -298,14 +302,15 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Terminado: `lib/ingesta/fuente.ts` con `listarCambios`, `descargar` y
   `marcarProcesado`; Drive como primera implementación, sin cambio de
   comportamiento; tests con una fuente falsa.
-- Rama: `feat/fuentes-interfaz` · Estado: pendiente · Depende de: B1.
+- Rama: `feat/fuentes-interfaz` · Estado: en PR (#24) · Depende de: B1 (#22).
 
 **H2 · Fuente FIND**
 - Qué: FIND va a ser la fuente maestra.
 - Terminado: esqueleto de la implementación detrás de la bandera
   `INGESTA_FUENTE=find`, que hoy responde «no configurada».
-- Rama: `feat/fuentes-interfaz` · Estado: pendiente · Depende de: H1;
-  credenciales de FIND (P10).
+- Rama: `feat/fuente-find` · Estado: en PR (#34, esqueleto apagado) /
+  bloqueado por humano (API y credenciales de FIND, P10) · Depende de: H1;
+  P10.
 
 ## I · Pulido
 
