@@ -1,4 +1,4 @@
--- 0295 · La sección del maestro SIFACO puede nombrar a la droguería.
+-- 0296 · La sección del maestro SIFACO puede nombrar a la droguería.
 --
 -- Z45, MIC, CEO y el resto viven en la columna seccion. Esta tabla dice a qué
 -- proveedor corresponde cada código. No se carga ningún mapeo acá: Facu lo

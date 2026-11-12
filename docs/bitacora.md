@@ -65,7 +65,8 @@ y un pendiente no se podía sacar de la cola sin esperar a que fallara.
 
 ## 2026-11-12 · La sección SIFACO puede nombrar a la droguería
 
-Migración `0295`, sin aplicar. Rollback en `supabase/rollbacks/0295_…sql`.
+Migración `0296`, sin aplicar. Rollback en `supabase/rollbacks/0296_…sql`.
+La `0295` quedó para el historial de precios y facturas, en el PR #6.
 Tabla `sifaco_seccion_proveedor(seccion text primary key, proveedor_id uuid
 references proveedores on delete set null, nota text, created_at)`. RLS
 prendido. La lectura es la de `proveedores_read` (cualquier admin). La
