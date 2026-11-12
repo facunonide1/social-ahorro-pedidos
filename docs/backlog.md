@@ -183,7 +183,8 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Qué: hay canales que no tienen una sucursal de despacho configurada.
 - Terminado: la pantalla de canales permite asignarla y el aviso de la
   home lleva ahí.
-- Rama: `feat/multisucursal-canales` · Estado: pendiente · Depende de: —
+- Rama: `feat/multisucursal-canales` · Estado: en PR (reasignar los pedidos
+  viejos sin sucursal queda aparte) · Depende de: —
 
 ## F · Seguridad
 

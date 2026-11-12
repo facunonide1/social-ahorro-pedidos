@@ -22,7 +22,7 @@ export const metadata = { title: 'Canales de venta' }
  * lo que compromete legalmente.
  */
 export default async function CanalesPage() {
-  await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo'] })
+  const perfil = await requireAdminHubAccess({ allowedRoles: ['super_admin', 'gerente', 'comprador', 'administrativo'] })
   const sb = createClient()
 
   // v1.4 · A.5 y A.6 · el estado de los cinco canales. Va con el cliente de
@@ -37,12 +37,13 @@ export default async function CanalesPage() {
     conflictoLegal(adm),
   ])
 
-  const [{ data: canales }, { data: problemas }, { count: publicados }, { count: candidatos }] =
+  const [{ data: canales }, { data: problemas }, { count: publicados }, { count: candidatos }, { data: sucursales }] =
     await Promise.all([
       sb.from('canales_venta').select('*').order('id'),
       sb.from('canal_problemas').select('*').eq('canal_id', 'woo'),
       sb.from('canal_publicaciones').select('externo_id', { count: 'exact', head: true }).eq('canal_id', 'woo'),
       sb.from('canal_candidatos').select('producto_id', { count: 'exact', head: true }),
+      sb.from('sucursales').select('id, nombre').eq('activa', true).order('nombre'),
     ])
 
   // Los que no deberían estar publicados van completos: son 17 y es lo primero
@@ -75,6 +76,8 @@ export default async function CanalesPage() {
         <CanalesEstado estados={estados} />
         <CanalesErrores errores={errores} conflicto={conflicto} />
         <CanalesClient
+          sucursales={(sucursales ?? []) as { id: string; nombre: string }[]}
+          puedeDespacho={perfil.rol === 'super_admin' || perfil.rol === 'gerente'}
           canales={(canales ?? []) as any[]}
           problemas={(problemas ?? []) as any[]}
           publicados={publicados ?? 0}

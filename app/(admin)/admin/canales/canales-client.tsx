@@ -7,6 +7,7 @@ import { exportExcel } from '@/lib/utils/export-excel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { SucursalDespacho } from './sucursal-despacho'
 
 const PROBLEMA: Record<string, { titulo: string; que_es: string; grave?: boolean }> = {
   no_deberia_estar_publicado: {
@@ -44,10 +45,13 @@ const PROBLEMA: Record<string, { titulo: string; que_es: string; grave?: boolean
 }
 
 export function CanalesClient({
-  canales, problemas, publicados, candidatos, ilegales, sinCruce,
+  canales, problemas, publicados, candidatos, ilegales, sinCruce, sucursales = [], puedeDespacho = false,
 }: {
   canales: any[]; problemas: any[]; publicados: number; candidatos: number
   ilegales: any[]; sinCruce: any[]
+  /** Para elegir la sucursal de despacho (sólo super_admin y gerente). */
+  sucursales?: { id: string; nombre: string }[]
+  puedeDespacho?: boolean
 }) {
   const n = (p: string) => Number(problemas.find((x) => x.problema === p)?.casos ?? 0)
   const woo = canales.find((c) => c.id === 'woo')
@@ -173,6 +177,9 @@ export function CanalesClient({
               impuesto {c.impuesto_pct}% · margen extra {c.margen_extra_pct}%
             </div>
             {c.notas && <p className="mt-1 text-xs italic text-muted-foreground">{c.notas}</p>}
+            {puedeDespacho && (
+              <SucursalDespacho canalId={c.id} actual={c.sucursal_despacho_id ?? null} sucursales={sucursales} />
+            )}
           </div>
         ))}
       </section>
