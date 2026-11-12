@@ -88,6 +88,54 @@ export function nombreDeCompra(f: FilaCompra): string {
   return [f.producto, f.droga, f.concentracion, f.unidades].filter(Boolean).join(' ')
 }
 
+export type LineaSinProducto = {
+  id: string
+  proveedor_id: string | null
+  producto_nombre: string | null
+  droga: string | null
+  concentracion: string | null
+  unidades: string | null
+  codigo_barras: string | null
+  producto_id: string | null
+  match_score: number | string | null
+  match_via: string | null
+}
+
+export type UpdateMatch = {
+  id: string
+  producto_id: string | null
+  match_score: number
+  match_via: ResultadoMatch['via']
+}
+
+/**
+ * Qué hay que escribir en un rematch. Una fila que ya tiene producto no se
+ * toca. Si el score y la vía ya son los mismos, tampoco: correrlo de nuevo
+ * no cambia nada y no borra.
+ */
+export function updatesDeRematch(filas: LineaSinProducto[], ctx: ContextoMatchCompra): UpdateMatch[] {
+  const indice = ctx.indice === undefined ? indiceDeNombres(ctx.catalogo) : ctx.indice
+  const barras = fusionarBarras(ctx.barras, ctx.catalogo)
+  const out: UpdateMatch[] = []
+  for (const f of filas) {
+    if (f.producto_id) continue
+    const mapeos = ctx.mapeos.filter((m) => !m.proveedorId || m.proveedorId === f.proveedor_id)
+    const nombre = [f.producto_nombre, f.droga, f.concentracion, f.unidades].filter(Boolean).join(' ')
+    const m = matchearLineaCompra(
+      { nombre, ean: f.codigo_barras },
+      ctx.catalogo,
+      barras,
+      mapeos,
+      ctx.umbral,
+      indice,
+    )
+    const scoreAntes = f.match_score == null || f.match_score === '' ? null : Number(f.match_score)
+    if (f.match_via === m.via && scoreAntes === m.score) continue
+    out.push({ id: f.id, producto_id: m.productoId, match_score: m.score, match_via: m.via })
+  }
+  return out
+}
+
 export function prepararFilasCompra(
   filas: FilaCompra[],
   origen: string,

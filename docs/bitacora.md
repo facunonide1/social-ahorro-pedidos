@@ -28,6 +28,18 @@ menos un token con la ficha; el barrido de 46.000 fichas por cada línea de la
 planilla no entra en los 60 segundos del cron. El test compara el índice
 contra el barrido completo.
 
+Las 727 filas que ya estaban sin producto no se reescriben al reingresar: el
+hash choca y `ignoreDuplicates` las deja. El rematch las recorre de a 80,
+sólo donde `producto_id` es null, y aplica el mismo cruce. No borra nada y no
+pisa un producto que ya estaba. Si el score y la vía ya coinciden, no escribe.
+Corta a los 40 segundos y devuelve `siguiente` para seguir. Hoy unas 82
+deberían cruzar por barras.
+
+Lo llama un super_admin, gerente o comprador en `POST /api/compras/rematch`.
+El cron, sin sesión, es `GET /api/cron/compras-rematch` con `CRON_SECRET`: el
+middleware manda a login cualquier otra API sin sesión, así que el secreto no
+serviría en la ruta de compras. No está en `vercel.json`. Se corre a mano.
+
 ## 2026-11-12 · Google Drive: carpetas compartidas, listas al comparador, maestro solo en previa
 
 NORA puede leer las carpetas «compras farmacias» y «compras farmacias (privado)».

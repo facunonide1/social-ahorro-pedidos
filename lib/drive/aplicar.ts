@@ -13,7 +13,9 @@ import { prepararRevision } from '@/lib/documentos/preparar-revision'
 import { umbralMatchLista, umbralScoreNombre, preciosAutoAplicar } from './flag'
 import { parsearFacturaTexto } from './facturas-texto'
 import { parsearGrilla, parsearMayorsur, type FilaLista, type ListaParseada } from './listas'
-import { prepararFilasCompra, type MapeoNombre } from './compras-match'
+import {
+  prepararFilasCompra, type ContextoMatchCompra, type MapeoNombre,
+} from './compras-match'
 import { claveNombre, matchearProducto, porcentajeMatch, type ProductoRef } from './match'
 import {
   hashEstable, parsearArchivosCargados, parsearPestanaCompras, parsearPestanaPrecios, type FilaCompra,
@@ -53,7 +55,7 @@ export async function barrasDelCatalogo(adm: Adm): Promise<Map<string, string>> 
   return new Map(filas.map((f) => [f.codigo, f.producto_id]))
 }
 
-async function mapeosGuardados(adm: Adm): Promise<MapeoNombre[]> {
+export async function mapeosGuardados(adm: Adm): Promise<MapeoNombre[]> {
   const { filas } = await paginar<{ nombre_norm: string; producto_id: string; proveedor_id: string | null }>(
     adm.from('drive_mapeo_productos').select('nombre_norm, producto_id, proveedor_id').order('nombre_norm'),
     { maximo: 20_000 },
@@ -180,6 +182,19 @@ export async function resolverLista(adm: Adm, opts: {
   }
 }
 
+export async function contextoMatchCompras(adm: Adm, opts: {
+  catalogo?: ProductoRef[]
+  barras?: Map<string, string>
+  mapeos?: MapeoNombre[]
+} = {}): Promise<ContextoMatchCompra> {
+  return {
+    catalogo: opts.catalogo ?? await catalogoMatch(adm),
+    barras: opts.barras ?? await barrasDelCatalogo(adm),
+    mapeos: opts.mapeos ?? await mapeosGuardados(adm),
+    umbral: umbralScoreNombre(),
+  }
+}
+
 export async function guardarCompras(
   adm: Adm,
   filas: FilaCompra[],
@@ -192,15 +207,9 @@ export async function guardarCompras(
     mapeos?: MapeoNombre[]
   } = {},
 ) {
-  const catalogo = opts.catalogo ?? await catalogoMatch(adm)
-  const barras = opts.barras ?? await barrasDelCatalogo(adm)
-  const mapeos = opts.mapeos ?? await mapeosGuardados(adm)
-  const rows = prepararFilasCompra(filas, origen, origenRef, proveedores, {
-    catalogo,
-    barras,
-    mapeos,
-    umbral: umbralScoreNombre(),
-  })
+  const rows = prepararFilasCompra(
+    filas, origen, origenRef, proveedores, await contextoMatchCompras(adm, opts),
+  )
   let insertadas = 0
   await enTandas(rows, async (t) => {
     const { data, error } = await adm.from('compras_lineas').upsert(t, { onConflict: 'hash_linea', ignoreDuplicates: true }).select('id')

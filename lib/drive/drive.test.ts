@@ -8,7 +8,7 @@ import { esElMismoContenido } from './dedupe'
 import { parsearFacturaTexto } from './facturas-texto'
 import { parsearCeos, parsearDistrifarm, parsearMayorsur, parsearNorma, parsearPrecio, parsearVannier } from './listas'
 import {
-  clavesBarras, fusionarBarras, matchearLineaCompra, prepararFilasCompra,
+  clavesBarras, fusionarBarras, matchearLineaCompra, prepararFilasCompra, updatesDeRematch,
 } from './compras-match'
 import { catalogoAcotado, indiceDeNombres, matchearProducto, porcentajeMatch, scoreNombre } from './match'
 import { parsearArchivosCargados, parsearPestanaCompras, parsearPestanaPrecios } from './planilla'
@@ -245,6 +245,50 @@ test('preparar una compra guarda producto, score y vía sin cambiar el hash', ()
   assert.equal(sin.producto_id, null)
   assert.equal(sin.match_via, 'sin_match')
   assert.equal(row.hash_linea === sin.hash_linea, false)
+})
+
+test('el rematch escribe el cruce una vez y no pisa un producto ya puesto', () => {
+  const ctx = {
+    catalogo: [{ id: 'p2', nombre: 'Otro', codigoBarras: null }],
+    barras: new Map([['7792222222222', 'p2']]),
+    mapeos: [],
+    umbral: 0.62,
+  }
+  const base = {
+    id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    proveedor_id: null,
+    producto_nombre: 'X',
+    droga: null,
+    concentracion: null,
+    unidades: null,
+    codigo_barras: '7792222222222',
+    producto_id: null as string | null,
+    match_score: null as number | null,
+    match_via: null as string | null,
+  }
+  const primera = updatesDeRematch([base], ctx)
+  assert.equal(primera.length, 1)
+  assert.equal(primera[0].producto_id, 'p2')
+  assert.equal(primera[0].match_via, 'ean')
+  const ya = updatesDeRematch([{
+    ...base,
+    producto_id: 'p2',
+    match_score: 1,
+    match_via: 'ean',
+  }], ctx)
+  assert.equal(ya.length, 0)
+
+  const sinBase = { ...base, id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', codigo_barras: null, producto_nombre: 'nada de esto' }
+  const sin = updatesDeRematch([sinBase], ctx)
+  assert.equal(sin.length, 1)
+  assert.equal(sin[0].producto_id, null)
+  assert.equal(sin[0].match_via, 'sin_match')
+  const sinOtra = updatesDeRematch([{
+    ...sinBase,
+    match_score: sin[0].match_score,
+    match_via: sin[0].match_via,
+  }], ctx)
+  assert.equal(sinOtra.length, 0)
 })
 
 test('factura de texto: proveedor, número y líneas, sin usar un CUIT real', () => {
