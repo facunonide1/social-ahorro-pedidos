@@ -87,6 +87,7 @@ rollback en `supabase/rollbacks/`.
 | 1 | 0294 | #5 (ya en main) | Varias carpetas de Drive | `rollbacks/0294_…` | «Firmo aplicar migración 0294 en prod» |
 | 2 | 0295 | #6 → D1 | `vigente_desde` y `clave_dedup` (sólo columnas) | `rollbacks/0295_…` | «Firmo aplicar migración 0295 en prod» |
 | 3 | 0296 | #7 → B1 | `sifaco_seccion_proveedor` con RLS | `rollbacks/0296_…` | «Firmo aplicar migración 0296 en prod» |
+| 4 | 0297 | `feat/estabilidad-cerebro` | pg_cron del cerebro de cada minuto a cada 5 (no toca la función) | `rollbacks/0297_…` | junto con el PR #14: «Firmo merge del PR #14, SHA …, y aplicar la migración 0297 en prod» |
 
 Las siguientes se agregan a la tabla a medida que se preparen (cerebro, Monroe,
 maestro por sucursal, revoke, índices).

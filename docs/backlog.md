@@ -40,10 +40,11 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Qué: pg_cron lo corre cada minuto (`0288:478`) con tope de 50 s. Lee
   `decisiones_pendientes` dos veces (dentro de `bandeja_unica` y aparte) y
   hace varios group-by de toda la cadena.
-- Terminado: migración preparada que lo corre cada 5 minutos y lee la vista
-  una sola vez. Rollback listo. Sin aplicar.
-- Rama: `feat/estabilidad-cerebro` · Estado: pendiente · Depende de: firma de
-  la migración.
+- Terminado: migración preparada que lo corre cada 5 minutos; después (con A4),
+  que lea la vista una sola vez. Rollback listo. Sin aplicar.
+- Rama: `feat/estabilidad-cerebro` · Estado: en PR, esperando firma (0297
+  cambia sólo la frecuencia; la lectura única de la vista queda para A4) ·
+  Depende de: firma de la migración.
 
 **A4 · `decisiones_pendientes` pesada**
 - Qué: vista sin parámetro. Cada lectura calcula la cadena entera y la
