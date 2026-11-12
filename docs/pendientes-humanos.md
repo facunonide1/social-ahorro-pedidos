@@ -157,6 +157,22 @@ maestro por sucursal, revoke, índices).
 - **Dónde:** Vercel → proyecto social-ahorro-pedidos → Settings → Functions.
 - **Firma:** no hace falta; alcanza con la respuesta.
 
+## P12 · Crear los índices de las foreign keys
+
+- **Qué:** correr `supabase/consultas/indices_fk_faltantes.sql` en el SQL
+  editor de Supabase. Es de sólo lectura y devuelve, por FK sin índice, la
+  sentencia `crear` y su `rollback`, las tablas más grandes primero. Después,
+  ejecutar las sentencias `crear` **de a una** (no pegar varias juntas: el
+  editor las envuelve en una transacción y `concurrently` falla adentro).
+  Empezar por las 20 más grandes y medir.
+- **Por qué:** es una de las dos causas de fondo de los timeouts. Sin índice,
+  cada join por la FK y cada borrado en la tabla padre recorre la hija entera.
+- **Si no llega:** los crons y las pantallas siguen recorriendo tablas enteras.
+- **Rollback:** la columna `rollback` de cada fila (`drop index concurrently`).
+  Un índice que quedó INVALID por un corte se borra igual y se reintenta.
+- **Firma:** «Firmo crear en prod los índices de FK que lista la consulta,
+  empezando por las N más grandes».
+
 ## P10 · Datos de negocio
 
 - Confirmar el mapeo de secciones de SIFACO, sobre todo `NOR → NORMA`, que

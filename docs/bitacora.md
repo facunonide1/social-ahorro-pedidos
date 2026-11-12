@@ -1,5 +1,24 @@
 # Bitácora
 
+## 2026-11-12 · La lista de índices de las foreign keys sale de la base, no de adivinar
+
+Los advisors marcan 346 foreign keys sin índice. Escribir esos índices a mano
+desde las migraciones sería adivinar: parte del esquema vive sólo en la base.
+`supabase/consultas/indices_fk_faltantes.sql` es una consulta **de sólo
+lectura** sobre `pg_constraint` y `pg_index`. Devuelve cada FK de `public` sin
+un índice que empiece por sus columnas en el mismo orden, con el
+`create index concurrently if not exists` que le falta y su rollback (`drop
+index concurrently`), ordenadas por tamaño de tabla: las grandes primero.
+
+Se probó en un Postgres 16 local con casos armados (FK simple sin índice,
+compuesta, índice en orden invertido, índice que la cubre por prefijo, FK ya
+indexada). Marca las tres que faltan, ignora las dos cubiertas, las
+sentencias que genera corren, y después de correrlas la consulta da vacía.
+
+Las sentencias van **de a una y fuera de una transacción**: `concurrently` no
+bloquea escrituras pero no puede ir dentro de BEGIN/COMMIT. Lo corre Facu
+(P12).
+
 ## 2026-11-12 · El auditor de NORA publica sus avisos en lote
 
 `correrAuditor` llamaba a `emitirAviso` una vez por hallazgo: un SELECT para
