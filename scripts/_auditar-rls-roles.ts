@@ -1,8 +1,9 @@
 /**
  * El cuerpo del auditor de RLS por rol. Lo invoca scripts/auditar-rls-roles.mjs.
  *
- * Crea un usuario por rol, entra con su sesión, mide y los borra. Si algo
- * falla, los borra igual: un usuario de prueba que queda vivo es una puerta.
+ * Crea un usuario por rol, entra con su sesión, mide y los borra, SÓLO con
+ * AUDITOR_CREAR_USUARIOS=1 y fuera de Vercel. Si algo falla, los borra igual:
+ * un usuario de prueba que queda vivo es una puerta.
  */
 import { createClient } from '@supabase/supabase-js'
 
@@ -10,6 +11,7 @@ import { PRESET_POR_ROL, type PermisoModulo } from '../lib/types/permisos'
 import type { AdminRole } from '../lib/types/admin'
 import { filasDeLaMatriz } from './sincronizar-permisos'
 import { motivoSaltearAuditor } from './saltear-build'
+import { DOMINIO_AUDITOR, esUsuarioAuditor, listarTodosLosUsuarios, motivoNoCrearUsuarios } from './usuarios-auth'
 
 // Preview no tiene NEXT_PUBLIC_SUPABASE_URL (está en production). El build
 // cortaba acá, en la carga del módulo, antes de main(). Fuera de production,
@@ -113,21 +115,24 @@ async function main() {
   // ── 3 · ENTRAR CON CADA ROL Y MEDIR ───────────────────────────────────────
   //
   // Esta parte crea usuarios de verdad en auth, entra con cada uno y los borra.
-  // Hacerlo en el build de Vercel sería crear y borrar usuarios en la base de
-  // PRODUCCIÓN en cada deploy: si el build se cancela a la mitad, queda un
-  // usuario vivo con contraseña conocida. Eso es una puerta, no una prueba.
-  //
-  // En un build de Vercel (también production) no se crean usuarios: si se
-  // cancela a la mitad queda una puerta. Las dos verificaciones de arriba sí
-  // corren, porque sólo leen. Para la parte de sesiones, en la máquina:
-  //   VERCEL_ENV=production npm run auditar:rls-roles
-  // (sin el flag de Vercel).
-  if (process.env.VERCEL) {
-    console.log(
-      '  --    las sesiones por rol no se prueban en el build de Vercel: crear usuarios en ' +
-      'producción para medir es peor que la medición. En la máquina, con las env: ' +
-      'VERCEL_ENV=production npm run auditar:rls-roles',
-    )
+  // Eso es ESCRIBIR en la base de producción: si el proceso se corta a la
+  // mitad, queda un usuario activo con un email de patrón conocido. Por eso no
+  // corre nunca en un build de Vercel y, en la máquina, sólo si se pide:
+  //   AUDITOR_CREAR_USUARIOS=1 VERCEL_ENV=production npm run auditar:rls-roles
+  // Las verificaciones de arriba sí corren siempre, porque sólo leen. Y se
+  // revisa igual que no haya quedado ningún usuario de prueba de antes.
+  const motivoNoCrear = motivoNoCrearUsuarios(process.env)
+  if (motivoNoCrear) {
+    const vivos = (await listarTodosLosUsuarios(adm)).filter((u) => esUsuarioAuditor(u.email))
+    if (vivos.length) {
+      falla(`hay ${vivos.length} usuario(s) ${DOMINIO_AUDITOR} vivos de corridas anteriores: ` +
+        vivos.map((u) => u.email).join(', ') + '. Borrarlos (auth y users_admin).')
+    } else {
+      ok(`ningún usuario ${DOMINIO_AUDITOR} vivo`)
+    }
+    console.log(`  --    las sesiones por rol no se prueban (${motivoNoCrear}): crear usuarios ` +
+      'en producción es escribir en producción. A mano: ' +
+      'AUDITOR_CREAR_USUARIOS=1 VERCEL_ENV=production npm run auditar:rls-roles')
     console.log(fallas === 0 ? '\nTODO BIEN' : `\nFALLA · ${fallas} problemas de RLS por rol`)
     if (fallas > 0) process.exit(1)
     return
@@ -137,19 +142,33 @@ async function main() {
     .select('id').eq('activa', true).order('codigo').limit(1).maybeSingle()
 
   const creados: string[] = []
+  const borrarCreados = async () => {
+    for (const id of creados.splice(0)) {
+      await adm.from('users_admin').delete().eq('id', id)
+      await adm.auth.admin.deleteUser(id)
+    }
+  }
+  // try/finally no corre con Ctrl-C: sin esto, un SIGINT deja los usuarios vivos.
+  for (const sig of ['SIGINT', 'SIGTERM'] as const) {
+    process.once(sig, () => {
+      console.error(`\n${sig}: borrando los usuarios de prueba antes de salir…`)
+      borrarCreados().finally(() => process.exit(130))
+    })
+  }
+  let borrados = 0
   try {
     for (const rol of ROLES) {
       const email = `auditor.${rol}@rls.test`
       const pass = `Rls-${Date.now()}-${rol}!`
 
-      const { data: previos } = await adm.auth.admin.listUsers({ page: 1, perPage: 200 })
-      for (const u of previos?.users ?? []) {
+      for (const u of await listarTodosLosUsuarios(adm)) {
         if (u.email === email) { await adm.from('users_admin').delete().eq('id', u.id); await adm.auth.admin.deleteUser(u.id) }
       }
 
       const { data: c, error: e } = await adm.auth.admin.createUser({ email, password: pass, email_confirm: true })
       if (e || !c?.user) { falla(`no se pudo crear el usuario de prueba de ${rol}: ${e?.message}`); continue }
       creados.push(c.user.id)
+      borrados++
       await adm.from('users_admin').upsert({ id: c.user.id, rol, sucursal_id: suc?.id ?? null, activo: true }, { onConflict: 'id' })
 
       const s = createClient(URL, ANON, { auth: { persistSession: false } })
@@ -175,11 +194,10 @@ async function main() {
       else ok(`${rol}: no lee ninguna tabla sensible que su rol no habilite${noSePudo.length ? ` (${noSePudo.length} vacías, no se pudo probar)` : ''}`)
     }
   } finally {
-    for (const id of creados) { await adm.from('users_admin').delete().eq('id', id); await adm.auth.admin.deleteUser(id) }
-    const { data: q } = await adm.auth.admin.listUsers({ page: 1, perPage: 200 })
-    const quedan = (q?.users ?? []).filter((u) => u.email?.endsWith('@rls.test')).length
+    await borrarCreados()
+    const quedan = (await listarTodosLosUsuarios(adm)).filter((u) => esUsuarioAuditor(u.email)).length
     if (quedan > 0) falla(`quedaron ${quedan} usuarios de prueba sin borrar`)
-    else ok(`${creados.length} usuarios de prueba borrados`)
+    else ok(`${borrados} usuarios de prueba borrados`)
   }
 
   console.log(fallas === 0 ? '\nTODO BIEN' : `\nFALLA · ${fallas} problemas de RLS por rol`)

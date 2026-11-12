@@ -29,6 +29,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { paginar } from '../lib/supabase/paginar'
 import { motivoFaltanEnv } from './saltear-build'
+import { motivoSaltearSnapshot } from './snapshot-resumen'
 
 // El build de preview no tiene estas env y `npm run build` llega acá después
 // del auditor de RLS. Sin variables no hay nada que cruzar: se avisa y sale 0.
@@ -103,23 +104,31 @@ async function main() {
   //
   // Son dos implementaciones distintas del mismo hecho. Si coinciden, ninguna
   // de las dos está cortada.
-  // Se recalcula primero. El resumen es un snapshot diario (migración 0204) y
-  // comparar un snapshot de ayer contra las filas de hoy daría diferencias que
-  // no son cortes. Recalcular es idempotente: no cambia datos, los vuelve a
-  // contar.
-  const { data: resumen, error: eRes } =
-    await adm.rpc('agentes_resumen_calcular', { p_sucursal: null })
-  if (eRes) throw new Error(`no se pudo calcular el resumen de agentes: ${eRes.message}`)
-  if (resumen == null) throw new Error('el resumen de agentes volvió vacío')
-  const abasto = (resumen as any)?.abasto ?? {}
+  // El resumen es un snapshot (migración 0204). Antes se recalculaba acá con
+  // `agentes_resumen_calcular`, que ESCRIBE `agentes_resumen_snapshot` en
+  // producción y recorre toda la cadena (~20 s) en cada deploy. Un build no
+  // escribe en la base: ahora sólo se lee, y el cruce exacto corre si el
+  // snapshot es reciente (lo recalculan el cron medidor y el importador).
+  const { data: snap, error: eRes } = await adm
+    .from('agentes_resumen_snapshot')
+    .select('datos, calculado_at')
+    .is('sucursal_id', null)
+    .maybeSingle()
+  if (eRes) throw new Error(`no se pudo leer el resumen de agentes: ${eRes.message}`)
+  const motivoSnap = motivoSaltearSnapshot((snap as any)?.calculado_at, new Date())
+  const abasto = ((snap as any)?.datos as any)?.abasto ?? {}
 
-  const { filas: transf, truncado } = await paginar<{ producto_id: string }>(
-    adm.from('transferir_antes_de_comprar').select('producto_id').order('producto_id'),
-    { maximo: 200_000 },
-  )
+  const { filas: transf, truncado } = motivoSnap
+    ? { filas: [] as { producto_id: string }[], truncado: false }
+    : await paginar<{ producto_id: string }>(
+        adm.from('transferir_antes_de_comprar').select('producto_id').order('producto_id'),
+        { maximo: 200_000 },
+      )
   if (truncado) throw new Error('la vista de transferencias no entró en el tope de paginado')
 
-  if (transf.length === 0) {
+  if (motivoSnap) {
+    saltear(`Abasto · transferencias: ${motivoSnap}`)
+  } else if (transf.length === 0) {
     saltear('Abasto · transferencias: la vista está vacía, el cruce no prueba nada')
   } else {
     comparar('Abasto · productos para transferir en vez de comprar',
@@ -162,12 +171,16 @@ async function main() {
   // Una suma, no un conteo: un corte en las filas da una suma más chica y
   // plausible, que es exactamente la forma de fallar que no se nota.
   const plataCodigo = Math.round(Number(abasto.plata_a_transferir ?? 0))
-  const { filas: plataFilas } = await paginar<{ plata_que_no_hay_que_gastar: number }>(
-    adm.from('transferir_antes_de_comprar')
-      .select('producto_id, plata_que_no_hay_que_gastar').order('producto_id'),
-    { maximo: 200_000 },
-  )
-  if (!plataFilas.length) {
+  const { filas: plataFilas } = motivoSnap
+    ? { filas: [] as { plata_que_no_hay_que_gastar: number }[] }
+    : await paginar<{ plata_que_no_hay_que_gastar: number }>(
+        adm.from('transferir_antes_de_comprar')
+          .select('producto_id, plata_que_no_hay_que_gastar').order('producto_id'),
+        { maximo: 200_000 },
+      )
+  if (motivoSnap) {
+    saltear(`Abasto · plata parada: ${motivoSnap}`)
+  } else if (!plataFilas.length) {
     saltear('Abasto · plata parada: la vista está vacía')
   } else {
     const plataBase = Math.round(
