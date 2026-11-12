@@ -159,7 +159,7 @@ async function guardarPagina(adm: Adm, archivos: { fileId: string; nombre: strin
 
 async function procesarLote(adm: Adm, token: string, usuarioId: string | null) {
   const { data: cola } = await adm.from('drive_archivos_ingestados')
-    .select('id, file_id, nombre, mime, ruta_relativa, clasificacion, clasificacion_forzada, intentos, bytes, web_view_link, proximo_intento_at')
+    .select('id, file_id, nombre, mime, ruta_relativa, clasificacion, clasificacion_forzada, intentos, bytes, web_view_link, proximo_intento_at, modified_time')
     .eq('estado', 'pendiente')
     .order('created_at', { ascending: true })
     .limit(20)
@@ -256,7 +256,7 @@ async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: str
     const planilla = leerPlanilla(buf)
     const catalogo = await catalogoMatch(adm)
     const cubiertos = planilla.archivos.map((a) => a.fileId)
-    await guardarCompras(adm, planilla.compras, 'planilla', archivo.file_id, proveedores)
+    await guardarCompras(adm, planilla.compras, 'planilla', archivo.file_id, proveedores, catalogo, mapeos)
     let aplicadas = 0
     let enPrevia = 0
     for (const grupo of planilla.precios) {
@@ -272,6 +272,7 @@ async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: str
         lista, nombreArchivo: `${archivo.nombre} · ${grupo.proveedor}`, ruta: archivo.ruta_relativa,
         bufferHash: createHash('sha256').update(grupo.proveedor + ':' + grupo.filas.length + ':' + hash).digest('hex'),
         usuarioId, catalogo, proveedores, mapeos,
+        fechaArchivo: grupo.vigenteDesde ?? archivo.modified_time,
       })
       if (r.aplicado || r.motivo.includes('ya estaba')) aplicadas++
       else enPrevia++
@@ -299,6 +300,7 @@ async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: str
     const r = await resolverLista(adm, {
       lista, nombreArchivo: archivo.nombre, ruta: archivo.ruta_relativa,
       bufferHash: hash, usuarioId, catalogo, proveedores, mapeos,
+      fechaArchivo: archivo.modified_time,
     })
     return {
       estado: r.aplicado || r.motivo.includes('ya estaba') ? 'ok' : 'previa',
@@ -317,7 +319,11 @@ async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: str
     const mime = archivo.mime?.startsWith('image/') || archivo.mime === 'application/pdf'
       ? archivo.mime
       : (/\.pdf$/i.test(archivo.nombre) ? 'application/pdf' : 'image/jpeg')
-    const r = await ingerirFactura(adm, { buf, nombre: archivo.nombre, mime, usuarioId, proveedores })
+    const esPdf = mime === 'application/pdf'
+    const r = await ingerirFactura(adm, {
+      buf, nombre: archivo.nombre, mime, usuarioId, proveedores, mapeos,
+      catalogo: esPdf ? await catalogoMatch(adm) : [],
+    })
     if ('error' in r && r.error) return { estado: 'error', clasificacion: 'factura', error: r.error, hash }
     const destino = 'extraccionId' in r && r.extraccionId
       ? `/admin/finanzas/documentos/revision/${r.extraccionId}`

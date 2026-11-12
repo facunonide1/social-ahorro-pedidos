@@ -102,6 +102,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
   })
 
+  // El histórico de lo pagado ya lo escribe doc_confirmar_documento (origen
+  // factura, precio_neto). El comparador lee ese histórico: confirmar una foto
+  // alimenta el precio pagado sin un segundo insert.
   const { data, error } = await adm.rpc('doc_confirmar_documento', {
     p_extraccion_id: params.id,
     p_cabecera: cabecera,
