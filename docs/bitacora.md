@@ -1,5 +1,18 @@
 # Bitácora
 
+## 2026-11-12 · El comparador muestra todos los ítems de las listas vigentes
+
+El comparador leía `listas_precios_items` con un `.in('lista_id', …)` de hasta
+500 ids en la URL y un `.limit(20000)`. PostgREST corta en 1.000 sin avisar,
+así que mostraba los primeros mil ítems como si fueran todos, y con muchas
+listas la URL podía dar el mismo 400 que avisos-proveedores. Ahora lee en
+tandas de 100 listas, paginado con orden por `id`, cuatro tandas a la vez. El
+historial por producto va igual. La lectura de listas vigentes lee su error.
+
+Con muchas listas grandes la página tarda más, pero dice la verdad. Si se
+vuelve lenta, el próximo paso es una vista o RPC en la base que haga el
+mínimo por producto (con migración).
+
 ## 2026-11-12 · Precios con fecha, al día con main
 
 El #6 (precios con fecha, historial y lo pagado en la factura) queda en

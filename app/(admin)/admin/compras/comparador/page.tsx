@@ -18,26 +18,37 @@ export default async function ComparadorPage({ searchParams }: { searchParams: {
   // listas vigentes del rubro
   let lq = sb.from('listas_precios').select('id, proveedor_id, rubro, vigente_desde, fecha_carga').eq('vigente', true).limit(500)
   if (rubro !== 'todos') lq = lq.eq('rubro', rubro)
-  const { data: listas } = await lq
+  const { data: listas, error: eListas } = await lq
+  if (eListas) throw new Error(`no se pudieron leer las listas vigentes: ${eListas.message}`)
   const listaIds = ((listas ?? []) as any[]).map((l) => l.id)
   const provByLista = new Map(((listas ?? []) as any[]).map((l) => [l.id, l.proveedor_id]))
 
-  const [{ data: provs }, { data: items }] = await Promise.all([
+  // Ítems de TODAS las listas vigentes. Antes: un `.in('lista_id', …)` con
+  // hasta 500 ids en la URL (el mismo 400 que tenía avisos-proveedores) y un
+  // `.limit(20000)` que PostgREST corta en 1.000 sin avisar: el comparador
+  // mostraba los primeros mil ítems como si fueran todos. Ahora va en tandas
+  // de 100 listas, paginado y con orden estable; varias tandas a la vez.
+  const tandas = <T,>(xs: T[], n: number) => Array.from({ length: Math.ceil(xs.length / n) }, (_, i) => xs.slice(i * n, i * n + n))
+  async function deAPocos<T, R>(grupos: T[], f: (g: T) => Promise<R[]>, simultaneas = 4): Promise<R[]> {
+    const out: R[] = []
+    for (const ronda of tandas(grupos, simultaneas)) (await Promise.all(ronda.map(f))).forEach((r) => out.push(...r))
+    return out
+  }
+
+  const [{ data: provs }, items] = await Promise.all([
     sb.from('proveedores').select('id, razon_social, plazo_pago_dias, forma_pago_default, descuento_pronto_pago_pct').eq('activo', true),
-    listaIds.length ? sb.from('listas_precios_items').select('lista_id, producto_id, precio, desc_volumen, productos_catalogo(nombre, sku)').in('lista_id', listaIds).not('producto_id', 'is', null).limit(20000) : Promise.resolve({ data: [] as any[] }),
+    deAPocos(tandas(listaIds, 100), async (ids) => (await paginar<any>(sb.from('listas_precios_items')
+      .select('id, lista_id, producto_id, precio, desc_volumen, productos_catalogo(nombre, sku)')
+      .in('lista_id', ids).not('producto_id', 'is', null).order('id'), { maximo: 500_000 })).filas),
   ])
 
   // Historial sólo de los productos que se muestran, en tandas de 100 ids y
   // paginado: un tope global dejaba sin historial a casi todos.
-  const productoIds = Array.from(new Set(((items ?? []) as any[]).map((it) => it.producto_id as string)))
-  const hist: any[] = []
-  for (let i = 0; i < productoIds.length; i += 100) {
-    const { filas } = await paginar<any>(sb.from('doc_precios_historial')
-      .select('item_id, tercero_id, precio_unitario, precio_neto, fecha, origen')
-      .in('item_id', productoIds.slice(i, i + 100))
-      .order('fecha', { ascending: false }).order('id'), { maximo: 20_000 })
-    hist.push(...filas)
-  }
+  const productoIds = Array.from(new Set(items.map((it) => it.producto_id as string)))
+  const hist: any[] = await deAPocos(tandas(productoIds, 100), async (ids) => (await paginar<any>(sb.from('doc_precios_historial')
+    .select('item_id, tercero_id, precio_unitario, precio_neto, fecha, origen')
+    .in('item_id', ids)
+    .order('fecha', { ascending: false }).order('id'), { maximo: 20_000 })).filas)
 
   const provMap = new Map(((provs ?? []) as any[]).map((p) => [p.id, p]))
   const provList: ProvLite[] = ((provs ?? []) as any[]).map((p) => ({ id: p.id, nombre: p.razon_social, plazo: p.plazo_pago_dias, forma: p.forma_pago_default }))
