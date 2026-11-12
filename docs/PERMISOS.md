@@ -110,3 +110,21 @@ Misma app mostrando **menos** según el rol. `lib/constants/vista-rol.ts`:
   El usuario operativo no ve que existan Finanzas/Compras/BI.
 - **Preview**: la ficha de Usuarios (tab "Vista previa") avisa cuándo el rol usa
   la vista simple y lista los botones grandes que vería.
+
+## Quién entra a qué: `/admin` y `/pedidos`
+
+Hay dos tablas de perfiles: `users_admin` (NORA: rol y sucursal) y
+`users_pedidos` (el CRM de pedidos: admin, operador, repartidor). Una persona
+puede estar en las dos. La regla vive en `lib/auth/destino.ts`, con tests:
+
+| Entra a | Tiene | Va a |
+|---|---|---|
+| `/` | admin activo (con o sin pedidos) | `/admin` |
+| `/` | sólo pedidos activo, repartidor | `/repartidor` |
+| `/` | sólo pedidos activo, otro rol | `/dashboard` |
+| `/` | ningún perfil activo | panel de diagnóstico (no desloguea) |
+| `/pedidos` | pedidos activo, no repartidor | se queda |
+| `/pedidos` | pedidos activo, repartidor | `/repartidor` |
+| `/pedidos` | sin pedidos activo, con admin activo | `/admin/pedidos` |
+| `/pedidos` | ningún perfil activo | `/logout?reason=sin_permiso` |
+| pantalla de `/admin` sin el rol | admin activo | `/admin?denied=1`, con aviso |

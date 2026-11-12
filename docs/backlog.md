@@ -177,7 +177,7 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Qué: `users_pedidos` y `users_admin` son dos mundos de permisos.
 - Terminado: una sola regla documentada de quién entra a qué, y tests de
   la redirección.
-- Rama: `feat/multisucursal-activa` · Estado: pendiente · Depende de: E1.
+- Rama: `feat/multisucursal-acceso` · Estado: en PR · Depende de: E1.
 
 **E4 · Pedidos sin sucursal**
 - Qué: hay canales que no tienen una sucursal de despacho configurada.
