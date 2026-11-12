@@ -1,5 +1,14 @@
 # Bitácora
 
+## 2026-11-12 · Fuera el shell viejo que nadie usaba
+
+`components/layout/sidebar.tsx`, `top-nav.tsx`, `search-trigger.tsx`,
+`user-menu.tsx` y `period-selector.tsx` eran el shell anterior a `OsShell`.
+No los importaba ninguna página (los dos últimos sólo los usaba `top-nav`), y
+mostraban «En construcción» y «Próximamente» que nadie veía. Se borraron. Lo
+que sí se usa de esa carpeta (`notifications-trigger` y `sucursal-selector`,
+desde `OsShell`) queda. `tsc`, lint, tests y build pasan sin ellos.
+
 ## 2026-11-12 · Quién entra a /admin y a /pedidos, en un solo lugar y con tests
 
 La decisión de adónde va cada persona estaba repartida entre `app/page.tsx` y
