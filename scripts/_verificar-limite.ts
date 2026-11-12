@@ -19,6 +19,21 @@
  * nadie cuenta. Se cierran como `perdido`, con el motivo.
  */
 import { createClient } from '@supabase/supabase-js'
+import { motivoFaltanEnv } from './saltear-build'
+
+// Igual que la coherencia: preview no tiene la URL y el build moría con
+// "Falta NEXT_PUBLIC_SUPABASE_URL" antes de `next build`. Con las variables,
+// el chequeo no cambia.
+const faltanParaLimite = motivoFaltanEnv(process.env, [
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'SUPABASE_SERVICE_ROLE_KEY',
+])
+if (faltanParaLimite) {
+  console.warn(
+    `[verificar:limite] se saltea (${faltanParaLimite}). En production, con las variables, corre igual.`,
+  )
+  process.exit(0)
+}
 
 function env(n: string): string {
   const v = process.env[n]

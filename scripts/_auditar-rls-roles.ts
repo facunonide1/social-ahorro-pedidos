@@ -9,6 +9,22 @@ import { createClient } from '@supabase/supabase-js'
 import { PRESET_POR_ROL, type PermisoModulo } from '../lib/types/permisos'
 import type { AdminRole } from '../lib/types/admin'
 import { filasDeLaMatriz } from './sincronizar-permisos'
+import { motivoSaltearAuditor } from './saltear-build'
+
+// Preview no tiene NEXT_PUBLIC_SUPABASE_URL (está en production). El build
+// cortaba acá, en la carga del módulo, antes de main(). Fuera de production,
+// o si falta alguna env, se avisa y se sale 0. Con VERCEL_ENV=production y
+// las tres variables, no se saltea nada.
+//
+// El build local tampoco define VERCEL_ENV. Para correrlo a mano:
+//   VERCEL_ENV=production npm run auditar:rls-roles
+const motivoSaltear = motivoSaltearAuditor(process.env)
+if (motivoSaltear) {
+  console.warn(
+    `[auditar:rls-roles] se saltea (${motivoSaltear}). En production, con las variables, corre igual.`,
+  )
+  process.exit(0)
+}
 
 function env(n: string): string {
   const v = process.env[n]
@@ -101,14 +117,16 @@ async function main() {
   // PRODUCCIÓN en cada deploy: si el build se cancela a la mitad, queda un
   // usuario vivo con contraseña conocida. Eso es una puerta, no una prueba.
   //
-  // El portón sigue siendo el build local, que es el que corre antes de cada
-  // push y el que falla. En Vercel quedan las dos verificaciones de arriba, que
-  // sólo leen — y la de la matriz desincronizada es la única de las tres que
-  // puede llegar sola hasta producción sin que nadie la vea.
+  // En un build de Vercel (también production) no se crean usuarios: si se
+  // cancela a la mitad queda una puerta. Las dos verificaciones de arriba sí
+  // corren, porque sólo leen. Para la parte de sesiones, en la máquina:
+  //   VERCEL_ENV=production npm run auditar:rls-roles
+  // (sin el flag de Vercel).
   if (process.env.VERCEL) {
     console.log(
       '  --    las sesiones por rol no se prueban en el build de Vercel: crear usuarios en ' +
-      'producción para medir es peor que la medición. Se prueban en el build local, antes del push.',
+      'producción para medir es peor que la medición. En la máquina, con las env: ' +
+      'VERCEL_ENV=production npm run auditar:rls-roles',
     )
     console.log(fallas === 0 ? '\nTODO BIEN' : `\nFALLA · ${fallas} problemas de RLS por rol`)
     if (fallas > 0) process.exit(1)
