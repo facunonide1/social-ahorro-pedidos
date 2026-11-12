@@ -23,7 +23,7 @@ a `main`.
 | 1 | [#12](https://github.com/facunonide1/social-ahorro-pedidos/pull/12) | `fix/avisos-dedup-por-tandas` | — | «Firmo merge y deploy del PR #12, SHA …» |
 | 2 | [#15](https://github.com/facunonide1/social-ahorro-pedidos/pull/15) | `feat/seguridad-pin-debil` | — | «Firmo merge y deploy del PR #15, SHA …» |
 | 3 | [#14](https://github.com/facunonide1/social-ahorro-pedidos/pull/14) | `feat/estabilidad-cerebro` | 0297 | Un solo paquete: «Firmo merge del PR #14, SHA …, y aplicar la migración 0297 en prod» |
-| 4 | [#13](https://github.com/facunonide1/social-ahorro-pedidos/pull/13) | `fix/crons-tandas` | — | Todavía no: falta que alertas-stock y metricas-stock no puedan pasar los 60 s. |
+| 4 | [#13](https://github.com/facunonide1/social-ahorro-pedidos/pull/13) | `fix/crons-tandas` | — | «Firmo merge y deploy del PR #13, SHA …». Ya va por tramos con plazo: ninguna corrida pasa los 60 s y la que no llega no escribe. |
 
 El SHA exacto de cada uno se completa en la firma cuando el PR quede cerrado
 y con CI en verde. Rollback de cualquiera: promover en Vercel el deploy
