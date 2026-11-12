@@ -163,11 +163,13 @@ async function guardarPagina(adm: Adm, archivos: { fileId: string; nombre: strin
 }
 
 async function recuperarTrabados(adm: Adm) {
-  const { data } = await adm.from('drive_archivos_ingestados')
+  const { data, error } = await adm.from('drive_archivos_ingestados')
     .select('id, intentos, updated_at')
     .eq('estado', 'procesando')
     .order('updated_at', { ascending: true })
+    .order('id', { ascending: true })
     .limit(40)
+  if (error) throw new Error(`no pude leer los trabados: ${error.message}`)
   const ahora = new Date()
   let recuperados = 0
   for (const a of (data ?? []) as any[]) {
@@ -179,7 +181,7 @@ async function recuperarTrabados(adm: Adm) {
     })
     if (d.accion === 'esperar') continue
     const estado = d.accion === 'error' ? 'error' : 'pendiente'
-    await adm.from('drive_archivos_ingestados').update({
+    const { error: eUp } = await adm.from('drive_archivos_ingestados').update({
       estado,
       intentos: d.intentos,
       error: d.accion === 'error'
@@ -188,6 +190,7 @@ async function recuperarTrabados(adm: Adm) {
       proximo_intento_at: null,
       updated_at: ahora.toISOString(),
     }).eq('id', a.id)
+    if (eUp) throw new Error(`no pude sacar de procesando ${a.id}: ${eUp.message}`)
     recuperados++
   }
   return recuperados
@@ -210,12 +213,13 @@ async function procesarLote(adm: Adm, token: string, usuarioId: string | null, i
   const resultados: { fileId: string; estado: string }[] = []
   for (const archivo of plan.omitidos) {
     const mb = Math.round(Number(archivo.bytes) / 1_048_576)
-    await adm.from('drive_archivos_ingestados').update({
+    const { error: eUp } = await adm.from('drive_archivos_ingestados').update({
       estado: 'previa',
       destino_ref: 'omitido_por_tamano',
       error: mensajeTope(mb),
       updated_at: new Date().toISOString(),
     }).eq('id', archivo.id)
+    if (eUp) throw new Error(`no pude pasar a previa ${archivo.file_id}: ${eUp.message}`)
     resultados.push({ fileId: archivo.file_id, estado: 'previa' })
   }
   let cubiertos = new Set<string>()

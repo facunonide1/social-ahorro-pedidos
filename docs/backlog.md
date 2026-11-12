@@ -59,8 +59,7 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Qué: corridas que pasan los 60 s con planillas grandes.
 - Terminado: lote seguro (uno pesado por corrida, corte a los 45 s,
   recuperación de `procesando` colgados). Ya está en el PR #7.
-- Rama: `cursor/compras-match-ingesta-61dc` → B1 · Estado: en PR ·
-  Depende de: B1.
+- Rama: `feat/compras-cruce` (B1) · Estado: en PR · Depende de: B1.
 
 **A6 · nora-auditor y generar-agenda**
 - Qué: el auditor corre `compras_rotacion` de toda la cadena y un
@@ -77,7 +76,7 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   reescribe la rama ajena: se arma una rama nueva con main mergeado.
 - Terminado: rama nueva con CI en verde, preview sin depender de las env,
   0296 con rollback.
-- Rama: `feat/compras-cruce` · Estado: pendiente · Depende de: G1.
+- Rama: `feat/compras-cruce` · Estado: en PR · Depende de: G1.
 
 **B2 · Proveedores Monroe Americana y OMICRON**
 - Qué: los alias ya están en el PR #7. Falta la fila «MONROE AMERICANA» en
@@ -105,7 +104,7 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Qué: `compras_lineas` no la lee ninguna pantalla.
 - Terminado: listado en compras con filtro de cruzadas y sin cruzar, y
   «Ignorar».
-- Rama: `feat/compras-cruce` · Estado: pendiente · Depende de: B1.
+- Rama: `feat/compras-cruce` · Estado: en PR · Depende de: B1.
 
 ## C · Maestro por sucursal
 

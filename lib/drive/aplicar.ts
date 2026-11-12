@@ -50,7 +50,7 @@ export async function proveedoresActivos(adm: Adm): Promise<ProveedorRef[]> {
 /** Códigos de `producto_codigos_barras`, tal como están. El cruce los normaliza. */
 export async function barrasDelCatalogo(adm: Adm): Promise<Map<string, string>> {
   const { filas } = await paginar<{ codigo: string; producto_id: string }>(
-    adm.from('producto_codigos_barras').select('codigo, producto_id').order('codigo'),
+    adm.from('producto_codigos_barras').select('codigo, producto_id').order('codigo').order('producto_id'),
     { maximo: 200_000 },
   )
   return new Map(filas.map((f) => [f.codigo, f.producto_id]))
@@ -58,7 +58,7 @@ export async function barrasDelCatalogo(adm: Adm): Promise<Map<string, string>> 
 
 export async function mapeosGuardados(adm: Adm): Promise<MapeoNombre[]> {
   const { filas } = await paginar<{ nombre_norm: string; producto_id: string; proveedor_id: string | null }>(
-    adm.from('drive_mapeo_productos').select('nombre_norm, producto_id, proveedor_id').order('nombre_norm'),
+    adm.from('drive_mapeo_productos').select('nombre_norm, producto_id, proveedor_id').order('nombre_norm').order('id'),
     { maximo: 20_000 },
   )
   return filas.map((m) => ({

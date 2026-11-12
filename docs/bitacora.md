@@ -1,5 +1,45 @@
 # Bitácora
 
+## 2026-11-12 · El PR #7 se pone al día con main en `feat/compras-cruce`
+
+El #7 (`cursor/compras-match-ingesta-61dc`) no mergeaba limpio desde que
+entró el #8. No se reescribió esa rama: `feat/compras-cruce` sale de main y
+mergea el #7 con `--no-ff`, así quedan sus commits y su autoría.
+
+Qué trae el #7: `guardarCompras` cruza cada línea con el catálogo (barras de
+`producto_codigos_barras`, después el matcher de las listas) y deja
+`producto_id`, `match_score` y `match_via`. El rematch de las que ya estaban
+sin producto, de a 80, sin borrar: `POST /api/compras/rematch` con sesión y
+`GET /api/cron/compras-rematch` con `CRON_SECRET` (no está en `vercel.json`).
+El cron de Drive deja en previa lo que pasa de 12 MB sin bajarlo, entra un
+solo pesado por corrida, corta a los 45 segundos y saca de `procesando` lo que
+quedó colgado. La bandeja deja ignorar un pendiente. La sección SIFACO puede
+nombrar a la droguería, si la tabla existe.
+
+Conflicto sólo en esta bitácora: quedan todas las entradas de los dos lados,
+las de main (#8 a #11) arriba porque son más nuevas. `package.json` no chocó:
+el #7 no tocaba los tests, y `drive.test.ts` ya estaba en la lista. Lo de
+main (saltear verificadores sin env, el build que no escribe en producción,
+CI y lint) queda como estaba.
+
+Arreglos sobre el #7. `recuperarTrabados` no leía el error del select ni de
+los updates: ahora corta la corrida, igual que el rematch, en vez de contar
+un archivo como recuperado sin haberlo escrito. Lo mismo el update que manda
+a previa un archivo de más de 12 MB. El select de trabados ordena también por
+`id`. `mapeosGuardados` paginaba por `nombre_norm`, que se repite entre
+proveedores: suma `id` al orden para no perder ni repetir filas entre
+páginas. `barrasDelCatalogo` suma `producto_id` por la misma razón. El rematch
+ya ordenaba por `id`, leía todos los errores y tenía `maxDuration`; no hay
+`.in()` con listas largas.
+
+`npm test` 51 de 51, `tsc` limpio, lint en 0 con avisos, build sin env de
+Supabase: los verificadores de la base se saltean, cortes, RLS y lente pasan.
+
+La migración `0296_la_seccion_sifaco_nombra_al_proveedor.sql` sigue sin
+aplicar. Rollback en
+`supabase/rollbacks/0296_la_seccion_sifaco_nombra_al_proveedor.sql`. No se
+tocó la base, ni secretos, ni `sifaco_aplicar_maestro`.
+
 ## 2026-11-12 · CI en cada PR y config de lint
 
 `.github/workflows/ci.yml` corre `npm ci`, `npm test`, `tsc --noEmit`,
