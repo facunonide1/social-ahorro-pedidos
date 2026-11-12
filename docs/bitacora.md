@@ -1,5 +1,104 @@
 # Bitácora
 
+## 2026-11-12 · Las compras que ya entraron cruzan con el catálogo
+
+`guardarCompras` insertaba `compras_lineas` sin `producto_id`, `match_score`
+ni `match_via`. El comparador de `/admin/compras/donde-comprar` lee las listas
+por `producto_id`: una compra sin producto no se puede poner al lado de un
+precio. El cruce es el mismo que el de las listas (`matchearProducto`), con
+un paso delante.
+
+Primero el código de barras. La fuente es `producto_codigos_barras` (un
+producto puede tener hasta cuatro). `productos_catalogo.codigo_barras` es sólo
+el principal y completa los huecos: no pisa un código que ya estaba en la
+tabla. Se guardan los dígitos y, si al sacar los ceros de la izquierda sigue
+siendo un EAN, también esa forma. Un código de menos de 8 dígitos o un cero
+no es un EAN.
+
+Si el código no está, sigue el matcher de las listas: mapeo manual y, si no,
+nombre (producto, droga, concentración, unidades) con `DRIVE_MATCH_SCORE`
+(0,62 si no está). Debajo del umbral la fila queda con `producto_id` null,
+`match_via = sin_match` y el score que tuvo. No se borra nada. El `hash_linea`
+no cambió, así que un reingreso no duplica: `ignoreDuplicates` deja la fila
+vieja como está. Las que ya estaban sin producto las toma el rematch, en otro
+paso.
+
+El índice por token no cambia el resultado. Un score mayor a cero comparte al
+menos un token con la ficha; el barrido de 46.000 fichas por cada línea de la
+planilla no entra en los 60 segundos del cron. El test compara el índice
+contra el barrido completo.
+
+Las 727 filas que ya estaban sin producto no se reescriben al reingresar: el
+hash choca y `ignoreDuplicates` las deja. El rematch las recorre de a 80,
+sólo donde `producto_id` es null, y aplica el mismo cruce. No borra nada y no
+pisa un producto que ya estaba. Si el score y la vía ya coinciden, no escribe.
+Corta a los 40 segundos y devuelve `siguiente` para seguir. Hoy unas 82
+deberían cruzar por barras.
+
+Lo llama un super_admin, gerente o comprador en `POST /api/compras/rematch`.
+El cron, sin sesión, es `GET /api/cron/compras-rematch` con `CRON_SECRET`: el
+middleware manda a login cualquier otra API sin sesión, así que el secreto no
+serviría en la ruta de compras. No está en `vercel.json`. Se corre a mano.
+
+## 2026-11-12 · El cron no se come un archivo que no entra
+
+`/api/cron/drive-ingesta` tiene `maxDuration` 60. La planilla «Compras y
+precios por droguería» quedó en `procesando`: la corrida murió a la mitad y
+nadie la devolvía a la cola.
+
+Un archivo de más de 12 MB se marca `previa` con `destino_ref =
+omitido_por_tamano` antes de descargarlo, así no gasta uno de los 4 lugares.
+Si Drive no manda el tamaño (un Google Sheet) y al bajarlo igual pasa el
+tope, tampoco se parsea. La planilla, un maestro, o un archivo de 2 MB o más
+entra de a uno por corrida. A los 45 segundos desde que arrancó la ingesta no
+se empieza otro: el resto sigue `pendiente`.
+
+Si `procesando` tiene más de 10 minutos —más que los 60 del tope, menos que
+los 30 del cron— vuelve a `pendiente` con intento+1. Empezar a procesarlo
+suma otro intento, igual que antes. Al llegar a 3, `error`. `updated_at` se
+escribe al pasar a `procesando`, para no recuperar un archivo que está
+corriendo de verdad.
+
+En la pantalla de Drive, Ignorar también está para los que siguen
+`pendiente`. Antes el botón sólo aparecía en sin clasificar, previa y error,
+y un pendiente no se podía sacar de la cola sin esperar a que fallara.
+
+## 2026-11-12 · La sección SIFACO puede nombrar a la droguería
+
+Migración `0296`, sin aplicar. Rollback en `supabase/rollbacks/0296_…sql`.
+La `0295` quedó para el historial de precios y facturas, en el PR #6.
+Tabla `sifaco_seccion_proveedor(seccion text primary key, proveedor_id uuid
+references proveedores on delete set null, nota text, created_at)`. RLS
+prendido. La lectura es la de `proveedores_read` (cualquier admin). La
+escritura es la de `proveedores_write` (super_admin, gerente, comprador,
+administrativo), partida en insert, update y delete: un `FOR ALL` también da
+SELECT y el auditor lo marca. No hay filas. El mapeo lo carga Facu.
+
+Propuesto, no cargado:
+
+- MIC → MICROSULES
+- MAY → MAYORSUR
+- PHA → Pharmamerican / PHARMOS, a confirmar
+- CEO → CEOS
+- WES → WEST
+- Z59 → LAFARMEN
+- Z33 → HIERBAS
+- Z34 → KIOSKO
+- NOR → ¿NORMA? Dudoso
+- El resto queda con el código como nombre hasta que exista la fila
+
+Si la tabla no está, la consulta devuelve el error de «no existe» y el cruce
+sigue sin ella. No se rompe la ingesta. Un código sin fila no inventa un
+proveedor: `proveedor_nombre` sigue siendo Z45, MIC o el que venga.
+
+`detectarProveedor` ahora distingue Monroe Americana de Monroe. El alias
+busca «monroe americana» en la razón social. En `proveedores` no está
+«MONROE AMERICANA»: hasta que se cargue, una factura de Monroe Americana no
+se cuelga de un proveedor que sólo se llama Monroe. «Laboratorio Omicron»
+matchea con el proveedor que ya existe, OMICRON.
+
+No se tocó `sifaco_aplicar_maestro`.
+
 ## 2026-11-12 · Google Drive: carpetas compartidas, listas al comparador, maestro solo en previa
 
 NORA puede leer las carpetas «compras farmacias» y «compras farmacias (privado)».
