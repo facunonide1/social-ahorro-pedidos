@@ -69,8 +69,9 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   SELECT + INSERT por aviso. generar-agenda filtra `tareas` por
   `created_at`.
 - Terminado: avisos en tandas; índices en F5.
-- Rama: `fix/crons-tandas` · Estado: en PR (generar-agenda) / pendiente
-  (avisos del auditor en tandas) · Depende de: F5 para los índices.
+- Rama: `fix/crons-tandas` (generar-agenda) + `fix/auditor-avisos-tandas`
+  (avisos del auditor en lote) · Estado: en PR · Depende de: F5 para los
+  índices.
 
 ## B · Compras e ingesta
 
