@@ -41,3 +41,6 @@ data/sifaco/
 
 # El Excel de facturas y pagos: es del negocio, se baja de Drive cuando hace falta.
 data/proveedores/*.xlsx
+
+# worktrees de agentes de Claude Code
+.claude/worktrees/
