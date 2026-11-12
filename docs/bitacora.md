@@ -1,5 +1,42 @@
 # Bitácora
 
+## 2026-11-12 · /admin no se cae si la vista de decisiones no responde
+
+`/admin` tiraba `Cannot read properties of null (reading 'filter')`.
+`decisiones_pendientes` es una vista pesada: cuando PostgREST corta por
+statement timeout, `data` vuelve `null` y `EquipoClient` filtraba eso. La home
+ahora espera como mucho 5 segundos, loguea código y mensaje (sin las filas) y
+sigue con lista vacía. `equipo.agentes` también va con `?? []`. El resto de
+los `.filter` de esa página ya partían de `data ?? []` o de helpers que
+devuelven array (`papelesEnAlerta`, `diasSinTrazabilidad`, `primerDia`).
+
+Si otra página de NORA tira, `app/(admin)/error.tsx` muestra el error adentro
+del shell (el dock sigue) con Reintentar y un link a `/admin`.
+
+Quien entra a `/pedidos` sin fila en `users_pedidos` iba a
+`/logout?reason=sin_permiso` y perdía la sesión. Si tiene fila activa en
+`users_admin`, ahora va a `/admin/pedidos`. El resto sigue igual: sin fila en
+ninguna de las dos, o con la de pedidos inactiva y sin admin activo, logout;
+repartidor, a `/repartidor`.
+
+El build de preview cortaba en `scripts/_auditar-rls-roles.ts` con
+`Falta NEXT_PUBLIC_SUPABASE_URL`. Esas env están en production; en preview,
+sólo en la rama vieja `feature/crm-redesign`. El auditor se saltea (aviso,
+exit 0) cuando `VERCEL_ENV !== 'production'` o falta alguna de las tres
+variables. En production, con las variables, la medición no cambia: en Vercel
+sigue sin crear usuarios de prueba. Para correrlo en la máquina:
+`VERCEL_ENV=production npm run auditar:rls-roles`.
+
+`verificar:coherencia` y `verificar:limite` vienen después en `npm run build`
+y tiran el mismo `Falta …` si no hay URL. Se saltean sólo cuando faltan las
+variables. Con `.env.local` o en production corren como antes. El auditor de
+RLS, no: fuera de production no corre aunque las variables estén.
+
+`npm test` corre los `node:test` de drive, dónde comprar, meses del maestro,
+el null del equipo y la decisión de saltear el build.
+
+No se tocó la base, ni migraciones, ni RLS, ni secretos.
+
 ## 2026-11-12 · Google Drive: carpetas compartidas, listas al comparador, maestro solo en previa
 
 NORA puede leer las carpetas «compras farmacias» y «compras farmacias (privado)».
