@@ -1,5 +1,39 @@
 # Bitácora
 
+## 2026-11-12 · Precios con fecha, al día con main
+
+El #6 (precios con fecha, historial y lo pagado en la factura) queda en
+`feat/precios-historial`, con main mergeado. La rama original no se tocó.
+Trae `vigente_desde` en las listas (el día de la lista o del archivo, no el de
+carga), el historial que no se pisa cuando llega una lista más vieja, el
+precio pagado como unitario neto (PDF de Asoprofarma y Monroe, pestaña
+Compras, fotos confirmadas) y el comparador con lista, pagado y anteriores,
+cada uno con su fecha.
+
+Merge, no rebase. El #6 salía de la rama de Drive antes del squash del #5,
+pero git resolvió solo `lib/drive/**`: lo que agrega la rama sobre main es
+exactamente su commit. El único conflicto fue esta bitácora; quedan todas las
+entradas.
+
+Arreglos:
+- El comparador leía las últimas 500 filas de `doc_precios_historial` de toda
+  la cadena: casi ningún producto tenía historial. Ahora trae sólo los
+  productos que muestra, en tandas de 100 ids, paginado y ordenado por fecha
+  e `id`.
+- `aplicarLista` no miraba el error al leer la vigente, al darla de baja, al
+  insertar los ítems ni al guardar el historial. Ahora corta con el mensaje.
+  La vigente se elige por `fecha_carga` y `id`, no por el orden que devuelva
+  la base.
+- `lib/compras/vigencia-precios.test.ts` no estaba en `npm test`. Ahora sí.
+
+La migración `0295_la_fecha_del_precio_no_se_pisa.sql` no está aplicada.
+Tiene que ir antes del deploy: sin `vigente_desde` y `clave_dedup` el
+comparador y la ingesta fallan. Rollback en
+`supabase/rollbacks/0295_la_fecha_del_precio_no_se_pisa.sql`; no borra
+precios ni listas.
+
+No se tocó la base, ni RLS, ni secretos.
+
 ## 2026-11-12 · CI en cada PR y config de lint
 
 `.github/workflows/ci.yml` corre `npm ci`, `npm test`, `tsc --noEmit`,

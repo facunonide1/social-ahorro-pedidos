@@ -131,14 +131,14 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 **D1 · PR #6: historial de precios (0295)**
 - Qué: no mergea limpio contra main.
 - Terminado: rama con main mergeado y CI en verde.
-- Rama: `feat/precios-historial` · Estado: pendiente · Depende de: G1;
+- Rama: `feat/precios-historial` · Estado: en PR · Depende de: G1;
   firma de la 0295.
 
 **D2 · Precio real desde facturas**
 - Qué: ya está en el PR #6 (PDF con texto, la pestaña Compras, fotos
   confirmadas).
 - Terminado: igual que D1.
-- Rama: D1 · Estado: pendiente · Depende de: D1.
+- Rama: `feat/precios-historial` · Estado: en PR · Depende de: D1.
 
 **D3 · PR #3: comparador detrás de bandera**
 - Qué: trae su propia `0294_el_comparador_de_precios.sql`, que choca con la

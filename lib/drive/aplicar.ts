@@ -58,9 +58,11 @@ export async function aplicarLista(adm: Adm, opts: {
 }): Promise<{ listaId: string; anteriorId: string | null; yaEstaba: boolean; quedoEnHistorial: boolean }> {
   const rubro = 'farmacia'
   const fecha = fechaIso(opts.vigenteDesde) ?? new Date().toISOString().slice(0, 10)
-  const { data: vigentes } = await adm.from('listas_precios')
+  const { data: vigentes, error: errVig } = await adm.from('listas_precios')
     .select('id, hash, vigente_desde, fecha_carga')
-    .eq('proveedor_id', opts.proveedorId).eq('rubro', rubro).eq('vigente', true).limit(5)
+    .eq('proveedor_id', opts.proveedorId).eq('rubro', rubro).eq('vigente', true)
+    .order('fecha_carga', { ascending: false }).order('id').limit(5)
+  if (errVig) throw new Error(errVig.message)
   const actual = ((vigentes ?? []) as any[])[0] ?? null
   if (actual?.hash === opts.hash) {
     return { listaId: actual.id, anteriorId: null, yaEstaba: true, quedoEnHistorial: false }
@@ -71,7 +73,8 @@ export async function aplicarLista(adm: Adm, opts: {
   )
   const esVigente = decision === 'reemplaza'
   if (esVigente && actual) {
-    await adm.from('listas_precios').update({ vigente: false }).eq('proveedor_id', opts.proveedorId).eq('rubro', rubro).eq('vigente', true)
+    const { error: errBaja } = await adm.from('listas_precios').update({ vigente: false }).eq('proveedor_id', opts.proveedorId).eq('rubro', rubro).eq('vigente', true)
+    if (errBaja) throw new Error(errBaja.message)
   }
   const { data: lista, error } = await adm.from('listas_precios').insert({
     proveedor_id: opts.proveedorId,
@@ -96,7 +99,10 @@ export async function aplicarLista(adm: Adm, opts: {
     match_score: f.score,
     match_via: f.via,
   }))
-  await enTandas(items, async (t) => { await adm.from('listas_precios_items').insert(t) })
+  await enTandas(items, async (t) => {
+    const { error: errItems } = await adm.from('listas_precios_items').insert(t)
+    if (errItems) throw new Error(errItems.message)
+  })
   const hist = items.filter((i) => i.producto_id && i.precio > 0).map((i) => ({
     item_id: i.producto_id,
     tercero_id: opts.proveedorId,
@@ -107,7 +113,9 @@ export async function aplicarLista(adm: Adm, opts: {
     clave_dedup: createHash('sha256').update(['lista', opts.proveedorId, i.producto_id, fecha, i.precio].join('|')).digest('hex'),
   }))
   await enTandas(hist, async (t) => {
-    if (t.length) await adm.from('doc_precios_historial').upsert(t, { onConflict: 'clave_dedup', ignoreDuplicates: true })
+    if (!t.length) return
+    const { error: errHist } = await adm.from('doc_precios_historial').upsert(t, { onConflict: 'clave_dedup', ignoreDuplicates: true })
+    if (errHist) throw new Error(errHist.message)
   })
   return { listaId: lista.id, anteriorId: esVigente ? (actual?.id ?? null) : null, yaEstaba: false, quedoEnHistorial: !esVigente }
 }

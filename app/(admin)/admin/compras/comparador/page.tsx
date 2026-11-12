@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/shared/page-header'
 import { RubroFilter } from '@/components/compras/rubro-filter'
 import { parseRubro } from '@/components/compras/rubro'
 import { partirPorFecha, type EventoPrecio } from '@/lib/compras/vigencia-precios'
+import { paginar } from '@/lib/supabase/paginar'
 import { ComparadorClient, type ProductoComp, type ProvLite } from './comparador-client'
 
 export const dynamic = 'force-dynamic'
@@ -21,11 +22,22 @@ export default async function ComparadorPage({ searchParams }: { searchParams: {
   const listaIds = ((listas ?? []) as any[]).map((l) => l.id)
   const provByLista = new Map(((listas ?? []) as any[]).map((l) => [l.id, l.proveedor_id]))
 
-  const [{ data: provs }, { data: items }, { data: hist }] = await Promise.all([
+  const [{ data: provs }, { data: items }] = await Promise.all([
     sb.from('proveedores').select('id, razon_social, plazo_pago_dias, forma_pago_default, descuento_pronto_pago_pct').eq('activo', true),
     listaIds.length ? sb.from('listas_precios_items').select('lista_id, producto_id, precio, desc_volumen, productos_catalogo(nombre, sku)').in('lista_id', listaIds).not('producto_id', 'is', null).limit(20000) : Promise.resolve({ data: [] as any[] }),
-    sb.from('doc_precios_historial').select('item_id, tercero_id, precio_unitario, precio_neto, fecha, origen').order('fecha', { ascending: false }).limit(500),
   ])
+
+  // Historial sólo de los productos que se muestran, en tandas de 100 ids y
+  // paginado: un tope global dejaba sin historial a casi todos.
+  const productoIds = Array.from(new Set(((items ?? []) as any[]).map((it) => it.producto_id as string)))
+  const hist: any[] = []
+  for (let i = 0; i < productoIds.length; i += 100) {
+    const { filas } = await paginar<any>(sb.from('doc_precios_historial')
+      .select('item_id, tercero_id, precio_unitario, precio_neto, fecha, origen')
+      .in('item_id', productoIds.slice(i, i + 100))
+      .order('fecha', { ascending: false }).order('id'), { maximo: 20_000 })
+    hist.push(...filas)
+  }
 
   const provMap = new Map(((provs ?? []) as any[]).map((p) => [p.id, p]))
   const provList: ProvLite[] = ((provs ?? []) as any[]).map((p) => ({ id: p.id, nombre: p.razon_social, plazo: p.plazo_pago_dias, forma: p.forma_pago_default }))
@@ -34,7 +46,7 @@ export default async function ComparadorPage({ searchParams }: { searchParams: {
     l.id, String(l.vigente_desde ?? l.fecha_carga ?? '').slice(0, 10) || null,
   ]))
   const eventos = new Map<string, EventoPrecio[]>()
-  for (const h of (hist ?? []) as any[]) {
+  for (const h of hist) {
     if (!h.item_id || !h.tercero_id) continue
     const origen = h.origen === 'factura' || h.origen === 'remito' ? 'factura' as const : 'lista' as const
     const precio = Number(h.precio_neto ?? h.precio_unitario)
