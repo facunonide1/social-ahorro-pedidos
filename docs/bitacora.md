@@ -1,5 +1,15 @@
 # Bitácora
 
+## 2026-11-12 · Quién entra a /admin y a /pedidos, en un solo lugar y con tests
+
+La decisión de adónde va cada persona estaba repartida entre `app/page.tsx` y
+`app/pedidos/page.tsx`, cada una con su versión. Ahora vive en
+`lib/auth/destino.ts` (`destinoRaiz`, `destinoPedidos`) y las dos páginas la
+usan. No cambia ninguna regla: es la misma que dejó el #8 (alguien de NORA sin
+fila en `users_pedidos` va a `/admin/pedidos`, no al logout). La tabla
+completa está en `docs/PERMISOS.md`. Hay tests para cada caso, incluido el que
+el #8 arregló.
+
 ## 2026-11-12 · La sucursal de despacho de cada canal se elige desde la pantalla
 
 De qué sucursal sale un pedido que entra solo no se deduce del stock

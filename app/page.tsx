@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { destinoRaiz } from '@/lib/auth/destino'
 import DiagnosticPanel from './_diag'
 
 export const dynamic = 'force-dynamic'
@@ -25,9 +26,8 @@ export default async function Home() {
     .eq('id', user.id)
     .maybeSingle()
 
-  if (adminProfile?.activo) {
-    redirect('/admin')
-  }
+  // La regla está en lib/auth/destino.ts, con tests.
+  if (destinoRaiz(adminProfile, null) === '/admin') redirect('/admin')
 
   // 2) ¿Está en CRM pedidos?
   const { data: pedidosProfile, error: pedidosErr } = await sb
@@ -52,10 +52,8 @@ export default async function Home() {
     )
   }
 
-  if (pedidosProfile?.active) {
-    if (pedidosProfile.role === 'repartidor') redirect('/repartidor')
-    redirect('/dashboard')
-  }
+  const destino = destinoRaiz(adminProfile, pedidosProfile)
+  if (destino !== 'diagnostico') redirect(destino)
 
   // 3) No está en ninguna. Mostramos diagnóstico con todas las pistas.
   return (

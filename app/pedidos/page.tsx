@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { destinoPedidos } from '@/lib/auth/destino'
 import Link from 'next/link'
 import { Download, Plus } from 'lucide-react'
 
@@ -61,16 +62,15 @@ export default async function PedidosListPage({
     .maybeSingle<UserPedidos>()
   // NORA vive en users_admin y no tiene fila en users_pedidos. Logout la
   // desloguea. Si la fila de admin está activa, el listado es el del hub.
-  if (!profile?.active) {
-    const { data: admin } = await sb
-      .from('users_admin')
-      .select('activo')
-      .eq('id', user.id)
-      .maybeSingle<{ activo: boolean }>()
-    if (admin?.activo) redirect('/admin/pedidos')
-    redirect('/logout?reason=sin_permiso')
-  }
-  if (profile.role === 'repartidor') redirect('/repartidor')
+  // La regla está en lib/auth/destino.ts, con tests.
+  const admin = profile?.active ? null : (await sb
+    .from('users_admin')
+    .select('activo')
+    .eq('id', user.id)
+    .maybeSingle<{ activo: boolean }>()).data
+  const destino = destinoPedidos(admin, profile)
+  if (destino !== 'quedarse') redirect(destino)
+  if (!profile) redirect('/logout?reason=sin_permiso')
 
   const q = (searchParams.q || '').trim()
   const status = (searchParams.status || '').trim() as OrderStatus | ''
