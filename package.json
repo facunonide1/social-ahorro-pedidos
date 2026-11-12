@@ -7,7 +7,7 @@
     "build": "node scripts/build-info.mjs && npm run auditar:definer && npm run auditar:cortes && npm run auditar:rls && npm run auditar:lente && npm run probar:permisos && npm run auditar:rls-roles && npm run verificar:coherencia && npm run verificar:limite && next build",
     "start": "next start -p 3001",
     "lint": "next lint",
-    "test": "npx tsx --test lib/*/*.test.ts scripts/*.test.ts",
+    "test": "npx tsx --test lib/*.test.ts lib/*/*.test.ts scripts/*.test.ts",
     "auditar:cortes": "node scripts/auditar-cortes.mjs",
     "auditar:definer": "node scripts/auditar-definer.mjs",
     "auditar:lente": "node scripts/auditar-lente.mjs",
