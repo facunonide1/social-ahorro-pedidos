@@ -1,5 +1,18 @@
 # Bitácora
 
+## 2026-11-12 · FIND tiene su lugar como fuente, apagado
+
+`lib/ingesta/fuente-find.ts` es el esqueleto de FIND como fuente: cumple
+`FuenteArchivos` y cualquier uso falla con `FuenteNoConfigurada` («todavía no
+está conectado: falta la API y las credenciales»). Se prende con
+`NORA_FUENTE_FIND='true'` (la bandera `fuente_find`). Prendida, `correrIngesta`
+responde que FIND no está conectado **en vez de seguir con Drive en
+silencio**. Apagada, que es lo que hay hoy, nada cambia.
+
+Cuando haya API de FIND: implementar `listarPagina` y `descargar`, armar su
+conexión y elegir la fuente en `correrIngesta`. Clasificar, parsear, cruzar y
+guardar no se tocan.
+
 ## 2026-11-12 · Ingesta incremental: ya estaba; faltaba que leyera sus errores
 
 B4 pedía reprocesar sólo lo que cambió. Eso ya pasa desde el #5: `encolar`
