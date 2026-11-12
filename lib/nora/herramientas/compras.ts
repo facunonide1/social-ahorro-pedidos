@@ -185,4 +185,34 @@ export const HERRAMIENTAS_COMPRAS: Herramienta[] = [
       return { texto: `Mejores precios de ${nombre}:\n${lista}` }
     },
   },
+  {
+    id: 'donde_comprar',
+    nombre: 'Dónde lo compro más barato',
+    descripcion: 'Dice en qué droguería está más barato un producto, por nombre, EAN o código. Solo lectura. No compra nada.',
+    subapp: 'compras',
+    soloLectura: true,
+    lecturaGlobal: true,
+    roles: ['super_admin', 'gerente', 'comprador'],
+    permiso: { modulo: 'compras', accion: 'ver' },
+    slots: [
+      { nombre: 'consulta', tipo: 'texto', descripcion: 'Nombre del producto, EAN o código interno' },
+    ],
+    responder: async (adm, v) => {
+      const q = String(v.consulta ?? '').trim()
+      if (q.length < 2) return { texto: 'Decime el nombre, el EAN o el código.' }
+      const like = `%${q.replace(/[%,().]/g, ' ')}%`
+      const { data } = await adm.from('productos_catalogo')
+        .select('id, nombre, sku')
+        .eq('activo', true)
+        .or(`nombre.ilike.${like},sku.ilike.${like},codigo_barras.ilike.${like}`)
+        .limit(8)
+      const prods = (data ?? []) as { id: string; nombre: string; sku: string | null }[]
+      if (!prods.length) return { texto: `No encontré «${q}» en el catálogo.` }
+      const top = await comparador(adm, prods[0].id)
+      const precios = top.length
+        ? top.map((c, i) => `${i + 1}. ${c.razon_social} — ${money(c.precioFinal)}${i === 0 ? ' · más barato' : ''}`).join('\n')
+        : 'No hay lista vigente con precio para ese producto.'
+      return { texto: `${prods[0].nombre}:\n${precios}\n\nVer condiciones y equivalentes → /admin/compras/donde-comprar` }
+    },
+  },
 ]

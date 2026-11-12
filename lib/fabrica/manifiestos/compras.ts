@@ -101,6 +101,7 @@ export const MANIFIESTO_COMPRAS: Manifiesto = {
     // que efectivamente SE PAGÓ. Fusionarlos en la declaración sería declarar
     // una pantalla que no existe.
     { ruta: '/admin/compras/comparador', titulo: 'Comparador de listas vigentes', molde: 'lista_maestra', permiso: 'compras' },
+    { ruta: '/admin/compras/donde-comprar', titulo: 'Dónde lo compro más barato', molde: 'otro', permiso: 'compras' },
     { ruta: '/admin/compras/costos', titulo: 'Comparador de costos pagados', molde: 'lista_maestra', permiso: 'compras' },
 
     { ruta: '/admin/compras/conciliaciones', titulo: 'Conciliaciones', molde: 'lista_maestra', permiso: 'compras' },

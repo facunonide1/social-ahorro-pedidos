@@ -1,0 +1,72 @@
+import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
+import { createAdminClient } from '@/lib/supabase/server'
+import { PageHeader } from '@/components/shared/page-header'
+import { ingestaHabilitada, preciosAutoAplicar } from '@/lib/drive/flag'
+import { avisoPlazo, venceEstimado } from '@/lib/drive/vencimiento'
+import { resumenIngesta } from '@/lib/drive/correr'
+
+import { DriveClient } from './drive-client'
+
+export const dynamic = 'force-dynamic'
+export const metadata = { title: 'Google Drive' }
+
+export default async function GoogleDrivePage({ searchParams }: { searchParams: { aviso?: string } }) {
+  await requireAdminHubAccess({ allowedRoles: ['super_admin'] })
+  const habilitada = ingestaHabilitada()
+  const adm = createAdminClient()
+  const resumen = habilitada ? await resumenIngesta(adm).catch(() => null) : null
+  const c = resumen?.conexion
+  const plazo = c?.connected_at ? avisoPlazo(new Date(), new Date(c.connected_at)) : 'ok'
+  const vence = c?.connected_at ? venceEstimado(new Date(c.connected_at)).toISOString() : null
+
+  return (
+    <>
+      <PageHeader
+        title="Google Drive"
+        description="Listas, facturas y maestros de las carpetas compartidas. Nada del maestro se aplica solo."
+        breadcrumbs={[
+          { label: 'Administración', href: '/admin/configuracion/general' },
+          { label: 'Google Drive' },
+        ]}
+      />
+      <div className="p-4 md:p-6">
+        <DriveClient
+          habilitada={habilitada}
+          autoAplicar={preciosAutoAplicar()}
+          aviso={searchParams.aviso ?? null}
+          conexion={c ? {
+            email: c.email_cuenta,
+            estado: c.estado,
+            connectedAt: c.connected_at,
+            vence,
+            plazo,
+            lastSync: c.last_sync_at,
+            lastError: c.last_error,
+            listadoCompleto: c.listado_completo,
+          } : null}
+          carpetas={(resumen?.carpetas ?? []).map((x: any) => ({
+            id: x.folder_id,
+            nombre: x.folder_nombre,
+            incluirSubcarpetas: x.incluir_subcarpetas,
+          }))}
+          progreso={{
+            hechos: resumen?.hechos ?? 0,
+            total: resumen?.total ?? 0,
+            cuentas: resumen?.cuentas ?? {},
+          }}
+          bandeja={(resumen?.bandeja ?? []).map((b: any) => ({
+            fileId: b.file_id,
+            nombre: b.nombre,
+            ruta: b.ruta_relativa,
+            clasificacion: b.clasificacion,
+            estado: b.estado,
+            error: b.error,
+            link: b.web_view_link || `https://drive.google.com/file/d/${b.file_id}/view`,
+            matchPct: b.match_pct,
+            intentos: b.intentos,
+          }))}
+        />
+      </div>
+    </>
+  )
+}

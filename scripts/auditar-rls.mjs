@@ -46,8 +46,10 @@ const DECLARADAS = 'scripts/rls-intencional.json'
 export const SIN_POLITICAS = [
   'sifaco_maestro_staging', 'backup_movimientos_stock_v20', 'backup_stock_items_v20',
   'demo_origen_ref', 'crons_calculo', 'backup_users_admin_v26',
-  'backup_empleados_v26', 'sifaco_mapeo_columnas', 'auth_trigger_errors',
+  'backup_empleados_v26',   'sifaco_mapeo_columnas', 'auth_trigger_errors',
   'backup_stock_sucursal_v20', 'cerebro_snapshot',
+  'integraciones_google_drive', 'integraciones_google_drive_carpetas',
+  'drive_archivos_ingestados', 'drive_mapeo_productos',
 ]
 
 /** ¿Este archivo consulta con la sesión del usuario, o con service_role? */

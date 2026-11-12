@@ -50,6 +50,7 @@ export const MANIFIESTO_CONFIGURACION: Manifiesto = {
     { ruta: '/admin/configuracion/usuarios', titulo: 'Usuarios y permisos', molde: 'lista_maestra', permiso: 'configuracion' },
     { ruta: '/admin/configuracion/catalogo', titulo: 'Catálogo de items', molde: 'lista_maestra', permiso: 'configuracion' },
     { ruta: '/admin/configuracion/general', titulo: 'General', molde: 'formulario', permiso: 'configuracion' },
+    { ruta: '/admin/configuracion/integraciones/google-drive', titulo: 'Google Drive', molde: 'formulario', permiso: 'configuracion' },
 
     { ruta: '/admin/configuracion/catalogo/importar', titulo: 'Importar catálogo', molde: 'wizard', permiso: 'configuracion', navegable: false },
     { ruta: '/admin/sucursales', titulo: 'Puntos', molde: 'lista_maestra', permiso: 'sucursales', navegable: false },
