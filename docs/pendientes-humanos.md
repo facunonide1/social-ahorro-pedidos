@@ -24,6 +24,19 @@ a `main`.
 | 2 | [#15](https://github.com/facunonide1/social-ahorro-pedidos/pull/15) | `feat/seguridad-pin-debil` | — | «Firmo merge y deploy del PR #15, SHA …» |
 | 3 | [#14](https://github.com/facunonide1/social-ahorro-pedidos/pull/14) | `feat/estabilidad-cerebro` | 0297 | Un solo paquete: «Firmo merge del PR #14, SHA …, y aplicar la migración 0297 en prod» |
 | 4 | [#13](https://github.com/facunonide1/social-ahorro-pedidos/pull/13) | `fix/crons-tandas` | — | «Firmo merge y deploy del PR #13, SHA …». Ya va por tramos con plazo: ninguna corrida pasa los 60 s y la que no llega no escribe. |
+| 5 | [#16](https://github.com/facunonide1/social-ahorro-pedidos/pull/16) | `chore/auditar-definer` | — | «Firmo merge del PR #16, SHA …» |
+| 6 | [#17](https://github.com/facunonide1/social-ahorro-pedidos/pull/17) | `fix/multisucursal-denegado` | — | «Firmo merge y deploy del PR #17, SHA …» |
+| 7 | [#18](https://github.com/facunonide1/social-ahorro-pedidos/pull/18) | `feat/pulido-estados` | — | «Firmo merge y deploy del PR #18, SHA …» |
+| 8 | [#19](https://github.com/facunonide1/social-ahorro-pedidos/pull/19) | `chore/banderas` | — | «Firmo merge del PR #19, SHA …» |
+| 9 | [#20](https://github.com/facunonide1/social-ahorro-pedidos/pull/20) | `chore/tests-ingesta-woo` | — | «Firmo merge y deploy del PR #20, SHA …» |
+
+**Fuera de la pila** (salen de `main`, se mergean en cualquier momento; si
+chocan en `docs/bitacora.md` se re-apilan antes de firmar):
+
+| PR | Rama | Migración | Firma |
+|---|---|---|---|
+| [#22](https://github.com/facunonide1/social-ahorro-pedidos/pull/22) (reemplaza #7) | `feat/compras-cruce` | 0296 (opcional: sin la tabla la ingesta sigue) | «Firmo merge y deploy del PR #22, SHA 86a8065»; aparte «Firmo aplicar la migración 0296 en prod» |
+| [#21](https://github.com/facunonide1/social-ahorro-pedidos/pull/21) (reemplaza #6) | `feat/precios-historial` | **0295 ANTES del deploy** (sin ella el comparador queda vacío) | Paquete: «Firmo aplicar la migración 0295 en prod y, después, merge y deploy del PR #21, SHA 57e9a0e» |
 
 El SHA exacto de cada uno se completa en la firma cuando el PR quede cerrado
 y con CI en verde. Rollback de cualquiera: promover en Vercel el deploy
@@ -85,8 +98,8 @@ rollback en `supabase/rollbacks/`.
 | Orden | Migración | PR | Qué hace | Rollback | Firma |
 |---|---|---|---|---|---|
 | 1 | 0294 | #5 (ya en main) | Varias carpetas de Drive | `rollbacks/0294_…` | «Firmo aplicar migración 0294 en prod» |
-| 2 | 0295 | #6 → D1 | `vigente_desde` y `clave_dedup` (sólo columnas) | `rollbacks/0295_…` | «Firmo aplicar migración 0295 en prod» |
-| 3 | 0296 | #7 → B1 | `sifaco_seccion_proveedor` con RLS | `rollbacks/0296_…` | «Firmo aplicar migración 0296 en prod» |
+| 2 | 0295 | #21 (reemplaza #6) · **antes del deploy del #21** | `vigente_desde` y `clave_dedup` (sólo columnas) | `rollbacks/0295_…` | «Firmo aplicar migración 0295 en prod» |
+| 3 | 0296 | #22 (reemplaza #7) | `sifaco_seccion_proveedor` con RLS | `rollbacks/0296_…` | «Firmo aplicar migración 0296 en prod» |
 | 4 | 0297 | `feat/estabilidad-cerebro` | pg_cron del cerebro de cada minuto a cada 5 (no toca la función) | `rollbacks/0297_…` | junto con el PR #14: «Firmo merge del PR #14, SHA …, y aplicar la migración 0297 en prod» |
 
 Las siguientes se agregan a la tabla a medida que se preparen (cerebro, Monroe,
@@ -109,7 +122,7 @@ maestro por sucursal, revoke, índices).
 
 - **Qué:** cerrar el PR #3 (su 0294 choca con la de main y su comparador lo
   reemplazaron el #5 y el #6). El #6 y el #7 se cierran cuando entren sus
-  reemplazos (D1 y B1).
+  reemplazos, #21 y #22.
 - **Por qué:** que no se mergee por error una 0294 duplicada.
 - **Dónde:** GitHub.
 - **Firma:** «Firmo cerrar el PR #3 como reemplazado».
