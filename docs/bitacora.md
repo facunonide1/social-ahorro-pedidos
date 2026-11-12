@@ -1,5 +1,20 @@
 # Bitácora
 
+## 2026-11-12 · La sucursal de despacho de cada canal se elige desde la pantalla
+
+De qué sucursal sale un pedido que entra solo no se deduce del stock
+(`lib/pedidos/canales.ts`): sale de `canales_venta.sucursal_despacho_id`, que
+elige una persona. Si nadie la eligió, el pedido entra igual y queda en
+`pedidos_sin_sucursal`. La home de pedidos lo avisaba, pero ninguna pantalla
+dejaba elegirla: sólo se veía el cartel «sucursal de despacho sin definir».
+
+En `/admin/canales`, cada canal tiene ahora «Despacha desde» con las
+sucursales activas. Lo ven y lo cambian sólo super_admin y gerente. Guarda por
+`POST /api/canales/[id]/sucursal-despacho`, que revisa rol, que la sucursal
+exista y esté activa, y que el canal exista. Elegir «sin definir» la borra.
+
+No reasigna los pedidos que ya entraron sin sucursal: eso es otra decisión.
+
 ## 2026-11-12 · Nada visible que no ande: la campanita funciona y lo «próximamente» se esconde
 
 **Notificaciones.** La campanita de arriba ya contaba bien: el store
