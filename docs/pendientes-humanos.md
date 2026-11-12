@@ -17,13 +17,13 @@ a `main`.
 
 | # | PR | Rama | Migración | Firma |
 |---|---|---|---|---|
-| 1 | [#9](https://github.com/facunonide1/social-ahorro-pedidos/pull/9) | `claude/bold-turing-9ualkj` | — | «Firmo merge y deploy del PR #9, SHA 9f170fd» |
-| 2 | [#10](https://github.com/facunonide1/social-ahorro-pedidos/pull/10) | `chore/backlog` | — | «Firmo merge del PR #10» |
-| 3 | [#11](https://github.com/facunonide1/social-ahorro-pedidos/pull/11) | `chore/ci-tests` | — | «Firmo merge del PR #11» |
-| 4 | [#12](https://github.com/facunonide1/social-ahorro-pedidos/pull/12) | `fix/avisos-dedup-por-tandas` | — | «Firmo merge y deploy del PR #12» |
-| 5 | [#13](https://github.com/facunonide1/social-ahorro-pedidos/pull/13) | `fix/crons-tandas` | — | «Firmo merge y deploy del PR #13» |
-| 6 | [#14](https://github.com/facunonide1/social-ahorro-pedidos/pull/14) | `feat/estabilidad-cerebro` | 0297 | «Firmo merge del PR #14» y, aparte, «Firmo aplicar migración 0297 en prod» |
-| 7 | [#15](https://github.com/facunonide1/social-ahorro-pedidos/pull/15) | `feat/seguridad-pin-debil` | — | «Firmo merge y deploy del PR #15» |
+| ✓ | [#9](https://github.com/facunonide1/social-ahorro-pedidos/pull/9) | `claude/bold-turing-9ualkj` | — | firmado y mergeado (e59e71e) |
+| ✓ | [#10](https://github.com/facunonide1/social-ahorro-pedidos/pull/10) | `chore/backlog` | — | firmado y mergeado (bea4fef) |
+| ✓ | [#11](https://github.com/facunonide1/social-ahorro-pedidos/pull/11) | `chore/ci-tests` | — | firmado y mergeado (fa7a354) |
+| 1 | [#12](https://github.com/facunonide1/social-ahorro-pedidos/pull/12) | `fix/avisos-dedup-por-tandas` | — | «Firmo merge y deploy del PR #12, SHA …» |
+| 2 | [#15](https://github.com/facunonide1/social-ahorro-pedidos/pull/15) | `feat/seguridad-pin-debil` | — | «Firmo merge y deploy del PR #15, SHA …» |
+| 3 | [#14](https://github.com/facunonide1/social-ahorro-pedidos/pull/14) | `feat/estabilidad-cerebro` | 0297 | Un solo paquete: «Firmo merge del PR #14, SHA …, y aplicar la migración 0297 en prod» |
+| 4 | [#13](https://github.com/facunonide1/social-ahorro-pedidos/pull/13) | `fix/crons-tandas` | — | Todavía no: falta que alertas-stock y metricas-stock no puedan pasar los 60 s. |
 
 El SHA exacto de cada uno se completa en la firma cuando el PR quede cerrado
 y con CI en verde. Rollback de cualquiera: promover en Vercel el deploy
