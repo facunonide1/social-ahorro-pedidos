@@ -17,7 +17,7 @@
 
 import 'server-only'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
-import { hashPin, verificarPin, esPinValido, normalizarNumeroEmpleado } from '@/lib/auth/pin'
+import { hashPin, verificarPin, esPinValido, motivoPinDebil, normalizarNumeroEmpleado } from '@/lib/auth/pin'
 
 const MAX_INTENTOS = 5
 const BLOQUEO_MINUTOS = 15
@@ -128,7 +128,10 @@ export async function setPinEmpleado(
 ): Promise<SetPinResult> {
   const numero = normalizarNumeroEmpleado(numeroEmpleadoRaw || '')
   if (!numero) return { ok: false, error: 'Ingresá un N° de empleado.' }
-  if (!esPinValido(pin)) return { ok: false, error: 'El PIN debe ser de 4 dígitos.' }
+  // Sólo al crear o cambiar un PIN: los que ya existen siguen entrando, para
+  // no dejar a nadie afuera. Se cambian de a uno desde la pantalla de usuarios.
+  const debil = motivoPinDebil(pin, numero)
+  if (debil) return { ok: false, error: debil }
 
   const admin = createAdminClient()
 

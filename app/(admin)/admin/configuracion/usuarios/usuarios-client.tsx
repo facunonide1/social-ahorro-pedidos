@@ -286,6 +286,7 @@ function PersonaSheet({
         })
         const j = await r.json(); if (!r.ok) throw new Error(j?.error || 'No se pudo crear el acceso.')
         toast.success(mode === 'dar_acceso' ? 'Acceso otorgado al empleado.' : 'Usuario creado.')
+        if (j?.aviso_pin) toast.warning(j.aviso_pin)
       }
       onClose(); router.refresh()
     } catch (e: any) { toast.error(e?.message ?? 'Error inesperado.') } finally { setBusy(false) }
