@@ -1,5 +1,62 @@
 # Bitácora
 
+## 2026-11-12 · Estado del desarrollo: qué quedó, qué espera firma y en qué orden
+
+**Hecho y en main:** #8, #9 (el build no escribe en prod), #10 (backlog y
+pendientes) y #11 (CI y lint).
+
+**En PR, con CI en verde, esperando firma.** Tres pilas. Cada una se mergea en
+orden y la siguiente se re-apunta a main (ver `pendientes-humanos.md`):
+
+1. **Principal (estabilidad, seguridad, calidad, multisucursal, pulido):**
+   #12 → #15 → #14 (+0297) → #13 → #16 → #17 → #18 → #19 → #20 → #26 → #27 →
+   #28 → #29 → #30 → #31 → #35 → #36 → #37.
+2. **Compras e ingesta:** #22 (reemplaza #7; 0296 opcional) → #23 → #24 →
+   #32 → #33 → #34.
+3. **Precios:** #21 (reemplaza #6; **0295 antes del deploy**) → #25.
+
+Si dos pilas chocan en `docs/bitacora.md`, la segunda se re-apila sobre la
+primera antes de firmar. Es un conflicto sólo de texto.
+
+**Migraciones, en este orden** (ninguna aplicada; cada una con rollback en
+`supabase/rollbacks/`):
+1. 0294, ya en main. Confirmar qué partes existen en la base: `compras_lineas`
+   ya tiene filas.
+2. 0295, junto con #21 y antes de su deploy.
+3. 0296, con #22. Opcional: sin la tabla, la ingesta sigue.
+4. 0297, junto con #14, como un solo paquete.
+
+**Cambios en la base preparados como consultas de sólo lectura** (los corre
+Facu): índices de FK (P12), RLS initplan y permisivas (P13), funciones
+definer abiertas a anon y esquema vivo (P14).
+
+**Bloqueado por humano:**
+- A4, `decisiones_pendientes`: el cuerpo de la vista vive sólo en la base (P2/P14).
+- C1 y C2, maestro por sucursal: `producto_stock_sifaco` y
+  `sifaco_aplicar_sucursales` viven sólo en la base (P2/P14).
+- F2, revoke a anon: lista real de la base (P14).
+- F4, contraseñas filtradas (P4).
+- F7, usuarios `@rls.test` (P2/P9).
+- B2, alta de Monroe Americana con su CUIT (P15).
+- G6, env de Preview (P6).
+- H2 real, la API de FIND (P10).
+- E2, depende de A4.
+
+**Pendiente sin bloqueo:** I3 (estados vacíos y de error en las pantallas más
+usadas).
+
+**Riesgos que quedan:**
+- alertas-stock y metricas-stock leen ahora las 192.000 filas por tramos. Si
+  un tramo no entra en 40 s dos veces seguidas, esa sexta parte queda con el
+  dato de ayer y `ok:false` en el log. Se arregla subiendo los tramos.
+- El ABC de metricas-stock es una aproximación por tramo.
+- El límite real de duración en Vercel no se conoce (P11). Los crons que
+  declaran 60 s están hechos para entrar en 60.
+- El comparador (#25) lee todos los ítems vigentes: es más lento, pero ya no
+  miente.
+- Cuatro piezas del esquema viven sólo en la base. Hasta volcarlas (P14), todo
+  lo que las toca es a ciegas, y por eso no se tocaron.
+
 ## 2026-11-12 · Fuera el shell viejo que nadie usaba
 
 `components/layout/sidebar.tsx`, `top-nav.tsx`, `search-trigger.tsx`,

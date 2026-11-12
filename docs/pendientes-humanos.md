@@ -35,6 +35,9 @@ a `main`.
 | 13 | [#29](https://github.com/facunonide1/social-ahorro-pedidos/pull/29) | `feat/seguridad-rls-initplan` | — (consultas de sólo lectura; aplicar, P13) | «Firmo merge del PR #29, SHA …» |
 | 14 | [#30](https://github.com/facunonide1/social-ahorro-pedidos/pull/30) | `chore/esquema-vivo` | — (consultas de sólo lectura, P14) | «Firmo merge del PR #30, SHA …» |
 | 15 | [#31](https://github.com/facunonide1/social-ahorro-pedidos/pull/31) | `feat/pulido-proximamente` | — | «Firmo merge y deploy del PR #31, SHA …» |
+| 16 | [#35](https://github.com/facunonide1/social-ahorro-pedidos/pull/35) | `feat/multisucursal-canales` | — | «Firmo merge y deploy del PR #35, SHA …» |
+| 17 | [#36](https://github.com/facunonide1/social-ahorro-pedidos/pull/36) | `feat/multisucursal-acceso` | — | «Firmo merge y deploy del PR #36, SHA …» |
+| 18 | [#37](https://github.com/facunonide1/social-ahorro-pedidos/pull/37) | `chore/limpiar-shell-viejo` | — | «Firmo merge y deploy del PR #37, SHA …» |
 
 **Segunda pila: compras e ingesta** (sale de `main`; sus PRs van en este
 orden; si chocan con la primera en `docs/bitacora.md`, se re-apilan antes de
