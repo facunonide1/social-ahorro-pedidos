@@ -1,5 +1,30 @@
 # Bitácora
 
+## 2026-11-12 · El build se rompe si una función SECURITY DEFINER nueva queda abierta a anon
+
+Octava vez que aparece la misma familia de error: una función SECURITY DEFINER
+que `anon` puede ejecutar por `/rest/v1/rpc`. `scripts/auditar-definer.mjs`
+corre primero en `npm run build`, y por eso también en CI. Recorre
+`supabase/migrations` en orden y, para cada función cuya **última** definición
+es SECURITY DEFINER, exige un `revoke … from public, anon` **después** de ese
+último `create`. Cuenta la forma de la 0228 (el `do` que cierra todas las
+funciones de trigger) y `drop function`. Falla si después aparece un
+`grant … to anon`.
+
+Hoy encuentra 11 funciones abiertas según las migraciones; los advisors de la
+base dicen 9, así que alguna se cerró a mano. Esas 11 quedan en
+`scripts/definer-deuda.json`: se listan en cada build pero no lo rompen. Las
+cierra la migración de F2, que se arma contra la base. Cualquier función
+**nueva** que quede abierta rompe el build.
+
+Ojo para F2: `current_admin_role` y `hub_rol_activo` las usan las políticas de
+RLS. Si `anon` lee alguna tabla con esas políticas, quitarle el EXECUTE
+cambia «cero filas» por «permission denied». Hay que mirarlo en la base antes
+de firmar.
+
+`npm test` corre ahora todos los `lib/*/*.test.ts` y `scripts/*.test.ts` por
+glob: un test nuevo ya no queda afuera por no estar en la lista.
+
 ## 2026-11-12 · alertas-stock y metricas-stock por tramos: no pueden pasar los 60 s
 
 Leer las 192.464 filas de stock de una vez arreglaba el cálculo incompleto pero

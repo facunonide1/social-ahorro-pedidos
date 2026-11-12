@@ -1,0 +1,13 @@
+{
+  "calcular_irregularidades_stock": "Abierta según las migraciones; se cierra con la migración de F2, armada contra la base (pendiente P2).",
+  "cerrar_inventario_fisico": "Abierta según las migraciones; se cierra con la migración de F2, armada contra la base (pendiente P2).",
+  "contar_demo": "Abierta según las migraciones; se cierra con la migración de F2, armada contra la base (pendiente P2).",
+  "current_admin_role": "Abierta según las migraciones; se cierra con la migración de F2, armada contra la base (pendiente P2). Ver si la usan políticas RLS que lee anon.",
+  "generar_controles_zona": "Abierta según las migraciones; se cierra con la migración de F2, armada contra la base (pendiente P2).",
+  "hub_rol_activo": "Abierta según las migraciones; se cierra con la migración de F2, armada contra la base (pendiente P2). Ver si la usan políticas RLS que lee anon.",
+  "limpiar_demo": "Abierta según las migraciones; se cierra con la migración de F2, armada contra la base (pendiente P2).",
+  "recalcular_nivel_empleado": "Abierta según las migraciones; se cierra con la migración de F2, armada contra la base (pendiente P2).",
+  "seed_demo_maestro": "Abierta según las migraciones; se cierra con la migración de F2, armada contra la base (pendiente P2).",
+  "seed_irregularidades_demo": "Abierta según las migraciones; se cierra con la migración de F2, armada contra la base (pendiente P2).",
+  "snapshot_stock_sucursal": "Abierta según las migraciones; se cierra con la migración de F2, armada contra la base (pendiente P2)."
+}
