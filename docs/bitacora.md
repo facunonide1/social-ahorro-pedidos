@@ -1,5 +1,20 @@
 # Bitácora
 
+## 2026-11-12 · CI en cada PR y config de lint
+
+`.github/workflows/ci.yml` corre `npm ci`, `npm test`, `tsc --noEmit`,
+`npm run lint` y `npm run build` en cada PR y en cada push a una rama que no
+sea main. No usa secretos: sin las env de Supabase, los verificadores del
+build que necesitan la base se saltean solos y el resto (cortes, RLS estática,
+lente, permisos) corre igual. Nada de esto escribe en producción.
+
+`.eslintrc.json` extiende `next/core-web-vitals`. Se apaga
+`react/no-unescaped-entities`, que marcaba 24 comillas en textos en castellano,
+y se declara el plugin de `@typescript-eslint` para que los
+`eslint-disable` que ya había encuentren su regla. `npm run lint` sale en 0
+con 5 avisos (dependencias de hooks e `<img>`). El build sigue con
+`ignoreDuringBuilds`: el lint corre aparte en CI.
+
 ## 2026-11-12 · Backlog y pendientes de Facu
 
 `docs/backlog.md` junta todo lo que falta para dar NORA por terminada, por

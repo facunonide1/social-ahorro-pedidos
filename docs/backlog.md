@@ -240,12 +240,12 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 **G1 · Workflow de CI**
 - Qué: `npm test` + `tsc` + lint + build en cada PR, sin secretos.
 - Terminado: corre en cada PR y queda en verde.
-- Rama: `chore/ci-tests` · Estado: en curso · Depende de: —
+- Rama: `chore/ci-tests` · Estado: en PR · Depende de: —
 
 **G2 · Config de lint**
 - Qué: `.eslintrc.json` con `next/core-web-vitals`.
 - Terminado: `npm run lint` sale en 0 y quedan sólo avisos.
-- Rama: `chore/ci-tests` · Estado: en curso · Depende de: —
+- Rama: `chore/ci-tests` · Estado: en PR · Depende de: —
 
 **G3 · Tests de la ingesta y del sync Woo**
 - Qué: `lib/drive/correr.ts` y `lib/woo/sync.ts` no tienen tests.
