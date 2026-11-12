@@ -2,14 +2,17 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
+import { conRegistro } from '@/lib/cron/corrida'
 import type { AdminRole } from '@/lib/types/admin'
 import { automatizacionActiva } from '@/lib/os/definicion'
 import { puedeCalcular } from '@/lib/demo/guarda-calculo'
 import { catalogoCompleto } from '@/lib/catalogo/indice'
 
-import { paginar } from '@/lib/supabase/paginar'
+import { paginar, paginarCompleto } from '@/lib/supabase/paginar'
+import { insertarEnTandas } from '@/lib/supabase/tandas'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+export const maxDuration = 60
 
 const LEAD_DAYS = 3 // lead time de reposición (config futura)
 
@@ -17,7 +20,7 @@ const LEAD_DAYS = 3 // lead time de reposición (config futura)
  * Genera alertas_stock (OPS · T8): 9 tipos. Regenera las activas no-demo cada
  * corrida (preserva atendidas/descartadas e históricas demo). GET cron / POST super.
  */
-export async function GET(req: NextRequest) {
+async function get(req: NextRequest) {
   if (!isCronRequest(req)) return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
   // DOS automatizaciones declaradas comparten esta ruta: recalcular las alertas
   // de stock y avisar los vencimientos. Se preguntan por separado porque son dos
@@ -52,12 +55,16 @@ async function run(conAlertas: boolean, conVencimientos: boolean) {
   const en = (d: number) => new Date(ahora + d * 86_400_000).toISOString().slice(0, 10)
   const hoy = new Date().toISOString().slice(0, 10)
 
-  const [{ filas: stock }, { data: rot }, { filas: lotes }, prods, { data: sucs }] = await Promise.all([
+  const [stock, rot, lotes, prods, { data: sucs }] = await Promise.all([
     // Paginado: el cron recorre TODO el stock para decidir que alertar. Si se
     // corta en mil, deja de alertar sobre el resto y nadie se entera (v0.85).
-    paginar<any>(adm.from('stock_items').select('producto_id, sucursal_id, cantidad, cantidad_gondola, cantidad_deposito, stock_minimo, stock_maximo').order('producto_id')),
-    adm.from('producto_rotacion').select('producto_id, sucursal_id, venta_diaria_prom_30d, dias_stock_restante, ultima_venta'),
-    paginar<any>(adm.from('lotes_productos').select('id, producto_id, sucursal_id, numero_lote, fecha_vencimiento, cantidad_actual').gt('cantidad_actual', 0).order('id')),
+    // El orden lleva `id` de desempate: con `producto_id` solo (se repite por
+    // sucursal) el paginado por offset puede saltear o repetir filas. Y si se
+    // llega al tope, tira: antes devolvía la parte y alertaba sobre la parte.
+    paginarCompleto<any>(adm.from('stock_items').select('producto_id, sucursal_id, cantidad, cantidad_gondola, cantidad_deposito, stock_minimo, stock_maximo').order('producto_id').order('id'), 'stock_items'),
+    // Antes sin paginar: se cortaba en 1.000 filas en silencio.
+    paginarCompleto<any>(adm.from('producto_rotacion').select('producto_id, sucursal_id, venta_diaria_prom_30d, dias_stock_restante, ultima_venta').order('id'), 'producto_rotacion'),
+    paginarCompleto<any>(adm.from('lotes_productos').select('id, producto_id, sucursal_id, numero_lote, fecha_vencimiento, cantidad_actual').gt('cantidad_actual', 0).order('id'), 'lotes_productos'),
     catalogoCompleto(adm),
     adm.from('sucursales').select('id, nombre').eq('activa', true),
   ])
@@ -143,12 +150,15 @@ async function run(conAlertas: boolean, conVencimientos: boolean) {
   const TIPOS_STOCK = ['stock_critico', 'reponer_gondola', 'quiebre_proyectado', 'sobrestock', 'stock_fantasma', 'sin_rotacion']
   const TIPOS_VENCIMIENTO = ['vencimiento_15', 'vencimiento_30', 'vencimiento_60', 'vencimiento_90', 'ventana_devolucion_por_cerrar']
   const aRegenerar = [...(conAlertas ? TIPOS_STOCK : []), ...(conVencimientos ? TIPOS_VENCIMIENTO : [])]
+  // Los errores se leen. Antes el insert era uno solo con todas las alertas y
+  // no se miraba su error: si se caía por timeout, las activas ya estaban
+  // borradas y la pantalla quedaba vacía sin aviso. Ahora va en tandas y, si
+  // falla, la corrida termina en 500 y queda en el log (conRegistro).
   if (aRegenerar.length > 0) {
-    await adm.from('alertas_stock').delete().eq('estado', 'activa').eq('es_demo', false).in('tipo', aRegenerar)
+    const { error: eDel } = await adm.from('alertas_stock').delete().eq('estado', 'activa').eq('es_demo', false).in('tipo', aRegenerar)
+    if (eDel) throw new Error(`no se pudieron regenerar las alertas: ${eDel.message}`)
   }
-  if (out.length > 0) {
-    await adm.from('alertas_stock').insert(out.map((a) => ({ ...a, estado: 'activa' })))
-  }
+  await insertarEnTandas(adm, 'alertas_stock', out.map((a) => ({ ...a, estado: 'activa' })))
 
   // Notificar stock fantasma a super_admins
   const fantasmas = out.filter((a) => a.tipo === 'stock_fantasma')
@@ -168,3 +178,5 @@ async function run(conAlertas: boolean, conVencimientos: boolean) {
     ...(conAlertas && conVencimientos ? {} : { omitidas: { alertas: !conAlertas, vencimientos: !conVencimientos } }),
   })
 }
+
+export const GET = conRegistro('alertas-stock', get)

@@ -2,12 +2,18 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
+import { conRegistro } from '@/lib/cron/corrida'
 import type { AdminRole } from '@/lib/types/admin'
 import { automatizacionActiva } from '@/lib/os/definicion'
 
-import { paginar } from '@/lib/supabase/paginar'
+import { paginar, paginarCompleto } from '@/lib/supabase/paginar'
+import { enTandas } from '@/lib/supabase/tandas'
+
+/** IDs por `.in()`: 100 UUIDs son ~3,7 KB de URL. */
+const TANDA_IDS = 100
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+export const maxDuration = 60
 
 /**
  * Genera la agenda de HOY desde tareas_recurrencias activas (F6-T · T4).
@@ -17,7 +23,7 @@ export const runtime = 'nodejs'
  *
  * Idempotente: no crea una tarea si ya existe una de esa recurrencia creada hoy.
  */
-export async function GET(req: NextRequest) {
+async function get(req: NextRequest) {
   if (!isCronRequest(req)) {
     return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
   }
@@ -81,29 +87,33 @@ async function run() {
   const diaMes = Number(fechaAR.slice(8, 10))
   const nowIso = new Date().toISOString()
 
-  const { data: recs, error } = await sb
-    .from('tareas_recurrencias')
-    .select(
-      'id, tipo_tarea_id, titulo_plantilla, descripcion_plantilla, patron, dias_semana, dia_mes, hora_limite, sucursal_id, asignacion_tipo, turno_id, usuario_fijo_id, activa, ultima_ejecucion',
-    )
-    .eq('activa', true)
-    .limit(500)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  const recurrencias = (recs ?? []) as Recurrencia[]
+  // Paginado: antes `.limit(500)` dejaba sin generar, en silencio, las
+  // recurrencias de la 501 en adelante.
+  const recurrencias = await paginarCompleto<Recurrencia>(
+    sb.from('tareas_recurrencias')
+      .select(
+        'id, tipo_tarea_id, titulo_plantilla, descripcion_plantilla, patron, dias_semana, dia_mes, hora_limite, sucursal_id, asignacion_tipo, turno_id, usuario_fijo_id, activa, ultima_ejecucion',
+      )
+      .eq('activa', true)
+      .order('id'),
+    'tareas_recurrencias',
+  )
   if (recurrencias.length === 0) {
     return NextResponse.json({ ok: true, creadas: 0, evaluadas: 0 })
   }
 
   // Tipos (para prioridad/sla/verificación/nombre)
   const tipoIds = [...new Set(recurrencias.map((r) => r.tipo_tarea_id))]
-  const { data: tiposData } = await sb
-    .from('tipos_tareas')
-    .select('id, nombre, prioridad_default, sla_horas, verificacion_humana')
-    .in('id', tipoIds)
-  const tipos = new Map<string, Tipo>(
-    ((tiposData ?? []) as Tipo[]).map((t) => [t.id, t]),
-  )
+  const tiposData: Tipo[] = []
+  for (const grupo of enTandas(tipoIds, TANDA_IDS)) {
+    const { data, error: eT } = await sb
+      .from('tipos_tareas')
+      .select('id, nombre, prioridad_default, sla_horas, verificacion_humana')
+      .in('id', grupo)
+    if (eT) throw new Error(`no se pudieron leer los tipos de tarea: ${eT.message}`)
+    tiposData.push(...((data ?? []) as Tipo[]))
+  }
+  const tipos = new Map<string, Tipo>(tiposData.map((t) => [t.id, t]))
 
   // Idempotencia: recurrencias que ya generaron tarea hoy
   // Es lo que hace idempotente al generador: si se corta, cree que no genero
@@ -114,7 +124,11 @@ async function run() {
       .select('recurrencia_id')
       .gte('created_at', inicioHoy)
       .not('recurrencia_id', 'is', null)
-      .order('recurrencia_id'),
+      // `id` de desempate: con `recurrencia_id` solo el paginado por offset
+      // puede saltear una fila, y una recurrencia salteada se vuelve a crear.
+      .order('recurrencia_id')
+      .order('id'),
+    { maximo: 1_000_000 },
   )
   const generadas = new Set(
     ((yaHoy ?? []) as { recurrencia_id: string }[]).map((r) => r.recurrencia_id),
@@ -177,18 +191,18 @@ async function run() {
     if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 })
     creadas = ins?.length ?? 0
 
-    // marcar ultima_ejecucion en las recurrencias generadas
-    await sb
-      .from('tareas_recurrencias')
-      .update({ ultima_ejecucion: nowIso })
-      .in('id', recIds)
+    // marcar ultima_ejecucion en las recurrencias generadas. En tandas: cada
+    // UUID son 36 caracteres en la URL y 500 juntos pasan el límite del
+    // gateway (el mismo 400 que tenía avisos-proveedores).
+    for (const grupo of enTandas(recIds, TANDA_IDS)) {
+      const { error: eU } = await sb.from('tareas_recurrencias').update({ ultima_ejecucion: nowIso }).in('id', grupo)
+      if (eU) throw new Error(`tareas creadas, pero no se pudo marcar la ejecución: ${eU.message}`)
+    }
 
     // desactivar las 'unica' ya disparadas
-    if (unicasAdesactivar.length > 0) {
-      await sb
-        .from('tareas_recurrencias')
-        .update({ activa: false })
-        .in('id', unicasAdesactivar)
+    for (const grupo of enTandas(unicasAdesactivar, TANDA_IDS)) {
+      const { error: eA } = await sb.from('tareas_recurrencias').update({ activa: false }).in('id', grupo)
+      if (eA) throw new Error(`tareas creadas, pero no se pudieron desactivar las únicas: ${eA.message}`)
     }
   }
 
@@ -199,3 +213,5 @@ async function run() {
     creadas,
   })
 }
+
+export const GET = conRegistro('generar-agenda', get)

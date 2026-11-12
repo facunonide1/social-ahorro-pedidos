@@ -91,3 +91,18 @@ export async function traerTodo<T>(
 ): Promise<T[]> {
   return (await paginar<T>(consulta, opts)).filas
 }
+
+/**
+ * Como `paginar`, pero si se llega al tope tira en vez de devolver filas
+ * cortadas. Para los crons que GUARDAN un resultado: un cálculo hecho sobre la
+ * mitad de las filas queda guardado como si fuera el total.
+ */
+export async function paginarCompleto<T>(
+  consulta: Rango<T>,
+  que: string,
+  maximo = 2_000_000,
+): Promise<T[]> {
+  const { filas, truncado } = await paginar(consulta, { maximo })
+  if (truncado) throw new Error(`${que}: más de ${maximo.toLocaleString('es-AR')} filas, no se calcula sobre una parte`)
+  return filas
+}

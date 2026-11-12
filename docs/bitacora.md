@@ -1,5 +1,46 @@
 # Bitácora
 
+## 2026-11-12 · Crons: todo el stock, escrituras en tandas y registro de cada corrida
+
+**Calculaban sobre una parte.** `stock_items` tiene 192.464 filas (lo dice
+`auditar:cortes`) y `paginar()` corta en 100.000 por defecto. alertas-stock y
+metricas-stock no miraban `truncado`: alertaban y guardaban la rotación sobre
+la mitad del stock. alertas-stock, además, leía `producto_rotacion` sin
+paginar, cortado en 1.000. `paginarCompleto()` (en `lib/supabase/paginar.ts`)
+sube el tope a 2.000.000 y tira si se llega: un cron que guarda un resultado
+no calcula sobre una parte. `auditar:cortes` lo reconoce como paginado.
+
+**El orden no era único.** Se paginaba por offset ordenando por `producto_id`
+(o `recurrencia_id`), que se repite. Entre páginas, Postgres no garantiza el
+orden de los empates y se pueden saltear o repetir filas. En generar-agenda
+eso es grave: una recurrencia salteada en «ya se generó hoy» se vuelve a
+crear. Ahora el orden lleva `id` de desempate.
+
+**Escrituras gigantes sin mirar el error.** alertas-stock borraba las activas
+y hacía un único insert de todas. No leía el error, y si el insert se caía
+por timeout la pantalla de alertas quedaba vacía. metricas-stock hacía un
+upsert único de todo `producto_rotacion`. Ahora las dos van de a 500 con
+`lib/supabase/tandas.ts` y cortan en el primer error. El borrado-y-recarga
+sigue sin ser atómico: si falla a la mitad, quedan las tandas que entraron, y
+la corrida termina en 500 y queda en el log.
+
+**URLs largas en generar-agenda.** `.in('id', recIds)` con hasta 500 UUIDs
+es el mismo riesgo de 400 que tenía avisos-proveedores. Va de a 100 y lee el
+error. Las recurrencias se leían con `.limit(500)` y la 501 no se generaba
+nunca: ahora se pagina.
+
+**Registro.** `lib/cron/corrida.ts` envuelve el GET de generar-agenda,
+alertas-stock, metricas-stock, nora-auditor, drive-ingesta, avisos-proveedores
+y avisos-compras. Escribe una línea JSON al empezar y otra al terminar (cron,
+corrida, ms, status, ok, error). Se filtra en los logs de Vercel por
+`"cron":`. Si el handler tira, responde 500 con el mensaje. No escribe en la
+base. Todos declaran `maxDuration = 60`.
+
+Lo que queda para que dejen de cortar: los índices (F5), sobre todo
+`movimientos_stock(tipo, fecha)` y `tareas(created_at)`, y bajar
+`cerebro_calcular`, que corre cada minuto y compite con todo (A3).
+`nora-auditor` sigue haciendo un SELECT y un INSERT por aviso.
+
 ## 2026-11-12 · El cerebro cada cinco minutos (migración 0297, sin aplicar)
 
 `cerebro_calcular()` corre por pg_cron **cada minuto** desde la 0288, con tope

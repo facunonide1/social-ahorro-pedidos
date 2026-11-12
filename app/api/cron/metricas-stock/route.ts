@@ -2,14 +2,17 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
+import { conRegistro } from '@/lib/cron/corrida'
 import { automatizacionActiva } from '@/lib/os/definicion'
 import { puedeCalcular } from '@/lib/demo/guarda-calculo'
 import type { AdminRole } from '@/lib/types/admin'
 import { catalogoCompleto } from '@/lib/catalogo/indice'
 
-import { paginar } from '@/lib/supabase/paginar'
+import { paginarCompleto } from '@/lib/supabase/paginar'
+import { upsertEnTandas } from '@/lib/supabase/tandas'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+export const maxDuration = 60
 
 /**
  * Recalcula producto_rotacion desde movimientos `venta` (OPS · T6).
@@ -17,7 +20,7 @@ export const runtime = 'nodejs'
  *  - venta_diaria_prom 7d/30d, dias_stock_restante, fecha_quiebre_estimada,
  *  - ultima_venta, clasificacion_abc (por facturación: A=top 20% items, B=30%, C=resto).
  */
-export async function GET(req: NextRequest) {
+async function get(req: NextRequest) {
   if (!isCronRequest(req)) return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
   // La declaración de la fábrica puede apagarla. Fallback `true`: lo que hace el
   // código. Un cron que corre de más se nota; uno que no corre, no.
@@ -58,11 +61,13 @@ async function run() {
   const d7 = new Date(ahora - 7 * 86_400_000).toISOString()
   const hoy = new Date().toISOString().slice(0, 10)
 
-  const [{ filas: ventas }, { filas: stock }, prods] = await Promise.all([
+  const [ventas, stock, prods] = await Promise.all([
     // La rotacion se calcula sobre TODOS los movimientos del periodo. Cortada
     // en mil, el promedio sale por una fraccion y queda guardado (v0.85).
-    paginar<any>(adm.from('movimientos_stock').select('producto_id, sucursal_id, cantidad, fecha').eq('tipo', 'venta').gte('fecha', d30).order('producto_id')),
-    paginar<any>(adm.from('stock_items').select('producto_id, sucursal_id, cantidad').order('producto_id')),
+    // `id` de desempate en el orden, y si se llega al tope tira: antes, con
+    // más de 100.000 ventas en 30 días, guardaba la rotación de una parte.
+    paginarCompleto<any>(adm.from('movimientos_stock').select('producto_id, sucursal_id, cantidad, fecha').eq('tipo', 'venta').gte('fecha', d30).order('producto_id').order('id'), 'movimientos_stock'),
+    paginarCompleto<any>(adm.from('stock_items').select('producto_id, sucursal_id, cantidad').order('producto_id').order('id'), 'stock_items'),
     catalogoCompleto(adm),
   ])
 
@@ -116,8 +121,10 @@ async function run() {
     }
   })
 
-  if (rows.length > 0) {
-    await adm.from('producto_rotacion').upsert(rows, { onConflict: 'producto_id,sucursal_id' })
-  }
+  // En tandas y leyendo el error: antes era un upsert único de todas las filas,
+  // sin mirar si había entrado.
+  await upsertEnTandas(adm, 'producto_rotacion', rows, 'producto_id,sucursal_id')
   return NextResponse.json({ ok: true, fecha: hoy, filas: rows.length })
 }
+
+export const GET = conRegistro('metricas-stock', get)

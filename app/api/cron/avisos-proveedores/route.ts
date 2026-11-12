@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
+import { conRegistro } from '@/lib/cron/corrida'
 import { automatizacionActiva } from '@/lib/os/definicion'
 import { publicarAvisos } from '@/lib/proveedores/avisos'
 
@@ -15,7 +16,7 @@ export const maxDuration = 60
  * Sólo publica avisos: no paga, no aprueba y no cierra nada. Lo reversible sale
  * solo; lo que compromete plata espera a una persona (regla de oro 7).
  */
-export async function GET(req: NextRequest) {
+async function get(req: NextRequest) {
   if (!isCronRequest(req)) return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
   if (!(await automatizacionActiva('compras', 'avisos_proveedores', true))) {
     return NextResponse.json({ ok: true, omitida: 'la declaración la tiene apagada' })
@@ -27,3 +28,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: e?.message ?? 'falló' }, { status: 500 })
   }
 }
+
+export const GET = conRegistro('avisos-proveedores', get)
