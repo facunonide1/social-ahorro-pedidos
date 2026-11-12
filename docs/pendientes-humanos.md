@@ -29,14 +29,32 @@ a `main`.
 | 7 | [#18](https://github.com/facunonide1/social-ahorro-pedidos/pull/18) | `feat/pulido-estados` | — | «Firmo merge y deploy del PR #18, SHA …» |
 | 8 | [#19](https://github.com/facunonide1/social-ahorro-pedidos/pull/19) | `chore/banderas` | — | «Firmo merge del PR #19, SHA …» |
 | 9 | [#20](https://github.com/facunonide1/social-ahorro-pedidos/pull/20) | `chore/tests-ingesta-woo` | — | «Firmo merge y deploy del PR #20, SHA …» |
+| 10 | [#26](https://github.com/facunonide1/social-ahorro-pedidos/pull/26) | `fix/crons-registro` | — | «Firmo merge y deploy del PR #26, SHA …» |
+| 11 | [#27](https://github.com/facunonide1/social-ahorro-pedidos/pull/27) | `fix/auditor-avisos-tandas` | — | «Firmo merge y deploy del PR #27, SHA …» |
+| 12 | [#28](https://github.com/facunonide1/social-ahorro-pedidos/pull/28) | `feat/seguridad-indices-fk` | — (consulta de sólo lectura; los índices, P12) | «Firmo merge del PR #28, SHA …» |
+| 13 | [#29](https://github.com/facunonide1/social-ahorro-pedidos/pull/29) | `feat/seguridad-rls-initplan` | — (consultas de sólo lectura; aplicar, P13) | «Firmo merge del PR #29, SHA …» |
+| 14 | [#30](https://github.com/facunonide1/social-ahorro-pedidos/pull/30) | `chore/esquema-vivo` | — (consultas de sólo lectura, P14) | «Firmo merge del PR #30, SHA …» |
+| 15 | [#31](https://github.com/facunonide1/social-ahorro-pedidos/pull/31) | `feat/pulido-proximamente` | — | «Firmo merge y deploy del PR #31, SHA …» |
 
-**Fuera de la pila** (salen de `main`, se mergean en cualquier momento; si
-chocan en `docs/bitacora.md` se re-apilan antes de firmar):
+**Segunda pila: compras e ingesta** (sale de `main`; sus PRs van en este
+orden; si chocan con la primera en `docs/bitacora.md`, se re-apilan antes de
+firmar):
 
-| PR | Rama | Migración | Firma |
-|---|---|---|---|
-| [#22](https://github.com/facunonide1/social-ahorro-pedidos/pull/22) (reemplaza #7) | `feat/compras-cruce` | 0296 (opcional: sin la tabla la ingesta sigue) | «Firmo merge y deploy del PR #22, SHA 86a8065»; aparte «Firmo aplicar la migración 0296 en prod» |
-| [#21](https://github.com/facunonide1/social-ahorro-pedidos/pull/21) (reemplaza #6) | `feat/precios-historial` | **0295 ANTES del deploy** (sin ella el comparador queda vacío) | Paquete: «Firmo aplicar la migración 0295 en prod y, después, merge y deploy del PR #21, SHA 57e9a0e» |
+| # | PR | Rama | Migración | Firma |
+|---|---|---|---|---|
+| 1 | [#22](https://github.com/facunonide1/social-ahorro-pedidos/pull/22) (reemplaza #7) | `feat/compras-cruce` | 0296 opcional (sin la tabla la ingesta sigue) | «Firmo merge y deploy del PR #22, SHA 86a8065»; aparte «Firmo aplicar la migración 0296 en prod» |
+| 2 | [#23](https://github.com/facunonide1/social-ahorro-pedidos/pull/23) | `feat/compras-lineas` | — | «Firmo merge y deploy del PR #23, SHA …» |
+| 3 | [#24](https://github.com/facunonide1/social-ahorro-pedidos/pull/24) | `feat/fuentes-interfaz` | — | «Firmo merge y deploy del PR #24, SHA …» |
+| 4 | [#32](https://github.com/facunonide1/social-ahorro-pedidos/pull/32) | `feat/ingesta-archivos-grandes` | — | «Firmo merge y deploy del PR #32, SHA …» |
+| 5 | [#33](https://github.com/facunonide1/social-ahorro-pedidos/pull/33) | `feat/ingesta-incremental` | — | «Firmo merge y deploy del PR #33, SHA …» |
+| 6 | [#34](https://github.com/facunonide1/social-ahorro-pedidos/pull/34) | `feat/fuente-find` | — | «Firmo merge del PR #34, SHA …» |
+
+**Tercera pila: precios** (sale de `main`):
+
+| # | PR | Rama | Migración | Firma |
+|---|---|---|---|---|
+| 1 | [#21](https://github.com/facunonide1/social-ahorro-pedidos/pull/21) (reemplaza #6) | `feat/precios-historial` | **0295 ANTES del deploy** (sin ella el comparador queda vacío) | Paquete: «Firmo aplicar la migración 0295 en prod y, después, merge y deploy del PR #21, SHA 57e9a0e» |
+| 2 | [#25](https://github.com/facunonide1/social-ahorro-pedidos/pull/25) | `fix/comparador-items` | — | «Firmo merge y deploy del PR #25, SHA …» |
 
 El SHA exacto de cada uno se completa en la firma cuando el PR quede cerrado
 y con CI en verde. Rollback de cualquiera: promover en Vercel el deploy
@@ -202,6 +220,17 @@ Si P2 (acceso de los agentes a la base) no llega, esto lo reemplaza.
   maestro por sucursal (C1).
 - **Si no llega:** F2, A4 y C1 siguen bloqueados.
 - **Firma:** no hace falta, las dos sólo leen.
+
+## P15 · Dar de alta Monroe Americana (y confirmar OMICRON)
+
+- **Qué:** en `/admin/proveedores/nuevo`, crear «MONROE AMERICANA» con su CUIT
+  real. Confirmar que existe un proveedor OMICRON.
+- **Por qué:** el #22 ya reconoce «Monroe Americana» y «Laboratorio Omicron»
+  en las listas y facturas, pero si el proveedor no existe, la lista queda sin
+  droguería y no entra al comparador. `cuit` es obligatorio y único: no se
+  carga por migración con un CUIT inventado.
+- **Si no llega:** las listas de Monroe Americana quedan en previa.
+- **Firma:** no hace falta; es un alta desde la app.
 
 ## P10 · Datos de negocio
 

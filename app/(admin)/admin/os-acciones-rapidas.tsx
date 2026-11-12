@@ -10,14 +10,16 @@ import { cn } from '@/lib/utils'
 
 /**
  * Zona 2 de Mission Control · fila de acciones rápidas primary según rol
- * (del catálogo del OS). Las `proximamente` se muestran deshabilitadas.
+ * (del catálogo del OS). Las `proximamente` sólo se muestran (deshabilitadas)
+ * con la bandera `pantallas_en_construccion`: nada visible que no ande.
  */
-export function OsAccionesRapidas() {
+export function OsAccionesRapidas({ mostrarEnConstruccion = false }: { mostrarEnConstruccion?: boolean }) {
   const { rol, permisosCustom, isReady } = usePermissions()
   if (!isReady || !rol) return null
 
   const primary = quickActionsVisibles(rol, permisosCustom)
     .filter(({ action }) => action.primary)
+    .filter(({ action }) => mostrarEnConstruccion || !action.proximamente)
     .slice(0, 6)
   if (primary.length === 0) return null
 

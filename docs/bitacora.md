@@ -1,5 +1,22 @@
 # Bitácora
 
+## 2026-11-12 · Nada visible que no ande: la campanita funciona y lo «próximamente» se esconde
+
+**Notificaciones.** La campanita de arriba ya contaba bien: el store
+(`lib/stores/notifications-store.ts`) carga las últimas 50 de
+`notificaciones_admin` y escucha las nuevas por Realtime. Pero al abrirla
+decía «Próximamente». Ahora lista las notificaciones con prioridad, hora y
+estado. Al tocar una, la marca leída y va a su `url_accion`. Tiene «Marcar
+todas como leídas» y, sin notificaciones, dice «No tenés notificaciones».
+Las de stock fantasma que manda alertas-stock ya aparecen ahí.
+
+**Lo que no anda, oculto.** Las acciones rápidas marcadas `proximamente` (en
+la home y en Aplicaciones) y el botón de dictado deshabilitado de Mi día sólo
+se muestran con la bandera `pantallas_en_construccion` (G4), que está
+apagada. `components/layout/sidebar.tsx`, `top-nav.tsx` y `search-trigger.tsx`
+también dicen «En construcción», pero no los importa nadie: el shell es
+`OsShell`. No se borraron (quedan anotados para limpiar).
+
 ## 2026-11-12 · Las 9 funciones abiertas a anon y el esquema que vive sólo en la base
 
 Dos consultas más **de sólo lectura** para destrabar lo que estaba bloqueado

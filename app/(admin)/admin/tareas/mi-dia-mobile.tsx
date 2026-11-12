@@ -73,6 +73,7 @@ export function MiDiaMobile({
   sucursales,
   currentUserId,
   progresoDia,
+  mostrarEnConstruccion = false,
 }: {
   tareas: Row[]
   tipos: TipoTarea[]
@@ -80,6 +81,8 @@ export function MiDiaMobile({
   sucursales: { id: string; nombre: string }[]
   currentUserId: string
   progresoDia: { total: number; completadas: number }
+  /** Bandera `pantallas_en_construccion`: muestra el dictado (todavía no anda). */
+  mostrarEnConstruccion?: boolean
 }) {
   const router = useRouter()
   const sb = createClient()
@@ -254,6 +257,7 @@ export function MiDiaMobile({
         users={users}
         sucursales={sucursales}
         currentUserId={currentUserId}
+        mostrarDictado={mostrarEnConstruccion}
       />
 
       {posponer && (
@@ -413,12 +417,13 @@ function PosponerModal({
 }
 
 function QuickCreateBar({
-  tipos, users, sucursales, currentUserId,
+  tipos, users, sucursales, currentUserId, mostrarDictado,
 }: {
   tipos: TipoTarea[]
   users: AdminUserOption[]
   sucursales: { id: string; nombre: string }[]
   currentUserId: string
+  mostrarDictado: boolean
 }) {
   const router = useRouter()
   const sb = createClient()
@@ -513,14 +518,16 @@ function QuickCreateBar({
           placeholder="Nueva tarea…"
           className="h-11 flex-1 rounded-full"
         />
-        <button
-          type="button"
-          disabled
-          title="Dictado por voz — próximamente"
-          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground opacity-50"
-        >
-          <Mic className="size-5" />
-        </button>
+        {mostrarDictado && (
+          <button
+            type="button"
+            disabled
+            title="Dictado por voz — próximamente"
+            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground opacity-50"
+          >
+            <Mic className="size-5" />
+          </button>
+        )}
         <Button
           size="icon"
           className="size-11 shrink-0 rounded-full"
