@@ -1,5 +1,18 @@
 # Bitácora
 
+## 2026-11-12 · Cargando y «no está» adentro de NORA
+
+No había ningún `loading.tsx` ni `not-found.tsx`. Mientras una página pesada
+de `/admin` cargaba, la pantalla anterior quedaba quieta y parecía colgada. Un
+`notFound()` (lo llaman 21 páginas: pedido, proveedor o producto que no está)
+mostraba el 404 genérico de Next, en inglés y fuera del shell.
+
+- `app/(admin)/loading.tsx`: bloques grises con la forma de una página,
+  adentro del shell, con `aria-busy`.
+- `app/(admin)/admin/not-found.tsx`: «Esta pantalla no existe, o lo que
+  buscabas ya no está», con link al inicio.
+- `app/not-found.tsx`: las URLs que no existen, en castellano.
+
 ## 2026-11-12 · «No tenés permiso» en vez de caer en la home sin saber por qué
 
 `requireAdminHubAccess` y seis pantallas del mostrador mandaban a
