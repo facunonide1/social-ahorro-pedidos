@@ -28,7 +28,7 @@ orden y la siguiente se re-apunta a main (ver `pendientes-humanos.md`):
 
 1. **Principal (estabilidad, seguridad, calidad, multisucursal, pulido):**
    #12 → #15 → #14 (+0297) → #13 → #16 → #17 → #18 → #19 → #20 → #26 → #27 →
-   #28 → #29 → #30 → #31 → #35 → #36 → #37.
+   #28 → #29 → #30 → #31 → #35 → #36 → #37 → #38.
 2. **Compras e ingesta:** #22 (reemplaza #7; 0296 opcional) → #23 → #24 →
    #32 → #33 → #34.
 3. **Precios:** #21 (reemplaza #6; **0295 antes del deploy**) → #25.
@@ -60,8 +60,8 @@ definer abiertas a anon y esquema vivo (P14).
 - H2 real, la API de FIND (P10).
 - E2, depende de A4.
 
-**Pendiente sin bloqueo:** I3 (estados vacíos y de error en las pantallas más
-usadas).
+**Pendiente sin bloqueo:** ninguno. I3 quedó en #38 con el patrón aplicado
+a las dos homes más usadas.
 
 **Riesgos que quedan:**
 - alertas-stock y metricas-stock leen ahora las 192.000 filas por tramos. Si
