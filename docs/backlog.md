@@ -274,8 +274,8 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Terminado: un wrapper `correrCron()` que loguea JSON (nombre, inicio,
   duración, ok o error) y responde igual que antes. La tabla de corridas
   va aparte, con migración.
-- Rama: `fix/crons-tandas` · Estado: en PR (7 crons envueltos; faltan los
-  otros 14) · Depende de: —
+- Rama: `fix/crons-tandas` (7 crons) + `fix/crons-registro` (los 14
+  restantes) · Estado: en PR · Depende de: —
 
 **G6 · Variables de Supabase en Preview**
 - Qué: hoy están limitadas a `feature/crm-redesign`.

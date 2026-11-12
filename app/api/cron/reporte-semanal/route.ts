@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { conRegistro } from '@/lib/cron/corrida'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
@@ -14,7 +15,7 @@ export const runtime = 'nodejs'
  * documentado). Narrativa con cumplimiento por sucursal + top/bottom empleados
  * → ai_resumenes_diarios + notificación a super_admin.
  */
-export async function GET(req: NextRequest) {
+async function get(req: NextRequest) {
   if (!isCronRequest(req)) return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
   // La declaración de la fábrica puede apagarla. Fallback `true`: lo que hace el
   // código. Un cron que corre de más se nota; uno que no corre, no.
@@ -127,3 +128,5 @@ async function run() {
 
   return NextResponse.json({ ok: true, sucursales: sucursales.length, informes })
 }
+
+export const GET = conRegistro('reporte-semanal', get)

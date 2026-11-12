@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { conRegistro } from '@/lib/cron/corrida'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
@@ -14,7 +15,7 @@ export const runtime = 'nodejs'
  * Idempotente: UNIQUE (gasto_fijo_id, periodo) evita duplicar; usa ignoreDuplicates.
  * Acepta ?periodo=YYYY-MM (default: mes actual).
  */
-export async function GET(req: NextRequest) {
+async function get(req: NextRequest) {
   if (!isCronRequest(req)) return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
   // La declaración de la fábrica puede apagarla. Fallback `true`: lo que hace el
   // código. Un cron que corre de más se nota; uno que no corre, no.
@@ -60,3 +61,5 @@ async function run(periodoIn: string | null) {
   if (error) return NextResponse.json({ error: error.message }, { status: 400 })
   return NextResponse.json({ ok: true, periodo, generadas: data?.length ?? 0 })
 }
+
+export const GET = conRegistro('gastos-fijos', get)

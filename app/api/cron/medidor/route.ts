@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { conRegistro } from '@/lib/cron/corrida'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
@@ -27,7 +28,7 @@ export const maxDuration = 300
  * datos sembrados. Éste no lo necesita: sólo lee la bitácora, que se llena con
  * decisiones de personas reales. Si alguien decidió, eso pasó de verdad.
  */
-export async function GET(req: NextRequest) {
+async function get(req: NextRequest) {
   if (!isCronRequest(req)) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
 
   const adm = createAdminClient()
@@ -81,3 +82,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: e?.message ?? 'error' }, { status: 500 })
   }
 }
+
+export const GET = conRegistro('medidor', get)

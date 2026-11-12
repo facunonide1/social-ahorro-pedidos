@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { conRegistro } from '@/lib/cron/corrida'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
@@ -11,7 +12,7 @@ export const runtime = 'nodejs'
  * Conecta con el auditor nocturno: arma un resumen y lo notifica a encargados.
  * También recalcula un score de clima simple por sucursal (innov. 11).
  */
-export async function GET(req: NextRequest) {
+async function get(req: NextRequest) {
   if (!isCronRequest(req)) return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
   const adm = createAdminClient()
   const d1 = new Date(Date.now() - 86_400_000).toISOString()
@@ -44,3 +45,5 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ ok: true, resumen })
 }
+
+export const GET = conRegistro('comunicacion-resumen', get)

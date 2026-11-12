@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { conRegistro } from '@/lib/cron/corrida'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
@@ -25,7 +26,7 @@ export const runtime = 'nodejs'
  *
  * Devuelve un resumen para diagnóstico.
  */
-export async function GET(req: NextRequest) {
+async function get(req: NextRequest) {
   if (!isCronRequest(req))
     return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
   // La declaración de la fábrica puede apagarla. Fallback `true`: lo que hace el
@@ -234,3 +235,5 @@ function pickOne<T>(v: T | T[] | null | undefined): T | null {
   if (Array.isArray(v)) return v[0] ?? null
   return v ?? null
 }
+
+export const GET = conRegistro('check-triggers', get)

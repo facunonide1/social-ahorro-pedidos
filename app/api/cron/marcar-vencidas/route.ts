@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { conRegistro } from '@/lib/cron/corrida'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
@@ -17,7 +18,7 @@ export const runtime = 'nodejs'
  * Las que están en verificación/aprobación ya están "trabajadas" — no
  * las marcamos como vencidas para no penalizar al responsable.
  */
-export async function GET(req: NextRequest) {
+async function get(req: NextRequest) {
   if (!isCronRequest(req))
     return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
   // La declaración de la fábrica puede apagarla. Fallback `true`: lo que hace el
@@ -71,3 +72,5 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ ok: true, marcadas: vencidas.length })
 }
+
+export const GET = conRegistro('marcar-vencidas', get)
