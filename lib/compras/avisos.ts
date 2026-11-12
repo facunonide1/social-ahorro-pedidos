@@ -15,6 +15,7 @@
  */
 
 import { parametro } from '@/lib/os/definicion'
+import { clavesYaPendientes, insertarEnTandas, soloNuevos } from '@/lib/avisos/dedup'
 
 type Adm = { from: (t: string) => any; rpc: (n: string, a?: any) => any }
 
@@ -47,19 +48,13 @@ export async function publicarAvisosCompras(adm: Adm): Promise<{ nuevos: number;
   let nuevos = 0
 
   if (hallazgos.length) {
-    const claves = hallazgos.map((h) => h.clave)
-    const { data: previos } = await adm.from('nora_avisos')
-      .select('clave_dedup').in('clave_dedup', claves).eq('estado', 'pendiente')
-    const yaEstan = new Set(((previos ?? []) as any[]).map((p) => p.clave_dedup))
-    const faltan = hallazgos.filter((h) => !yaEstan.has(h.clave))
-    if (faltan.length) {
-      await adm.from('nora_avisos').insert(faltan.map((h) => ({
-        tipo: h.tipo, severidad: h.severidad, titulo: h.titulo, detalle: h.detalle,
-        modulo: 'compras', accion_label: 'Ver', accion_href: h.href,
-        estado: 'pendiente', clave_dedup: h.clave,
-      })))
-      nuevos = faltan.length
-    }
+    const yaEstan = await clavesYaPendientes(adm, hallazgos.map((h) => h.clave))
+    const faltan = soloNuevos(hallazgos, yaEstan)
+    nuevos = await insertarEnTandas(adm, 'nora_avisos', faltan.map((h) => ({
+      tipo: h.tipo, severidad: h.severidad, titulo: h.titulo, detalle: h.detalle,
+      modulo: 'compras', accion_label: 'Ver', accion_href: h.href,
+      estado: 'pendiente', clave_dedup: h.clave,
+    })))
   }
 
   const foto = await guardarFoto(adm)

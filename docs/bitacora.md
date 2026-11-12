@@ -1,5 +1,24 @@
 # Bitácora
 
+## 2026-11-12 · avisos-proveedores: sin 400 «header too large» y sin duplicados
+
+`publicarAvisos` (`lib/proveedores/avisos.ts`) armaba un
+`.in('clave_dedup', claves.slice(0, 500))`. PostgREST lleva ese filtro en la
+URL: con cientos de claves de 40 a 80 caracteres el pedido pesa decenas de KB y
+el gateway lo corta con 400 «header too large». El error no se leía, así que
+`previos` volvía null, todo contaba como nuevo y el insert (tampoco se miraba
+su error) podía duplicar los avisos de todos los días. Las claves después de
+la 500 nunca se revisaban. `lib/compras/avisos.ts` tenía lo mismo, sin tope.
+
+`lib/avisos/dedup.ts` revisa las claves de a 50, inserta de a 200 y corta con
+error si falla cualquiera de las dos cosas: es mejor no avisar hoy que avisar
+diez veces lo mismo. También descarta las claves repetidas dentro del mismo
+lote. Los dos crons de avisos declaran `maxDuration = 60`.
+
+El 400 era la única causa visible. `proveedores_detectar` no está en el repo
+(vive en la base) y no tiene `statement_timeout` propio: si después de esto el
+cron sigue lento, la causa está ahí.
+
 ## 2026-11-12 · CI en cada PR y config de lint
 
 `.github/workflows/ci.yml` corre `npm ci`, `npm test`, `tsc --noEmit`,

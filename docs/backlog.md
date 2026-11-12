@@ -25,7 +25,7 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   `lib/compras/avisos.ts`, sin tope.
 - Terminado: dedup en tandas chicas, errores que cortan la corrida, sin
   tope de 500, tests.
-- Rama: `fix/avisos-dedup-por-tandas` · Estado: en curso · Depende de: —
+- Rama: `fix/avisos-dedup-por-tandas` · Estado: en PR · Depende de: —
 
 **A2 · Crons sin tope y con escrituras gigantes**
 - Qué: generar-agenda, alertas-stock, metricas-stock y avisos-proveedores
