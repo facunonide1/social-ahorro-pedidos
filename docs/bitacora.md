@@ -1,5 +1,26 @@
 # Bitácora
 
+## 2026-11-12 · RLS: las 430 initplan y las 259 permisivas, listadas desde la base
+
+Como con los índices: el arreglo sale de leer la base, no de adivinar desde
+las migraciones. Dos consultas **de sólo lectura** en `supabase/consultas/`:
+
+- `rls_initplan.sql`: cada política de `public` que llama a `auth.uid()`,
+  `auth.jwt()` o `auth.role()` sin envolver en `(select …)`, que se evalúa
+  **por fila**. Devuelve la definición actual, el `alter policy` con las
+  llamadas envueltas (Postgres las evalúa una vez por consulta) y el
+  `alter policy` de rollback con la definición original.
+- `rls_permisivas_multiples.sql`: por tabla × rol × acción, las políticas
+  permisivas que se suman con OR, con su condición. No genera sentencias:
+  fusionar políticas es una decisión de permisos, no un reemplazo mecánico.
+
+Probadas en Postgres 16 local con un `auth.uid()` de mentira. La primera no
+marca la política ya envuelta, sus `alter policy` corren y la dejan vacía, y
+el rollback la devuelve a como estaba. La segunda junta las tres permisivas de
+SELECT (incluida la que viene de un `for all`).
+
+Es cambio de RLS: lo aplica Facu, tabla por tabla, con firma (P13).
+
 ## 2026-11-12 · La lista de índices de las foreign keys sale de la base, no de adivinar
 
 Los advisors marcan 346 foreign keys sin índice. Escribir esos índices a mano
