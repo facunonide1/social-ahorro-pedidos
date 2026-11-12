@@ -36,7 +36,7 @@ export default async function ComprasIngeridasPage({ searchParams }: { searchPar
   let lista = sb.from('compras_lineas')
     .select('id, fecha, proveedor_nombre, sucursal_nombre, comprobante, producto_nombre, codigo_barras, cantidad, precio_unitario, descuento_pct, importe, producto_id, match_score, match_via, productos_catalogo(nombre, sku)')
     .order('fecha', { ascending: false, nullsFirst: false }).order('id')
-    .limit(MOSTRAR)
+    .limit(200) // = MOSTRAR; literal para que auditar:cortes vea el tope
   if (cruce === 'sin') lista = lista.is('producto_id', null)
   if (cruce === 'con') lista = lista.not('producto_id', 'is', null)
   if (q) {
