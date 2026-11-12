@@ -1,5 +1,28 @@
 # Bitácora
 
+## 2026-11-12 · Las 9 funciones abiertas a anon y el esquema que vive sólo en la base
+
+Dos consultas más **de sólo lectura** para destrabar lo que estaba bloqueado
+por no ver la base:
+
+- `supabase/consultas/definer_abiertas_a_anon.sql`: las funciones SECURITY
+  DEFINER que `anon` puede ejecutar (los advisors dicen 9), con el `revoke`,
+  su rollback (`grant`) y, antes de firmar, **en qué políticas RLS aparece
+  cada una y para qué roles**. Si una política que evalúa `anon` usa la
+  función (el caso posible de `current_admin_role`), revocar cambia «cero
+  filas» por «permission denied». Con esa salida se arma la migración de F2
+  sin adivinar.
+- `supabase/consultas/esquema_vivo.sql`: el DDL actual de
+  `decisiones_pendientes`, `proveedores_detectar`, `sifaco_aplicar_maestro`,
+  `sifaco_aplicar_sucursales`, `rls_escrituras_que_dan_lectura` y
+  `producto_stock_sifaco`. Se guarda en `supabase/esquema-vivo/` como
+  referencia, no como migración.
+
+Probadas en Postgres 16 local: la primera marca las definer abiertas (no las
+cerradas ni las invoker), señala la política de anon que usa
+`current_admin_role`, sus revokes corren y la dejan vacía. La segunda devuelve
+el DDL de la vista, la función y la tabla.
+
 ## 2026-11-12 · RLS: las 430 initplan y las 259 permisivas, listadas desde la base
 
 Como con los índices: el arreglo sale de leer la base, no de adivinar desde
