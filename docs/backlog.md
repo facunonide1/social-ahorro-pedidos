@@ -221,8 +221,9 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   concurrently` desde el catálogo, y una migración con los de las tablas
   que leen los crons lentos (`movimientos_stock(tipo, fecha)`,
   `tareas(created_at)` y los que salgan).
-- Rama: `feat/seguridad-indices-fk` · Estado: pendiente (el script) /
-  bloqueado por humano (la lista real) · Depende de: P2.
+- Rama: `feat/seguridad-indices-fk` · Estado: en PR (la consulta, probada en
+  Postgres local) / bloqueado por humano (correrla y crear los índices, P12)
+  · Depende de: P12.
 
 **F6 · RLS: 430 initplan y 259 multiple permissive**
 - Qué: `auth.uid()` sin `(select …)` y políticas permisivas que se
