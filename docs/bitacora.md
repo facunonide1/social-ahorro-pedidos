@@ -1,5 +1,24 @@
 # Bitácora
 
+## 2026-11-12 · La ingesta no sabe que es Drive
+
+FIND va a ser la fuente maestra. Para que cambiar de fuente no sea reescribir
+la ingesta, `lib/ingesta/fuente.ts` define lo único que depende de la fuente:
+listar una página de una carpeta y bajar un archivo (`FuenteArchivos`).
+`lib/drive/fuente-drive.ts` es la implementación de Drive, armada con el access
+token ya refrescado. `correrIngesta` arma la fuente una vez y, de ahí en más,
+`encolar`, `procesarLote` y `procesarUno` reciben la fuente, no el token.
+Clasificar, parsear, cruzar y guardar no cambiaron.
+
+La conexión (OAuth, token cifrado, vencimiento a los 7 días) sigue siendo de
+Drive y queda en `correrIngesta`: cada fuente se construye ya autenticada.
+FIND va a ser otra implementación de `FuenteArchivos` más su propia conexión,
+detrás de la bandera `fuente_find` (G4).
+
+Tests con una fuente en memoria que recorre páginas, subcarpetas y el corte
+por fecha del último sync, y del adaptador de Drive con `fetch` simulado
+(traducción de la respuesta, token, error 403). `npm test` corre por glob.
+
 ## 2026-11-12 · Las compras que entraron desde Drive se ven
 
 `compras_lineas` la llena la ingesta y no la mostraba ninguna pantalla.

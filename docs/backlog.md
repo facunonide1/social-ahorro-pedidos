@@ -277,7 +277,7 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Terminado: `lib/ingesta/fuente.ts` con `listarCambios`, `descargar` y
   `marcarProcesado`; Drive como primera implementación, sin cambio de
   comportamiento; tests con una fuente falsa.
-- Rama: `feat/fuentes-interfaz` · Estado: pendiente · Depende de: B1.
+- Rama: `feat/fuentes-interfaz` · Estado: en PR · Depende de: B1 (#22).
 
 **H2 · Fuente FIND**
 - Qué: FIND va a ser la fuente maestra.

@@ -13,7 +13,9 @@ import {
   TOPE_BYTES, decisionTrabado, mensajeTope, planificarCorrida, sigueEnPresupuesto,
 } from './lote'
 import { mapeoSeccionSiExiste } from './seccion'
-import { descargar, listarPagina, refrescarAccessToken } from './google'
+import { refrescarAccessToken } from './google'
+import { fuenteDrive } from './fuente-drive'
+import type { FuenteArchivos } from '@/lib/ingesta/fuente'
 import { parsearMayorsur } from './listas'
 import { claveDesdeEnv, descifrarToken } from './crypto'
 import { tomarPagina, tareasIniciales, type TareaCarpeta } from './recorrer'
@@ -81,12 +83,14 @@ export async function correrIngesta(opts: { manual?: boolean } = {}) {
     .select('folder_id, folder_nombre, incluir_subcarpetas').eq('integracion_id', conexion.id).limit(30)
   if (!carpetas?.length) return { ok: true, sin_carpetas: true }
 
-  const encolados = await encolar(adm, acceso.accessToken, conexion, carpetas as any[])
-  const procesados = await procesarLote(adm, acceso.accessToken, conexion.owner_admin_id, inicio)
+  // Desde acá la ingesta no sabe que es Drive: lista y baja por la fuente.
+  const fuente = fuenteDrive(acceso.accessToken)
+  const encolados = await encolar(adm, fuente, conexion, carpetas as any[])
+  const procesados = await procesarLote(adm, fuente, conexion.owner_admin_id, inicio)
   return { ok: true, manual: !!opts.manual, ...encolados, ...procesados }
 }
 
-async function encolar(adm: Adm, token: string, conexion: any, carpetas: { folder_id: string; folder_nombre: string; incluir_subcarpetas: boolean }[]) {
+async function encolar(adm: Adm, fuente: FuenteArchivos, conexion: any, carpetas: { folder_id: string; folder_nombre: string; incluir_subcarpetas: boolean }[]) {
   let tareas: TareaCarpeta[] = Array.isArray(conexion.listado_cursor?.tareas) ? conexion.listado_cursor.tareas : []
   let desde: string | null = conexion.listado_cursor?.desde ?? null
   if (!tareas.length) {
@@ -101,14 +105,8 @@ async function encolar(adm: Adm, token: string, conexion: any, carpetas: { folde
   let nuevos = 0
   let paginas = 0
   while (tareas.length && paginas < 3 && nuevos < 40) {
-    const paso = await tomarPagina(tareas, (id, page) => listarPagina(token, id, page).then((p) => ({
-      files: p.files.map((f) => ({
-        id: f.id, name: f.name, mimeType: f.mimeType,
-        modifiedTime: f.modifiedTime ?? null, md5Checksum: f.md5Checksum ?? null,
-        webViewLink: f.webViewLink ?? null, size: f.size ?? null,
-      })),
-      nextPageToken: p.nextPageToken,
-    })), { maxProfundidad: MAX_PROFUNDIDAD, modificadoDespues: desde, vistos })
+    const paso = await tomarPagina(tareas, (id, page) => fuente.listarPagina(id, page),
+      { maxProfundidad: MAX_PROFUNDIDAD, modificadoDespues: desde, vistos })
     tareas = paso.tareas
     paginas++
     nuevos += await guardarPagina(adm, paso.archivos)
@@ -196,7 +194,7 @@ async function recuperarTrabados(adm: Adm) {
   return recuperados
 }
 
-async function procesarLote(adm: Adm, token: string, usuarioId: string | null, inicio: number) {
+async function procesarLote(adm: Adm, fuente: FuenteArchivos, usuarioId: string | null, inicio: number) {
   const recuperados = await recuperarTrabados(adm)
   const { data: cola } = await adm.from('drive_archivos_ingestados')
     .select('id, file_id, nombre, mime, ruta_relativa, clasificacion, clasificacion_forzada, intentos, bytes, web_view_link, proximo_intento_at')
@@ -237,7 +235,7 @@ async function procesarLote(adm: Adm, token: string, usuarioId: string | null, i
       estado: 'procesando', intentos, updated_at: new Date().toISOString(),
     }).eq('id', archivo.id)
     try {
-      const r = await procesarUno(adm, token, archivo, usuarioId)
+      const r = await procesarUno(adm, fuente, archivo, usuarioId)
       if (r.cubiertos) cubiertos = new Set([...cubiertos, ...r.cubiertos])
       await adm.from('drive_archivos_ingestados').update({
         estado: r.estado,
@@ -267,7 +265,7 @@ async function procesarLote(adm: Adm, token: string, usuarioId: string | null, i
   return { procesados: resultados.length, resultados, recuperados, omitidos: plan.omitidos.length }
 }
 
-async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: string | null): Promise<{
+async function procesarUno(adm: Adm, fuente: FuenteArchivos, archivo: any, usuarioId: string | null): Promise<{
   estado: string
   clasificacion: Clasificacion
   destino?: string | null
@@ -282,7 +280,7 @@ async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: str
 }> {
   const forzada = archivo.clasificacion_forzada as Clasificacion | null
   if (forzada === 'ignorar') return { estado: 'ok', clasificacion: 'ignorar' }
-  const buf = await descargar(token, { id: archivo.file_id, mimeType: archivo.mime })
+  const buf = await fuente.descargar({ id: archivo.file_id, mime: archivo.mime })
   const hash = createHash('sha256').update(buf).digest('hex')
   if (buf.length > TOPE_BYTES) {
     const clas = forzada ?? clasificar({ nombre: archivo.nombre, mime: archivo.mime, ruta: archivo.ruta_relativa })
