@@ -187,6 +187,22 @@ maestro por sucursal, revoke, índices).
 - **Firma:** «Firmo aplicar en prod los alter policy de initplan de las
   tablas …».
 
+## P14 · Dos consultas de sólo lectura que destraban F2, A4 y C1
+
+Si P2 (acceso de los agentes a la base) no llega, esto lo reemplaza.
+
+- **Qué:** correr en el SQL editor de Supabase y pegar el resultado en un
+  comentario del PR o en un archivo:
+  1. `supabase/consultas/definer_abiertas_a_anon.sql`: las funciones abiertas
+     a anon, con las políticas que las usan.
+  2. `supabase/consultas/esquema_vivo.sql`: el DDL de la vista, las funciones
+     y la tabla que no están en el repo.
+- **Por qué:** con (1) se arma la migración del revoke (F2) sin adivinar. Con
+  (2) se puede arreglar `decisiones_pendientes` (A4) y escribir el aplicar del
+  maestro por sucursal (C1).
+- **Si no llega:** F2, A4 y C1 siguen bloqueados.
+- **Firma:** no hace falta, las dos sólo leen.
+
 ## P10 · Datos de negocio
 
 - Confirmar el mapeo de secciones de SIFACO, sobre todo `NOR → NORMA`, que

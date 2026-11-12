@@ -198,8 +198,10 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   la lista real de la base. Vacía `scripts/definer-deuda.json` (11 según las
   migraciones). Antes de firmar: ver si `current_admin_role` y
   `hub_rol_activo` (las usan políticas RLS) las necesita `anon`.
-- Rama: `feat/seguridad-revoke-anon` · Estado: bloqueado por humano (no se
-  escribe a ciegas) · Depende de: P2.
+- Rama: `feat/seguridad-revoke-anon` · Estado: bloqueado por humano: la
+  consulta que arma la lista real está en PR (`chore/esquema-vivo`,
+  `definer_abiertas_a_anon.sql`); falta que Facu la corra (P14) · Depende de:
+  P14.
 
 **F3 · Chequeo que rompe el build**
 - Qué: es la octava vez que aparece esta familia de error.
@@ -245,8 +247,8 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   ninguna migración.
 - Terminado: su DDL volcado a `supabase/esquema-vivo/` como referencia, sin
   aplicar nada.
-- Rama: `chore/esquema-vivo` · Estado: bloqueado por humano · Depende de:
-  P2.
+- Rama: `chore/esquema-vivo` · Estado: en PR (la consulta y la carpeta) /
+  bloqueado por humano (correrla, P14) · Depende de: P14.
 
 ## G · Calidad y CI
 
