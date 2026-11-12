@@ -1,5 +1,23 @@
 # Bitácora
 
+## 2026-11-12 · Un número que no se pudo leer no es un cero
+
+Las homes de Compras y Pedidos leían sus números sin mirar el error. Si una
+consulta caía (por un timeout, por ejemplo), el KPI mostraba 0: «0 pedidos
+abiertos», «0 faltantes». Un número plausible que miente sin avisar es el error
+que este proyecto ya encontró cuatro veces con los cortes de 1.000.
+
+`erroresDeLectura` (`lib/supabase/errores.ts`) junta los errores de las
+lecturas de una pantalla. `AvisoLectura` (`components/shared/`) los muestra
+arriba: «No se pudo leer: … Esos números aparecen vacíos, no en cero». Un
+«permission denied» de RLS aparece aparte, como «tu rol no puede ver…», porque
+no es una caída. En Pedidos, el KPI que falló queda en «—» (`KpiCard` ya lo
+hacía con `null`).
+
+Es el patrón para el resto de las pantallas. Esta pasada cubre las dos homes
+más usadas. Las demás (sifaco, drive, comparador) ya decían sus errores o se
+arreglaron en sus PRs (#23, #25, #32).
+
 ## 2026-11-12 · Estado del desarrollo: qué quedó, qué espera firma y en qué orden
 
 **Hecho y en main:** #8, #9 (el build no escribe en prod), #10 (backlog y
@@ -10,7 +28,7 @@ orden y la siguiente se re-apunta a main (ver `pendientes-humanos.md`):
 
 1. **Principal (estabilidad, seguridad, calidad, multisucursal, pulido):**
    #12 → #15 → #14 (+0297) → #13 → #16 → #17 → #18 → #19 → #20 → #26 → #27 →
-   #28 → #29 → #30 → #31 → #35 → #36 → #37.
+   #28 → #29 → #30 → #31 → #35 → #36 → #37 → #38.
 2. **Compras e ingesta:** #22 (reemplaza #7; 0296 opcional) → #23 → #24 →
    #32 → #33 → #34.
 3. **Precios:** #21 (reemplaza #6; **0295 antes del deploy**) → #25.
@@ -42,8 +60,8 @@ definer abiertas a anon y esquema vivo (P14).
 - H2 real, la API de FIND (P10).
 - E2, depende de A4.
 
-**Pendiente sin bloqueo:** I3 (estados vacíos y de error en las pantallas más
-usadas).
+**Pendiente sin bloqueo:** ninguno. I3 quedó en #38 con el patrón aplicado
+a las dos homes más usadas.
 
 **Riesgos que quedan:**
 - alertas-stock y metricas-stock leen ahora las 192.000 filas por tramos. Si

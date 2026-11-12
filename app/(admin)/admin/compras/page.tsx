@@ -1,3 +1,5 @@
+import { erroresDeLectura } from '@/lib/supabase/errores'
+import { AvisoLectura } from '@/components/shared/aviso-lectura'
 import Link from 'next/link'
 import { ShoppingCart, AlertTriangle, DollarSign, TrendingDown, Truck, FileText, PackageCheck, Undo2, Scale, Megaphone, ArrowRight, PackageX } from 'lucide-react'
 
@@ -40,7 +42,8 @@ export default async function ComprasTablero({ searchParams }: { searchParams: {
   if (!esTodas && sucursalId) afQ = afQ.eq('sucursal_id', sucursalId)
   let provQ = sb.from('proveedores').select('id, razon_social, rubros, score_actual, es_drogueria').eq('activo', true).order('razon_social').limit(500)
 
-  const [{ data: ocs }, { data: avisos }, { data: provs }] = await Promise.all([ocQ, afQ, provQ])
+  const [rOcs, rAvisos, rProvs] = await Promise.all([ocQ, afQ, provQ])
+  const { data: ocs } = rOcs, { data: avisos } = rAvisos, { data: provs } = rProvs
 
   const ordenes = (ocs ?? []) as any[]
   const abiertas = ordenes.filter((o) => ABIERTAS.includes(o.estado)).length
@@ -51,7 +54,10 @@ export default async function ComprasTablero({ searchParams }: { searchParams: {
   // Plata que el proveedor debe y que nadie está persiguiendo.
   let concQ = sb.from('doc_conciliaciones').select('monto_diferencia').eq('estado', 'con_diferencias').limit(2000)
   if (!esTodas && sucursalId) concQ = concQ.eq('sucursal_id', sucursalId)
-  const { data: concs } = await concQ
+  const rConcs = await concQ
+  const { data: concs } = rConcs
+  // Una lectura que falla se veía como 0 (órdenes, faltantes, diferencias). Se avisa arriba.
+  const errores = erroresDeLectura({ 'órdenes de compra': rOcs, 'avisos de faltantes': rAvisos, 'proveedores': rProvs, 'conciliaciones': rConcs })
   const diferenciasAbiertas = ((concs ?? []) as any[]).reduce((a, c) => a + Math.abs(Number(c.monto_diferencia ?? 0)), 0)
 
   return (
@@ -59,6 +65,7 @@ export default async function ComprasTablero({ searchParams }: { searchParams: {
       <PageHeader title="Compras" description="Sistema de compras multisucursal conectado a stock, ventas y finanzas."
         breadcrumbs={[{ label: 'Compras' }]} />
       <div className="space-y-5 p-4 md:p-6">
+        <AvisoLectura errores={errores} />
         <AccionesSubApp app="compras" />
         <RubroFilter />
 
