@@ -1,6 +1,6 @@
 {
-  "construido_at": "2026-11-12T20:04:31.381Z",
-  "commit": "a15343af56789cfbb822d4932b33b9d42c37c98c",
-  "mensaje": "Hotfix /admin y /pedidos (#8)",
-  "rama": "claude/bold-turing-9ualkj"
+  "construido_at": "2026-10-29T04:19:31.304Z",
+  "commit": "9b0f5d42d34cc449e48624afa42fec44889f9c63",
+  "mensaje": "feat: la voz con ElevenLabs",
+  "rama": "main"
 }
