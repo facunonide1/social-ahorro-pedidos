@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/shared/page-header'
 
 import { OsSubAppsGrid } from '../os-subapps-grid'
 import { OsAccionesRapidas } from '../os-acciones-rapidas'
+import { bandera } from '@/lib/banderas'
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Aplicaciones' }
@@ -31,7 +32,7 @@ export default async function AplicacionesPage() {
         breadcrumbs={[{ label: 'Aplicaciones' }]}
       />
       <div className="container mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-6">
-        <OsAccionesRapidas />
+        <OsAccionesRapidas mostrarEnConstruccion={bandera('pantallas_en_construccion')} />
         <OsSubAppsGrid />
       </div>
     </>

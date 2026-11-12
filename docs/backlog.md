@@ -315,7 +315,9 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   construcción».
 - Terminado: o funciona, o se oculta detrás de una bandera; nada visible
   que no ande.
-- Rama: `feat/pulido-proximamente` · Estado: pendiente · Depende de: G4.
+- Rama: `feat/pulido-proximamente` · Estado: en PR (campanita funcionando;
+  lo demás detrás de bandera). `sidebar.tsx`, `top-nav.tsx` y
+  `search-trigger.tsx` no se usan: candidatos a borrar · Depende de: G4.
 
 **I3 · Estados vacíos y errores amigables**
 - Qué: las pantallas más usadas (compras, sifaco, drive, pedidos).

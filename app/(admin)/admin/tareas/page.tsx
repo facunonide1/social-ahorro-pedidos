@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 
 import { BandejaV2Client } from './bandeja-v2-client'
 import { MiDiaMobile } from './mi-dia-mobile'
+import { bandera } from '@/lib/banderas'
 import { lente } from '@/lib/demo/lente'
 import { KanbanClient } from './kanban-client'
 
@@ -195,6 +196,7 @@ export default async function TareasBandejaPage({
                 sucursales={(sucursalesData ?? []) as { id: string; nombre: string }[]}
                 currentUserId={profile.id}
                 progresoDia={{ total: totalHoy ?? 0, completadas: completadasHoy ?? 0 }}
+                mostrarEnConstruccion={bandera('pantallas_en_construccion')}
               />
             </div>
             {/* Desktop: la bandeja de siempre. */}

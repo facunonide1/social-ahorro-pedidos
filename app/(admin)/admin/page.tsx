@@ -19,6 +19,7 @@ import { NoraBriefingCard } from './nora-briefing-card'
 import { NoraPrediccionesPanel } from './nora-predicciones-panel'
 import { SucursalesLive } from './sucursales-live'
 import { OsAccionesRapidas } from './os-acciones-rapidas'
+import { bandera } from '@/lib/banderas'
 import { OsSubAppsGrid } from './os-subapps-grid'
 import { EquipoClient } from './equipo-client'
 import { leerEquipo } from '@/lib/agentes/lectura'
@@ -353,7 +354,7 @@ export default async function MissionControlPage({ searchParams }: { searchParam
       {verSinDemo ? null : <NoraBriefingCard />}
 
       {/* Zona 2 · Acciones rápidas (por rol) */}
-      <OsAccionesRapidas />
+      <OsAccionesRapidas mostrarEnConstruccion={bandera('pantallas_en_construccion')} />
 
       {/* ── LA CAPA DE DIRECCIÓN ──────────────────────────────────────────
           Lo primero que se ve deja de ser el listado de 13 aplicaciones y pasa
