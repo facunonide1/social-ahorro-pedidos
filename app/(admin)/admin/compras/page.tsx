@@ -103,6 +103,7 @@ export default async function ComprasTablero({ searchParams }: { searchParams: {
               { l: 'Avisos de faltantes', h: '/admin/compras/faltantes', i: AlertTriangle },
               { l: 'Órdenes de compra', h: '/admin/compras/ordenes', i: ShoppingCart },
               { l: 'Comparador de precios', h: '/admin/compras/comparador', i: Scale },
+              { l: 'Compras ingeridas', h: '/admin/compras/ingeridas', i: FileText },
               { l: 'Recepciones', h: '/admin/compras/recepciones', i: PackageCheck },
               { l: 'Devoluciones', h: '/admin/compras/devoluciones', i: Undo2 },
               { l: 'Proveedores', h: '/admin/proveedores', i: Truck },
