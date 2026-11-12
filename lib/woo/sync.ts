@@ -1,46 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server'
-import { fetchOrders, type WooOrder, type WooLineItem } from './client'
-import type { OrderItem, TipoEnvio } from '@/lib/types'
-
-/**
- * Deduce el tipo de envío a partir del shipping_method de Woo.
- * Si el method_title o method_id contiene "express" → express.
- * Si contiene "retiro" / "pickup" / "local pickup" → retiro.
- * Default: programado.
- */
-function pickTipoEnvio(o: WooOrder): TipoEnvio {
-  const raw = ((o.shipping_lines ?? [])
-    .map(l => `${l.method_id ?? ''} ${l.method_title ?? ''}`)
-    .join(' ') || '').toLowerCase()
-  if (raw.includes('express')) return 'express'
-  if (raw.includes('pickup') || raw.includes('retiro') || raw.includes('local_pickup')) return 'retiro'
-  return 'programado'
-}
-
-/**
- * Fuera de horario: pedido creado antes de hora_apertura o a partir
- * de hora_cierre, en hora local Buenos Aires.
- */
-function isFueraDeHorario(iso: string | null | undefined, open: number, close: number): boolean {
-  if (!iso) return false
-  const d = new Date(iso)
-  const hour = Number(d.toLocaleString('en-US', {
-    timeZone: 'America/Argentina/Buenos_Aires',
-    hour: '2-digit', hour12: false,
-  }))
-  return hour < open || hour >= close
-}
-
-function mapItems(items: WooLineItem[]): OrderItem[] {
-  return items.map(it => ({
-    product_id: it.product_id,
-    name: it.name,
-    qty: it.quantity,
-    price: Number(it.price) || Number(it.total) / Math.max(1, it.quantity),
-    sku: it.sku || undefined,
-    meta: it.meta_data?.length ? { meta_data: it.meta_data } : undefined,
-  }))
-}
+import { fetchOrders, type WooOrder } from './client'
+import { fueraDeHorario as isFueraDeHorario, mapearItems as mapItems, tipoEnvio as pickTipoEnvio } from './mapear'
 
 function pickCustomerName(o: WooOrder): string {
   const s = o.shipping

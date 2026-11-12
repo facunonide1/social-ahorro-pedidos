@@ -258,7 +258,8 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 **G3 · Tests de la ingesta y del sync Woo**
 - Qué: `lib/drive/correr.ts` y `lib/woo/sync.ts` no tienen tests.
 - Terminado: tests con dobles de Drive, de Woo y de Supabase, sin red.
-- Rama: `chore/tests-ingesta-woo` · Estado: pendiente · Depende de: H1.
+- Rama: `chore/tests-ingesta-woo` · Estado: en PR (Woo); la ingesta va con
+  H1 · Depende de: H1 para la ingesta.
 
 **G4 · Banderas**
 - Qué: un módulo único `lib/banderas.ts`.

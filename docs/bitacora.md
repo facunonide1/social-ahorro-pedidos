@@ -1,5 +1,21 @@
 # Bitácora
 
+## 2026-11-12 · Woo: un solo mapeo, firma de tiempo constante y tests
+
+El sync (`lib/woo/sync.ts`) y el webhook (`/api/woo-webhook`) tenían cada uno
+su copia de `pickTipoEnvio`, `isFueraDeHorario` y `mapItems`: un arreglo en uno
+no llegaba al otro. Ahora las dos rutas usan `lib/woo/mapear.ts`, que no toca
+red ni base y tiene tests. Además, `horaBuenosAires` normaliza el «24» que
+algunas versiones de ICU devuelven a medianoche.
+
+El webhook comparaba la firma HMAC con `!==`. Eso no es de tiempo constante:
+el tiempo de respuesta filtra cuántos caracteres coinciden. `firmaValida` usa
+`timingSafeEqual` y rechaza la firma vacía.
+
+No cambia qué pedido entra ni cómo se guarda. La ingesta de Drive
+(`lib/drive/correr.ts`) todavía no tiene tests de punta a punta: van con H1,
+cuando la fuente sea una interfaz que se pueda reemplazar por una falsa.
+
 ## 2026-11-12 · Las banderas en un solo lugar
 
 `lib/banderas.ts` registra cada bandera con su variable, qué cambia al
