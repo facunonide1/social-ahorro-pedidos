@@ -1,5 +1,92 @@
 # Bitácora
 
+## 2026-11-12 · alertas-stock y metricas-stock por tramos: no pueden pasar los 60 s
+
+Leer las 192.464 filas de stock de una vez arreglaba el cálculo incompleto pero
+abría otro riesgo: que la corrida pasara los 60 s y las alertas no salieran.
+Facu pidió no cambiar una cosa por la otra.
+
+**Tramos.** `lib/cron/tramos.ts` parte el espacio de UUID de `producto_id` en
+6 rangos parejos (los UUID v4 son aleatorios: ~1/6 del catálogo cada uno). Cada
+corrida procesa un tramo para todas las sucursales: ~32.000 filas de stock en
+vez de 192.000. Todas las lecturas (stock, rotación, lotes, vencimientos,
+catálogo, ventas de 30 días y las alertas activas) se filtran por ese rango.
+
+**Qué tramo toca.** Un solo cron cada 5 minutos en una ventana de una hora
+(`vercel.json`: metricas-stock `*/5 3 * * *`, alertas-stock `*/5 4 * * *`). El
+tramo sale del reloj (minuto / 5, módulo 6), así que cada uno corre dos veces.
+Si la primera pasada no llega, la segunda lo retoma. No hace falta guardar un
+cursor en la base, ni hace falta migración. `?tramo=N` fuerza uno a mano.
+
+**Plazo.** Leer tiene 40 s. Si se pasa, la corrida responde 503, queda en el
+log y **no escribe nada**: las alertas y la rotación de ayer siguen como
+estaban. Escribir tiene hasta 52 s y se mira entre tandas, nunca en el medio.
+
+**Alertas por diferencia.** Antes se borraban todas las activas y se
+insertaban de nuevo. Ahora se leen las activas del tramo y se escribe sólo la
+diferencia (`diferenciaAlertas`):
+- se borra lo que ya no vale;
+- lo que cambió se borra e inserta de a pares en la misma tanda (el índice
+  único no deja dos activas iguales);
+- se inserta lo nuevo.
+Lo que no cambió no se toca y conserva su `created_at`. En ningún momento la
+tabla queda vacía. Si se corta entre tandas, lo no tocado queda en la versión
+anterior. El aviso de stock fantasma a los super admin sale sólo por los
+fantasmas nuevos: antes se repetía todos los días.
+
+**ABC.** La clasificación A/B/C de metricas-stock se rankea dentro del tramo.
+Como cada tramo es una muestra al azar del catálogo, los cortes de 20 % y 50 %
+casi no se mueven, pero un producto justo en el borde puede caer en la letra
+vecina. Es una aproximación, a cambio de que la corrida entre en 60 s.
+
+**El botón.** «Regenerar» en `/admin/operaciones/alertas` pide los seis tramos
+uno atrás del otro, cada uno en su propio pedido. Si uno falla, dice cuál y
+los anteriores ya quedaron hechos.
+
+Si con el tiempo un tramo no entra en 40 s, se sube `TRAMOS_POR_DEFECTO` (con
+12 tramos cada uno corre una vez por ventana).
+
+## 2026-11-12 · Crons: todo el stock, escrituras en tandas y registro de cada corrida
+
+**Calculaban sobre una parte.** `stock_items` tiene 192.464 filas (lo dice
+`auditar:cortes`) y `paginar()` corta en 100.000 por defecto. alertas-stock y
+metricas-stock no miraban `truncado`: alertaban y guardaban la rotación sobre
+la mitad del stock. alertas-stock, además, leía `producto_rotacion` sin
+paginar, cortado en 1.000. `paginarCompleto()` (en `lib/supabase/paginar.ts`)
+sube el tope a 2.000.000 y tira si se llega: un cron que guarda un resultado
+no calcula sobre una parte. `auditar:cortes` lo reconoce como paginado.
+
+**El orden no era único.** Se paginaba por offset ordenando por `producto_id`
+(o `recurrencia_id`), que se repite. Entre páginas, Postgres no garantiza el
+orden de los empates y se pueden saltear o repetir filas. En generar-agenda
+eso es grave: una recurrencia salteada en «ya se generó hoy» se vuelve a
+crear. Ahora el orden lleva `id` de desempate.
+
+**Escrituras gigantes sin mirar el error.** alertas-stock borraba las activas
+y hacía un único insert de todas. No leía el error, y si el insert se caía
+por timeout la pantalla de alertas quedaba vacía. metricas-stock hacía un
+upsert único de todo `producto_rotacion`. Ahora las dos van de a 500 con
+`lib/supabase/tandas.ts` y cortan en el primer error. El borrado-y-recarga
+sigue sin ser atómico: si falla a la mitad, quedan las tandas que entraron, y
+la corrida termina en 500 y queda en el log.
+
+**URLs largas en generar-agenda.** `.in('id', recIds)` con hasta 500 UUIDs
+es el mismo riesgo de 400 que tenía avisos-proveedores. Va de a 100 y lee el
+error. Las recurrencias se leían con `.limit(500)` y la 501 no se generaba
+nunca: ahora se pagina.
+
+**Registro.** `lib/cron/corrida.ts` envuelve el GET de generar-agenda,
+alertas-stock, metricas-stock, nora-auditor, drive-ingesta, avisos-proveedores
+y avisos-compras. Escribe una línea JSON al empezar y otra al terminar (cron,
+corrida, ms, status, ok, error). Se filtra en los logs de Vercel por
+`"cron":`. Si el handler tira, responde 500 con el mensaje. No escribe en la
+base. Todos declaran `maxDuration = 60`.
+
+Lo que queda para que dejen de cortar: los índices (F5), sobre todo
+`movimientos_stock(tipo, fecha)` y `tareas(created_at)`, y bajar
+`cerebro_calcular`, que corre cada minuto y compite con todo (A3).
+`nora-auditor` sigue haciendo un SELECT y un INSERT por aviso.
+
 ## 2026-11-12 · El cerebro cada cinco minutos (migración 0297, sin aplicar)
 
 `cerebro_calcular()` corre por pg_cron **cada minuto** desde la 0288, con tope

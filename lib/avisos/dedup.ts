@@ -11,20 +11,16 @@
  * vez de publicar de más.
  */
 
+import { enTandas, insertarEnTandas as insertarGenerico } from '@/lib/supabase/tandas'
+
+export { enTandas }
+
 type Adm = { from: (t: string) => any }
 
 /** Claves por consulta. 50 × ~80 caracteres codificados queda lejos de 8 KB. */
 export const TANDA_CLAVES = 50
 /** Filas por insert. */
 export const TANDA_INSERT = 200
-
-export function enTandas<T>(xs: readonly T[], n: number): T[][] {
-  if (n < 1) throw new Error('enTandas: n tiene que ser ≥ 1')
-  const out: T[][] = []
-  for (let i = 0; i < xs.length; i += n) out.push(xs.slice(i, i + n))
-  return out
-}
-
 /** Las claves que ya tienen un aviso pendiente en `nora_avisos`. */
 export async function clavesYaPendientes(
   adm: Adm,
@@ -55,18 +51,12 @@ export function soloNuevos<H extends { clave: string }>(hallazgos: readonly H[],
   })
 }
 
-/** Inserta en tandas y corta en el primer error. Devuelve cuántas filas entraron. */
-export async function insertarEnTandas(
+/** Inserta avisos en tandas de 200. Corta en el primer error. */
+export function insertarEnTandas(
   adm: Adm,
   tabla: string,
   filas: readonly Record<string, unknown>[],
   tanda: number = TANDA_INSERT,
 ): Promise<number> {
-  let n = 0
-  for (const grupo of enTandas(filas, tanda)) {
-    const { error } = await adm.from(tabla).insert(grupo)
-    if (error) throw new Error(`no se pudo insertar en ${tabla} (llevaba ${n}): ${error.message ?? error}`)
-    n += grupo.length
-  }
-  return n
+  return insertarGenerico(adm, tabla, filas, tanda)
 }

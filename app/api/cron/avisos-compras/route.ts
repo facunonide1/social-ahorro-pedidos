@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
+import { conRegistro } from '@/lib/cron/corrida'
 import { automatizacionActiva } from '@/lib/os/definicion'
 import { publicarAvisosCompras } from '@/lib/compras/avisos'
 
@@ -31,7 +32,7 @@ export const maxDuration = 60
  * compras ya están publicados. Son dos trabajos y uno roto no justifica
  * perder el otro — es lo mismo que hace el cron del medidor.
  */
-export async function GET(req: NextRequest) {
+async function get(req: NextRequest) {
   if (!isCronRequest(req)) return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
   if (!(await automatizacionActiva('compras', 'avisos_compras', true))) {
     return NextResponse.json({ ok: true, omitida: 'la declaración la tiene apagada' })
@@ -54,3 +55,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: e?.message ?? 'falló' }, { status: 500 })
   }
 }
+
+export const GET = conRegistro('avisos-compras', get)

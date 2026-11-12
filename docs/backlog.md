@@ -34,7 +34,9 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   metricas-stock hace un upsert único de todo `producto_rotacion`.
 - Terminado: `maxDuration` en todos los crons, lecturas paginadas, escrituras
   en tandas, cada corrida loguea inicio, fin, duración y error (G5).
-- Rama: `fix/crons-tandas` · Estado: pendiente · Depende de: —
+  alertas-stock y metricas-stock por tramos con plazo: ninguna corrida pasa
+  los 60 s y, si una no llega, no escribe y la retoma la siguiente pasada.
+- Rama: `fix/crons-tandas` · Estado: en PR · Depende de: —
 
 **A3 · `cerebro_calcular` (206 timeouts por día)**
 - Qué: pg_cron lo corre cada minuto (`0288:478`) con tope de 50 s. Lee
@@ -68,8 +70,8 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   SELECT + INSERT por aviso. generar-agenda filtra `tareas` por
   `created_at`.
 - Terminado: avisos en tandas; índices en F5.
-- Rama: `fix/crons-tandas` · Estado: pendiente · Depende de: F5 para los
-  índices.
+- Rama: `fix/crons-tandas` · Estado: en PR (generar-agenda) / pendiente
+  (avisos del auditor en tandas) · Depende de: F5 para los índices.
 
 ## B · Compras e ingesta
 
@@ -265,7 +267,8 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Terminado: un wrapper `correrCron()` que loguea JSON (nombre, inicio,
   duración, ok o error) y responde igual que antes. La tabla de corridas
   va aparte, con migración.
-- Rama: `fix/crons-tandas` · Estado: pendiente · Depende de: —
+- Rama: `fix/crons-tandas` · Estado: en PR (7 crons envueltos; faltan los
+  otros 14) · Depende de: —
 
 **G6 · Variables de Supabase en Preview**
 - Qué: hoy están limitadas a `feature/crm-redesign`.
