@@ -6,6 +6,7 @@ import * as Iconos from 'lucide-react'
 import { ArrowRight, CircleSlash, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
+import { normalizarListas } from '@/lib/agentes/normalizar-equipo'
 import { formatARS } from '@/lib/utils/format'
 import { NIVEL_TEXTO, type Nivel } from '@/lib/agentes/elenco'
 import { Badge } from '@/components/ui/badge'
@@ -36,8 +37,10 @@ function Icono({ nombre, className }: { nombre: string; className?: string }) {
   return <C className={className} />
 }
 
-export function EquipoClient({ equipo, decisiones, alcanceNombre, esCadena, calculadoAt }: {
-  equipo: Lectura[]; decisiones: Decision[]; alcanceNombre: string; esCadena: boolean
+export function EquipoClient({
+  equipo: equipoProp, decisiones: decisionesProp, alcanceNombre, esCadena, calculadoAt,
+}: {
+  equipo: Lectura[] | null; decisiones: Decision[] | null; alcanceNombre: string; esCadena: boolean
   /** De cuándo son los números de los agentes. Null = nunca se calcularon. */
   calculadoAt: string | null
 }) {
@@ -46,13 +49,16 @@ export function EquipoClient({ equipo, decisiones, alcanceNombre, esCadena, calc
   const [decidiendo, setDecidiendo] = useState(false)
   const [resueltas, setResueltas] = useState<string[]>([])
 
-  const pendientes = decisiones.filter((d) => !resueltas.includes(d.clave))
+  // La query puede fallar y llegar null. Filtrar eso tira
+  // "Cannot read properties of null (reading 'filter')" y se cae /admin.
+  const { equipo, decisiones } = normalizarListas(equipoProp, decisionesProp)
+  const pendientes = (decisiones ?? []).filter((d) => !resueltas.includes(d.clave))
   const conCosto = pendientes.filter((d) => d.costo_por_dia != null)
   const sinCosto = pendientes.filter((d) => d.costo_por_dia == null)
   const porDia = conCosto.reduce((a, d) => a + Number(d.costo_por_dia), 0)
 
-  const encendidos = equipo.filter((a) => a.encendido)
-  const apagados = equipo.filter((a) => !a.encendido)
+  const encendidos = (equipo ?? []).filter((a) => a.encendido)
+  const apagados = (equipo ?? []).filter((a) => !a.encendido)
 
   /** C.5 · lo que se decide queda en la bitácora: es lo que llena el marcador. */
   async function decidir(d: Decision, que: 'aceptada' | 'rechazada') {

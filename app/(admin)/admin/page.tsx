@@ -91,6 +91,63 @@ type ResumenGerencial = {
 
 const OC_ABIERTAS = ['borrador', 'enviada', 'confirmada', 'recibida_parcial']
 
+const DECISIONES_TIMEOUT_MS = 5_000
+
+type QueryDecisiones = {
+  data: unknown[] | null
+  error: { message: string; code: string | null } | null
+}
+
+/**
+ * `decisiones_pendientes` es una vista pesada. Si PostgREST corta (statement
+ * timeout), `data` vuelve null y la home hacía `.filter` sobre eso. A los 5s
+ * devolvemos [] para no trabar Mission Control. El error se loguea con código
+ * y mensaje, sin las filas.
+ */
+async function leerDecisionesPendientes(
+  sb: ReturnType<typeof createClient>,
+): Promise<unknown[]> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<QueryDecisiones>((resolve) => {
+    timer = setTimeout(() => {
+      resolve({ data: null, error: { message: 'timeout 5s', code: 'timeout' } })
+    }, DECISIONES_TIMEOUT_MS)
+  })
+
+  const query: PromiseLike<QueryDecisiones> = sb
+    .from('decisiones_pendientes')
+    .select('*')
+    .limit(200)
+    .then(
+      (res) => ({
+        data: (res.data as unknown[] | null) ?? null,
+        error: res.error
+          ? { message: res.error.message, code: res.error.code ?? null }
+          : null,
+      }),
+      (e: unknown) => ({
+        data: null,
+        error: {
+          message: e instanceof Error ? e.message : 'error',
+          code: 'exception',
+        },
+      }),
+    )
+
+  try {
+    const res = await Promise.race([query, timeout])
+    if (res.error) {
+      console.error('[admin/home] decisiones_pendientes', {
+        code: res.error.code,
+        message: res.error.message,
+      })
+    }
+    return res.data ?? []
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
 /**
  * Resumen gerencial (absorbido del ex /admin/ejecutivo) — solo roles
  * transversales. Vistazo de 30s a nivel dirección. Tolerante a tablas vacías.
@@ -243,7 +300,7 @@ export default async function MissionControlPage() {
   //
   // Las decisiones las filtra la RLS por sucursal: un encargado ve las suyas.
   const sbEq = createClient()
-  const [kpis, gerencial, urgente, demo, equipo, { data: decisiones }, { data: sucActiva }] =
+  const [kpis, gerencial, urgente, demo, equipo, decisiones, sucActiva] =
     await Promise.all([
       esTransversal ? getKpis() : Promise.resolve(null),
       esTransversal ? getResumenGerencial() : Promise.resolve(null),
@@ -254,13 +311,14 @@ export default async function MissionControlPage() {
       // alguien, y si hubiera 200 el problema no es el corte de PostgREST. Es
       // para que el auditor de cortes no tenga que hacer una excepción con una
       // vista cuyo conteo no termina — y `decisiones_pendientes` es una de las
-      // dos que el contador no puede contar.
-      sbEq.from('decisiones_pendientes').select('*').limit(200),
+      // dos que el contador no puede contar. Si la vista no responde, la home
+      // sigue: ver `leerDecisionesPendientes`.
+      leerDecisionesPendientes(sbEq),
       sucursalId
         ? sbEq.from('sucursales').select('nombre').eq('id', sucursalId).maybeSingle()
         : Promise.resolve({ data: null }),
     ])
-  const nombreAlcance = (sucActiva as any)?.nombre ?? 'la cadena'
+  const nombreAlcance = (sucActiva.data as any)?.nombre ?? 'la cadena'
 
   return (
     <div className="container mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-6 md:py-8">
@@ -297,9 +355,9 @@ export default async function MissionControlPage() {
           que una persona pueda hacer su día sin bajar a los listados — si para
           operar hay que ir ahí, esta capa está mal armada. */}
       <EquipoClient
-        equipo={equipo.agentes as any}
+        equipo={(equipo.agentes ?? []) as any}
         calculadoAt={equipo.calculadoAt}
-        decisiones={decisiones as any}
+        decisiones={(decisiones ?? []) as any}
         alcanceNombre={nombreAlcance}
         esCadena={esTodas}
       />
