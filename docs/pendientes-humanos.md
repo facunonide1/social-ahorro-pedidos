@@ -1,0 +1,117 @@
+# Pendientes de Facu
+
+Lista viva de lo que necesita una persona, ordenada por prioridad. Cada ítem
+dice qué hace falta, por qué, qué se traba si no llega, dónde se resuelve y
+el texto exacto de la firma.
+
+Nada de esto lo hace un agente: no aplica SQL, no toca secretos ni
+variables, no mergea a main y no deploya.
+
+---
+
+## P1 · Merge del hotfix del build (PR #9)
+
+- **Qué:** mergear y deployar [PR #9](https://github.com/facunonide1/social-ahorro-pedidos/pull/9).
+- **Por qué:** hoy cada deploy de producción escribe `agentes_resumen_snapshot`
+  y le carga a la base unos 20 s de cálculo. Y el comando de la bitácora para
+  correr el auditor crea usuarios reales.
+- **Si no llega:** sigue pasando eso en cada deploy.
+- **Dónde:** GitHub, y después Vercel.
+- **Rollback:** promover el deploy anterior (`dpl_GviuDZxnxRuSC97cn8WybpbqkuDJ`).
+- **Firma:** «Firmo merge y deploy del PR #9, SHA 9f170fd».
+
+## P2 · Acceso de solo lectura a la base para los agentes
+
+- **Qué:** abrir una sesión nueva en el entorno de Claude
+  `social-ahorro-pedidos` (ya permite `mcp.supabase.com` y la URL del
+  proyecto), y conectar el MCP de Supabase en modo solo lectura.
+- **Por qué:** sin la base no se puede:
+  - armar el revoke de las 9 funciones (F2);
+  - traer el cuerpo de `decisiones_pendientes` (A4) y el resto del esquema
+    que vive sólo en la base (F8);
+  - leer los advisors (F5, F6);
+  - revisar los usuarios `@rls.test` (F7).
+- **Si no llega:** A4, F2, F5 (la lista real), F6, F7 y F8 quedan
+  bloqueados. El resto sigue.
+- **Dónde:** claude.ai/code, con una sesión nueva en ese entorno.
+- **Firma:** «Autorizo acceso de solo lectura del MCP de Supabase al proyecto
+  hrjxjbirajbsurobqdca».
+
+## P3 · Cambiar el PIN del super admin
+
+- **Qué:** poner un PIN nuevo desde `/admin/configuracion/usuarios`.
+- **Por qué:** el PIN actual es débil. Cuando entre F1, la pantalla rechaza
+  los PINs débiles (todos iguales, escaleras, años).
+- **Si no llega:** el acceso queda abierto a quien pruebe los PINs obvios.
+- **Dónde:** la app, logueado.
+- **Firma:** no hace falta; avisar cuando esté.
+
+## P4 · Protección de contraseñas filtradas
+
+- **Qué:** prenderla en Supabase, en Authentication → Sign In / Providers →
+  Email.
+- **Por qué:** sin ella, Auth acepta contraseñas que ya aparecen en
+  filtraciones.
+- **Si no llega:** F4 sigue abierto.
+- **Dónde:** el dashboard de Supabase.
+- **Firma:** «Firmo activar la protección de contraseñas filtradas en Supabase
+  Auth».
+
+## P5 · Migraciones, en este orden
+
+No se aplica ninguna hasta que su PR esté mergeado. Cada una tiene su
+rollback en `supabase/rollbacks/`.
+
+| Orden | Migración | PR | Qué hace | Rollback | Firma |
+|---|---|---|---|---|---|
+| 1 | 0294 | #5 (ya en main) | Varias carpetas de Drive | `rollbacks/0294_…` | «Firmo aplicar migración 0294 en prod» |
+| 2 | 0295 | #6 → D1 | `vigente_desde` y `clave_dedup` (sólo columnas) | `rollbacks/0295_…` | «Firmo aplicar migración 0295 en prod» |
+| 3 | 0296 | #7 → B1 | `sifaco_seccion_proveedor` con RLS | `rollbacks/0296_…` | «Firmo aplicar migración 0296 en prod» |
+
+Las siguientes se agregan a la tabla a medida que se preparen (cerebro, Monroe,
+maestro por sucursal, revoke, índices).
+
+## P6 · Variables de Supabase en Vercel Preview
+
+- **Qué:** que `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  apliquen a todas las ramas de Preview, no sólo a `feature/crm-redesign`. La
+  `SUPABASE_SERVICE_ROLE_KEY` conviene dejarla fuera de Preview.
+- **Por qué:** sin ellas, las previews compilan pero no se pueden probar
+  logueado.
+- **Si no llega:** las pruebas en preview quedan sin base. CI no se traba:
+  no usa secretos.
+- **Dónde:** Vercel → Settings → Environment Variables.
+- **Firma:** «Firmo ampliar las env de Supabase (URL y anon) a todas las ramas
+  de Preview».
+
+## P7 · Cerrar PRs reemplazados
+
+- **Qué:** cerrar el PR #3 (su 0294 choca con la de main y su comparador lo
+  reemplazaron el #5 y el #6). El #6 y el #7 se cierran cuando entren sus
+  reemplazos (D1 y B1).
+- **Por qué:** que no se mergee por error una 0294 duplicada.
+- **Dónde:** GitHub.
+- **Firma:** «Firmo cerrar el PR #3 como reemplazado».
+
+## P8 · PR #1 (guardrail) y PR #2 (docs)
+
+- **Qué:** decidir si entran.
+- **#1:** agrega hooks de Claude (`.claude/`) que bloquean scripts que
+  escriben en producción. Mergea limpio contra main.
+- **#2:** agrega `docs/COMO-FUNCIONA-HOY.md`.
+- **Firma:** «Firmo merge del PR #1, SHA 35ab431» y/o «Firmo merge del PR #2,
+  SHA 6c15bfc», o «Cerrar #1/#2».
+
+## P9 · Usuarios `@rls.test`
+
+- **Qué:** si no llega P2, correr en la máquina (es de solo lectura):
+  `npx tsx --env-file=.env.local scripts/buscar-usuarios-auditor.ts`
+  (está en la rama del PR #9).
+- **Si aparece alguno:** borrarlo de Auth y de `users_admin`.
+- **Firma para borrar:** «Firmo borrar los usuarios @rls.test listados».
+
+## P10 · Datos de negocio
+
+- Confirmar el mapeo de secciones de SIFACO, sobre todo `NOR → NORMA`, que
+  está dudoso.
+- Quién da acceso a FIND, y cómo, cuando llegue el momento (H2).

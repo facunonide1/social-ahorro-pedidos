@@ -1,5 +1,20 @@
 # Bitácora
 
+## 2026-11-12 · Backlog y pendientes de Facu
+
+`docs/backlog.md` junta todo lo que falta para dar NORA por terminada, por
+épica: estabilidad, compras e ingesta, maestro por sucursal, precios,
+multisucursal, seguridad, calidad, fuentes intercambiables y pulido. Cada ítem
+tiene criterio de terminado, rama, estado y dependencia.
+`docs/pendientes-humanos.md` junta lo que necesita a Facu, con el texto de
+firma.
+
+En el relevamiento salió que cuatro piezas del esquema no están en ninguna
+migración y viven sólo en la base: `decisiones_pendientes`,
+`proveedores_detectar`, `sifaco_aplicar_maestro` y
+`rls_escrituras_que_dan_lectura`. `cerebro_calcular` corre por pg_cron cada
+minuto con tope de 50 s.
+
 ## 2026-11-12 · El build no escribe en producción
 
 `npm run build` corre `verificar:coherencia`, y eso llamaba a
