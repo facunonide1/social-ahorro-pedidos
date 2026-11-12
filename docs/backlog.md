@@ -327,7 +327,8 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Qué: las pantallas más usadas (compras, sifaco, drive, pedidos).
 - Terminado: cada una distingue «vacío», «no se pudo leer» y «sin
   permiso».
-- Rama: `feat/pulido-estados` · Estado: pendiente · Depende de: —
+- Rama: `feat/pulido-errores-lectura` · Estado: en PR (homes de Compras y
+  Pedidos; el patrón queda para las demás) · Depende de: —
 
 ## Fuera de alcance
 

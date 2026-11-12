@@ -1,5 +1,23 @@
 # Bitácora
 
+## 2026-11-12 · Un número que no se pudo leer no es un cero
+
+Las homes de Compras y Pedidos leían sus números sin mirar el error. Si una
+consulta caía (por un timeout, por ejemplo), el KPI mostraba 0: «0 pedidos
+abiertos», «0 faltantes». Un número plausible que miente sin avisar es el error
+que este proyecto ya encontró cuatro veces con los cortes de 1.000.
+
+`erroresDeLectura` (`lib/supabase/errores.ts`) junta los errores de las
+lecturas de una pantalla. `AvisoLectura` (`components/shared/`) los muestra
+arriba: «No se pudo leer: … Esos números aparecen vacíos, no en cero». Un
+«permission denied» de RLS aparece aparte, como «tu rol no puede ver…», porque
+no es una caída. En Pedidos, el KPI que falló queda en «—» (`KpiCard` ya lo
+hacía con `null`).
+
+Es el patrón para el resto de las pantallas. Esta pasada cubre las dos homes
+más usadas. Las demás (sifaco, drive, comparador) ya decían sus errores o se
+arreglaron en sus PRs (#23, #25, #32).
+
 ## 2026-11-12 · Estado del desarrollo: qué quedó, qué espera firma y en qué orden
 
 **Hecho y en main:** #8, #9 (el build no escribe en prod), #10 (backlog y

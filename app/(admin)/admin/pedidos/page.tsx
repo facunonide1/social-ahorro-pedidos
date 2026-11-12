@@ -1,3 +1,5 @@
+import { erroresDeLectura } from '@/lib/supabase/errores'
+import { AvisoLectura } from '@/components/shared/aviso-lectura'
 import { Package, MapPin, Store, ClipboardList, PackageX, Truck } from 'lucide-react'
 
 import { requireAdminHubAccess } from '@/lib/admin-hub/auth'
@@ -35,7 +37,7 @@ export default async function PedidosDashboard() {
     entregadosQ = entregadosQ.eq('sucursal_id', sucursalId)
   }
 
-  const [{ count: abiertos }, { count: entregadosHoy }, { count: sinSucursal }, { data: canales }] =
+  const [rAbiertos, rEntregados, rSinSucursal, rCanales] =
     await Promise.all([
       abiertosQ,
       entregadosQ,
@@ -43,14 +45,24 @@ export default async function PedidosDashboard() {
       sb.from('canales_venta').select('id, nombre, sucursal_despacho_id'),
     ])
 
+  // Una lectura que falla no es un 0: se muestra vacía y se avisa arriba.
+  const errores = erroresDeLectura({
+    'pedidos abiertos': rAbiertos, 'entregados hoy': rEntregados,
+    'pedidos sin sucursal': rSinSucursal, 'canales': rCanales,
+  })
+  const abiertos = rAbiertos.error ? null : rAbiertos.count
+  const entregadosHoy = rEntregados.error ? null : rEntregados.count
+  const sinSucursal = rSinSucursal.error ? null : rSinSucursal.count
+  const canales = rCanales.error ? null : rCanales.data
+
   const sinRegla = (canales ?? []).filter((c: any) => !c.sucursal_despacho_id).length
 
   const kpis: SectorKpi[] = [
-    { label: 'Pedidos abiertos', value: abiertos ?? 0, icon: Package, href: '/admin/pedidos/tablero' },
-    { label: 'Entregados hoy', value: entregadosHoy ?? 0, icon: Truck },
+    { label: 'Pedidos abiertos', value: abiertos, icon: Package, href: '/admin/pedidos/tablero' },
+    { label: 'Entregados hoy', value: entregadosHoy, icon: Truck },
     {
       label: 'Sin sucursal asignada',
-      value: sinSucursal ?? 0,
+      value: sinSucursal,
       icon: MapPin,
       variant: (sinSucursal ?? 0) > 0 ? 'warning' : 'default',
       href: '/admin/pedidos/tablero?sucursal=sin',
@@ -89,6 +101,8 @@ export default async function PedidosDashboard() {
       kpis={kpis}
       nora={nora}
       accesos={accesos}
-    />
+    >
+      <AvisoLectura errores={errores} />
+    </SectorDashboard>
   )
 }
