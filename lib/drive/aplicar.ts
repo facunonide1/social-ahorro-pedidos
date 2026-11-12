@@ -11,6 +11,7 @@ import { subirDocumento } from '@/lib/documentos/subida'
 import { prepararRevision } from '@/lib/documentos/preparar-revision'
 
 import { umbralMatchLista, umbralScoreNombre, preciosAutoAplicar } from './flag'
+import { TOPE_BYTES } from './lote'
 import { parsearFacturaTexto } from './facturas-texto'
 import { parsearGrilla, parsearMayorsur, type FilaLista, type ListaParseada } from './listas'
 import {
@@ -25,7 +26,6 @@ import { detectarProveedor, sucursalDeArchivo, type ProveedorRef } from './prove
 type Adm = any
 
 const LOTE = 400
-const TOPE_MAESTRO = 12 * 1024 * 1024
 
 export async function catalogoMatch(adm: Adm): Promise<ProductoRef[]> {
   const { filas } = await paginar<any>(adm.from('productos_catalogo')
@@ -323,7 +323,7 @@ export async function estacionarMaestro(adm: Adm, opts: {
   usuarioId: string | null
 }) {
   const sucursal = sucursalDeArchivo(opts.nombre, opts.ruta)
-  if (opts.buf.length > TOPE_MAESTRO) {
+  if (opts.buf.length > TOPE_BYTES) {
     return {
       ok: false as const,
       sucursal,

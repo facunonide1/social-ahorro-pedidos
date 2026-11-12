@@ -40,6 +40,25 @@ El cron, sin sesión, es `GET /api/cron/compras-rematch` con `CRON_SECRET`: el
 middleware manda a login cualquier otra API sin sesión, así que el secreto no
 serviría en la ruta de compras. No está en `vercel.json`. Se corre a mano.
 
+## 2026-11-12 · El cron no se come un archivo que no entra
+
+`/api/cron/drive-ingesta` tiene `maxDuration` 60. La planilla «Compras y
+precios por droguería» quedó en `procesando`: la corrida murió a la mitad y
+nadie la devolvía a la cola.
+
+Un archivo de más de 12 MB se marca `previa` con `destino_ref =
+omitido_por_tamano` antes de descargarlo, así no gasta uno de los 4 lugares.
+Si Drive no manda el tamaño (un Google Sheet) y al bajarlo igual pasa el
+tope, tampoco se parsea. La planilla, un maestro, o un archivo de 2 MB o más
+entra de a uno por corrida. A los 45 segundos desde que arrancó la ingesta no
+se empieza otro: el resto sigue `pendiente`.
+
+Si `procesando` tiene más de 10 minutos —más que los 60 del tope, menos que
+los 30 del cron— vuelve a `pendiente` con intento+1. Empezar a procesarlo
+suma otro intento, igual que antes. Al llegar a 3, `error`. `updated_at` se
+escribe al pasar a `procesando`, para no recuperar un archivo que está
+corriendo de verdad.
+
 ## 2026-11-12 · Google Drive: carpetas compartidas, listas al comparador, maestro solo en previa
 
 NORA puede leer las carpetas «compras farmacias» y «compras farmacias (privado)».

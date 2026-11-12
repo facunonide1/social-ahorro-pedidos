@@ -13,6 +13,9 @@ import {
 import { catalogoAcotado, indiceDeNombres, matchearProducto, porcentajeMatch, scoreNombre } from './match'
 import { parsearArchivosCargados, parsearPestanaCompras, parsearPestanaPrecios } from './planilla'
 import { detectarProveedor, sucursalDeArchivo } from './proveedor'
+import {
+  MINUTOS_TRABADO, TOPE_BYTES, UMBRAL_PESADO, decisionTrabado, planificarCorrida, sigueEnPresupuesto,
+} from './lote'
 import { tomarPagina, tareasIniciales } from './recorrer'
 import { avisoPlazo, proximoIntento } from './vencimiento'
 
@@ -364,6 +367,53 @@ test('el recorrido es BFS, no baja de la profundidad y no duplica el file id', a
     vistosArch.push(...paso.archivos.map((a) => a.fileId))
   }
   assert.deepEqual(vistosArch.sort(), ['f1', 'foto'])
+})
+
+test('lo que pesa más de 12 MB no ocupa lugar en el lote', () => {
+  const grande = { id: 'g', bytes: TOPE_BYTES + 1, clasificacion: 'precios', clasificacionForzada: null }
+  const chicos = [1, 2, 3, 4, 5].map((n) => ({
+    id: `c${n}`, bytes: 1000, clasificacion: 'factura', clasificacionForzada: null,
+  }))
+  const plan = planificarCorrida([grande, ...chicos], { max: 4 })
+  assert.deepEqual(plan.omitidos.map((a) => a.id), ['g'])
+  assert.equal(plan.elegir.length, 4)
+  assert.equal(plan.elegir.some((a) => a.id === 'g'), false)
+  assert.deepEqual(plan.dejar.map((a) => a.id), ['c5'])
+})
+
+test('entra un solo pesado por corrida y el presupuesto corta a los 45 segundos', () => {
+  const planilla = { id: 'p', bytes: null, clasificacion: 'planilla', clasificacionForzada: null }
+  const otra = { id: 'p2', bytes: null, clasificacion: 'planilla', clasificacionForzada: null }
+  const maestro = { id: 'm', bytes: 100, clasificacion: 'factura', clasificacionForzada: 'maestro' }
+  const mediano = { id: 'med', bytes: UMBRAL_PESADO, clasificacion: 'precios', clasificacionForzada: null }
+  const chico = { id: 'c', bytes: UMBRAL_PESADO - 1, clasificacion: 'factura', clasificacionForzada: null }
+  const plan = planificarCorrida([planilla, otra, maestro, mediano, chico], { max: 4 })
+  assert.deepEqual(plan.elegir.map((a) => a.id), ['p', 'c'])
+  assert.deepEqual(plan.dejar.map((a) => a.id), ['p2', 'm', 'med'])
+  assert.equal(plan.omitidos.length, 0)
+  assert.equal(sigueEnPresupuesto(44_999), true)
+  assert.equal(sigueEnPresupuesto(45_000), false)
+})
+
+test('un procesando de más de 10 minutos vuelve a pendiente y al tope queda en error', () => {
+  const ahora = new Date('2026-11-12T15:00:00Z')
+  const hace = (min: number) => new Date(ahora.getTime() - min * 60_000).toISOString()
+  assert.equal(decisionTrabado({
+    updatedAt: hace(MINUTOS_TRABADO - 1), ahora, intentos: 1, maxIntentos: 3,
+  }).accion, 'esperar')
+  const retry = decisionTrabado({
+    updatedAt: hace(MINUTOS_TRABADO + 1), ahora, intentos: 1, maxIntentos: 3,
+  })
+  assert.equal(retry.accion, 'reintentar')
+  assert.equal(retry.intentos, 2)
+  const agotado = decisionTrabado({
+    updatedAt: hace(30), ahora, intentos: 2, maxIntentos: 3,
+  })
+  assert.equal(agotado.accion, 'error')
+  assert.equal(agotado.intentos, 3)
+  assert.equal(decisionTrabado({
+    updatedAt: null, ahora, intentos: 1, maxIntentos: 3,
+  }).accion, 'reintentar')
 })
 
 test('el refresh de testing avisa el último día y el reintento espera', () => {

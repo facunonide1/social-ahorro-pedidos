@@ -9,6 +9,9 @@ import {
 import { clasificar, type Clasificacion } from './clasificar'
 import { esElMismoContenido } from './dedupe'
 import { ingestaHabilitada, MAX_INTENTOS, MAX_PROFUNDIDAD, ARCHIVOS_POR_CORRIDA } from './flag'
+import {
+  TOPE_BYTES, decisionTrabado, mensajeTope, planificarCorrida, sigueEnPresupuesto,
+} from './lote'
 import { descargar, listarPagina, refrescarAccessToken } from './google'
 import { parsearMayorsur } from './listas'
 import { claveDesdeEnv, descifrarToken } from './crypto'
@@ -43,6 +46,7 @@ async function marcarVencida(adm: Adm, row: { id: string; connected_at: string }
 }
 
 export async function correrIngesta(opts: { manual?: boolean } = {}) {
+  const inicio = Date.now()
   if (!ingestaHabilitada()) return { ok: true, omitido: 'deshabilitado' }
   const adm = createAdminClient()
   const { data: conexion } = await adm.from('integraciones_google_drive')
@@ -77,7 +81,7 @@ export async function correrIngesta(opts: { manual?: boolean } = {}) {
   if (!carpetas?.length) return { ok: true, sin_carpetas: true }
 
   const encolados = await encolar(adm, acceso.accessToken, conexion, carpetas as any[])
-  const procesados = await procesarLote(adm, acceso.accessToken, conexion.owner_admin_id)
+  const procesados = await procesarLote(adm, acceso.accessToken, conexion.owner_admin_id, inicio)
   return { ok: true, manual: !!opts.manual, ...encolados, ...procesados }
 }
 
@@ -157,19 +161,65 @@ async function guardarPagina(adm: Adm, archivos: { fileId: string; nombre: strin
   return n
 }
 
-async function procesarLote(adm: Adm, token: string, usuarioId: string | null) {
+async function recuperarTrabados(adm: Adm) {
+  const { data } = await adm.from('drive_archivos_ingestados')
+    .select('id, intentos, updated_at')
+    .eq('estado', 'procesando')
+    .order('updated_at', { ascending: true })
+    .limit(40)
+  const ahora = new Date()
+  let recuperados = 0
+  for (const a of (data ?? []) as any[]) {
+    const d = decisionTrabado({
+      updatedAt: a.updated_at ?? null,
+      ahora,
+      intentos: Number(a.intentos ?? 0),
+      maxIntentos: MAX_INTENTOS,
+    })
+    if (d.accion === 'esperar') continue
+    const estado = d.accion === 'error' ? 'error' : 'pendiente'
+    await adm.from('drive_archivos_ingestados').update({
+      estado,
+      intentos: d.intentos,
+      error: d.accion === 'error'
+        ? 'Quedó trabado en procesando y se agotaron los intentos.'
+        : 'Quedó trabado en procesando. Vuelve a la cola.',
+      proximo_intento_at: null,
+      updated_at: ahora.toISOString(),
+    }).eq('id', a.id)
+    recuperados++
+  }
+  return recuperados
+}
+
+async function procesarLote(adm: Adm, token: string, usuarioId: string | null, inicio: number) {
+  const recuperados = await recuperarTrabados(adm)
   const { data: cola } = await adm.from('drive_archivos_ingestados')
     .select('id, file_id, nombre, mime, ruta_relativa, clasificacion, clasificacion_forzada, intentos, bytes, web_view_link, proximo_intento_at')
     .eq('estado', 'pendiente')
     .order('created_at', { ascending: true })
-    .limit(20)
+    .limit(40)
   const ahoraMs = Date.now()
   const archivos = ((cola ?? []) as any[]).filter((a) => !a.proximo_intento_at || Date.parse(a.proximo_intento_at) <= ahoraMs)
-  archivos.sort((a, b) => Number(b.clasificacion === 'planilla') - Number(a.clasificacion === 'planilla'))
-  const lote = archivos.slice(0, ARCHIVOS_POR_CORRIDA)
+  const plan = planificarCorrida(archivos.map((a) => ({
+    ...a,
+    bytes: a.bytes == null ? null : Number(a.bytes),
+    clasificacionForzada: a.clasificacion_forzada ?? null,
+  })), { max: ARCHIVOS_POR_CORRIDA })
   const resultados: { fileId: string; estado: string }[] = []
+  for (const archivo of plan.omitidos) {
+    const mb = Math.round(Number(archivo.bytes) / 1_048_576)
+    await adm.from('drive_archivos_ingestados').update({
+      estado: 'previa',
+      destino_ref: 'omitido_por_tamano',
+      error: mensajeTope(mb),
+      updated_at: new Date().toISOString(),
+    }).eq('id', archivo.id)
+    resultados.push({ fileId: archivo.file_id, estado: 'previa' })
+  }
   let cubiertos = new Set<string>()
-  for (const archivo of lote) {
+  for (const archivo of plan.elegir) {
+    if (!sigueEnPresupuesto(Date.now() - inicio)) break
     if (cubiertos.has(archivo.file_id)) {
       await adm.from('drive_archivos_ingestados').update({
         estado: 'ok', destino_ref: 'cubierto_por_planilla', error: null,
@@ -178,7 +228,9 @@ async function procesarLote(adm: Adm, token: string, usuarioId: string | null) {
       continue
     }
     const intentos = Number(archivo.intentos ?? 0) + 1
-    await adm.from('drive_archivos_ingestados').update({ estado: 'procesando', intentos }).eq('id', archivo.id)
+    await adm.from('drive_archivos_ingestados').update({
+      estado: 'procesando', intentos, updated_at: new Date().toISOString(),
+    }).eq('id', archivo.id)
     try {
       const r = await procesarUno(adm, token, archivo, usuarioId)
       if (r.cubiertos) cubiertos = new Set([...cubiertos, ...r.cubiertos])
@@ -207,7 +259,7 @@ async function procesarLote(adm: Adm, token: string, usuarioId: string | null) {
       resultados.push({ fileId: archivo.file_id, estado })
     }
   }
-  return { procesados: resultados.length, resultados }
+  return { procesados: resultados.length, resultados, recuperados, omitidos: plan.omitidos.length }
 }
 
 async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: string | null): Promise<{
@@ -227,6 +279,15 @@ async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: str
   if (forzada === 'ignorar') return { estado: 'ok', clasificacion: 'ignorar' }
   const buf = await descargar(token, { id: archivo.file_id, mimeType: archivo.mime })
   const hash = createHash('sha256').update(buf).digest('hex')
+  if (buf.length > TOPE_BYTES) {
+    const clas = forzada ?? clasificar({ nombre: archivo.nombre, mime: archivo.mime, ruta: archivo.ruta_relativa })
+    return {
+      estado: 'previa',
+      clasificacion: clas,
+      error: mensajeTope(Math.round(buf.length / 1_048_576)),
+      hash,
+    }
+  }
   let clas = forzada ?? clasificar({ nombre: archivo.nombre, mime: archivo.mime, ruta: archivo.ruta_relativa })
   if (!forzada && (archivo.mime?.includes('spreadsheet') || /\.xls/i.test(archivo.nombre))) {
     // Señales del contenido, sin cambiar un forzado.
