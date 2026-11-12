@@ -272,7 +272,7 @@ async function getLoUrgente(rol: AdminRole, custom: PermisosCustom | null): Prom
  * lo urgente · grilla de sub-apps · KPIs + sucursales en vivo (roles altos).
  * Todo filtrado por rol/permisos y tolerante a datos vacíos.
  */
-export default async function MissionControlPage() {
+export default async function MissionControlPage({ searchParams }: { searchParams?: { denied?: string } }) {
   const profile = await requireAdminHubAccess()
 
   const { data: fila } = await createAdminClient()
@@ -334,6 +334,14 @@ export default async function MissionControlPage() {
           {ADMIN_ROLE_LABELS[profile.rol]} · NORA OS
         </p>
       </header>
+
+      {/* Llegó acá porque una pantalla le dijo que no: se lo decimos, en vez de
+          dejarlo en la home sin saber por qué. */}
+      {searchParams?.denied === '1' && (
+        <div role="alert" className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+          No tenés permiso para la pantalla que quisiste abrir. Si la necesitás, pedile a un super admin que te lo habilite en Configuración → Usuarios.
+        </div>
+      )}
 
       {/* Antes que cualquier número: qué parte de lo que sigue es inventado. */}
       <AvisoDemo conceptos={demo.porConcepto} total={demo.total} sinDemo={verSinDemo} />

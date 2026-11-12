@@ -28,7 +28,7 @@ export default async function ClienteMostradorPage() {
     .select('rol, activo, permisos_custom, sucursal_id').eq('id', user.id)
     .maybeSingle<{ rol: AdminRole; activo: boolean; permisos_custom: PermisosCustom | null; sucursal_id: string | null }>()
   if (!me?.activo) redirect('/logout?reason=sin_permiso')
-  if (!puede(me.rol, me.permisos_custom ?? null, 'clientes', 'ver')) redirect('/hub?denied=1')
+  if (!puede(me.rol, me.permisos_custom ?? null, 'clientes', 'ver')) redirect('/admin?denied=1')
 
   return (
     <ClienteClient puedeCrear={puede(me.rol, me.permisos_custom ?? null, 'clientes', 'crear')} />
