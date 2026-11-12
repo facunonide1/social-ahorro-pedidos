@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { conRegistro } from '@/lib/cron/corrida'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
@@ -15,7 +16,7 @@ export const runtime = 'nodejs'
  * score ponderado. Solo implementa fuente_dato 'tareas' por ahora
  * (asistencia/ventas/manual quedan en TODO hasta integrar SIFACO).
  */
-export async function GET(req: NextRequest) {
+async function get(req: NextRequest) {
   if (!isCronRequest(req))
     return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
 
@@ -122,3 +123,5 @@ function periodoFin(o: any): Date {
   else d.setFullYear(d.getFullYear() + 1)
   return d
 }
+
+export const GET = conRegistro('calcular-objetivos', get)

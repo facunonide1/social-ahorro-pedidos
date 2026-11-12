@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { conRegistro } from '@/lib/cron/corrida'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
@@ -16,7 +17,7 @@ export const runtime = 'nodejs'
  *
  * Los objetivos mensuales los recalcula el cron calcular-objetivos (F6).
  */
-export async function GET(req: NextRequest) {
+async function get(req: NextRequest) {
   if (!isCronRequest(req)) return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
   // La declaración de la fábrica puede apagarla. Fallback `true`: lo que hace el
   // código. Un cron que corre de más se nota; uno que no corre, no.
@@ -94,3 +95,5 @@ async function run() {
 
   return NextResponse.json({ ok: true, fecha: fechaAR, empleados: empRows.length, sucursales: sucRows.length })
 }
+
+export const GET = conRegistro('metricas-nightly', get)

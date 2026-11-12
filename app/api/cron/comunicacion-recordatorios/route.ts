@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { conRegistro } from '@/lib/cron/corrida'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
@@ -7,7 +8,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 /** Postea los recordatorios programados vencidos y reprograma (Comunicación · T8). */
-export async function GET(req: NextRequest) {
+async function get(req: NextRequest) {
   if (!isCronRequest(req)) return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
   const adm = createAdminClient()
   const ahora = new Date()
@@ -24,3 +25,5 @@ export async function GET(req: NextRequest) {
   }
   return NextResponse.json({ ok: true, posteados })
 }
+
+export const GET = conRegistro('comunicacion-recordatorios', get)

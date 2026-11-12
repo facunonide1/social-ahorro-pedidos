@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { conRegistro } from '@/lib/cron/corrida'
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { isCronRequest } from '@/lib/cron/auth'
@@ -42,7 +43,7 @@ export const runtime = 'nodejs'
  * BORRAR ESTE ARCHIVO DESPUÉS DEL 25-nov-2026 (90 días), si nadie lo reclamó.
  * No queda nada más que sacar: no está en vercel.json ni lo importa nadie.
  */
-export async function GET(req: NextRequest) {
+async function get(req: NextRequest) {
   if (!isCronRequest(req))
     return NextResponse.json({ error: 'sin_secret' }, { status: 401 })
 
@@ -162,3 +163,5 @@ function calcularProxima(
 function daysInMonth(d: Date): number {
   return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
 }
+
+export const GET = conRegistro('recurrencias', get)

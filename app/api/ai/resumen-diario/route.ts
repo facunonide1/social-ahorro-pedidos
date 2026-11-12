@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { conRegistro } from '@/lib/cron/corrida'
 
 import { createClient } from '@/lib/supabase/server'
 import { hasAnthropicKey } from '@/lib/ai/client'
@@ -49,7 +50,7 @@ async function generarYGuardar(sb: ReturnType<typeof createClient>) {
  *  - Cron de Vercel (header de secret): genera y guarda el resumen de hoy.
  *  - Usuario autenticado: devuelve el resumen guardado de hoy (read-only).
  */
-export async function GET(req: NextRequest) {
+async function get(req: NextRequest) {
   const sb = createClient()
 
   if (isCronRequest(req)) {
@@ -134,3 +135,5 @@ export async function POST(req: NextRequest) {
     )
   }
 }
+
+export const GET = conRegistro('resumen-diario', get)

@@ -144,6 +144,19 @@ maestro por sucursal, revoke, índices).
 - **Si aparece alguno:** borrarlo de Auth y de `users_admin`.
 - **Firma para borrar:** «Firmo borrar los usuarios @rls.test listados».
 
+## P11 · Cómo está configurado el límite de tiempo en Vercel
+
+- **Qué:** decir el plan de Vercel y si el proyecto tiene fluid compute
+  prendido (Settings → Functions).
+- **Por qué:** `medidor` declara `maxDuration = 300` y se deploya, así que el
+  plan permite más de 60 s. Con fluid compute, el valor por defecto ya es 300:
+  declarar 60 en un cron lo **bajaría**. #12 y #13 declaran 60 en crons
+  hechos para entrar en 60 s. En el resto no se tocó.
+- **Si no llega:** los crons siguen con su límite actual. Sólo se pierde poder
+  ajustar cada uno con datos.
+- **Dónde:** Vercel → proyecto social-ahorro-pedidos → Settings → Functions.
+- **Firma:** no hace falta; alcanza con la respuesta.
+
 ## P10 · Datos de negocio
 
 - Confirmar el mapeo de secciones de SIFACO, sobre todo `NOR → NORMA`, que

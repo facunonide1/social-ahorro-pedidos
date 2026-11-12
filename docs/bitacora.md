@@ -1,5 +1,18 @@
 # Bitácora
 
+## 2026-11-12 · Todos los crons dejan registro de cada corrida
+
+Los 13 crons que faltaban y `/api/ai/resumen-diario` (que también es un cron
+de `vercel.json`) pasan por `conRegistro`: una línea JSON al empezar y otra al
+terminar, con duración, status y error. Con esto, los 21 crons dejan registro.
+Se filtra en los logs de Vercel por `"cron":`.
+
+Acá **no** se agregó `maxDuration`. `medidor` ya declara 300 y se deploya, así
+que el plan permite más de 60 s. Si el proyecto usa fluid compute, el valor
+por defecto ya es 300, y declarar 60 bajaría el límite. Antes de tocarlo hay
+que saber cómo está configurado el proyecto (pendiente P11). Los que ya
+declaran 60 (#12, #13) están hechos para entrar en 60 s.
+
 ## 2026-11-12 · Woo: un solo mapeo, firma de tiempo constante y tests
 
 El sync (`lib/woo/sync.ts`) y el webhook (`/api/woo-webhook`) tenían cada uno
