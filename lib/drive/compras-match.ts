@@ -14,7 +14,8 @@ import type { FilaCompra } from './planilla'
 import {
   catalogoAcotado, indiceDeNombres, matchearProducto, type ProductoRef, type ResultadoMatch,
 } from './match'
-import { detectarProveedor, sucursalDeArchivo, type ProveedorRef } from './proveedor'
+import { sucursalDeArchivo, type ProveedorRef } from './proveedor'
+import { proveedorPorAliasOSeccion, type MapeoSeccion } from './seccion'
 
 export type MapeoNombre = { nombreNorm: string; productoId: string; proveedorId?: string | null }
 
@@ -82,6 +83,8 @@ export type ContextoMatchCompra = {
   mapeos: MapeoNombre[]
   umbral: number
   indice?: Map<string, number[]> | null
+  /** null: la tabla no está o no se consultó. No es un error. */
+  secciones?: MapeoSeccion[] | null
 }
 
 export function nombreDeCompra(f: FilaCompra): string {
@@ -146,7 +149,11 @@ export function prepararFilasCompra(
   const indice = ctx.indice === undefined ? indiceDeNombres(ctx.catalogo) : ctx.indice
   const barras = fusionarBarras(ctx.barras, ctx.catalogo)
   return filas.map((f) => {
-    const prov = detectarProveedor({ pista: f.drogueria, nombreArchivo: f.drogueria }, proveedores)
+    const prov = proveedorPorAliasOSeccion(
+      { pista: f.drogueria, nombreArchivo: f.drogueria },
+      proveedores,
+      ctx.secciones ?? null,
+    )
     const mapeos = ctx.mapeos.filter((m) => !m.proveedorId || m.proveedorId === prov?.id)
     const m = matchearLineaCompra(
       { nombre: nombreDeCompra(f), ean: f.codigoBarras },

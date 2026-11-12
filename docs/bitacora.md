@@ -63,6 +63,41 @@ En la pantalla de Drive, Ignorar también está para los que siguen
 `pendiente`. Antes el botón sólo aparecía en sin clasificar, previa y error,
 y un pendiente no se podía sacar de la cola sin esperar a que fallara.
 
+## 2026-11-12 · La sección SIFACO puede nombrar a la droguería
+
+Migración `0295`, sin aplicar. Rollback en `supabase/rollbacks/0295_…sql`.
+Tabla `sifaco_seccion_proveedor(seccion text primary key, proveedor_id uuid
+references proveedores on delete set null, nota text, created_at)`. RLS
+prendido. La lectura es la de `proveedores_read` (cualquier admin). La
+escritura es la de `proveedores_write` (super_admin, gerente, comprador,
+administrativo), partida en insert, update y delete: un `FOR ALL` también da
+SELECT y el auditor lo marca. No hay filas. El mapeo lo carga Facu.
+
+Propuesto, no cargado:
+
+- MIC → MICROSULES
+- MAY → MAYORSUR
+- PHA → Pharmamerican / PHARMOS, a confirmar
+- CEO → CEOS
+- WES → WEST
+- Z59 → LAFARMEN
+- Z33 → HIERBAS
+- Z34 → KIOSKO
+- NOR → ¿NORMA? Dudoso
+- El resto queda con el código como nombre hasta que exista la fila
+
+Si la tabla no está, la consulta devuelve el error de «no existe» y el cruce
+sigue sin ella. No se rompe la ingesta. Un código sin fila no inventa un
+proveedor: `proveedor_nombre` sigue siendo Z45, MIC o el que venga.
+
+`detectarProveedor` ahora distingue Monroe Americana de Monroe. El alias
+busca «monroe americana» en la razón social. En `proveedores` no está
+«MONROE AMERICANA»: hasta que se cargue, una factura de Monroe Americana no
+se cuelga de un proveedor que sólo se llama Monroe. «Laboratorio Omicron»
+matchea con el proveedor que ya existe, OMICRON.
+
+No se tocó `sifaco_aplicar_maestro`.
+
 ## 2026-11-12 · Google Drive: carpetas compartidas, listas al comparador, maestro solo en previa
 
 NORA puede leer las carpetas «compras farmacias» y «compras farmacias (privado)».

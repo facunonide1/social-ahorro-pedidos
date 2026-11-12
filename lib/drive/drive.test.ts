@@ -13,6 +13,7 @@ import {
 import { catalogoAcotado, indiceDeNombres, matchearProducto, porcentajeMatch, scoreNombre } from './match'
 import { parsearArchivosCargados, parsearPestanaCompras, parsearPestanaPrecios } from './planilla'
 import { detectarProveedor, sucursalDeArchivo } from './proveedor'
+import { esCodigoSeccion, mapeoSeccionSiExiste, proveedorPorAliasOSeccion } from './seccion'
 import {
   MINUTOS_TRABADO, TOPE_BYTES, UMBRAL_PESADO, decisionTrabado, planificarCorrida, sigueEnPresupuesto,
 } from './lote'
@@ -130,6 +131,45 @@ test('el proveedor sale del nombre y la sucursal del archivo', () => {
   ]), null)
   assert.equal(sucursalDeArchivo('guz gon 11-11.xls', 'ventas y stock'), 'GUZ')
   assert.equal(sucursalDeArchivo('figueiras 11-11.xls'), 'FIG')
+  assert.equal(detectarProveedor(
+    { pista: 'Laboratorio Omicron' },
+    [{ id: 'o', razonSocial: 'OMICRON' }],
+  )?.id, 'o')
+  assert.equal(detectarProveedor(
+    { nombreArchivo: 'Monroe Americana S.A.pdf' },
+    [{ id: 'ma', razonSocial: 'MONROE AMERICANA' }],
+  )?.id, 'ma')
+  assert.equal(detectarProveedor(
+    { pista: 'Monroe Americana' },
+    [{ id: 'm', razonSocial: 'Monroe' }],
+  ), null)
+})
+
+test('una sección SIFACO usa el mapeo si la tabla está, y no rompe si no está', async () => {
+  assert.equal(esCodigoSeccion('mic'), true)
+  assert.equal(esCodigoSeccion('Z45'), true)
+  assert.equal(esCodigoSeccion('Farmasun'), false)
+  const provs = [{ id: 'micro', razonSocial: 'MICROSULES' }]
+  const hit = proveedorPorAliasOSeccion(
+    { pista: 'MIC' },
+    provs,
+    [{ seccion: 'MIC', proveedorId: 'micro' }],
+  )
+  assert.equal(hit?.id, 'micro')
+  assert.equal(proveedorPorAliasOSeccion({ pista: 'MIC' }, provs, []), null)
+  assert.equal(proveedorPorAliasOSeccion({ pista: 'MIC' }, provs, null), null)
+  assert.equal(proveedorPorAliasOSeccion({ pista: 'Z90' }, provs, [{ seccion: 'Z90', proveedorId: null }]), null)
+
+  const ausente = {
+    from() {
+      return {
+        select() { return this },
+        order() { return this },
+        limit: async () => ({ data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.sifaco_seccion_proveedor' in the schema cache" } }),
+      }
+    },
+  }
+  assert.equal(await mapeoSeccionSiExiste(ausente), null)
 })
 
 test('match por nombre, y el mapeo manual gana', () => {

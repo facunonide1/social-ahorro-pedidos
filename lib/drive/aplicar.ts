@@ -21,7 +21,8 @@ import { claveNombre, matchearProducto, porcentajeMatch, type ProductoRef } from
 import {
   hashEstable, parsearArchivosCargados, parsearPestanaCompras, parsearPestanaPrecios, type FilaCompra,
 } from './planilla'
-import { detectarProveedor, sucursalDeArchivo, type ProveedorRef } from './proveedor'
+import { sucursalDeArchivo, type ProveedorRef } from './proveedor'
+import { mapeoSeccionSiExiste, proveedorPorAliasOSeccion, type MapeoSeccion } from './seccion'
 
 type Adm = any
 
@@ -142,13 +143,14 @@ export async function resolverLista(adm: Adm, opts: {
   catalogo: ProductoRef[]
   proveedores: ProveedorRef[]
   mapeos: { nombreNorm: string; productoId: string; proveedorId: string | null }[]
+  secciones?: MapeoSeccion[] | null
 }) {
-  const prov = detectarProveedor({
+  const prov = proveedorPorAliasOSeccion({
     nombreArchivo: opts.nombreArchivo,
     ruta: opts.ruta,
     pista: opts.lista.proveedorPista,
     encabezado: opts.lista.proveedorPista,
-  }, opts.proveedores)
+  }, opts.proveedores, opts.secciones ?? null)
   const mapeos = opts.mapeos.filter((m) => !m.proveedorId || m.proveedorId === prov?.id)
   const filas = cruzar(opts.lista.filas, opts.catalogo, mapeos)
   const matchPct = porcentajeMatch(filas)
@@ -186,11 +188,13 @@ export async function contextoMatchCompras(adm: Adm, opts: {
   catalogo?: ProductoRef[]
   barras?: Map<string, string>
   mapeos?: MapeoNombre[]
+  secciones?: MapeoSeccion[] | null
 } = {}): Promise<ContextoMatchCompra> {
   return {
     catalogo: opts.catalogo ?? await catalogoMatch(adm),
     barras: opts.barras ?? await barrasDelCatalogo(adm),
     mapeos: opts.mapeos ?? await mapeosGuardados(adm),
+    secciones: 'secciones' in opts ? opts.secciones ?? null : await mapeoSeccionSiExiste(adm),
     umbral: umbralScoreNombre(),
   }
 }
@@ -205,6 +209,7 @@ export async function guardarCompras(
     catalogo?: ProductoRef[]
     barras?: Map<string, string>
     mapeos?: MapeoNombre[]
+    secciones?: MapeoSeccion[] | null
   } = {},
 ) {
   const rows = prepararFilasCompra(

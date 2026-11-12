@@ -12,6 +12,7 @@ import { ingestaHabilitada, MAX_INTENTOS, MAX_PROFUNDIDAD, ARCHIVOS_POR_CORRIDA 
 import {
   TOPE_BYTES, decisionTrabado, mensajeTope, planificarCorrida, sigueEnPresupuesto,
 } from './lote'
+import { mapeoSeccionSiExiste } from './seccion'
 import { descargar, listarPagina, refrescarAccessToken } from './google'
 import { parsearMayorsur } from './listas'
 import { claveDesdeEnv, descifrarToken } from './crypto'
@@ -317,8 +318,9 @@ async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: str
     const planilla = leerPlanilla(buf)
     const catalogo = await catalogoMatch(adm)
     const cubiertos = planilla.archivos.map((a) => a.fileId)
+    const secciones = await mapeoSeccionSiExiste(adm)
     await guardarCompras(adm, planilla.compras, 'planilla', archivo.file_id, proveedores, {
-      catalogo, mapeos,
+      catalogo, mapeos, secciones,
     })
     let aplicadas = 0
     let enPrevia = 0
@@ -334,7 +336,7 @@ async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: str
       const r = await resolverLista(adm, {
         lista, nombreArchivo: `${archivo.nombre} · ${grupo.proveedor}`, ruta: archivo.ruta_relativa,
         bufferHash: createHash('sha256').update(grupo.proveedor + ':' + grupo.filas.length + ':' + hash).digest('hex'),
-        usuarioId, catalogo, proveedores, mapeos,
+        usuarioId, catalogo, proveedores, mapeos, secciones,
       })
       if (r.aplicado || r.motivo.includes('ya estaba')) aplicadas++
       else enPrevia++
@@ -359,9 +361,10 @@ async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: str
       return { estado: 'sin_clasificar', clasificacion: 'sin_clasificar', error: 'No encontré precios.', hash }
     }
     const catalogo = await catalogoMatch(adm)
+    const secciones = await mapeoSeccionSiExiste(adm)
     const r = await resolverLista(adm, {
       lista, nombreArchivo: archivo.nombre, ruta: archivo.ruta_relativa,
-      bufferHash: hash, usuarioId, catalogo, proveedores, mapeos,
+      bufferHash: hash, usuarioId, catalogo, proveedores, mapeos, secciones,
     })
     return {
       estado: r.aplicado || r.motivo.includes('ya estaba') ? 'ok' : 'previa',

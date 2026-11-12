@@ -20,7 +20,10 @@ const ALIAS: { re: RegExp; aguja: string }[] = [
   { re: /mayorsur|mayor sur/, aguja: 'mayorsur' },
   { re: /\bnorma\b/, aguja: 'norma' },
   { re: /asopro/, aguja: 'asopro' },
+  // Antes que «monroe»: si no, «Monroe Americana» cae en un proveedor que sólo se llama Monroe.
+  { re: /monroe americana/, aguja: 'monroe americana' },
   { re: /monroe/, aguja: 'monroe' },
+  { re: /omicron/, aguja: 'omicron' },
   { re: /farmasun/, aguja: 'farmasun' },
   { re: /distrisam/, aguja: 'distrisam' },
   { re: /generia/, aguja: 'generia' },
