@@ -37,6 +37,7 @@ export function DriveClient(props: {
   carpetas: Carpeta[]
   progreso: { hechos: number; total: number; cuentas: Record<string, number> }
   bandeja: Bandeja[]
+  pendientes: Bandeja[]
 }) {
   const router = useRouter()
   const [q, setQ] = useState('compras farmacias')
@@ -221,6 +222,30 @@ export function DriveClient(props: {
           {' · '}error {props.progreso.cuentas.error ?? 0}
           {' · '}sin clasificar {props.progreso.cuentas.sin_clasificar ?? 0}
         </div>
+      </section>
+
+      <section className="space-y-3 rounded-xl border bg-card p-5">
+        <h2 className="font-medium">Pendientes</h2>
+        {props.pendientes.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No hay archivos esperando.</p>
+        ) : (
+          <ul className="space-y-3">
+            {props.pendientes.map((b) => (
+              <li key={b.fileId} className="rounded-md border px-3 py-2 text-sm">
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <a className="font-medium underline" href={b.link} target="_blank" rel="noreferrer">{b.nombre}</a>
+                  <span className="text-xs text-muted-foreground">{b.clasificacion}{b.intentos ? ` · intento ${b.intentos}` : ''}</span>
+                </div>
+                {b.ruta && <div className="text-xs text-muted-foreground">{b.ruta}</div>}
+                <div className="mt-2">
+                  <Button size="sm" variant="outline" disabled={ocupado} onClick={() => post({ accion: 'clasificar', fileId: b.fileId, clasificacion: 'ignorar' }, 'Quedó ignorado.')}>
+                    Ignorar
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="space-y-3 rounded-xl border bg-card p-5">

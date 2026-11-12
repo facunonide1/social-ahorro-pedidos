@@ -7,6 +7,20 @@ import { resumenIngesta } from '@/lib/drive/correr'
 
 import { DriveClient } from './drive-client'
 
+function filaBandeja(b: any) {
+  return {
+    fileId: b.file_id as string,
+    nombre: b.nombre as string,
+    ruta: (b.ruta_relativa as string | null) ?? null,
+    clasificacion: b.clasificacion as string,
+    estado: b.estado as string,
+    error: (b.error as string | null) ?? null,
+    link: (b.web_view_link as string | null) || `https://drive.google.com/file/d/${b.file_id}/view`,
+    matchPct: (b.match_pct as number | null) ?? null,
+    intentos: Number(b.intentos ?? 0),
+  }
+}
+
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Google Drive' }
 
@@ -54,17 +68,8 @@ export default async function GoogleDrivePage({ searchParams }: { searchParams: 
             total: resumen?.total ?? 0,
             cuentas: resumen?.cuentas ?? {},
           }}
-          bandeja={(resumen?.bandeja ?? []).map((b: any) => ({
-            fileId: b.file_id,
-            nombre: b.nombre,
-            ruta: b.ruta_relativa,
-            clasificacion: b.clasificacion,
-            estado: b.estado,
-            error: b.error,
-            link: b.web_view_link || `https://drive.google.com/file/d/${b.file_id}/view`,
-            matchPct: b.match_pct,
-            intentos: b.intentos,
-          }))}
+          bandeja={(resumen?.bandeja ?? []).map(filaBandeja)}
+          pendientes={(resumen?.pendientes ?? []).map(filaBandeja)}
         />
       </div>
     </>
