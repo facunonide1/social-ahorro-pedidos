@@ -14,6 +14,7 @@ import { umbralMatchLista, umbralScoreNombre, preciosAutoAplicar } from './flag'
 import { parsearFacturaTexto } from './facturas-texto'
 import { parsearGrilla, parsearMayorsur, type FilaLista, type ListaParseada } from './listas'
 import { claveNombre, matchearProducto, porcentajeMatch, type ProductoRef } from './match'
+import { decidirVigencia, fechaIso, precioNetoPagado } from '@/lib/compras/vigencia-precios'
 import {
   hashEstable, parsearArchivosCargados, parsearPestanaCompras, parsearPestanaPrecios, type FilaCompra,
 } from './planilla'
@@ -51,29 +52,41 @@ export async function aplicarLista(adm: Adm, opts: {
   proveedorId: string
   archivoNombre: string
   hash: string
+  vigenteDesde: string | null
   filas: (FilaLista & { productoId: string | null; score: number; via: string })[]
   usuarioId: string | null
-}): Promise<{ listaId: string; anteriorId: string | null; yaEstaba: boolean }> {
+}): Promise<{ listaId: string; anteriorId: string | null; yaEstaba: boolean; quedoEnHistorial: boolean }> {
   const rubro = 'farmacia'
-  const { data: vigente } = await adm.from('listas_precios')
-    .select('id, hash').eq('proveedor_id', opts.proveedorId).eq('rubro', rubro).eq('vigente', true).limit(5)
-  const misma = ((vigente ?? []) as any[]).find((l) => l.hash === opts.hash)
-  if (misma) return { listaId: misma.id, anteriorId: null, yaEstaba: true }
-  const anteriorId = (vigente ?? [])[0]?.id ?? null
-  if (anteriorId) {
-    await adm.from('listas_precios').update({ vigente: false }).eq('proveedor_id', opts.proveedorId).eq('rubro', rubro).eq('vigente', true)
+  const fecha = fechaIso(opts.vigenteDesde) ?? new Date().toISOString().slice(0, 10)
+  const { data: vigentes, error: errVig } = await adm.from('listas_precios')
+    .select('id, hash, vigente_desde, fecha_carga')
+    .eq('proveedor_id', opts.proveedorId).eq('rubro', rubro).eq('vigente', true)
+    .order('fecha_carga', { ascending: false }).order('id').limit(5)
+  if (errVig) throw new Error(errVig.message)
+  const actual = ((vigentes ?? []) as any[])[0] ?? null
+  if (actual?.hash === opts.hash) {
+    return { listaId: actual.id, anteriorId: null, yaEstaba: true, quedoEnHistorial: false }
+  }
+  const decision = decidirVigencia(
+    actual ? { fecha: actual.vigente_desde ?? String(actual.fecha_carga ?? '').slice(0, 10) } : null,
+    fecha,
+  )
+  const esVigente = decision === 'reemplaza'
+  if (esVigente && actual) {
+    const { error: errBaja } = await adm.from('listas_precios').update({ vigente: false }).eq('proveedor_id', opts.proveedorId).eq('rubro', rubro).eq('vigente', true)
+    if (errBaja) throw new Error(errBaja.message)
   }
   const { data: lista, error } = await adm.from('listas_precios').insert({
     proveedor_id: opts.proveedorId,
     rubro,
     archivo_nombre: opts.archivoNombre,
     hash: opts.hash,
-    vigente: true,
+    vigente: esVigente,
+    vigente_desde: fecha,
     created_by: opts.usuarioId,
     mapeo_usado: { origen: 'google_drive' },
   }).select('id').single()
   if (error || !lista) throw new Error(error?.message ?? 'no se pudo crear la lista')
-  const hoy = new Date().toISOString().slice(0, 10)
   const items = opts.filas.map((f) => ({
     lista_id: lista.id,
     sku: f.sku,
@@ -82,17 +95,29 @@ export async function aplicarLista(adm: Adm, opts: {
     producto_id: f.productoId,
     precio: f.precio,
     desc_volumen: { categoria: f.categoria, condiciones: f.condiciones, descuento: f.descuento },
-    fecha: hoy,
+    fecha,
     match_score: f.score,
     match_via: f.via,
   }))
-  await enTandas(items, async (t) => { await adm.from('listas_precios_items').insert(t) })
+  await enTandas(items, async (t) => {
+    const { error: errItems } = await adm.from('listas_precios_items').insert(t)
+    if (errItems) throw new Error(errItems.message)
+  })
   const hist = items.filter((i) => i.producto_id && i.precio > 0).map((i) => ({
-    item_id: i.producto_id, tercero_id: opts.proveedorId, precio_unitario: i.precio,
-    fecha: hoy, origen: 'lista_precios',
+    item_id: i.producto_id,
+    tercero_id: opts.proveedorId,
+    precio_unitario: i.precio,
+    precio_neto: i.precio,
+    fecha,
+    origen: 'lista_precios' as const,
+    clave_dedup: createHash('sha256').update(['lista', opts.proveedorId, i.producto_id, fecha, i.precio].join('|')).digest('hex'),
   }))
-  await enTandas(hist, async (t) => { if (t.length) await adm.from('doc_precios_historial').insert(t) })
-  return { listaId: lista.id, anteriorId, yaEstaba: false }
+  await enTandas(hist, async (t) => {
+    if (!t.length) return
+    const { error: errHist } = await adm.from('doc_precios_historial').upsert(t, { onConflict: 'clave_dedup', ignoreDuplicates: true })
+    if (errHist) throw new Error(errHist.message)
+  })
+  return { listaId: lista.id, anteriorId: esVigente ? (actual?.id ?? null) : null, yaEstaba: false, quedoEnHistorial: !esVigente }
 }
 
 export async function revertirLista(adm: Adm, listaId: string, anteriorId: string | null) {
@@ -118,6 +143,7 @@ export async function resolverLista(adm: Adm, opts: {
   catalogo: ProductoRef[]
   proveedores: ProveedorRef[]
   mapeos: { nombreNorm: string; productoId: string; proveedorId: string | null }[]
+  fechaArchivo?: string | null
 }) {
   const prov = detectarProveedor({
     nombreArchivo: opts.nombreArchivo,
@@ -144,24 +170,47 @@ export async function resolverLista(adm: Adm, opts: {
     proveedorId: prov.id,
     archivoNombre: opts.nombreArchivo,
     hash: opts.bufferHash,
+    vigenteDesde: fechaIso(opts.lista.vigenteDesde) ?? fechaIso(opts.fechaArchivo ?? null),
     filas,
     usuarioId: opts.usuarioId,
   })
+  const motivo = r.yaEstaba
+    ? 'Esa lista ya estaba vigente.'
+    : r.quedoEnHistorial
+      ? `Lista del ${fechaIso(opts.lista.vigenteDesde) ?? 'archivo'} más vieja que la vigente: quedó en el historial.`
+      : `Aplicada. Match ${matchPct}%.`
   return {
     aplicado: !r.yaEstaba,
     matchPct,
     proveedorId: prov.id,
-    motivo: r.yaEstaba ? 'Esa lista ya estaba vigente.' : `Aplicada. Match ${matchPct}%.`,
+    motivo,
     listaId: r.listaId,
     anteriorId: r.anteriorId,
     sinMatch: filas.filter((f) => f.via === 'sin_match').length,
   }
 }
 
-export async function guardarCompras(adm: Adm, filas: FilaCompra[], origen: string, origenRef: string, proveedores: ProveedorRef[]) {
+export async function guardarCompras(
+  adm: Adm,
+  filas: FilaCompra[],
+  origen: string,
+  origenRef: string,
+  proveedores: ProveedorRef[],
+  catalogo: ProductoRef[] = [],
+  mapeos: { nombreNorm: string; productoId: string }[] = [],
+) {
   const rows = filas.map((f) => {
     const prov = detectarProveedor({ pista: f.drogueria, nombreArchivo: f.drogueria }, proveedores)
-    const hash = createHash('sha256').update([f.drogueria, f.comprobante, f.producto, f.cantidad, f.precioNeto ?? f.precioCaja].join('|')).digest('hex')
+    const neto = f.precioNeto ?? precioNetoPagado({
+      unitario: f.precioCaja, descuento: f.descuento, importe: f.subtotal, cantidad: f.cantidad,
+    })
+    const hash = createHash('sha256').update([f.drogueria, f.comprobante, f.producto, f.cantidad, neto].join('|')).digest('hex')
+    const match = catalogo.length
+      ? matchearProducto({
+        nombre: [f.producto, f.droga, f.concentracion, f.unidades].filter(Boolean).join(' '),
+        ean: f.codigoBarras,
+      }, catalogo, mapeos, 0.62)
+      : null
     return {
       proveedor_id: prov?.id ?? null,
       proveedor_nombre: f.drogueria,
@@ -175,21 +224,45 @@ export async function guardarCompras(adm: Adm, filas: FilaCompra[], origen: stri
       unidades: f.unidades,
       codigo_barras: f.codigoBarras,
       cantidad: f.cantidad,
-      precio_unitario: f.precioNeto ?? f.precioCaja,
+      precio_unitario: neto,
       descuento_pct: f.descuento,
       importe: f.subtotal,
+      producto_id: match?.productoId ?? null,
+      match_score: match?.score ?? null,
+      match_via: match?.via ?? null,
       origen,
       origen_ref: origenRef,
       hash_linea: hash,
+      _precio: neto,
+      _producto: match?.productoId ?? null,
+      _prov: prov?.id ?? null,
     }
   })
   let insertadas = 0
   await enTandas(rows, async (t) => {
-    const { data, error } = await adm.from('compras_lineas').upsert(t, { onConflict: 'hash_linea', ignoreDuplicates: true }).select('id')
+    const limpios = t.map(({ _precio, _producto, _prov, ...row }) => row)
+    const { data, error } = await adm.from('compras_lineas').upsert(limpios, { onConflict: 'hash_linea', ignoreDuplicates: true }).select('id')
     if (error) throw new Error(error.message)
     insertadas += (data ?? []).length
   })
-  return { filas: rows.length, insertadas }
+  const eventos = rows.filter((r) => r._producto && r._prov && r._precio && r.fecha).map((r) => ({
+    item_id: r._producto,
+    tercero_id: r._prov,
+    fecha: r.fecha,
+    precio_unitario: r._precio,
+    precio_neto: r._precio,
+    descuento_pct: r.descuento_pct,
+    origen: 'factura' as const,
+    clave_dedup: createHash('sha256').update(['factura', r._prov, r._producto, r.fecha, r.comprobante, r._precio].join('|')).digest('hex'),
+  }))
+  let precios = 0
+  await enTandas(eventos, async (t) => {
+    if (!t.length) return
+    const { error } = await adm.from('doc_precios_historial').upsert(t, { onConflict: 'clave_dedup', ignoreDuplicates: true })
+    if (error) throw new Error(error.message)
+    precios += t.length
+  })
+  return { filas: rows.length, insertadas, preciosFactura: precios }
 }
 
 export async function guardarMapeo(adm: Adm, opts: { proveedorId: string | null; nombre: string; productoId: string }) {
@@ -252,30 +325,40 @@ export async function ingerirFactura(adm: Adm, opts: {
   mime: string
   usuarioId: string | null
   proveedores: ProveedorRef[]
+  catalogo?: ProductoRef[]
+  mapeos?: { nombreNorm: string; productoId: string }[]
 }) {
   const esPdf = opts.mime === 'application/pdf' || /\.pdf$/i.test(opts.nombre)
   if (esPdf) {
     const texto = await textoPdf(opts.buf)
     const parsed = texto ? parsearFacturaTexto(texto, opts.nombre) : null
     if (parsed && (parsed.lineas.length || parsed.numero)) {
-      const compras: FilaCompra[] = parsed.lineas.map((l) => ({
-        fecha: parsed.fecha,
-        drogueria: parsed.proveedor ?? 'sin proveedor',
-        comprobante: parsed.numero,
-        sucursal: parsed.sucursal,
-        producto: l.descripcion,
-        droga: null,
-        concentracion: null,
-        unidades: null,
-        codigoBarras: l.codigo,
-        cantidad: l.cantidad,
-        precioCaja: l.precioUnitario,
-        descuento: null,
-        precioNeto: l.precioUnitario,
-        subtotal: l.importe,
-        observaciones: 'texto de la factura',
-      }))
-      const g = await guardarCompras(adm, compras, 'factura_texto', opts.nombre, opts.proveedores)
+      const compras: FilaCompra[] = parsed.lineas.map((l) => {
+        const neto = precioNetoPagado({
+          unitario: l.precioUnitario, importe: l.importe, cantidad: l.cantidad,
+        })
+        return {
+          fecha: parsed.fecha,
+          drogueria: parsed.proveedor ?? 'sin proveedor',
+          comprobante: parsed.numero,
+          sucursal: parsed.sucursal,
+          producto: l.descripcion,
+          droga: null,
+          concentracion: null,
+          unidades: null,
+          codigoBarras: l.codigo,
+          cantidad: l.cantidad,
+          precioCaja: l.precioUnitario,
+          descuento: null,
+          precioNeto: neto,
+          subtotal: l.importe,
+          observaciones: 'texto de la factura',
+        }
+      })
+      const g = await guardarCompras(
+        adm, compras, 'factura_texto', opts.nombre, opts.proveedores,
+        opts.catalogo ?? [], opts.mapeos ?? [],
+      )
       return { via: 'texto' as const, ...parsed, ...g }
     }
   }

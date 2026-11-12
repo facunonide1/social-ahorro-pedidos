@@ -12,7 +12,19 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
-type Oferta = { proveedor_id: string; proveedor: string; precio: number; precioFinal: number; condicion: string; descPP: number; subio: boolean }
+type Oferta = {
+  proveedor_id: string
+  proveedor: string
+  precio: number
+  precioFinal: number
+  condicion: string
+  descPP: number
+  subio: boolean
+  fechaLista: string | null
+  precioPagado: number | null
+  fechaPagado: string | null
+  anteriores: { fecha: string; precio: number; origen: string }[]
+}
 export type ProductoComp = { producto_id: string; nombre: string; sku: string | null; ofertas: Oferta[] }
 export type ProvLite = { id: string; nombre: string; plazo: number | null; forma: string | null }
 
@@ -113,7 +125,13 @@ export function ComparadorClient({ productos, proveedores, rubro }: { productos:
                 <tbody>
                   {p.ofertas.map((o, i) => (
                     <tr key={o.proveedor_id} className={cn('border-t border-border/60 first:border-t-0', i === 0 && 'bg-emerald-500/5')}>
-                      <td className="px-4 py-1.5">{o.proveedor} {i === 0 && <Badge variant="success" className="ml-1 font-normal"><Check className="mr-0.5 size-3" />mejor</Badge>}</td>
+                      <td className="px-4 py-1.5">
+                        <div>{o.proveedor} {i === 0 && <Badge variant="success" className="ml-1 font-normal"><Check className="mr-0.5 size-3" />mejor</Badge>}</div>
+                        <div className="text-[11px] text-muted-foreground">
+                          Lista {o.fechaLista ?? 'sin fecha'}
+                          {o.precioPagado != null && ` · Pagado ${o.fechaPagado ?? ''} ${formatARS(o.precioPagado)}`}
+                        </div>
+                      </td>
                       <td className="px-3 py-1.5 text-xs text-muted-foreground">{o.condicion}{o.descPP > 0 && ` · -${o.descPP}% PP`}</td>
                       <td className="px-3 py-1.5 text-right tabular-nums">{o.subio && <TrendingUp className="mr-1 inline size-3 text-rose-500" />}{formatARS(o.precio)}</td>
                       <td className="px-4 py-1.5 text-right font-mono font-medium tabular-nums">{formatARS(o.precioFinal)}</td>
@@ -126,6 +144,23 @@ export function ComparadorClient({ productos, proveedores, rubro }: { productos:
                   ))}
                 </tbody>
               </table>
+              {p.ofertas.some((o) => o.anteriores.length > 0) && (
+                <details className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
+                  <summary className="cursor-pointer">Precios anteriores</summary>
+                  <table className="mt-2 w-full">
+                    <tbody>
+                      {p.ofertas.flatMap((o) => o.anteriores.map((a) => (
+                        <tr key={`${o.proveedor_id}-${a.origen}-${a.fecha}-${a.precio}`}>
+                          <td className="py-0.5">{o.proveedor}</td>
+                          <td>{a.origen === 'factura' ? 'Pagado' : 'Lista'}</td>
+                          <td>{a.fecha}</td>
+                          <td className="text-right tabular-nums">{formatARS(a.precio)}</td>
+                        </tr>
+                      )))}
+                    </tbody>
+                  </table>
+                </details>
+              )}
             </div>
           ))}
         </div>

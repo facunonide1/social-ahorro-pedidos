@@ -1,5 +1,39 @@
 # Bitácora
 
+## 2026-11-12 · Precios con fecha, al día con main
+
+El #6 (precios con fecha, historial y lo pagado en la factura) queda en
+`feat/precios-historial`, con main mergeado. La rama original no se tocó.
+Trae `vigente_desde` en las listas (el día de la lista o del archivo, no el de
+carga), el historial que no se pisa cuando llega una lista más vieja, el
+precio pagado como unitario neto (PDF de Asoprofarma y Monroe, pestaña
+Compras, fotos confirmadas) y el comparador con lista, pagado y anteriores,
+cada uno con su fecha.
+
+Merge, no rebase. El #6 salía de la rama de Drive antes del squash del #5,
+pero git resolvió solo `lib/drive/**`: lo que agrega la rama sobre main es
+exactamente su commit. El único conflicto fue esta bitácora; quedan todas las
+entradas.
+
+Arreglos:
+- El comparador leía las últimas 500 filas de `doc_precios_historial` de toda
+  la cadena: casi ningún producto tenía historial. Ahora trae sólo los
+  productos que muestra, en tandas de 100 ids, paginado y ordenado por fecha
+  e `id`.
+- `aplicarLista` no miraba el error al leer la vigente, al darla de baja, al
+  insertar los ítems ni al guardar el historial. Ahora corta con el mensaje.
+  La vigente se elige por `fecha_carga` y `id`, no por el orden que devuelva
+  la base.
+- `lib/compras/vigencia-precios.test.ts` no estaba en `npm test`. Ahora sí.
+
+La migración `0295_la_fecha_del_precio_no_se_pisa.sql` no está aplicada.
+Tiene que ir antes del deploy: sin `vigente_desde` y `clave_dedup` el
+comparador y la ingesta fallan. Rollback en
+`supabase/rollbacks/0295_la_fecha_del_precio_no_se_pisa.sql`; no borra
+precios ni listas.
+
+No se tocó la base, ni RLS, ni secretos.
+
 ## 2026-11-12 · CI en cada PR y config de lint
 
 `.github/workflows/ci.yml` corre `npm ci`, `npm test`, `tsc --noEmit`,
@@ -105,6 +139,24 @@ RLS, no: fuera de production no corre aunque las variables estén.
 el null del equipo y la decisión de saltear el build.
 
 No se tocó la base, ni migraciones, ni RLS, ni secretos.
+
+## 2026-11-12 · La fecha del precio, y lo que se pagó de verdad
+
+Las listas se van actualizando. `vigente_desde` es el día de la lista o del
+archivo, no `fecha_carga`. Si llega una lista más vieja que la vigente, se
+guarda en el historial (`doc_precios_historial`, una fila por producto y
+droguería, sin pisar las anteriores) y no reemplaza la vigente. El comparador
+muestra el último precio de lista y el último precio pagado, cada uno con su
+fecha, y una tabla de los anteriores.
+
+El precio pagado sale del unitario neto: importe de la línea dividido por la
+cantidad, o el unitario menos el descuento. Entra desde los PDF de Asoprofarma
+y Monroe, desde la pestaña Compras de la planilla, y desde una foto cuando una
+persona confirma el documento (`doc_confirmar_documento` ya escribe el
+histórico con origen `factura`).
+
+Migración `0295_la_fecha_del_precio_no_se_pisa.sql`, sin aplicar acá. No toca
+la 0294. Rollback en `supabase/rollbacks/0295_…sql`.
 
 ## 2026-11-12 · Google Drive: carpetas compartidas, listas al comparador, maestro solo en previa
 

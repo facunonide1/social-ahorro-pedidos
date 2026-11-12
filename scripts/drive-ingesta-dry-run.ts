@@ -20,6 +20,7 @@ import { parsearFacturaTexto } from '../lib/drive/facturas-texto'
 import { parsearGrilla, parsearMayorsur } from '../lib/drive/listas'
 import { matchearProducto, porcentajeMatch } from '../lib/drive/match'
 import { parsearArchivosCargados, parsearPestanaCompras, parsearPestanaPrecios } from '../lib/drive/planilla'
+import { precioNetoPagado } from '../lib/compras/vigencia-precios'
 
 function grilla(path: string, hoja?: string): unknown[][] {
   const wb = XLSX.read(readFileSync(path), { type: 'buffer', cellDates: false })
@@ -53,7 +54,11 @@ async function muestras(dir: string) {
   console.log(`  precios: ${precios.reduce((a, g) => a + g.filas.length, 0)} en ${precios.length} listas`)
   for (const g of precios) console.log(`    ${g.proveedor}: ${g.filas.length}`)
   const comps = new Set(compras.map((c) => `${c.drogueria}|${c.comprobante}`))
+  const comprasConPrecio = compras.filter((c) => precioNetoPagado({
+    unitario: c.precioNeto ?? c.precioCaja, descuento: c.descuento, importe: c.subtotal, cantidad: c.cantidad,
+  }) != null)
   console.log(`  compras: ${compras.length} líneas, ${comps.size} comprobantes`)
+  console.log(`  precios de factura en la planilla (unitario neto): ${comprasConPrecio.length}`)
   console.log(`  archivos ya cargados (no reprocesar): ${archivos.length}`)
 
   console.log('\nListas sueltas (match contra los nombres de la pestaña, umbral 0.62)')
@@ -90,13 +95,18 @@ async function muestras(dir: string) {
   const txtDir = join(dir, 'facturas/txt')
   let lineas = 0
   let facturas = 0
+  let preciosPdf = 0
   for (const nombre of readdirSync(txtDir)) {
     const f = parsearFacturaTexto(readFileSync(join(txtDir, nombre), 'utf8'), nombre)
     facturas++
     lineas += f.lineas.length
+    preciosPdf += f.lineas.filter((l) => precioNetoPagado({
+      unitario: l.precioUnitario, importe: l.importe, cantidad: l.cantidad,
+    }) != null).length
     console.log(`  factura ${nombre}: ${f.proveedor ?? '?'} ${f.numero ?? 'sin número'} ${f.lineas.length} líneas total ${f.total ?? '—'}`)
   }
-  console.log(`Facturas con texto: ${facturas}, líneas ${lineas}`)
+  console.log(`Facturas con texto: ${facturas}, líneas ${lineas}, precios netos ${preciosPdf}`)
+  console.log(`Precios de factura que entrarían al historial (planilla + PDF, si el producto matchea): ${comprasConPrecio.length + preciosPdf}`)
   const manifest = JSON.parse(readFileSync(join(dir, 'facturas/facturas_manifest.json'), 'utf8')) as { files: { mimeType: string }[] }
   const fotos = manifest.files.filter((f) => f.mimeType.startsWith('image/')).length
   const pdfs = manifest.files.filter((f) => f.mimeType === 'application/pdf').length
