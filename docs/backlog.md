@@ -94,11 +94,11 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Rama: `feat/ingesta-archivos-grandes` · Estado: en PR · Depende de: B1 (#22).
 
 **B4 · Ingesta incremental**
-- Qué: hoy mira `modifiedTime > last_sync_at`. Un archivo editado se
-  reprocesa entero, y uno que se movió de carpeta no se ve.
-- Terminado: se compara `md5Checksum` o `version` por archivo, y sólo se
-  reprocesa lo que cambió. Tests.
-- Rama: `feat/ingesta-incremental` · Estado: pendiente · Depende de: H1.
+- Qué: reprocesar sólo lo que cambió.
+- Terminado: ya estaba desde el #5 (lista lo modificado después de
+  `last_sync_at`, y se compara md5 o `modifiedTime` por archivo, con tests).
+  Faltaba que `guardarPagina` leyera sus errores: hecho.
+- Rama: `feat/ingesta-incremental` · Estado: en PR · Depende de: —
 
 **B5 · Las compras ingeridas se ven**
 - Qué: `compras_lineas` no la lee ninguna pantalla.

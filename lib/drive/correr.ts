@@ -124,8 +124,11 @@ async function encolar(adm: Adm, fuente: FuenteArchivos, conexion: any, carpetas
 async function guardarPagina(adm: Adm, archivos: { fileId: string; nombre: string; mime: string; modifiedTime: string | null; md5: string | null; webViewLink: string | null; size: number | null; carpetaRaizId: string; carpetaRaizNombre: string; rutaRelativa: string }[]) {
   if (!archivos.length) return 0
   const ids = archivos.map((a) => a.fileId)
-  const { data: previos } = await adm.from('drive_archivos_ingestados')
+  // Si esto falla, NO se sigue: sin `previos`, todo parecería nuevo y se
+  // reprocesaría (e insertaría de nuevo) la página entera.
+  const { data: previos, error: ePrev } = await adm.from('drive_archivos_ingestados')
     .select('file_id, md5, modified_time, estado').in('file_id', ids).limit(200)
+  if (ePrev) throw new Error(`no pude leer qué archivos ya conocía: ${ePrev.message}`)
   const porId = new Map(((previos ?? []) as any[]).map((p) => [p.file_id, p]))
   let n = 0
   for (const a of archivos) {
@@ -153,8 +156,10 @@ async function guardarPagina(adm: Adm, archivos: { fileId: string; nombre: strin
       error: null,
       updated_at: new Date().toISOString(),
     }
-    if (prev) await adm.from('drive_archivos_ingestados').update(fila).eq('file_id', a.fileId)
-    else await adm.from('drive_archivos_ingestados').insert(fila)
+    const { error: eFila } = prev
+      ? await adm.from('drive_archivos_ingestados').update(fila).eq('file_id', a.fileId)
+      : await adm.from('drive_archivos_ingestados').insert(fila)
+    if (eFila) throw new Error(`no pude encolar ${a.nombre}: ${eFila.message}`)
     n++
   }
   return n

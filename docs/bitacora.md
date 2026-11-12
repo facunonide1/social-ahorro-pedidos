@@ -1,5 +1,20 @@
 # Bitácora
 
+## 2026-11-12 · Ingesta incremental: ya estaba; faltaba que leyera sus errores
+
+B4 pedía reprocesar sólo lo que cambió. Eso ya pasa desde el #5: `encolar`
+lista sólo lo modificado después de `last_sync_at`, y `guardarPagina` compara
+cada archivo con `esElMismoContenido` (md5, o `modifiedTime` si Drive no da
+md5, como en las planillas nativas). Si no cambió, no se reencola. Un archivo
+que aparece en las dos carpetas compartidas es el mismo `file_id`. Tiene tests
+en `lib/drive/drive.test.ts`.
+
+Lo que faltaba: `guardarPagina` no leía ningún error. Si el select de «qué
+archivos ya conozco» fallaba, todos parecían nuevos y se reprocesaba la página
+entera. Y si fallaba el insert o el update, el archivo no quedaba encolado sin
+que nadie se enterara. Ahora cualquiera de los dos corta la corrida con el
+motivo, que queda en el log del cron (`conRegistro`).
+
 ## 2026-11-12 · Los archivos de más de 12 MB tienen su lugar en la pantalla de Drive
 
 Desde el #22, un archivo que pasa los 12 MB queda en previa con
