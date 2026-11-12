@@ -13,6 +13,7 @@ import { prepararRevision } from '@/lib/documentos/preparar-revision'
 import { umbralMatchLista, umbralScoreNombre, preciosAutoAplicar } from './flag'
 import { parsearFacturaTexto } from './facturas-texto'
 import { parsearGrilla, parsearMayorsur, type FilaLista, type ListaParseada } from './listas'
+import { prepararFilasCompra, type MapeoNombre } from './compras-match'
 import { claveNombre, matchearProducto, porcentajeMatch, type ProductoRef } from './match'
 import {
   hashEstable, parsearArchivosCargados, parsearPestanaCompras, parsearPestanaPrecios, type FilaCompra,
@@ -41,6 +42,27 @@ export async function catalogoMatch(adm: Adm): Promise<ProductoRef[]> {
 export async function proveedoresActivos(adm: Adm): Promise<ProveedorRef[]> {
   const { data } = await adm.from('proveedores').select('id, razon_social').eq('activo', true).order('razon_social').limit(500)
   return ((data ?? []) as any[]).map((p) => ({ id: p.id, razonSocial: p.razon_social }))
+}
+
+/** Códigos de `producto_codigos_barras`, tal como están. El cruce los normaliza. */
+export async function barrasDelCatalogo(adm: Adm): Promise<Map<string, string>> {
+  const { filas } = await paginar<{ codigo: string; producto_id: string }>(
+    adm.from('producto_codigos_barras').select('codigo, producto_id').order('codigo'),
+    { maximo: 200_000 },
+  )
+  return new Map(filas.map((f) => [f.codigo, f.producto_id]))
+}
+
+async function mapeosGuardados(adm: Adm): Promise<MapeoNombre[]> {
+  const { filas } = await paginar<{ nombre_norm: string; producto_id: string; proveedor_id: string | null }>(
+    adm.from('drive_mapeo_productos').select('nombre_norm, producto_id, proveedor_id').order('nombre_norm'),
+    { maximo: 20_000 },
+  )
+  return filas.map((m) => ({
+    nombreNorm: m.nombre_norm,
+    productoId: m.producto_id,
+    proveedorId: m.proveedor_id,
+  }))
 }
 
 async function enTandas(filas: any[], fn: (tanda: any[]) => Promise<void>) {
@@ -158,30 +180,26 @@ export async function resolverLista(adm: Adm, opts: {
   }
 }
 
-export async function guardarCompras(adm: Adm, filas: FilaCompra[], origen: string, origenRef: string, proveedores: ProveedorRef[]) {
-  const rows = filas.map((f) => {
-    const prov = detectarProveedor({ pista: f.drogueria, nombreArchivo: f.drogueria }, proveedores)
-    const hash = createHash('sha256').update([f.drogueria, f.comprobante, f.producto, f.cantidad, f.precioNeto ?? f.precioCaja].join('|')).digest('hex')
-    return {
-      proveedor_id: prov?.id ?? null,
-      proveedor_nombre: f.drogueria,
-      sucursal_nombre: f.sucursal,
-      sucursal_codigo: sucursalDeArchivo(f.sucursal ?? ''),
-      comprobante: f.comprobante,
-      fecha: f.fecha,
-      producto_nombre: f.producto,
-      droga: f.droga,
-      concentracion: f.concentracion,
-      unidades: f.unidades,
-      codigo_barras: f.codigoBarras,
-      cantidad: f.cantidad,
-      precio_unitario: f.precioNeto ?? f.precioCaja,
-      descuento_pct: f.descuento,
-      importe: f.subtotal,
-      origen,
-      origen_ref: origenRef,
-      hash_linea: hash,
-    }
+export async function guardarCompras(
+  adm: Adm,
+  filas: FilaCompra[],
+  origen: string,
+  origenRef: string,
+  proveedores: ProveedorRef[],
+  opts: {
+    catalogo?: ProductoRef[]
+    barras?: Map<string, string>
+    mapeos?: MapeoNombre[]
+  } = {},
+) {
+  const catalogo = opts.catalogo ?? await catalogoMatch(adm)
+  const barras = opts.barras ?? await barrasDelCatalogo(adm)
+  const mapeos = opts.mapeos ?? await mapeosGuardados(adm)
+  const rows = prepararFilasCompra(filas, origen, origenRef, proveedores, {
+    catalogo,
+    barras,
+    mapeos,
+    umbral: umbralScoreNombre(),
   })
   let insertadas = 0
   await enTandas(rows, async (t) => {

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { test } from 'node:test'
 
 import { clasificar } from './clasificar'
@@ -6,7 +7,10 @@ import { cifrarToken, claveDesdeEnv, descifrarToken } from './crypto'
 import { esElMismoContenido } from './dedupe'
 import { parsearFacturaTexto } from './facturas-texto'
 import { parsearCeos, parsearDistrifarm, parsearMayorsur, parsearNorma, parsearPrecio, parsearVannier } from './listas'
-import { matchearProducto, porcentajeMatch, scoreNombre } from './match'
+import {
+  clavesBarras, fusionarBarras, matchearLineaCompra, prepararFilasCompra,
+} from './compras-match'
+import { catalogoAcotado, indiceDeNombres, matchearProducto, porcentajeMatch, scoreNombre } from './match'
 import { parsearArchivosCargados, parsearPestanaCompras, parsearPestanaPrecios } from './planilla'
 import { detectarProveedor, sucursalDeArchivo } from './proveedor'
 import { tomarPagina, tareasIniciales } from './recorrer'
@@ -143,6 +147,104 @@ test('match por nombre, y el mapeo manual gana', () => {
   assert.equal(mapa.productoId, 'p2')
   assert.ok(scoreNombre('ibuprofeno 400 mg', 'ibuprofeno 600 mg') < 0.5)
   assert.equal(porcentajeMatch([{ via: 'nombre' }, { via: 'sin_match' }]), 50)
+})
+
+test('una compra cruza primero por la tabla de barras y después por nombre', () => {
+  const catalogo = [
+    { id: 'p1', nombre: 'TAFIROL 1 g comp x 80', droga: 'paracetamol', presentacion: 'x 80', codigoBarras: '7791111111111' },
+    { id: 'p2', nombre: 'TAFIROL 500 mg comp x 20', droga: 'paracetamol', presentacion: 'x 20', codigoBarras: null },
+    { id: 'p3', nombre: 'IBUPROFENO 400 mg comp x 10', droga: 'ibuprofeno', presentacion: 'x 10' },
+  ]
+  const barras = fusionarBarras([['7792 2222 22222', 'p2']], catalogo)
+  assert.equal(barras.get('7792222222222'), 'p2')
+  assert.equal(barras.get('7791111111111'), 'p1')
+  assert.deepEqual(clavesBarras('007791111111111'), ['007791111111111', '7791111111111'])
+
+  const indice = indiceDeNombres(catalogo)
+  const porBarras = matchearLineaCompra(
+    { nombre: 'TAFIROL 1 g comp x 80', ean: '7792-2222-22222' },
+    catalogo, barras, [], 0.62, indice,
+  )
+  assert.equal(porBarras.productoId, 'p2')
+  assert.equal(porBarras.via, 'ean')
+  assert.equal(porBarras.score, 1)
+
+  const porNombre = matchearLineaCompra(
+    { nombre: 'TAFIROL 1 g comp x 80', ean: null },
+    catalogo, barras, [], 0.62, indice,
+  )
+  assert.equal(porNombre.productoId, 'p1')
+  assert.equal(porNombre.via, 'nombre')
+
+  const bajo = matchearLineaCompra(
+    { nombre: 'algo que no existe en el catalogo', ean: '123' },
+    catalogo, barras, [], 0.62, indice,
+  )
+  assert.equal(bajo.productoId, null)
+  assert.equal(bajo.via, 'sin_match')
+
+  for (const nombre of ['TAFIROL 1 g comp x 80', 'IBUPROFENO 600 mg', 'algo que no existe', 'TAFIROL 500 mg comp x 20']) {
+    const full = matchearProducto({ nombre }, catalogo, [], 0.62)
+    const acot = matchearProducto({ nombre }, catalogoAcotado(nombre, catalogo, indice), [], 0.62)
+    assert.equal(acot.productoId, full.productoId)
+    assert.equal(acot.score, full.score)
+    assert.equal(acot.via, full.via)
+  }
+
+  const tablaGana = fusionarBarras(
+    [['7791111111111', 'p2']],
+    [{ id: 'p1', nombre: 'TAFIROL 1 g comp x 80', codigoBarras: '7791111111111' }],
+  )
+  assert.equal(tablaGana.get('7791111111111'), 'p2')
+})
+
+test('preparar una compra guarda producto, score y vía sin cambiar el hash', () => {
+  const fila = {
+    fecha: '2026-11-02',
+    drogueria: 'Farmasun',
+    comprobante: 'N-0001-00000001',
+    sucursal: 'Figueiras',
+    producto: 'TAFIROL 1 g comp x 80',
+    droga: null,
+    concentracion: null,
+    unidades: null,
+    codigoBarras: '7792222222222',
+    cantidad: 2,
+    precioCaja: 50,
+    descuento: null,
+    precioNeto: 50,
+    subtotal: 100,
+    observaciones: null,
+  }
+  const [row] = prepararFilasCompra([fila], 'planilla', 'file-1', [
+    { id: 'prov-farmasun', razonSocial: 'Farmasun' },
+  ], {
+    catalogo: [{ id: 'p2', nombre: 'Otro nombre', codigoBarras: null }],
+    barras: new Map([['7792222222222', 'p2']]),
+    mapeos: [],
+    umbral: 0.62,
+  })
+  assert.equal(row.producto_id, 'p2')
+  assert.equal(row.match_via, 'ean')
+  assert.equal(row.match_score, 1)
+  assert.equal(row.proveedor_id, 'prov-farmasun')
+  assert.equal(row.sucursal_codigo, 'FIG')
+  const hashViejo = createHash('sha256').update([
+    fila.drogueria, fila.comprobante, fila.producto, fila.cantidad, fila.precioNeto ?? fila.precioCaja,
+  ].join('|')).digest('hex')
+  assert.equal(row.hash_linea, hashViejo)
+
+  const [sin] = prepararFilasCompra([{ ...fila, codigoBarras: null, producto: 'no esta' }], 'planilla', 'file-1', [
+    { id: 'prov-farmasun', razonSocial: 'Farmasun' },
+  ], {
+    catalogo: [{ id: 'p2', nombre: 'Otro nombre', codigoBarras: null }],
+    barras: new Map(),
+    mapeos: [],
+    umbral: 0.62,
+  })
+  assert.equal(sin.producto_id, null)
+  assert.equal(sin.match_via, 'sin_match')
+  assert.equal(row.hash_linea === sin.hash_linea, false)
 })
 
 test('factura de texto: proveedor, número y líneas, sin usar un CUIT real', () => {

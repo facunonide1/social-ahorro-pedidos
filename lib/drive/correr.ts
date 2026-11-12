@@ -256,7 +256,9 @@ async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: str
     const planilla = leerPlanilla(buf)
     const catalogo = await catalogoMatch(adm)
     const cubiertos = planilla.archivos.map((a) => a.fileId)
-    await guardarCompras(adm, planilla.compras, 'planilla', archivo.file_id, proveedores)
+    await guardarCompras(adm, planilla.compras, 'planilla', archivo.file_id, proveedores, {
+      catalogo, mapeos,
+    })
     let aplicadas = 0
     let enPrevia = 0
     for (const grupo of planilla.precios) {

@@ -1,5 +1,33 @@
 # Bitácora
 
+## 2026-11-12 · Las compras que ya entraron cruzan con el catálogo
+
+`guardarCompras` insertaba `compras_lineas` sin `producto_id`, `match_score`
+ni `match_via`. El comparador de `/admin/compras/donde-comprar` lee las listas
+por `producto_id`: una compra sin producto no se puede poner al lado de un
+precio. El cruce es el mismo que el de las listas (`matchearProducto`), con
+un paso delante.
+
+Primero el código de barras. La fuente es `producto_codigos_barras` (un
+producto puede tener hasta cuatro). `productos_catalogo.codigo_barras` es sólo
+el principal y completa los huecos: no pisa un código que ya estaba en la
+tabla. Se guardan los dígitos y, si al sacar los ceros de la izquierda sigue
+siendo un EAN, también esa forma. Un código de menos de 8 dígitos o un cero
+no es un EAN.
+
+Si el código no está, sigue el matcher de las listas: mapeo manual y, si no,
+nombre (producto, droga, concentración, unidades) con `DRIVE_MATCH_SCORE`
+(0,62 si no está). Debajo del umbral la fila queda con `producto_id` null,
+`match_via = sin_match` y el score que tuvo. No se borra nada. El `hash_linea`
+no cambió, así que un reingreso no duplica: `ignoreDuplicates` deja la fila
+vieja como está. Las que ya estaban sin producto las toma el rematch, en otro
+paso.
+
+El índice por token no cambia el resultado. Un score mayor a cero comparte al
+menos un token con la ficha; el barrido de 46.000 fichas por cada línea de la
+planilla no entra en los 60 segundos del cron. El test compara el índice
+contra el barrido completo.
+
 ## 2026-11-12 · Google Drive: carpetas compartidas, listas al comparador, maestro solo en previa
 
 NORA puede leer las carpetas «compras farmacias» y «compras farmacias (privado)».

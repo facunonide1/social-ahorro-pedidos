@@ -92,6 +92,42 @@ export function claveNombre(nombre: string): string {
   return normalizarTexto(nombre)
 }
 
+/**
+ * Índice por token para no recorrer las 46.000 fichas en cada línea.
+ * Un score mayor a cero comparte al menos un token con la ficha: el que no
+ * está en el índice no podía ganar. El resultado es el mismo que el barrido.
+ */
+export function indiceDeNombres(catalogo: ProductoRef[]): Map<string, number[]> {
+  const indice = new Map<string, number[]>()
+  catalogo.forEach((p, i) => {
+    const ficha = [p.nombre, p.droga, p.presentacion].filter(Boolean).join(' ')
+    for (const t of new Set(tokensDe(ficha))) {
+      const lista = indice.get(t)
+      if (lista) lista.push(i)
+      else indice.set(t, [i])
+    }
+  })
+  return indice
+}
+
+export function catalogoAcotado(
+  nombre: string,
+  catalogo: ProductoRef[],
+  indice: Map<string, number[]>,
+): ProductoRef[] {
+  const vistos = new Set<number>()
+  const out: ProductoRef[] = []
+  for (const t of new Set(tokensDe(nombre))) {
+    for (const i of indice.get(t) ?? []) {
+      if (vistos.has(i)) continue
+      vistos.add(i)
+      const p = catalogo[i]
+      if (p) out.push(p)
+    }
+  }
+  return out
+}
+
 export function matchearProducto(
   consulta: { nombre?: string | null; ean?: string | null; codigo?: string | null },
   catalogo: ProductoRef[],
