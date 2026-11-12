@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { test } from 'node:test'
 
 import { clasificar } from './clasificar'
@@ -6,9 +7,16 @@ import { cifrarToken, claveDesdeEnv, descifrarToken } from './crypto'
 import { esElMismoContenido } from './dedupe'
 import { parsearFacturaTexto } from './facturas-texto'
 import { parsearCeos, parsearDistrifarm, parsearMayorsur, parsearNorma, parsearPrecio, parsearVannier } from './listas'
-import { matchearProducto, porcentajeMatch, scoreNombre } from './match'
+import {
+  clavesBarras, fusionarBarras, matchearLineaCompra, prepararFilasCompra, updatesDeRematch,
+} from './compras-match'
+import { catalogoAcotado, indiceDeNombres, matchearProducto, porcentajeMatch, scoreNombre } from './match'
 import { parsearArchivosCargados, parsearPestanaCompras, parsearPestanaPrecios } from './planilla'
 import { detectarProveedor, sucursalDeArchivo } from './proveedor'
+import { esCodigoSeccion, mapeoSeccionSiExiste, proveedorPorAliasOSeccion } from './seccion'
+import {
+  MINUTOS_TRABADO, TOPE_BYTES, UMBRAL_PESADO, decisionTrabado, planificarCorrida, sigueEnPresupuesto,
+} from './lote'
 import { tomarPagina, tareasIniciales } from './recorrer'
 import { avisoPlazo, proximoIntento } from './vencimiento'
 
@@ -123,6 +131,45 @@ test('el proveedor sale del nombre y la sucursal del archivo', () => {
   ]), null)
   assert.equal(sucursalDeArchivo('guz gon 11-11.xls', 'ventas y stock'), 'GUZ')
   assert.equal(sucursalDeArchivo('figueiras 11-11.xls'), 'FIG')
+  assert.equal(detectarProveedor(
+    { pista: 'Laboratorio Omicron' },
+    [{ id: 'o', razonSocial: 'OMICRON' }],
+  )?.id, 'o')
+  assert.equal(detectarProveedor(
+    { nombreArchivo: 'Monroe Americana S.A.pdf' },
+    [{ id: 'ma', razonSocial: 'MONROE AMERICANA' }],
+  )?.id, 'ma')
+  assert.equal(detectarProveedor(
+    { pista: 'Monroe Americana' },
+    [{ id: 'm', razonSocial: 'Monroe' }],
+  ), null)
+})
+
+test('una sección SIFACO usa el mapeo si la tabla está, y no rompe si no está', async () => {
+  assert.equal(esCodigoSeccion('mic'), true)
+  assert.equal(esCodigoSeccion('Z45'), true)
+  assert.equal(esCodigoSeccion('Farmasun'), false)
+  const provs = [{ id: 'micro', razonSocial: 'MICROSULES' }]
+  const hit = proveedorPorAliasOSeccion(
+    { pista: 'MIC' },
+    provs,
+    [{ seccion: 'MIC', proveedorId: 'micro' }],
+  )
+  assert.equal(hit?.id, 'micro')
+  assert.equal(proveedorPorAliasOSeccion({ pista: 'MIC' }, provs, []), null)
+  assert.equal(proveedorPorAliasOSeccion({ pista: 'MIC' }, provs, null), null)
+  assert.equal(proveedorPorAliasOSeccion({ pista: 'Z90' }, provs, [{ seccion: 'Z90', proveedorId: null }]), null)
+
+  const ausente = {
+    from() {
+      return {
+        select() { return this },
+        order() { return this },
+        limit: async () => ({ data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.sifaco_seccion_proveedor' in the schema cache" } }),
+      }
+    },
+  }
+  assert.equal(await mapeoSeccionSiExiste(ausente), null)
 })
 
 test('match por nombre, y el mapeo manual gana', () => {
@@ -143,6 +190,148 @@ test('match por nombre, y el mapeo manual gana', () => {
   assert.equal(mapa.productoId, 'p2')
   assert.ok(scoreNombre('ibuprofeno 400 mg', 'ibuprofeno 600 mg') < 0.5)
   assert.equal(porcentajeMatch([{ via: 'nombre' }, { via: 'sin_match' }]), 50)
+})
+
+test('una compra cruza primero por la tabla de barras y después por nombre', () => {
+  const catalogo = [
+    { id: 'p1', nombre: 'TAFIROL 1 g comp x 80', droga: 'paracetamol', presentacion: 'x 80', codigoBarras: '7791111111111' },
+    { id: 'p2', nombre: 'TAFIROL 500 mg comp x 20', droga: 'paracetamol', presentacion: 'x 20', codigoBarras: null },
+    { id: 'p3', nombre: 'IBUPROFENO 400 mg comp x 10', droga: 'ibuprofeno', presentacion: 'x 10' },
+  ]
+  const barras = fusionarBarras([['7792 2222 22222', 'p2']], catalogo)
+  assert.equal(barras.get('7792222222222'), 'p2')
+  assert.equal(barras.get('7791111111111'), 'p1')
+  assert.deepEqual(clavesBarras('007791111111111'), ['007791111111111', '7791111111111'])
+
+  const indice = indiceDeNombres(catalogo)
+  const porBarras = matchearLineaCompra(
+    { nombre: 'TAFIROL 1 g comp x 80', ean: '7792-2222-22222' },
+    catalogo, barras, [], 0.62, indice,
+  )
+  assert.equal(porBarras.productoId, 'p2')
+  assert.equal(porBarras.via, 'ean')
+  assert.equal(porBarras.score, 1)
+
+  const porNombre = matchearLineaCompra(
+    { nombre: 'TAFIROL 1 g comp x 80', ean: null },
+    catalogo, barras, [], 0.62, indice,
+  )
+  assert.equal(porNombre.productoId, 'p1')
+  assert.equal(porNombre.via, 'nombre')
+
+  const bajo = matchearLineaCompra(
+    { nombre: 'algo que no existe en el catalogo', ean: '123' },
+    catalogo, barras, [], 0.62, indice,
+  )
+  assert.equal(bajo.productoId, null)
+  assert.equal(bajo.via, 'sin_match')
+
+  for (const nombre of ['TAFIROL 1 g comp x 80', 'IBUPROFENO 600 mg', 'algo que no existe', 'TAFIROL 500 mg comp x 20']) {
+    const full = matchearProducto({ nombre }, catalogo, [], 0.62)
+    const acot = matchearProducto({ nombre }, catalogoAcotado(nombre, catalogo, indice), [], 0.62)
+    assert.equal(acot.productoId, full.productoId)
+    assert.equal(acot.score, full.score)
+    assert.equal(acot.via, full.via)
+  }
+
+  const tablaGana = fusionarBarras(
+    [['7791111111111', 'p2']],
+    [{ id: 'p1', nombre: 'TAFIROL 1 g comp x 80', codigoBarras: '7791111111111' }],
+  )
+  assert.equal(tablaGana.get('7791111111111'), 'p2')
+})
+
+test('preparar una compra guarda producto, score y vía sin cambiar el hash', () => {
+  const fila = {
+    fecha: '2026-11-02',
+    drogueria: 'Farmasun',
+    comprobante: 'N-0001-00000001',
+    sucursal: 'Figueiras',
+    producto: 'TAFIROL 1 g comp x 80',
+    droga: null,
+    concentracion: null,
+    unidades: null,
+    codigoBarras: '7792222222222',
+    cantidad: 2,
+    precioCaja: 50,
+    descuento: null,
+    precioNeto: 50,
+    subtotal: 100,
+    observaciones: null,
+  }
+  const [row] = prepararFilasCompra([fila], 'planilla', 'file-1', [
+    { id: 'prov-farmasun', razonSocial: 'Farmasun' },
+  ], {
+    catalogo: [{ id: 'p2', nombre: 'Otro nombre', codigoBarras: null }],
+    barras: new Map([['7792222222222', 'p2']]),
+    mapeos: [],
+    umbral: 0.62,
+  })
+  assert.equal(row.producto_id, 'p2')
+  assert.equal(row.match_via, 'ean')
+  assert.equal(row.match_score, 1)
+  assert.equal(row.proveedor_id, 'prov-farmasun')
+  assert.equal(row.sucursal_codigo, 'FIG')
+  const hashViejo = createHash('sha256').update([
+    fila.drogueria, fila.comprobante, fila.producto, fila.cantidad, fila.precioNeto ?? fila.precioCaja,
+  ].join('|')).digest('hex')
+  assert.equal(row.hash_linea, hashViejo)
+
+  const [sin] = prepararFilasCompra([{ ...fila, codigoBarras: null, producto: 'no esta' }], 'planilla', 'file-1', [
+    { id: 'prov-farmasun', razonSocial: 'Farmasun' },
+  ], {
+    catalogo: [{ id: 'p2', nombre: 'Otro nombre', codigoBarras: null }],
+    barras: new Map(),
+    mapeos: [],
+    umbral: 0.62,
+  })
+  assert.equal(sin.producto_id, null)
+  assert.equal(sin.match_via, 'sin_match')
+  assert.equal(row.hash_linea === sin.hash_linea, false)
+})
+
+test('el rematch escribe el cruce una vez y no pisa un producto ya puesto', () => {
+  const ctx = {
+    catalogo: [{ id: 'p2', nombre: 'Otro', codigoBarras: null }],
+    barras: new Map([['7792222222222', 'p2']]),
+    mapeos: [],
+    umbral: 0.62,
+  }
+  const base = {
+    id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    proveedor_id: null,
+    producto_nombre: 'X',
+    droga: null,
+    concentracion: null,
+    unidades: null,
+    codigo_barras: '7792222222222',
+    producto_id: null as string | null,
+    match_score: null as number | null,
+    match_via: null as string | null,
+  }
+  const primera = updatesDeRematch([base], ctx)
+  assert.equal(primera.length, 1)
+  assert.equal(primera[0].producto_id, 'p2')
+  assert.equal(primera[0].match_via, 'ean')
+  const ya = updatesDeRematch([{
+    ...base,
+    producto_id: 'p2',
+    match_score: 1,
+    match_via: 'ean',
+  }], ctx)
+  assert.equal(ya.length, 0)
+
+  const sinBase = { ...base, id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', codigo_barras: null, producto_nombre: 'nada de esto' }
+  const sin = updatesDeRematch([sinBase], ctx)
+  assert.equal(sin.length, 1)
+  assert.equal(sin[0].producto_id, null)
+  assert.equal(sin[0].match_via, 'sin_match')
+  const sinOtra = updatesDeRematch([{
+    ...sinBase,
+    match_score: sin[0].match_score,
+    match_via: sin[0].match_via,
+  }], ctx)
+  assert.equal(sinOtra.length, 0)
 })
 
 test('factura de texto: proveedor, número y líneas, sin usar un CUIT real', () => {
@@ -218,6 +407,53 @@ test('el recorrido es BFS, no baja de la profundidad y no duplica el file id', a
     vistosArch.push(...paso.archivos.map((a) => a.fileId))
   }
   assert.deepEqual(vistosArch.sort(), ['f1', 'foto'])
+})
+
+test('lo que pesa más de 12 MB no ocupa lugar en el lote', () => {
+  const grande = { id: 'g', bytes: TOPE_BYTES + 1, clasificacion: 'precios', clasificacionForzada: null }
+  const chicos = [1, 2, 3, 4, 5].map((n) => ({
+    id: `c${n}`, bytes: 1000, clasificacion: 'factura', clasificacionForzada: null,
+  }))
+  const plan = planificarCorrida([grande, ...chicos], { max: 4 })
+  assert.deepEqual(plan.omitidos.map((a) => a.id), ['g'])
+  assert.equal(plan.elegir.length, 4)
+  assert.equal(plan.elegir.some((a) => a.id === 'g'), false)
+  assert.deepEqual(plan.dejar.map((a) => a.id), ['c5'])
+})
+
+test('entra un solo pesado por corrida y el presupuesto corta a los 45 segundos', () => {
+  const planilla = { id: 'p', bytes: null, clasificacion: 'planilla', clasificacionForzada: null }
+  const otra = { id: 'p2', bytes: null, clasificacion: 'planilla', clasificacionForzada: null }
+  const maestro = { id: 'm', bytes: 100, clasificacion: 'factura', clasificacionForzada: 'maestro' }
+  const mediano = { id: 'med', bytes: UMBRAL_PESADO, clasificacion: 'precios', clasificacionForzada: null }
+  const chico = { id: 'c', bytes: UMBRAL_PESADO - 1, clasificacion: 'factura', clasificacionForzada: null }
+  const plan = planificarCorrida([planilla, otra, maestro, mediano, chico], { max: 4 })
+  assert.deepEqual(plan.elegir.map((a) => a.id), ['p', 'c'])
+  assert.deepEqual(plan.dejar.map((a) => a.id), ['p2', 'm', 'med'])
+  assert.equal(plan.omitidos.length, 0)
+  assert.equal(sigueEnPresupuesto(44_999), true)
+  assert.equal(sigueEnPresupuesto(45_000), false)
+})
+
+test('un procesando de más de 10 minutos vuelve a pendiente y al tope queda en error', () => {
+  const ahora = new Date('2026-11-12T15:00:00Z')
+  const hace = (min: number) => new Date(ahora.getTime() - min * 60_000).toISOString()
+  assert.equal(decisionTrabado({
+    updatedAt: hace(MINUTOS_TRABADO - 1), ahora, intentos: 1, maxIntentos: 3,
+  }).accion, 'esperar')
+  const retry = decisionTrabado({
+    updatedAt: hace(MINUTOS_TRABADO + 1), ahora, intentos: 1, maxIntentos: 3,
+  })
+  assert.equal(retry.accion, 'reintentar')
+  assert.equal(retry.intentos, 2)
+  const agotado = decisionTrabado({
+    updatedAt: hace(30), ahora, intentos: 2, maxIntentos: 3,
+  })
+  assert.equal(agotado.accion, 'error')
+  assert.equal(agotado.intentos, 3)
+  assert.equal(decisionTrabado({
+    updatedAt: null, ahora, intentos: 1, maxIntentos: 3,
+  }).accion, 'reintentar')
 })
 
 test('el refresh de testing avisa el último día y el reintento espera', () => {
