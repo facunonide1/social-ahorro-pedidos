@@ -423,5 +423,12 @@ export async function resumenIngesta(adm: Adm) {
     .select('id, file_id, nombre, ruta_relativa, clasificacion, estado, error, web_view_link, match_pct, intentos')
     .in('estado', ['sin_clasificar', 'error', 'previa'])
     .order('updated_at', { ascending: false }).limit(40)
-  return { conexion, carpetas: carpetas ?? [], cuentas, total, hechos, bandeja: bandeja ?? [] }
+  const { data: pendientes } = await adm.from('drive_archivos_ingestados')
+    .select('id, file_id, nombre, ruta_relativa, clasificacion, estado, error, web_view_link, match_pct, intentos')
+    .eq('estado', 'pendiente')
+    .order('created_at', { ascending: true }).limit(40)
+  return {
+    conexion, carpetas: carpetas ?? [], cuentas, total, hechos,
+    bandeja: bandeja ?? [], pendientes: pendientes ?? [],
+  }
 }

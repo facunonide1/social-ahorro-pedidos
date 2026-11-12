@@ -59,6 +59,10 @@ suma otro intento, igual que antes. Al llegar a 3, `error`. `updated_at` se
 escribe al pasar a `procesando`, para no recuperar un archivo que está
 corriendo de verdad.
 
+En la pantalla de Drive, Ignorar también está para los que siguen
+`pendiente`. Antes el botón sólo aparecía en sin clasificar, previa y error,
+y un pendiente no se podía sacar de la cola sin esperar a que fallara.
+
 ## 2026-11-12 · Google Drive: carpetas compartidas, listas al comparador, maestro solo en previa
 
 NORA puede leer las carpetas «compras farmacias» y «compras farmacias (privado)».
