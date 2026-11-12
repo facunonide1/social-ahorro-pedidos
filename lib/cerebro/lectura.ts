@@ -197,7 +197,7 @@ export async function leerCerebro(
   if (data == null) {
     return {
       ok: false, estado: null, leido_en_ms,
-      por_que: 'el estado todavía no se calculó nunca. Se calcula cada minuto: en un minuto debería estar.',
+      por_que: 'el estado todavía no se calculó nunca. Se calcula cada cinco minutos: en cinco minutos debería estar.',
     }
   }
   if (data.autorizado === false) {

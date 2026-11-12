@@ -1,5 +1,22 @@
 # Bitácora
 
+## 2026-11-12 · El cerebro cada cinco minutos (migración 0297, sin aplicar)
+
+`cerebro_calcular()` corre por pg_cron **cada minuto** desde la 0288, con tope
+de 50 s, y recorre toda la cadena: `bandeja_unica(null, null, 100000)` (que
+arrastra `decisiones_pendientes`), otra lectura de la vista para contar por
+agente, `direccion_por_sucursal` y varios group-by grandes. Es el candidato
+más claro de los timeouts de arranque: un cálculo de decenas de segundos
+cada 60 compite con todo lo demás.
+
+La 0297 sólo lo pasa a `*/5 * * * *`: de 1.440 corridas por día a 288. El
+cuerpo de la función no se toca. Sacar la segunda lectura de la vista pide
+reescribir 250 líneas sin poder probarlas contra la base; queda para cuando
+haya acceso (A4). La pantalla del cerebro ya dice «hace N min», y el texto de
+«todavía no se calculó» dice cinco minutos.
+
+Rollback: `supabase/rollbacks/0297_el_cerebro_cada_cinco_minutos.sql`.
+
 ## 2026-11-12 · PINs débiles rechazados
 
 El PIN es de 4 dígitos y el login corta a los pocos intentos, así que lo que
