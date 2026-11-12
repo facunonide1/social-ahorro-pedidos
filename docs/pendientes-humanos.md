@@ -9,6 +9,26 @@ variables, no mergea a main y no deploya.
 
 ---
 
+## Orden de merge propuesto
+
+Los PRs van apilados: cada uno apunta a la rama del anterior, así la bitácora
+no choca. Se mergean en este orden. Al mergear uno, el siguiente se re-apunta
+a `main`.
+
+| # | PR | Rama | Migración | Firma |
+|---|---|---|---|---|
+| 1 | [#9](https://github.com/facunonide1/social-ahorro-pedidos/pull/9) | `claude/bold-turing-9ualkj` | — | «Firmo merge y deploy del PR #9, SHA 9f170fd» |
+| 2 | [#10](https://github.com/facunonide1/social-ahorro-pedidos/pull/10) | `chore/backlog` | — | «Firmo merge del PR #10» |
+| 3 | [#11](https://github.com/facunonide1/social-ahorro-pedidos/pull/11) | `chore/ci-tests` | — | «Firmo merge del PR #11» |
+| 4 | [#12](https://github.com/facunonide1/social-ahorro-pedidos/pull/12) | `fix/avisos-dedup-por-tandas` | — | «Firmo merge y deploy del PR #12» |
+| 5 | [#13](https://github.com/facunonide1/social-ahorro-pedidos/pull/13) | `fix/crons-tandas` | — | «Firmo merge y deploy del PR #13» |
+| 6 | [#14](https://github.com/facunonide1/social-ahorro-pedidos/pull/14) | `feat/estabilidad-cerebro` | 0297 | «Firmo merge del PR #14» y, aparte, «Firmo aplicar migración 0297 en prod» |
+| 7 | [#15](https://github.com/facunonide1/social-ahorro-pedidos/pull/15) | `feat/seguridad-pin-debil` | — | «Firmo merge y deploy del PR #15» |
+
+El SHA exacto de cada uno se completa en la firma cuando el PR quede cerrado
+y con CI en verde. Rollback de cualquiera: promover en Vercel el deploy
+anterior. Ninguno de estos cambia datos.
+
 ## P1 · Merge del hotfix del build (PR #9)
 
 - **Qué:** mergear y deployar [PR #9](https://github.com/facunonide1/social-ahorro-pedidos/pull/9).
