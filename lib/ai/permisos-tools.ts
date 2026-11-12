@@ -89,6 +89,11 @@ export const PERMISOS_TOOLS: Record<string, PermisoTool> = {
   },
   score_proveedor: { permiso: { modulo: 'compras', accion: 'ver' } },
   get_proveedor_resumen: { permiso: { modulo: 'compras', accion: 'ver' } },
+  donde_comprar: {
+    permiso: { modulo: 'compras', accion: 'ver' },
+    roles: ['super_admin', 'gerente', 'comprador'],
+    motivo: 'los precios de droguería los ve quien compra',
+  },
 
   // ── Datos y desempeño de personas ────────────────────────────────────────
   centro_datos_estado: { roles: ['super_admin', 'gerente', 'administrativo'] },

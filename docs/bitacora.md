@@ -1,5 +1,70 @@
 # Bitácora
 
+## 2026-11-12 · Google Drive: carpetas compartidas, listas al comparador, maestro solo en previa
+
+NORA puede leer las carpetas «compras farmacias» y «compras farmacias (privado)».
+No son de la cuenta del dueño: están en gabrielafigueiras75@gmail.com y
+compartidas con él. La API pide `sharedWithMe`, `supportsAllDrives` e
+`includeItemsFromAllDrives`. El alcance es `drive.readonly`.
+
+OAuth: authorization code, PKCE y state. La app de Google queda en Testing, así
+que el refresh token se estima vencido a los 7 días (`connected_at`) y, si
+Google responde `invalid_grant`, la fila pasa a `vencida` y entra un aviso en
+`nora_avisos`. El token se guarda cifrado (AES-256-GCM, `DRIVE_TOKEN_ENC_KEY`).
+No sale al navegador. Las tablas del token no tienen políticas: solo
+`service_role`, y se revoca `anon` y `authenticated` porque el default
+privilege de la 0250 no se va con un revoke a PUBLIC.
+
+`DRIVE_INGESTA_ENABLED` nace apagado. Si no es `true`, la pantalla dice
+deshabilitado y el cron `/api/cron/drive-ingesta` (cada 30 minutos) responde
+200 sin hacer nada. `DRIVE_PRECIOS_AUTO_APLICAR`, si no está, sigue a ese flag.
+
+La primera corrida lista todo, de a una página, y lo deja en
+`drive_archivos_ingestados`. Las siguientes miran lo modificado después de
+`last_sync_at`. Cada corrida procesa 4 archivos. A los 3 fallos el archivo
+queda en error. «Procesar ahora» corre el mismo lote.
+
+La planilla «Compras y precios por droguería» es la fuente principal: la
+pestaña de listas va al comparador (`listas_precios`, la vigente anterior del
+mismo proveedor deja de serlo), la de compras va a `compras_lineas`, y
+«Archivos cargados» marca esos file id para no bajarlos de nuevo. El
+comparador no se alimenta de `lib/centro-datos/import.ts`: `aplicar()` ahí
+pisa el precio de venta del catálogo y no arma una lista por droguería. Por
+eso una lista confiable usa el mismo camino que `/api/compras/listas-precios`
+(vigente / histórica) y se puede revertir desde la pantalla. Si no hay
+droguería o el match no llega al umbral, queda en previa.
+
+Ninguna lista trae EAN. El match es por nombre (droga, concentración,
+presentación). Debajo del score la fila queda sin producto, visible, y un
+mapeo manual se guarda en `drive_mapeo_productos` y se reutiliza. Norma, Ceos,
+Distrifarm y Vannier tienen parser propio: Ceos y Distrifarm no cargan el
+título de categoría como producto. Mayorsur es un PDF de dos columnas. Irma /
+Vitamin Way y cualquier «importación temporal» no entran como precios.
+
+Los PDF de Asoprofarma y Monroe se leen del texto. Las fotos van a
+`doc_extracciones` en pendiente y, si hay modelo, se dispara la extracción que
+ya existía. No se confirman.
+
+Los maestros `pla_3d` de Guz Gon y Figueiras se estacionan en la previa de
+SIFACO con la sucursal en el nombre. No se llama a `sifaco_aplicar_maestro`.
+Un archivo de más de 12 MB no se parsea en el cron: queda señalado para
+subirlo a mano en la pantalla que ya existe.
+
+«¿Dónde lo compro más barato?» está en `/admin/compras/donde-comprar` y como
+herramienta de solo lectura `donde_comprar` (super_admin, gerente, comprador).
+
+Migración `0294`, sin aplicar. Rollback en `supabase/rollbacks/0294_…sql`.
+
+Env: `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`,
+`DRIVE_TOKEN_ENC_KEY`, `DRIVE_INGESTA_ENABLED`, `DRIVE_PRECIOS_AUTO_APLICAR`.
+Redirect de producción:
+`https://social-ahorro-pedidos.vercel.app/api/integraciones/google-drive/callback`.
+Las previews usan el host del request.
+
+En Google Cloud, Facu: proyecto, Drive API, consentimiento External/Testing
+con su mail como usuario de prueba, cliente OAuth web con esa redirect, y las
+env en Vercel. Las credenciales OAuth ya las está cargando.
+
 ## 2026-11-10 · Meses del maestro de Guzmán (09/11/2026)
 
 El importador de `/admin/operaciones/sifaco` (`POST /api/sifaco/importar`,

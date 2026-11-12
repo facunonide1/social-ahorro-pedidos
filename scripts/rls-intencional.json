@@ -9,5 +9,9 @@
  "demo_origen_ref": "libreta de equivalencias que usa un trigger, no una pantalla",
  "sifaco_maestro_staging": "pila de origen del importador: solo la escribe y lee el cargador con service_role",
  "sifaco_mapeo_columnas": "mapeo de columnas del importador; nadie lo lee desde una pantalla",
- "cerebro_snapshot": "v1.5-cerebro: una fila que escribe pg_cron; la unica puerta es cerebro_estado(), que mira el rol adentro"
+ "cerebro_snapshot": "v1.5-cerebro: una fila que escribe pg_cron; la unica puerta es cerebro_estado(), que mira el rol adentro",
+ "integraciones_google_drive": "token de Drive cifrado; lo lee el cron con service_role",
+ "integraciones_google_drive_carpetas": "carpetas elegidas; las lee el cron con service_role",
+ "drive_archivos_ingestados": "cola de ingesta; la pantalla la lee con service_role despues de exigir super_admin",
+ "drive_mapeo_productos": "mapeo manual nombre→producto; lo escribe el cron y la pantalla con service_role"
 }

@@ -81,6 +81,7 @@ export const NAVEGACION: NavGrupo[] = [
       { label: 'Qué comprar',           href: '/admin/compras/recomendaciones', icon: 'Sparkles',     subsector: 'Decidir' },
       { label: 'Avisos de faltantes',   href: '/admin/compras/faltantes',      icon: 'AlertTriangle', subsector: 'Decidir', badge: 'faltantesPendientes' },
       { label: 'Comparador de precios', href: '/admin/compras/comparador',     icon: 'Scale',         subsector: 'Decidir' },
+      { label: 'Dónde lo compro',       href: '/admin/compras/donde-comprar', icon: 'Search',        subsector: 'Decidir', rolesPermitidos: ['super_admin', 'gerente', 'comprador'] },
       { label: 'Órdenes de compra',     href: '/admin/compras/ordenes',        icon: 'ShoppingCart',  subsector: 'Gestionar' },
       { label: 'Recepciones',           href: '/admin/compras/recepciones',    icon: 'PackageCheck',  subsector: 'Gestionar' },
       { label: 'Devoluciones',          href: '/admin/compras/devoluciones',   icon: 'Undo2',         subsector: 'Gestionar' },
@@ -174,6 +175,7 @@ export const NAVEGACION: NavGrupo[] = [
       { label: 'Supervisores',          href: '/admin/configuracion/supervisores', icon: 'UserCheck',  subsector: 'Administración', rolesPermitidos: SOLO_SUPER },
       { label: 'Datos demo',            href: '/admin/configuracion/general',      icon: 'Database',   subsector: 'Administración', rolesPermitidos: SOLO_SUPER },
       { label: 'Configuración general', href: '/admin/configuracion/general',      icon: 'Settings',   subsector: 'Administración', rolesPermitidos: SOLO_SUPER },
+      { label: 'Google Drive',          href: '/admin/configuracion/integraciones/google-drive', icon: 'Cloud', subsector: 'Administración', rolesPermitidos: SOLO_SUPER },
     ],
   },
 ]

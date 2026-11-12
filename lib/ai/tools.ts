@@ -1218,6 +1218,37 @@ const irAPantalla: ToolDef = {
   },
 }
 
+const dondeComprar: ToolDef = {
+  definition: {
+    name: 'donde_comprar',
+    description: 'Dice en qué droguería está más barato un producto, por nombre, EAN o código interno. Solo lectura: no compra ni aplica precios.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        consulta: { type: 'string', description: 'Nombre, EAN o código interno.' },
+      },
+      required: ['consulta'],
+    },
+  },
+  execute: async (sb, input) => {
+    const q = String(input.consulta ?? '').trim()
+    if (q.length < 2) return { error: 'Falta el producto.' }
+    const like = `%${q.replace(/[%,().]/g, ' ')}%`
+    const { data } = await sb.from('productos_catalogo')
+      .select('id, nombre, sku')
+      .eq('activo', true)
+      .or(`nombre.ilike.${like},sku.ilike.${like},codigo_barras.ilike.${like}`)
+      .limit(8)
+    const prods = (data ?? []) as { id: string; nombre: string }[]
+    if (!prods.length) return { texto: `No encontré «${q}».` }
+    return {
+      producto: prods[0].nombre,
+      pantalla: '/admin/compras/donde-comprar?q=' + encodeURIComponent(q),
+      nota: 'El detalle (fecha de lista, condiciones, equivalentes) está en esa pantalla.',
+    }
+  },
+}
+
 export const AI_TOOLS: Record<string, ToolDef> = {
   ir_a_pantalla: irAPantalla,
   buscar_cliente: buscarCliente,
@@ -1248,6 +1279,7 @@ export const AI_TOOLS: Record<string, ToolDef> = {
   get_performance_empleado: getPerformanceEmpleado,
   get_ranking_sucursal: getRankingSucursal,
   get_objetivos_empleado: getObjetivosEmpleado,
+  donde_comprar: dondeComprar,
 }
 
 /**
@@ -1298,6 +1330,7 @@ export const TOOL_LABELS: Record<string, string> = {
   get_performance_empleado: 'Analizando performance',
   get_ranking_sucursal: 'Calculando ranking',
   get_objetivos_empleado: 'Mirando objetivos',
+  donde_comprar: 'Comparando precios de droguería',
   get_faltantes: 'Revisando faltantes',
   score_proveedor: 'Evaluando proveedor',
   ofertas_activas: 'Mirando ofertas',

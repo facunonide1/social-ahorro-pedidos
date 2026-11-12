@@ -243,6 +243,7 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'A quién comprarle', ruta: '/admin/compras/a-quien' },
       { nombre: 'Cómo pagarlo', ruta: '/admin/compras/como-pagar' },
       { nombre: 'Comparador de listas', ruta: '/admin/compras/comparador' },
+      { nombre: 'Dónde lo compro más barato', ruta: '/admin/compras/donde-comprar' },
       { nombre: 'Órdenes de compra', ruta: '/admin/compras/ordenes' },
       { nombre: 'Seguimiento de órdenes', ruta: '/admin/compras/ordenes/seguimiento' },
       { nombre: 'Recepciones', ruta: '/admin/compras/recepciones' },
@@ -623,6 +624,7 @@ export const SUBAPPS: SubAppManifest[] = [
       { nombre: 'Turnos', ruta: '/admin/configuracion/turnos' },
       { nombre: 'Supervisores', ruta: '/admin/configuracion/supervisores' },
       { nombre: 'General', ruta: '/admin/configuracion/general' },
+      { nombre: 'Google Drive', ruta: '/admin/configuracion/integraciones/google-drive' },
       // v0.97 · F · habilitaciones, matriculas y el farmaceutico de cada
       // sucursal. SOLO DUEÑOS: la RLS tambien lo garantiza.
       { nombre: 'Documentos de la empresa', ruta: '/admin/configuracion/documentos-empresa' },
