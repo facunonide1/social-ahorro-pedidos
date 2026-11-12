@@ -203,6 +203,17 @@ Si P2 (acceso de los agentes a la base) no llega, esto lo reemplaza.
 - **Si no llega:** F2, A4 y C1 siguen bloqueados.
 - **Firma:** no hace falta, las dos sólo leen.
 
+## P15 · Dar de alta Monroe Americana (y confirmar OMICRON)
+
+- **Qué:** en `/admin/proveedores/nuevo`, crear «MONROE AMERICANA» con su CUIT
+  real. Confirmar que existe un proveedor OMICRON.
+- **Por qué:** el #22 ya reconoce «Monroe Americana» y «Laboratorio Omicron»
+  en las listas y facturas, pero si el proveedor no existe, la lista queda sin
+  droguería y no entra al comparador. `cuit` es obligatorio y único: no se
+  carga por migración con un CUIT inventado.
+- **Si no llega:** las listas de Monroe Americana quedan en previa.
+- **Firma:** no hace falta; es un alta desde la app.
+
 ## P10 · Datos de negocio
 
 - Confirmar el mapeo de secciones de SIFACO, sobre todo `NOR → NORMA`, que

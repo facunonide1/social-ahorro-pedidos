@@ -83,12 +83,15 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Rama: `feat/compras-cruce` · Estado: en PR (#22) · Depende de: G1.
 
 **B2 · Proveedores Monroe Americana y OMICRON**
-- Qué: los alias ya están en el PR #7. Falta la fila «MONROE AMERICANA» en
+- Qué: los alias ya están en el PR #22 («Laboratorio Omicron» → OMICRON;
+  «Monroe Americana» antes que «Monroe»). Falta la fila «MONROE AMERICANA» en
   `proveedores`.
-- Terminado: migración idempotente (`insert … where not exists`) con
-  rollback.
-- Rama: `feat/compras-proveedores-monroe` · Estado: pendiente · Depende de:
-  B1, firma de la migración.
+- Terminado: el proveedor existe con su CUIT real, y las listas y facturas de
+  Monroe Americana se asignan a él.
+- Rama: — · Estado: bloqueado por humano: `proveedores.cuit` es `not null
+  unique` y el CUIT no se inventa. Se da de alta en `/admin/proveedores/nuevo`
+  (P15), sin migración. Confirmar también que OMICRON existe · Depende de:
+  P15.
 
 **B3 · Archivos de más de 12 MB**
 - Qué: las copias .xls pesan 42 MB. El PR #7 las deja en previa
