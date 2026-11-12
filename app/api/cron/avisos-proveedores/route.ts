@@ -7,6 +7,7 @@ import { publicarAvisos } from '@/lib/proveedores/avisos'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+export const maxDuration = 60
 
 /**
  * Los avisos del circuito de proveedores, una vez por día.

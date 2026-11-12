@@ -11,6 +11,7 @@
  */
 
 import { parametro } from '@/lib/os/definicion'
+import { clavesYaPendientes, insertarEnTandas, soloNuevos } from '@/lib/avisos/dedup'
 
 type Adm = { from: (t: string) => any; rpc: (n: string, a?: any) => any }
 
@@ -55,26 +56,20 @@ export async function publicarAvisos(adm: Adm): Promise<{ nuevos: number; total:
   const hallazgos = await detectar(adm)
   if (!hallazgos.length) return { nuevos: 0, total: 0 }
 
-  const claves = hallazgos.map((h) => h.clave)
-  const { data: previos } = await adm.from('nora_avisos')
-    .select('clave_dedup').in('clave_dedup', claves.slice(0, 500)).eq('estado', 'pendiente')
-  const yaEstan = new Set(((previos ?? []) as any[]).map((p) => p.clave_dedup))
-
-  const nuevos = hallazgos.filter((h) => !yaEstan.has(h.clave))
-  if (nuevos.length) {
-    await adm.from('nora_avisos').insert(nuevos.map((h) => ({
-      tipo: h.tipo,
-      severidad: h.severidad,
-      titulo: h.titulo,
-      detalle: h.detalle,
-      modulo: 'compras',
-      sucursal_id: h.sucursal_id,
-      accion_label: 'Ver',
-      accion_href: h.href,
-      entidad_ref: { proveedor_id: h.proveedor_id },
-      estado: 'pendiente',
-      clave_dedup: h.clave,
-    })))
-  }
+  const yaEstan = await clavesYaPendientes(adm, hallazgos.map((h) => h.clave))
+  const nuevos = soloNuevos(hallazgos, yaEstan)
+  await insertarEnTandas(adm, 'nora_avisos', nuevos.map((h) => ({
+    tipo: h.tipo,
+    severidad: h.severidad,
+    titulo: h.titulo,
+    detalle: h.detalle,
+    modulo: 'compras',
+    sucursal_id: h.sucursal_id,
+    accion_label: 'Ver',
+    accion_href: h.href,
+    entidad_ref: { proveedor_id: h.proveedor_id },
+    estado: 'pendiente',
+    clave_dedup: h.clave,
+  })))
   return { nuevos: nuevos.length, total: hallazgos.length }
 }
