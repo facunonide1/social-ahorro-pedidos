@@ -153,11 +153,12 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 
 ## E · Multisucursal
 
-**E1 · `/hub?denied=1` no existe**
-- Qué: `requireAdminHubAccess` manda ahí cuando el rol no alcanza, y
-  `app/hub` no existe: termina en un 404.
+**E1 · `/hub?denied=1` sin aviso**
+- Qué: `requireAdminHubAccess` y el mostrador mandan ahí cuando el rol no
+  alcanza. `/hub` redirige a `/admin` (`next.config.mjs`), así que la
+  persona cae en la home sin saber por qué.
 - Terminado: va a `/admin` con un aviso de sin permiso.
-- Rama: `fix/multisucursal-denegado` · Estado: pendiente · Depende de: —
+- Rama: `fix/multisucursal-denegado` · Estado: en PR · Depende de: —
 
 **E2 · Selector de sucursal activa coherente**
 - Qué: la cookie `sa_sucursal` existe, pero la home de `/admin` no filtra

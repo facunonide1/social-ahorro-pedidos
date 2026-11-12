@@ -21,7 +21,7 @@ export default async function MostradorPage() {
     .select('rol, activo, permisos_custom, sucursal_id').eq('id', user.id)
     .maybeSingle<{ rol: AdminRole; activo: boolean; permisos_custom: PermisosCustom | null; sucursal_id: string | null }>()
   if (!me?.activo) redirect('/logout?reason=sin_permiso')
-  if (!puede(me.rol, me.permisos_custom ?? null, 'operaciones', 'ver')) redirect('/hub?denied=1')
+  if (!puede(me.rol, me.permisos_custom ?? null, 'operaciones', 'ver')) redirect('/admin?denied=1')
 
   // Regla de oro 8. Quien no tiene sucursal asignada elige una: el stock, el
   // vencimiento y lo que se vende son de UNA sucursal, y sin eso el orden de

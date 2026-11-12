@@ -35,7 +35,7 @@ export default async function FaltantePage({
     .select('rol, activo, permisos_custom, sucursal_id').eq('id', user.id)
     .maybeSingle<{ rol: AdminRole; activo: boolean; permisos_custom: PermisosCustom | null; sucursal_id: string | null }>()
   if (!me?.activo) redirect('/logout?reason=sin_permiso')
-  if (!puede(me.rol, me.permisos_custom ?? null, 'operaciones', 'crear')) redirect('/hub?denied=1')
+  if (!puede(me.rol, me.permisos_custom ?? null, 'operaciones', 'crear')) redirect('/admin?denied=1')
 
   const adm = createAdminClient()
   const { data: sucs } = await adm.from('sucursales')

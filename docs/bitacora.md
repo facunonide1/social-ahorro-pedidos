@@ -1,5 +1,14 @@
 # Bitácora
 
+## 2026-11-12 · «No tenés permiso» en vez de caer en la home sin saber por qué
+
+`requireAdminHubAccess` y seis pantallas del mostrador mandaban a
+`/hub?denied=1` cuando el rol no alcanzaba. `/hub` ya no existe: desde la v0.18,
+`next.config.mjs` lo redirige de forma permanente a `/admin`. La persona
+terminaba en la home de NORA sin ningún aviso. Ahora va directo a
+`/admin?denied=1` y la home muestra arriba «No tenés permiso para la pantalla
+que quisiste abrir», con a quién pedírselo.
+
 ## 2026-11-12 · El build se rompe si una función SECURITY DEFINER nueva queda abierta a anon
 
 Octava vez que aparece la misma familia de error: una función SECURITY DEFINER

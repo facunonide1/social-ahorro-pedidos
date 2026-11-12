@@ -33,7 +33,7 @@ export async function requireAdminHubAccess(opts?: {
 
   if (opts?.allowedRoles && opts.allowedRoles.length > 0) {
     if (!opts.allowedRoles.includes(profile.rol)) {
-      redirect('/hub?denied=1')
+      redirect('/admin?denied=1')
     }
   }
 
