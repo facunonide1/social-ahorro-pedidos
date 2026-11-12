@@ -1,5 +1,43 @@
 # Bitácora
 
+## 2026-11-12 · El build no escribe en producción
+
+`npm run build` corre `verificar:coherencia`, y eso llamaba a
+`agentes_resumen_calcular(null)`. Esa función es SECURITY DEFINER y
+**escribe** `agentes_resumen_snapshot`. Pasaba en cada deploy de producción y
+en cada build local con `.env.local` contra prod, y además le sumaba a la
+base unos 20 s de cálculo sobre toda la cadena. Ahora el script lee la fila
+de la cadena de `agentes_resumen_snapshot` y no llama a ninguna función que
+escriba. El cruce exacto de Abasto (productos y plata a transferir) corre
+sólo si el snapshot tiene 15 minutos o menos, que es cuando lo acaban de
+recalcular el cron `medidor` o el importador de SIFACO. Si es más viejo, se
+saltea con su edad: comparar un snapshot de la madrugada contra la vista de
+ahora daría diferencias que no son cortes. Los otros cruces (paginar,
+quiebres, candados) no cambian.
+
+`auditar:rls-roles` creaba 5 usuarios reales en Auth (`auditor.<rol>@rls.test`)
+con fila activa en `users_admin` cuando se lo corría a mano con
+`VERCEL_ENV=production`, como recomendaba la entrada de abajo. Ahora esa
+parte pide además `AUDITOR_CREAR_USUARIOS=1`, y en un build de Vercel no corre
+nunca, aunque el flag esté. Sin el flag, el auditor revisa **todos** los
+usuarios de Auth (paginados, no los primeros 200) y falla si queda algún
+`@rls.test` vivo. Con el flag, un Ctrl-C o un SIGTERM borra los usuarios
+creados antes de salir (`try/finally` no corre con una señal), y el control
+final también mira todas las páginas.
+
+`scripts/buscar-usuarios-auditor.ts` lista, sólo leyendo, los `@rls.test` que
+haya en Auth y si tienen fila activa en `users_admin`:
+`npx tsx --env-file=.env.local scripts/buscar-usuarios-auditor.ts`.
+
+Las demás funciones que llaman los verificadores del build están declaradas
+`stable` en las migraciones. `rls_escrituras_que_dan_lectura` (la usa
+`auditar:rls-roles`) no está en ninguna migración del repo: queda por revisar
+en la base.
+
+`npm test` suma `scripts/hotfix-build.test.ts` (44 tests).
+
+No se tocó la base, ni migraciones, ni RLS, ni secretos.
+
 ## 2026-11-12 · /admin no se cae si la vista de decisiones no responde
 
 `/admin` tiraba `Cannot read properties of null (reading 'filter')`.
@@ -25,7 +63,8 @@ sólo en la rama vieja `feature/crm-redesign`. El auditor se saltea (aviso,
 exit 0) cuando `VERCEL_ENV !== 'production'` o falta alguna de las tres
 variables. En production, con las variables, la medición no cambia: en Vercel
 sigue sin crear usuarios de prueba. Para correrlo en la máquina:
-`VERCEL_ENV=production npm run auditar:rls-roles`.
+`VERCEL_ENV=production npm run auditar:rls-roles` (desde el hotfix del build, además
+`AUDITOR_CREAR_USUARIOS=1` para que cree usuarios; ver la entrada de arriba).
 
 `verificar:coherencia` y `verificar:limite` vienen después en `npm run build`
 y tiran el mismo `Falta …` si no hay URL. Se saltean sólo cuando faltan las
