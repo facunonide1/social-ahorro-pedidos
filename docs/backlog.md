@@ -229,8 +229,9 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Qué: `auth.uid()` sin `(select …)` y políticas permisivas que se
   duplican.
 - Terminado: migración por tabla, con rollback, desde los advisors.
-- Rama: `feat/seguridad-rls-initplan` · Estado: bloqueado por humano ·
-  Depende de: P2.
+- Rama: `feat/seguridad-rls-initplan` · Estado: en PR (consultas de sólo
+  lectura probadas en Postgres local) / bloqueado por humano (aplicar, P13) ·
+  Depende de: P13.
 
 **F7 · Usuarios `@rls.test` vivos**
 - Qué: revisar si quedaron de corridas viejas del auditor.

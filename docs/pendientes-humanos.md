@@ -173,6 +173,20 @@ maestro por sucursal, revoke, índices).
 - **Firma:** «Firmo crear en prod los índices de FK que lista la consulta,
   empezando por las N más grandes».
 
+## P13 · RLS: envolver auth.uid() y revisar permisivas duplicadas
+
+- **Qué:** correr `supabase/consultas/rls_initplan.sql`. Es de sólo lectura:
+  por política, devuelve `cambiar` y `rollback`. Aplicar `cambiar` tabla por
+  tabla, empezando por las tablas grandes (stock, movimientos, pedidos).
+  Después, correr `rls_permisivas_multiples.sql` y decidir qué política sobra
+  en cada caso: no es mecánico.
+- **Por qué:** 430 políticas evalúan `auth.uid()` por fila. Es costo puro en
+  cada pantalla que lee con sesión, y suma a los timeouts.
+- **Si no llega:** las lecturas con sesión siguen pagando ese costo.
+- **Rollback:** la columna `rollback` de cada fila.
+- **Firma:** «Firmo aplicar en prod los alter policy de initplan de las
+  tablas …».
+
 ## P10 · Datos de negocio
 
 - Confirmar el mapeo de secciones de SIFACO, sobre todo `NOR → NORMA`, que
