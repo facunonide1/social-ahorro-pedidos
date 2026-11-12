@@ -1,5 +1,18 @@
 # Bitácora
 
+## 2026-11-12 · Los archivos de más de 12 MB tienen su lugar en la pantalla de Drive
+
+Desde el #22, un archivo que pasa los 12 MB queda en previa con
+`destino_ref = 'omitido_por_tamano'` sin bajarse. Pero aparecía mezclado en la
+bandeja general, con botones de «Clasificar como…» que no lo destraban: el
+cron lo vuelve a saltear. Las copias `.xls` de 42 MB caen siempre acá.
+
+Ahora la pantalla de Google Drive tiene una sección aparte, «Demasiado grandes
+para el cron», con el peso de cada archivo y adónde subirlo a mano según qué
+es: el maestro a Operaciones → SIFACO (que lee el archivo en el navegador y lo
+manda por lotes), las listas a Compras → Listas de precios y las facturas a
+Finanzas → Documentos. La bandeja general ya no los repite.
+
 ## 2026-11-12 · La ingesta no sabe que es Drive
 
 FIND va a ser la fuente maestra. Para que cambiar de fuente no sea reescribir

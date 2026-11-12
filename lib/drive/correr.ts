@@ -427,6 +427,13 @@ export async function resumenIngesta(adm: Adm) {
   const { data: bandeja } = await adm.from('drive_archivos_ingestados')
     .select('id, file_id, nombre, ruta_relativa, clasificacion, estado, error, web_view_link, match_pct, intentos')
     .in('estado', ['sin_clasificar', 'error', 'previa'])
+    .or('destino_ref.is.null,destino_ref.neq.omitido_por_tamano')
+    .order('updated_at', { ascending: false }).limit(40)
+  // Los que pasan el tope del cron van aparte: reclasificarlos no los destraba
+  // (el cron los vuelve a saltear); hay que subirlos a mano.
+  const { data: grandes } = await adm.from('drive_archivos_ingestados')
+    .select('id, file_id, nombre, ruta_relativa, clasificacion, estado, error, web_view_link, match_pct, intentos, bytes')
+    .eq('estado', 'previa').eq('destino_ref', 'omitido_por_tamano')
     .order('updated_at', { ascending: false }).limit(40)
   const { data: pendientes } = await adm.from('drive_archivos_ingestados')
     .select('id, file_id, nombre, ruta_relativa, clasificacion, estado, error, web_view_link, match_pct, intentos')
@@ -434,6 +441,6 @@ export async function resumenIngesta(adm: Adm) {
     .order('created_at', { ascending: true }).limit(40)
   return {
     conexion, carpetas: carpetas ?? [], cuentas, total, hechos,
-    bandeja: bandeja ?? [], pendientes: pendientes ?? [],
+    bandeja: bandeja ?? [], pendientes: pendientes ?? [], grandes: grandes ?? [],
   }
 }
