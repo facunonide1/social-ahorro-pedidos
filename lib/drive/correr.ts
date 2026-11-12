@@ -16,6 +16,7 @@ import { mapeoSeccionSiExiste } from './seccion'
 import { refrescarAccessToken } from './google'
 import { fuenteDrive } from './fuente-drive'
 import type { FuenteArchivos } from '@/lib/ingesta/fuente'
+import { findPrendido, MOTIVO_FIND } from '@/lib/ingesta/fuente-find'
 import { parsearMayorsur } from './listas'
 import { claveDesdeEnv, descifrarToken } from './crypto'
 import { tomarPagina, tareasIniciales, type TareaCarpeta } from './recorrer'
@@ -51,6 +52,9 @@ async function marcarVencida(adm: Adm, row: { id: string; connected_at: string }
 export async function correrIngesta(opts: { manual?: boolean } = {}) {
   const inicio = Date.now()
   if (!ingestaHabilitada()) return { ok: true, omitido: 'deshabilitado' }
+  // Con la bandera de FIND prendida, la ingesta NO cae en Drive en silencio:
+  // dice que la fuente pedida todavía no existe.
+  if (findPrendido()) return { ok: false, fuente: 'find', error: `FIND ${MOTIVO_FIND}` }
   const adm = createAdminClient()
   const { data: conexion } = await adm.from('integraciones_google_drive')
     .select('id, refresh_token_cifrado, iv, tag, estado, connected_at, last_sync_at, listado_cursor, listado_completo, owner_admin_id')

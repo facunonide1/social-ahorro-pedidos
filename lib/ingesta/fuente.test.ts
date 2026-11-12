@@ -72,3 +72,14 @@ test('fuenteDrive corta si Drive no responde 200', async () => {
   globalThis.fetch = (async () => new Response('no', { status: 403 })) as any
   await assert.rejects(fuenteDrive('tok').listarPagina('c', null), /403/)
 })
+
+test('FIND: apagado por defecto y, prendido, falla con motivo en vez de leer otra cosa', async () => {
+  const { findPrendido, fuenteFind, FuenteNoConfigurada } = await import('./fuente-find')
+  assert.equal(findPrendido({}), false)
+  assert.equal(findPrendido({ NORA_FUENTE_FIND: '1' }), false)
+  assert.equal(findPrendido({ NORA_FUENTE_FIND: 'true' }), true)
+  const f = fuenteFind()
+  assert.equal(f.nombre, 'find')
+  await assert.rejects(f.listarPagina('x', null), (e) => e instanceof FuenteNoConfigurada)
+  await assert.rejects(f.descargar({ id: 'x', mime: 'y' }), /no está conectado/)
+})

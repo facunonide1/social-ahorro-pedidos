@@ -283,8 +283,8 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Qué: FIND va a ser la fuente maestra.
 - Terminado: esqueleto de la implementación detrás de la bandera
   `INGESTA_FUENTE=find`, que hoy responde «no configurada».
-- Rama: `feat/fuentes-interfaz` · Estado: pendiente · Depende de: H1;
-  credenciales de FIND (P10).
+- Rama: `feat/fuente-find` · Estado: en PR (esqueleto apagado) / bloqueado
+  por humano (API y credenciales de FIND, P10) · Depende de: H1; P10.
 
 ## I · Pulido
 
