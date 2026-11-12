@@ -191,7 +191,9 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 **F2 · `anon` ejecuta 9 funciones SECURITY DEFINER**
 - Qué: hay que quitarle a `anon` el EXECUTE sobre esas funciones.
 - Terminado: migración con el revoke por función y rollback, armada desde
-  la lista real de la base.
+  la lista real de la base. Vacía `scripts/definer-deuda.json` (11 según las
+  migraciones). Antes de firmar: ver si `current_admin_role` y
+  `hub_rol_activo` (las usan políticas RLS) las necesita `anon`.
 - Rama: `feat/seguridad-revoke-anon` · Estado: bloqueado por humano (no se
   escribe a ciegas) · Depende de: P2.
 
@@ -201,7 +203,8 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   `security definer` termina con su revoke a `public` y `anon` después del
   último `create`), en el build y en CI. Más adelante, la verificación en
   vivo con una función de solo lectura.
-- Rama: `chore/auditar-definer` · Estado: pendiente · Depende de: G1.
+- Rama: `chore/auditar-definer` · Estado: en PR (estático, con 11 en deuda
+  conocida); la parte en vivo, bloqueada por humano (P2) · Depende de: G1.
 
 **F4 · Protección de contraseñas filtradas**
 - Qué: un interruptor de Supabase Auth.
