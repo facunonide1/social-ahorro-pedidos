@@ -1,5 +1,23 @@
 # Bitácora
 
+## 2026-11-12 · La fecha del precio, y lo que se pagó de verdad
+
+Las listas se van actualizando. `vigente_desde` es el día de la lista o del
+archivo, no `fecha_carga`. Si llega una lista más vieja que la vigente, se
+guarda en el historial (`doc_precios_historial`, una fila por producto y
+droguería, sin pisar las anteriores) y no reemplaza la vigente. El comparador
+muestra el último precio de lista y el último precio pagado, cada uno con su
+fecha, y una tabla de los anteriores.
+
+El precio pagado sale del unitario neto: importe de la línea dividido por la
+cantidad, o el unitario menos el descuento. Entra desde los PDF de Asoprofarma
+y Monroe, desde la pestaña Compras de la planilla, y desde una foto cuando una
+persona confirma el documento (`doc_confirmar_documento` ya escribe el
+histórico con origen `factura`).
+
+Migración `0295_la_fecha_del_precio_no_se_pisa.sql`, sin aplicar acá. No toca
+la 0294. Rollback en `supabase/rollbacks/0295_…sql`.
+
 ## 2026-11-12 · Google Drive: carpetas compartidas, listas al comparador, maestro solo en previa
 
 NORA puede leer las carpetas «compras farmacias» y «compras farmacias (privado)».
