@@ -59,7 +59,17 @@ export default async function PedidosListPage({
     .select('id, email, name, role, active')
     .eq('id', user.id)
     .maybeSingle<UserPedidos>()
-  if (!profile?.active) redirect('/logout?reason=sin_permiso')
+  // NORA vive en users_admin y no tiene fila en users_pedidos. Logout la
+  // desloguea. Si la fila de admin está activa, el listado es el del hub.
+  if (!profile?.active) {
+    const { data: admin } = await sb
+      .from('users_admin')
+      .select('activo')
+      .eq('id', user.id)
+      .maybeSingle<{ activo: boolean }>()
+    if (admin?.activo) redirect('/admin/pedidos')
+    redirect('/logout?reason=sin_permiso')
+  }
   if (profile.role === 'repartidor') redirect('/repartidor')
 
   const q = (searchParams.q || '').trim()

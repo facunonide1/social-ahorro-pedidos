@@ -28,6 +28,21 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { paginar } from '../lib/supabase/paginar'
+import { motivoFaltanEnv } from './saltear-build'
+
+// El build de preview no tiene estas env y `npm run build` llega acá después
+// del auditor de RLS. Sin variables no hay nada que cruzar: se avisa y sale 0.
+// Si están, la verificación corre igual (local con .env.local y production).
+const faltanParaCoherencia = motivoFaltanEnv(process.env, [
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'SUPABASE_SERVICE_ROLE_KEY',
+])
+if (faltanParaCoherencia) {
+  console.warn(
+    `[verificar:coherencia] se saltea (${faltanParaCoherencia}). En production, con las variables, corre igual.`,
+  )
+  process.exit(0)
+}
 
 function env(n: string): string {
   const v = process.env[n]
