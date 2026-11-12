@@ -1,5 +1,22 @@
 # Bitácora
 
+## 2026-11-12 · Las compras que entraron desde Drive se ven
+
+`compras_lineas` la llena la ingesta y no la mostraba ninguna pantalla.
+`/admin/compras/ingeridas` (está en los accesos rápidos de Compras) muestra
+cuántas líneas hay, cuántas se cruzaron con el catálogo y cuántas no, con
+`count: exact` (no se cuentan filas traídas). Lista las 200 más recientes del
+filtro, y lo dice. Busca por producto, proveedor o código de barras y, si la
+línea está cruzada, muestra con qué producto, la vía y el score.
+
+«Recalcular cruce» recorre `POST /api/compras/rematch` (#22) siguiendo el
+cursor, hasta 40 tandas por clic; cada pedido entra en 60 s y lo que ya se
+cruzó no se pisa. Pantalla y RLS piden lo mismo: super_admin, gerente o
+comprador. Si la tabla no existe, la pantalla lo dice en vez de romperse.
+
+No hay «Ignorar» por línea: `compras_lineas` no tiene columna para eso y
+agregarla es una migración. Queda anotado si hace falta.
+
 ## 2026-11-12 · El PR #7 se pone al día con main en `feat/compras-cruce`
 
 El #7 (`cursor/compras-match-ingesta-61dc`) no mergeaba limpio desde que

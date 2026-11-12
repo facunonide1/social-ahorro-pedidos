@@ -103,8 +103,9 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 **B5 · Las compras ingeridas se ven**
 - Qué: `compras_lineas` no la lee ninguna pantalla.
 - Terminado: listado en compras con filtro de cruzadas y sin cruzar, y
-  «Ignorar».
-- Rama: `feat/compras-cruce` · Estado: en PR · Depende de: B1.
+  botón para recalcular el cruce. «Ignorar» por línea, sólo si hace falta:
+  pide una columna nueva (migración).
+- Rama: `feat/compras-lineas` · Estado: en PR · Depende de: B1 (#22).
 
 ## C · Maestro por sucursal
 
