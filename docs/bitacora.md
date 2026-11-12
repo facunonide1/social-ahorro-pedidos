@@ -1,5 +1,15 @@
 # Bitácora
 
+## 2026-11-12 · Las banderas en un solo lugar
+
+`lib/banderas.ts` registra cada bandera con su variable, qué cambia al
+prenderla y su ítem del backlog. Todo nace apagado y sólo se prende con
+`'true'` exacto, el mismo criterio que ya usaba Drive (`lib/drive/flag.ts` no
+cambia y queda registrada). Por ahora están `ingesta_drive`,
+`maestro_por_sucursal` (C2), `fuente_find` (H2) y `pantallas_en_construccion`
+(I2). Prenderlas en producción es cambiar una variable en Vercel: eso lo hace
+Facu. `npm test` también corre ahora los `lib/*.test.ts`.
+
 ## 2026-11-12 · Cargando y «no está» adentro de NORA
 
 No había ningún `loading.tsx` ni `not-found.tsx`. Mientras una página pesada

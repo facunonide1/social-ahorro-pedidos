@@ -264,7 +264,7 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Qué: un módulo único `lib/banderas.ts`.
 - Terminado: las banderas de lo nuevo (maestro por sucursal, fuente FIND,
   etc.) se leen de ahí, apagadas por defecto, con tests.
-- Rama: `chore/banderas` · Estado: pendiente · Depende de: —
+- Rama: `chore/banderas` · Estado: en PR · Depende de: —
 
 **G5 · Logs de los crons**
 - Qué: hoy ningún cron deja registro de su corrida.
