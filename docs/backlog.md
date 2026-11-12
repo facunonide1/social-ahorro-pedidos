@@ -91,7 +91,7 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   (`omitido_por_tamano`).
 - Terminado: la pantalla de Drive lista los omitidos con el link a la carga
   manual, y la carga manual acepta el archivo de a hojas.
-- Rama: `feat/ingesta-archivos-grandes` · Estado: pendiente · Depende de: B1.
+- Rama: `feat/ingesta-archivos-grandes` · Estado: en PR · Depende de: B1 (#22).
 
 **B4 · Ingesta incremental**
 - Qué: hoy mira `modifiedTime > last_sync_at`. Un archivo editado se

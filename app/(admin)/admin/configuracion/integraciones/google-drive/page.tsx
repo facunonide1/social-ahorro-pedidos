@@ -18,6 +18,7 @@ function filaBandeja(b: any) {
     link: (b.web_view_link as string | null) || `https://drive.google.com/file/d/${b.file_id}/view`,
     matchPct: (b.match_pct as number | null) ?? null,
     intentos: Number(b.intentos ?? 0),
+    megas: b.bytes == null ? null : Math.round(Number(b.bytes) / 1_048_576),
   }
 }
 
@@ -70,6 +71,7 @@ export default async function GoogleDrivePage({ searchParams }: { searchParams: 
           }}
           bandeja={(resumen?.bandeja ?? []).map(filaBandeja)}
           pendientes={(resumen?.pendientes ?? []).map(filaBandeja)}
+          grandes={(resumen?.grandes ?? []).map(filaBandeja)}
         />
       </div>
     </>
