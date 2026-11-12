@@ -22,6 +22,35 @@ export function esPinValido(pin: string): boolean {
   return /^\d{4}$/.test(pin)
 }
 
+/**
+ * ¿Es un PIN que se adivina primero? Son 10.000 combinaciones y el bloqueo
+ * corta a los pocos intentos, así que lo que importa es no estar entre los
+ * que alguien prueba antes que nada:
+ *   - todos iguales (0000, 1111…)
+ *   - escaleras que suben o bajan, con o sin vuelta (1234, 4321, 7890, 9012)
+ *   - dos dígitos repetidos (1212, 6969) y espejos (1221)
+ *   - un año entre 1940 y 2039 (fechas de nacimiento, el año en curso)
+ *   - el N° de empleado, si se pasa
+ * Devuelve el motivo, o null si el PIN no es débil.
+ */
+export function motivoPinDebil(pin: string, numeroEmpleado?: string): string | null {
+  if (!esPinValido(pin)) return 'El PIN debe ser de 4 dígitos.'
+  const d = pin.split('').map(Number)
+  if (d.every((x) => x === d[0])) return 'El PIN no puede tener los cuatro dígitos iguales.'
+  const pasos = [1, 2, 3].map((i) => (d[i] - d[i - 1] + 10) % 10)
+  if (pasos.every((p) => p === 1) || pasos.every((p) => p === 9)) {
+    return 'El PIN no puede ser una escalera (1234, 4321…).'
+  }
+  if (pin.slice(0, 2) === pin.slice(2)) return 'El PIN no puede repetir dos dígitos (1212…).'
+  if (pin[0] === pin[3] && pin[1] === pin[2]) return 'El PIN no puede ser un espejo (1221…).'
+  const n = Number(pin)
+  if (n >= 1940 && n <= 2039) return 'El PIN no puede ser un año.'
+  if (numeroEmpleado && numeroEmpleado.replace(/\D/g, '').includes(pin)) {
+    return 'El PIN no puede salir del N° de empleado.'
+  }
+  return null
+}
+
 /** Normaliza el N° de empleado (trim, sin espacios internos). */
 export function normalizarNumeroEmpleado(n: string): string {
   return n.trim().replace(/\s+/g, '')

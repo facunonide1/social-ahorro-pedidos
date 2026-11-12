@@ -182,7 +182,8 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Terminado: el código rechaza PINs débiles al crearlos o cambiarlos (todos
   iguales, escaleras, repetidos, años, el N° de empleado), y el alta avisa
   si el PIN no se guardó. Facu cambia el del super admin (P3).
-- Rama: `feat/seguridad-pin-debil` · Estado: en curso · Depende de: —
+- Rama: `feat/seguridad-pin-debil` · Estado: en PR; el PIN del super admin,
+  bloqueado por humano (P3) · Depende de: —
 
 **F2 · `anon` ejecuta 9 funciones SECURITY DEFINER**
 - Qué: hay que quitarle a `anon` el EXECUTE sobre esas funciones.

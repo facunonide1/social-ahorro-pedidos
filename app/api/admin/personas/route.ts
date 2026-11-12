@@ -6,13 +6,16 @@ import { setPinEmpleado } from '@/lib/auth/pin-login'
 import { esPinValido } from '@/lib/auth/pin'
 import type { AdminRole } from '@/lib/types/admin'
 
-/** Setea N° empleado + PIN si vinieron en el body (best-effort, no rompe el alta). */
-async function setPinSiCorresponde(userId: string, b: any): Promise<void> {
+/**
+ * Setea N° empleado + PIN si vinieron en el body. No rompe el alta, pero si el
+ * PIN no se guardó (débil, N° repetido) devuelve el motivo para avisarlo.
+ */
+async function setPinSiCorresponde(userId: string, b: any): Promise<string | null> {
   const numero = String(b?.numero_empleado ?? '').trim()
   const pin = String(b?.pin ?? '')
-  if (numero && esPinValido(pin)) {
-    await setPinEmpleado(userId, numero, pin).catch(() => {})
-  }
+  if (!numero || !esPinValido(pin)) return null
+  const r = await setPinEmpleado(userId, numero, pin).catch((e) => ({ ok: false as const, error: String(e?.message ?? e) }))
+  return r.ok ? null : `La cuenta se creó, pero el PIN no: ${r.error}`
 }
 
 export const dynamic = 'force-dynamic'
@@ -73,8 +76,8 @@ export async function POST(req: NextRequest) {
           })
           if (error) return NextResponse.json({ error: error.message }, { status: 400 })
           if (b?.nombre) await adm.auth.admin.updateUserById(emp.user_id, { user_metadata: { nombre: String(b.nombre) } }).catch(() => {})
-          await setPinSiCorresponde(emp.user_id, b)
-          return NextResponse.json({ ok: true, userId: emp.user_id, reuso: true })
+          const avisoPin = await setPinSiCorresponde(emp.user_id, b)
+          return NextResponse.json({ ok: true, userId: emp.user_id, reuso: true, ...(avisoPin ? { aviso_pin: avisoPin } : {}) })
         }
         return NextResponse.json({ error: 'el empleado ya tiene cuenta de panel' }, { status: 409 })
       }
@@ -91,8 +94,8 @@ export async function POST(req: NextRequest) {
       empleado_id: b?.empleado_id ?? null,
     })
     if (!res.ok) return NextResponse.json({ error: res.error, stage: res.stage }, { status: 400 })
-    await setPinSiCorresponde(res.userId, b)
-    return NextResponse.json({ ok: true, userId: res.userId })
+    const avisoPin = await setPinSiCorresponde(res.userId, b)
+    return NextResponse.json({ ok: true, userId: res.userId, ...(avisoPin ? { aviso_pin: avisoPin } : {}) })
   }
 
   return NextResponse.json({ error: 'acción inválida' }, { status: 400 })

@@ -1,5 +1,19 @@
 # Bitácora
 
+## 2026-11-12 · PINs débiles rechazados
+
+El PIN es de 4 dígitos y el login corta a los pocos intentos, así que lo que
+importa es no estar entre los que se prueban primero. `motivoPinDebil()`
+(`lib/auth/pin.ts`) rechaza: los cuatro iguales, escaleras que suben o bajan
+(con vuelta: 7890, 9012), dos dígitos repetidos (1212), espejos (1221), años
+de 1940 a 2039 y el PIN que sale del N° de empleado. Corre sólo al crear o
+cambiar un PIN (`setPinEmpleado`): los que ya existen siguen entrando, para no
+dejar a nadie afuera. El del super admin lo cambia Facu.
+
+El alta de `/api/admin/personas` se tragaba el error del PIN
+(`.catch(() => {})`). Ahora la cuenta se crea igual, pero la respuesta trae
+`aviso_pin` y la pantalla de usuarios lo muestra.
+
 ## 2026-11-12 · avisos-proveedores: sin 400 «header too large» y sin duplicados
 
 `publicarAvisos` (`lib/proveedores/avisos.ts`) armaba un
