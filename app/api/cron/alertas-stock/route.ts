@@ -6,10 +6,11 @@ import { conRegistro } from '@/lib/cron/corrida'
 import type { AdminRole } from '@/lib/types/admin'
 import { automatizacionActiva } from '@/lib/os/definicion'
 import { puedeCalcular } from '@/lib/demo/guarda-calculo'
-import { catalogoCompleto } from '@/lib/catalogo/indice'
-
-import { paginar, paginarCompleto } from '@/lib/supabase/paginar'
-import { insertarEnTandas } from '@/lib/supabase/tandas'
+import { enTandas } from '@/lib/supabase/tandas'
+import {
+  diferenciaAlertas, filtrarRango, paginarConPlazo, Plazo, PlazoVencido, rangoDeTramo, tramoDeLaCorrida,
+  PLAZO_ESCRITURA_MS, TRAMOS_POR_DEFECTO,
+} from '@/lib/cron/tramos'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -38,34 +39,51 @@ async function get(req: NextRequest) {
   return run(
     await automatizacionActiva('stock', 'recalcular_alertas', true),
     await automatizacionActiva('stock', 'avisar_vencimientos', true),
+    tramoDeLaCorrida(new URL(req.url), new Date(), TRAMOS_POR_DEFECTO),
   )
 }
-export async function POST() {
+export async function POST(req: NextRequest) {
   const sb = createClient()
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return NextResponse.json({ error: 'no autenticado' }, { status: 401 })
   const { data: me } = await sb.from('users_admin').select('rol, activo').eq('id', user.id).maybeSingle<{ rol: AdminRole; activo: boolean }>()
   if (!me || !me.activo || !['super_admin', 'gerente'].includes(me.rol)) return NextResponse.json({ error: 'requiere super_admin/gerente' }, { status: 403 })
-  return run(true, true)
+  // Una persona apretando el botón corre un tramo (el de `?tramo=`, o el que
+  // toca por reloj). Correr los seis seguidos no entra en 60 s.
+  return run(true, true, tramoDeLaCorrida(new URL(req.url), new Date(), TRAMOS_POR_DEFECTO))
 }
 
-async function run(conAlertas: boolean, conVencimientos: boolean) {
+async function run(conAlertas: boolean, conVencimientos: boolean, tramo: number) {
   const adm = createAdminClient()
   const ahora = Date.now()
   const en = (d: number) => new Date(ahora + d * 86_400_000).toISOString().slice(0, 10)
   const hoy = new Date().toISOString().slice(0, 10)
+  const n = TRAMOS_POR_DEFECTO
+  const rango = rangoDeTramo(tramo, n)
+  const plazo = new Plazo()
+  const rg = <Q extends { gte: any; lt: any }>(q: Q) => filtrarRango(q, 'producto_id', rango)
 
+  try {
+    return await calcularYEscribir()
+  } catch (e) {
+    // Se pasó el plazo de lectura: no se escribió nada de este tramo y las
+    // alertas que había siguen. La próxima pasada del mismo tramo (la ventana
+    // corre cada uno dos veces) lo retoma.
+    if (e instanceof PlazoVencido) {
+      return NextResponse.json({ ok: false, pendiente: true, tramo, de: n, error: e.message }, { status: 503 })
+    }
+    throw e
+  }
+
+  async function calcularYEscribir() {
+  // Todo leído sólo para los productos del tramo, en todas las sucursales.
+  // El orden lleva `id`: con `producto_id` solo (se repite por sucursal) el
+  // paginado por offset puede saltear o repetir filas.
   const [stock, rot, lotes, prods, { data: sucs }] = await Promise.all([
-    // Paginado: el cron recorre TODO el stock para decidir que alertar. Si se
-    // corta en mil, deja de alertar sobre el resto y nadie se entera (v0.85).
-    // El orden lleva `id` de desempate: con `producto_id` solo (se repite por
-    // sucursal) el paginado por offset puede saltear o repetir filas. Y si se
-    // llega al tope, tira: antes devolvía la parte y alertaba sobre la parte.
-    paginarCompleto<any>(adm.from('stock_items').select('producto_id, sucursal_id, cantidad, cantidad_gondola, cantidad_deposito, stock_minimo, stock_maximo').order('producto_id').order('id'), 'stock_items'),
-    // Antes sin paginar: se cortaba en 1.000 filas en silencio.
-    paginarCompleto<any>(adm.from('producto_rotacion').select('producto_id, sucursal_id, venta_diaria_prom_30d, dias_stock_restante, ultima_venta').order('id'), 'producto_rotacion'),
-    paginarCompleto<any>(adm.from('lotes_productos').select('id, producto_id, sucursal_id, numero_lote, fecha_vencimiento, cantidad_actual').gt('cantidad_actual', 0).order('id'), 'lotes_productos'),
-    catalogoCompleto(adm),
+    paginarConPlazo<any>(rg(adm.from('stock_items').select('producto_id, sucursal_id, cantidad, cantidad_gondola, cantidad_deposito, stock_minimo, stock_maximo')).order('id'), 'stock_items', plazo),
+    paginarConPlazo<any>(rg(adm.from('producto_rotacion').select('producto_id, sucursal_id, venta_diaria_prom_30d, dias_stock_restante, ultima_venta')).order('id'), 'producto_rotacion', plazo),
+    paginarConPlazo<any>(rg(adm.from('lotes_productos').select('id, producto_id, sucursal_id, numero_lote, fecha_vencimiento, cantidad_actual').gt('cantidad_actual', 0)).order('id'), 'lotes_productos', plazo),
+    paginarConPlazo<any>(filtrarRango(adm.from('productos_catalogo').select('id, sku, nombre').eq('activo', true).eq('es_demo', false), 'id', rango).order('id'), 'productos_catalogo', plazo),
     adm.from('sucursales').select('id, nombre').eq('activa', true),
   ])
   const prodMap = new Map(((prods ?? []) as any[]).map((p) => [p.id, p]))
@@ -119,8 +137,8 @@ async function run(conAlertas: boolean, conVencimientos: boolean) {
   try {
     if (!conVencimientos) throw new Error('vencimientos apagados')
     const [{ filas: vencs }, { data: provs }, { data: rubros }] = await Promise.all([
-      paginar<any>(adm.from('vencimientos').select('producto_id, sucursal_id, sku, proveedor_id, fecha_vencimiento, cantidad, productos_catalogo(nombre, rubro)')
-        .eq('estado', 'vigente').eq('es_demo', false).not('proveedor_id', 'is', null).order('fecha_vencimiento')),
+      paginarConPlazo<any>(rg(adm.from('vencimientos').select('id, producto_id, sucursal_id, sku, proveedor_id, fecha_vencimiento, cantidad, productos_catalogo(nombre, rubro)')
+        .eq('estado', 'vigente').eq('es_demo', false).not('proveedor_id', 'is', null)).order('id'), 'vencimientos', plazo).then((filas) => ({ filas })),
       adm.from('proveedores').select('id, dias_ventana_devolucion'),
       adm.from('proveedor_devolucion_rubros').select('proveedor_id, rubro, dias_ventana'),
     ])
@@ -138,7 +156,12 @@ async function run(conAlertas: boolean, conVencimientos: boolean) {
           datos: { nombre: v.productos_catalogo?.nombre ?? v.sku, sku: v.sku, sucursal: sucMap.get(v.sucursal_id), cierre: cierre.toISOString().slice(0, 10), dias: restan, cantidad: Number(v.cantidad) } })
       }
     }
-  } catch { /* la alerta de ventana no bloquea el cron */ }
+  } catch (e) {
+    // La alerta de ventana no bloquea el cron, salvo el plazo: si se pasó,
+    // cortar acá es lo que evita escribir un tramo a medias.
+    if (e instanceof PlazoVencido) throw e
+  }
+  plazo.exigir(40_000, 'lectura del tramo')
 
   // Regenerar activas no-demo, SÓLO de los tipos que esta corrida vuelve a
   // calcular.
@@ -150,18 +173,54 @@ async function run(conAlertas: boolean, conVencimientos: boolean) {
   const TIPOS_STOCK = ['stock_critico', 'reponer_gondola', 'quiebre_proyectado', 'sobrestock', 'stock_fantasma', 'sin_rotacion']
   const TIPOS_VENCIMIENTO = ['vencimiento_15', 'vencimiento_30', 'vencimiento_60', 'vencimiento_90', 'ventana_devolucion_por_cerrar']
   const aRegenerar = [...(conAlertas ? TIPOS_STOCK : []), ...(conVencimientos ? TIPOS_VENCIMIENTO : [])]
-  // Los errores se leen. Antes el insert era uno solo con todas las alertas y
-  // no se miraba su error: si se caía por timeout, las activas ya estaban
-  // borradas y la pantalla quedaba vacía sin aviso. Ahora va en tandas y, si
-  // falla, la corrida termina en 500 y queda en el log (conRegistro).
-  if (aRegenerar.length > 0) {
-    const { error: eDel } = await adm.from('alertas_stock').delete().eq('estado', 'activa').eq('es_demo', false).in('tipo', aRegenerar)
-    if (eDel) throw new Error(`no se pudieron regenerar las alertas: ${eDel.message}`)
+  // ── ESCRIBIR SÓLO LA DIFERENCIA ────────────────────────────────────────
+  //
+  // Antes se borraban todas las activas y se insertaban de nuevo: si el insert
+  // se caía, la pantalla quedaba vacía. Ahora se leen las activas del tramo y
+  // se escribe la diferencia: se borra lo que ya no vale, lo que cambió se
+  // borra e inserta de a pares en la misma tanda (el índice único no deja
+  // tener dos activas iguales), y se inserta lo nuevo. Lo que no cambió no se
+  // toca. Si el plazo de escritura se pasa, se corta entre tandas: lo que no se
+  // llegó a tocar queda en la versión anterior, nunca vacío.
+  const existentes = aRegenerar.length
+    ? await paginarConPlazo<any>(rg(adm.from('alertas_stock').select('id, tipo, producto_id, sucursal_id, lote_id, severidad, datos')
+        .eq('estado', 'activa').eq('es_demo', false).in('tipo', aRegenerar)).order('id'), 'alertas_stock', plazo)
+    : []
+  const nuevasDelTramo = out.filter((a) => aRegenerar.includes(a.tipo))
+  const dif = diferenciaAlertas(existentes, nuevasDelTramo)
+  const fila = (a: Alerta) => ({ ...a, lote_id: a.lote_id ?? null, estado: 'activa' })
+
+  let escritas = { borradas: 0, reemplazadas: 0, insertadas: 0 }
+  let cortada = false
+  const hayTiempo = () => plazo.queda(PLAZO_ESCRITURA_MS) || ((cortada = true), false)
+
+  for (const ids of enTandas(dif.borrar, 100)) {
+    if (!hayTiempo()) break
+    const { error } = await adm.from('alertas_stock').delete().in('id', ids)
+    if (error) throw new Error(`no se pudieron borrar alertas viejas (llevaba ${escritas.borradas}): ${error.message}`)
+    escritas.borradas += ids.length
   }
-  await insertarEnTandas(adm, 'alertas_stock', out.map((a) => ({ ...a, estado: 'activa' })))
+  for (const par of enTandas(dif.reemplazar, 100)) {
+    if (cortada || !hayTiempo()) break
+    const { error: eD } = await adm.from('alertas_stock').delete().in('id', par.map((p) => p.id))
+    if (eD) throw new Error(`no se pudieron reemplazar alertas (llevaba ${escritas.reemplazadas}): ${eD.message}`)
+    const { error: eI } = await adm.from('alertas_stock').insert(par.map((p) => fila(p.nueva)))
+    if (eI) throw new Error(`se borraron ${par.length} alertas para reemplazarlas y no entraron las nuevas: ${eI.message}`)
+    escritas.reemplazadas += par.length
+  }
+  const insertadas: Alerta[] = []
+  for (const grupo of enTandas(dif.insertar, 500)) {
+    if (cortada || !hayTiempo()) break
+    const { error } = await adm.from('alertas_stock').insert(grupo.map(fila))
+    if (error) throw new Error(`no se pudieron insertar alertas (llevaba ${escritas.insertadas}): ${error.message}`)
+    escritas.insertadas += grupo.length
+    insertadas.push(...grupo)
+  }
 
   // Notificar stock fantasma a super_admins
-  const fantasmas = out.filter((a) => a.tipo === 'stock_fantasma')
+  // Sólo las nuevas: antes se avisaba cada día el mismo fantasma, y ahora
+  // además corre por tramos.
+  const fantasmas = insertadas.filter((a) => a.tipo === 'stock_fantasma')
   if (fantasmas.length > 0) {
     const { data: supers } = await adm.from('users_admin').select('id').eq('rol', 'super_admin').eq('activo', true)
     if (supers?.length) {
@@ -171,12 +230,16 @@ async function run(conAlertas: boolean, conVencimientos: boolean) {
   }
 
   return NextResponse.json({
-    ok: true,
+    ok: !cortada,
     fecha: hoy,
-    alertas: out.length,
+    tramo, de: n,
+    alertas: nuevasDelTramo.length,
+    ...escritas,
     fantasmas: fantasmas.length,
+    ...(cortada ? { pendiente: true, error: 'se pasó el plazo de escritura; la próxima pasada del tramo sigue' } : {}),
     ...(conAlertas && conVencimientos ? {} : { omitidas: { alertas: !conAlertas, vencimientos: !conVencimientos } }),
-  })
+  }, { status: cortada ? 503 : 200 })
+  }
 }
 
 export const GET = conRegistro('alertas-stock', get)

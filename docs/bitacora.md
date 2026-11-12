@@ -1,5 +1,51 @@
 # Bitácora
 
+## 2026-11-12 · alertas-stock y metricas-stock por tramos: no pueden pasar los 60 s
+
+Leer las 192.464 filas de stock de una vez arreglaba el cálculo incompleto pero
+abría otro riesgo: que la corrida pasara los 60 s y las alertas no salieran.
+Facu pidió no cambiar una cosa por la otra.
+
+**Tramos.** `lib/cron/tramos.ts` parte el espacio de UUID de `producto_id` en
+6 rangos parejos (los UUID v4 son aleatorios: ~1/6 del catálogo cada uno). Cada
+corrida procesa un tramo para todas las sucursales: ~32.000 filas de stock en
+vez de 192.000. Todas las lecturas (stock, rotación, lotes, vencimientos,
+catálogo, ventas de 30 días y las alertas activas) se filtran por ese rango.
+
+**Qué tramo toca.** Un solo cron cada 5 minutos en una ventana de una hora
+(`vercel.json`: metricas-stock `*/5 3 * * *`, alertas-stock `*/5 4 * * *`). El
+tramo sale del reloj (minuto / 5, módulo 6), así que cada uno corre dos veces.
+Si la primera pasada no llega, la segunda lo retoma. No hace falta guardar un
+cursor en la base, ni hace falta migración. `?tramo=N` fuerza uno a mano.
+
+**Plazo.** Leer tiene 40 s. Si se pasa, la corrida responde 503, queda en el
+log y **no escribe nada**: las alertas y la rotación de ayer siguen como
+estaban. Escribir tiene hasta 52 s y se mira entre tandas, nunca en el medio.
+
+**Alertas por diferencia.** Antes se borraban todas las activas y se
+insertaban de nuevo. Ahora se leen las activas del tramo y se escribe sólo la
+diferencia (`diferenciaAlertas`):
+- se borra lo que ya no vale;
+- lo que cambió se borra e inserta de a pares en la misma tanda (el índice
+  único no deja dos activas iguales);
+- se inserta lo nuevo.
+Lo que no cambió no se toca y conserva su `created_at`. En ningún momento la
+tabla queda vacía. Si se corta entre tandas, lo no tocado queda en la versión
+anterior. El aviso de stock fantasma a los super admin sale sólo por los
+fantasmas nuevos: antes se repetía todos los días.
+
+**ABC.** La clasificación A/B/C de metricas-stock se rankea dentro del tramo.
+Como cada tramo es una muestra al azar del catálogo, los cortes de 20 % y 50 %
+casi no se mueven, pero un producto justo en el borde puede caer en la letra
+vecina. Es una aproximación, a cambio de que la corrida entre en 60 s.
+
+**El botón.** «Regenerar» en `/admin/operaciones/alertas` pide los seis tramos
+uno atrás del otro, cada uno en su propio pedido. Si uno falla, dice cuál y
+los anteriores ya quedaron hechos.
+
+Si con el tiempo un tramo no entra en 40 s, se sube `TRAMOS_POR_DEFECTO` (con
+12 tramos cada uno corre una vez por ventana).
+
 ## 2026-11-12 · Crons: todo el stock, escrituras en tandas y registro de cada corrida
 
 **Calculaban sobre una parte.** `stock_items` tiene 192.464 filas (lo dice

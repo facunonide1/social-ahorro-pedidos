@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { TRAMOS_POR_DEFECTO as TRAMOS_ALERTAS } from '@/lib/cron/tramos'
 
 export type AlertaRow = {
   id: string; tipo: string; severidad: 'info' | 'warning' | 'critica'
@@ -56,9 +57,17 @@ export function AlertasClient({ alertas, sucursales, puedeRegenerar }: { alertas
   async function regenerar() {
     setBusy(true)
     try {
-      const r = await fetch('/api/cron/alertas-stock', { method: 'POST' })
-      const j = await r.json(); if (!r.ok) throw new Error(j?.error)
-      toast.success(`Alertas regeneradas: ${j.alertas}.`); router.refresh()
+      // El cálculo va por tramos de productos (cada pedido entra en 60 s): se
+      // piden uno atrás del otro. Si uno falla, los anteriores ya quedaron
+      // escritos y el resto conserva las alertas de antes.
+      let total = 0
+      for (let tramo = 0; tramo < TRAMOS_ALERTAS; tramo++) {
+        const r = await fetch(`/api/cron/alertas-stock?tramo=${tramo}`, { method: 'POST' })
+        const j = await r.json().catch(() => ({}))
+        if (!r.ok) throw new Error(`Tramo ${tramo + 1} de ${TRAMOS_ALERTAS}: ${j?.error ?? 'no se pudo'}. Los anteriores quedaron regenerados.`)
+        total += Number(j.alertas ?? 0)
+      }
+      toast.success(`Alertas regeneradas: ${total}.`); router.refresh()
     } catch (e: any) { toast.error(e?.message ?? 'Error') } finally { setBusy(false) }
   }
 

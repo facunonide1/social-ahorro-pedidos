@@ -24,7 +24,7 @@
  *   · `count: 'exact', head: true`  → cuenta EN LA BASE, no trae filas
  *   · `.single()` / `.maybeSingle()` → una fila por definición
  *   · un filtro por clave única      → no puede devolver miles
- *   · `paginar()` / `paginarCompleto()` / `traerTodo()` → ya está resuelto
+ *   · `paginar()` / `paginarCompleto()` / `paginarConPlazo()` / `traerTodo()` → ya está resuelto
  *
  * Corre con `npm run auditar:cortes`. Sale con código 1 si aparece una consulta
  * nueva, para que se note en el build.
@@ -152,7 +152,7 @@ export function auditar() {
       if (/count:\s*'exact'[^}]*head:\s*true|head:\s*true[^}]*count:\s*'exact'/s.test(bloque)) return
       if (/\.(maybeSingle|single)\(/.test(bloque)) return
       if (/\.range\(/.test(bloque)) return
-      if (/paginar(Completo)?\s*[<(]|traerTodo\s*[<(]/.test(bloque)) return
+      if (/paginar(Completo|ConPlazo)?\s*[<(]|traerTodo\s*[<(]/.test(bloque)) return
       // Filtro por una clave que devuelve pocas filas.
       if (/\.eq\('(id|sku|codigo|codigo_barras|archivo_hash)'/.test(bloque)) return
 

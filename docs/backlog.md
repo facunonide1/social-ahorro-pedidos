@@ -34,6 +34,8 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   metricas-stock hace un upsert único de todo `producto_rotacion`.
 - Terminado: `maxDuration` en todos los crons, lecturas paginadas, escrituras
   en tandas, cada corrida loguea inicio, fin, duración y error (G5).
+  alertas-stock y metricas-stock por tramos con plazo: ninguna corrida pasa
+  los 60 s y, si una no llega, no escribe y la retoma la siguiente pasada.
 - Rama: `fix/crons-tandas` · Estado: en PR · Depende de: —
 
 **A3 · `cerebro_calcular` (206 timeouts por día)**
