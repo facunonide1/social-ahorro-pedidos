@@ -300,7 +300,7 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 **I1 · loading.tsx y not-found.tsx**
 - Qué: no hay ninguno en toda la app.
 - Terminado: un `loading` y un `not-found` dentro del shell de NORA.
-- Rama: `feat/pulido-estados` · Estado: pendiente · Depende de: —
+- Rama: `feat/pulido-estados` · Estado: en PR · Depende de: —
 
 **I2 · Lo que dice «Próximamente»**
 - Qué: notificaciones, búsqueda, acciones rápidas, el dictado y la nav «En
