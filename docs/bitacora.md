@@ -1,5 +1,21 @@
 # Bitácora
 
+## 2026-11-12 · El auditor de NORA publica sus avisos en lote
+
+`correrAuditor` llamaba a `emitirAviso` una vez por hallazgo: un SELECT para
+ver si ya estaba pendiente y un INSERT, en serie, decenas de veces, dentro de
+un cron de 60 s. Además ninguna de las dos miraba el error. Ahora el auditor
+junta los avisos en `colaDeAvisos()` (`lib/ai/cola-avisos.ts`) y al final
+revisa las claves de a 50 e inserta de a 200 con el helper de
+avisos-proveedores, cortando si algo falla. `emitirAviso` sigue igual para los
+otros 19 usos sueltos.
+
+`correrAuditor` devolvía cuántos avisos *emitió*, contando los que el dedup
+descartaba. Ahora devuelve `avisos` (los nuevos de verdad) y `revisados` (todo
+lo que encontró). «Revisar ahora» en el feed lo distingue: «N cosas nuevas (y M
+que ya te había avisado)» o «lo que encontró ya te lo había avisado», en vez de
+«no encontró nada» cuando sí encontró.
+
 ## 2026-11-12 · Todos los crons dejan registro de cada corrida
 
 Los 13 crons que faltaban y `/api/ai/resumen-diario` (que también es un cron

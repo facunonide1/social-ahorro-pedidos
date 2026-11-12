@@ -43,7 +43,14 @@ export function FeedClient({ rows }: { rows: AvisoRow[] }) {
       const j = await r.json(); if (!r.ok) throw new Error(j?.error)
       // «Todo en orden» es una afirmación sobre el negocio; NORA sólo puede
       // afirmar sobre lo que revisó (v0.92).
-      toast.success(j.avisos > 0 ? `NORA encontró ${j.avisos} cosas para avisarte` : 'NORA no encontró nada para avisarte en lo que revisó')
+      // `avisos` son los nuevos; `revisados`, todo lo que encontró (incluye lo
+      // que ya estaba avisado y no se repite).
+      const yaEstaban = Number(j.revisados ?? 0) - Number(j.avisos ?? 0)
+      toast.success(j.avisos > 0
+        ? `NORA encontró ${j.avisos} cosas nuevas para avisarte${yaEstaban > 0 ? ` (y ${yaEstaban} que ya te había avisado)` : ''}`
+        : yaEstaban > 0
+          ? `Lo que NORA encontró ya te lo había avisado (${yaEstaban})`
+          : 'NORA no encontró nada para avisarte en lo que revisó')
       router.refresh()
     } catch (e: any) { toast.error(e?.message ?? 'Error') } finally { setRevisando(false) }
   }

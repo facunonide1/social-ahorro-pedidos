@@ -5,7 +5,7 @@
  * cargar. Lo corre el cron diario + el botón "Revisar ahora". Dedup por clave
  * (no repite el mismo aviso si ya está pendiente).
  */
-import { emitirAviso } from '@/lib/ai/nora'
+import { colaDeAvisos, type AvisoNora } from '@/lib/ai/cola-avisos'
 import { getRecomendaciones } from '@/lib/compras/recomendaciones'
 
 import { paginar } from '@/lib/supabase/paginar'
@@ -14,9 +14,13 @@ type Adm = any
 const hoy = () => new Date().toISOString().slice(0, 10)
 const isoMenos = (d: number) => new Date(Date.now() - d * 86400000).toISOString().slice(0, 10)
 
-export async function correrAuditor(adm: Adm): Promise<{ avisos: number }> {
+export async function correrAuditor(adm: Adm): Promise<{ avisos: number; revisados: number }> {
   let n = 0
   const inc = () => { n++ }
+  // Los avisos se juntan y se publican al final en lote (dedup de a 50,
+  // insert de a 200). Antes era un SELECT + INSERT por aviso, en serie.
+  const cola = colaDeAvisos()
+  const emitirAviso = async (_adm: Adm, a: AvisoNora) => { cola.agregar(a) }
 
   // 0.0) EL DATO ESTÁ VIEJO.
   //
@@ -225,5 +229,8 @@ export async function correrAuditor(adm: Adm): Promise<{ avisos: number }> {
     }
   } catch { /* */ }
 
-  return { avisos: n }
+  // `avisos` son los que entraron de verdad (antes contaba también los que el
+  // dedup descartaba); `revisados`, los que el auditor encontró.
+  const nuevos = await cola.vaciar(adm)
+  return { avisos: nuevos, revisados: n }
 }
