@@ -22,6 +22,7 @@ import {
   hashEstable, parsearArchivosCargados, parsearPestanaCompras, parsearPestanaPrecios, type FilaCompra,
 } from './planilla'
 import { sucursalDeArchivo, type ProveedorRef } from './proveedor'
+import { esMasVieja, fechaDeLista, type FuenteFecha } from './fecha-lista'
 import { mapeoSeccionSiExiste, proveedorPorAliasOSeccion, type MapeoSeccion } from './seccion'
 
 type Adm = any
@@ -78,27 +79,38 @@ export async function aplicarLista(adm: Adm, opts: {
   hash: string
   filas: (FilaLista & { productoId: string | null; score: number; via: string })[]
   usuarioId: string | null
-}): Promise<{ listaId: string; anteriorId: string | null; yaEstaba: boolean }> {
+  /** La fecha de la lista (lib/drive/fecha-lista). Sin ella, hoy. */
+  fecha?: { fecha: string; de: FuenteFecha }
+}): Promise<{ listaId: string; anteriorId: string | null; yaEstaba: boolean; masVieja: boolean }> {
   const rubro = 'farmacia'
-  const { data: vigente } = await adm.from('listas_precios')
-    .select('id, hash').eq('proveedor_id', opts.proveedorId).eq('rubro', rubro).eq('vigente', true).limit(5)
+  const fecha = opts.fecha ?? { fecha: new Date().toISOString().slice(0, 10), de: 'hoy' as const }
+  const { data: vigente, error: eVig } = await adm.from('listas_precios')
+    .select('id, hash, mapeo_usado').eq('proveedor_id', opts.proveedorId).eq('rubro', rubro).eq('vigente', true)
+    .order('fecha_carga', { ascending: false }).order('id').limit(5)
+  if (eVig) throw new Error(`no pude leer la lista vigente: ${eVig.message}`)
   const misma = ((vigente ?? []) as any[]).find((l) => l.hash === opts.hash)
-  if (misma) return { listaId: misma.id, anteriorId: null, yaEstaba: true }
-  const anteriorId = (vigente ?? [])[0]?.id ?? null
+  if (misma) return { listaId: misma.id, anteriorId: null, yaEstaba: true, masVieja: false }
+  // Sin columna nueva (0295 es de otro PR): la fecha de la lista va en
+  // `mapeo_usado.fecha_lista`. Una lista más vieja que la vigente entra al
+  // historial pero no la reemplaza.
+  const fechaVigente = ((vigente ?? [])[0] as any)?.mapeo_usado?.fecha_lista ?? null
+  const masVieja = esMasVieja(fecha.fecha, fechaVigente)
+  const anteriorId = masVieja ? null : ((vigente ?? [])[0]?.id ?? null)
   if (anteriorId) {
-    await adm.from('listas_precios').update({ vigente: false }).eq('proveedor_id', opts.proveedorId).eq('rubro', rubro).eq('vigente', true)
+    const { error: eOff } = await adm.from('listas_precios').update({ vigente: false })
+      .eq('proveedor_id', opts.proveedorId).eq('rubro', rubro).eq('vigente', true)
+    if (eOff) throw new Error(`no pude dar de baja la lista anterior: ${eOff.message}`)
   }
   const { data: lista, error } = await adm.from('listas_precios').insert({
     proveedor_id: opts.proveedorId,
     rubro,
     archivo_nombre: opts.archivoNombre,
     hash: opts.hash,
-    vigente: true,
+    vigente: !masVieja,
     created_by: opts.usuarioId,
-    mapeo_usado: { origen: 'google_drive' },
+    mapeo_usado: { origen: 'google_drive', fecha_lista: fecha.fecha, fecha_de: fecha.de },
   }).select('id').single()
   if (error || !lista) throw new Error(error?.message ?? 'no se pudo crear la lista')
-  const hoy = new Date().toISOString().slice(0, 10)
   const items = opts.filas.map((f) => ({
     lista_id: lista.id,
     sku: f.sku,
@@ -107,17 +119,24 @@ export async function aplicarLista(adm: Adm, opts: {
     producto_id: f.productoId,
     precio: f.precio,
     desc_volumen: { categoria: f.categoria, condiciones: f.condiciones, descuento: f.descuento },
-    fecha: hoy,
+    fecha: fecha.fecha,
     match_score: f.score,
     match_via: f.via,
   }))
-  await enTandas(items, async (t) => { await adm.from('listas_precios_items').insert(t) })
+  await enTandas(items, async (t) => {
+    const { error: eIt } = await adm.from('listas_precios_items').insert(t)
+    if (eIt) throw new Error(`no pude guardar los ítems de la lista: ${eIt.message}`)
+  })
   const hist = items.filter((i) => i.producto_id && i.precio > 0).map((i) => ({
     item_id: i.producto_id, tercero_id: opts.proveedorId, precio_unitario: i.precio,
-    fecha: hoy, origen: 'lista_precios',
+    fecha: fecha.fecha, origen: 'lista_precios',
   }))
-  await enTandas(hist, async (t) => { if (t.length) await adm.from('doc_precios_historial').insert(t) })
-  return { listaId: lista.id, anteriorId, yaEstaba: false }
+  await enTandas(hist, async (t) => {
+    if (!t.length) return
+    const { error: eH } = await adm.from('doc_precios_historial').insert(t)
+    if (eH) throw new Error(`no pude guardar el historial de precios: ${eH.message}`)
+  })
+  return { listaId: lista.id, anteriorId, yaEstaba: false, masVieja }
 }
 
 export async function revertirLista(adm: Adm, listaId: string, anteriorId: string | null) {
@@ -144,6 +163,8 @@ export async function resolverLista(adm: Adm, opts: {
   proveedores: ProveedorRef[]
   mapeos: { nombreNorm: string; productoId: string; proveedorId: string | null }[]
   secciones?: MapeoSeccion[] | null
+  /** Fecha de modificación en Drive: respaldo si la lista no dice su fecha. */
+  modifiedTime?: string | null
 }) {
   const prov = proveedorPorAliasOSeccion({
     nombreArchivo: opts.nombreArchivo,
@@ -166,18 +187,27 @@ export async function resolverLista(adm: Adm, opts: {
       sinMatch: filas.filter((f) => f.via === 'sin_match').length,
     }
   }
+  const fecha = fechaDeLista({
+    vigenteDesde: opts.lista.vigenteDesde ?? null, nombreArchivo: opts.nombreArchivo, modifiedTime: opts.modifiedTime ?? null,
+  })
   const r = await aplicarLista(adm, {
     proveedorId: prov.id,
     archivoNombre: opts.nombreArchivo,
     hash: opts.bufferHash,
     filas,
     usuarioId: opts.usuarioId,
+    fecha,
   })
   return {
     aplicado: !r.yaEstaba,
     matchPct,
     proveedorId: prov.id,
-    motivo: r.yaEstaba ? 'Esa lista ya estaba vigente.' : `Aplicada. Match ${matchPct}%.`,
+    fecha,
+    motivo: r.yaEstaba
+      ? 'Esa lista ya estaba vigente.'
+      : r.masVieja
+        ? `Es del ${fecha.fecha}, más vieja que la vigente: queda en el historial sin reemplazarla.`
+        : `Aplicada como lista del ${fecha.fecha}${fecha.de === 'hoy' ? ' (sin fecha en la lista ni en el nombre)' : ''}. Match ${matchPct}%.`,
     listaId: r.listaId,
     anteriorId: r.anteriorId,
     sinMatch: filas.filter((f) => f.via === 'sin_match').length,

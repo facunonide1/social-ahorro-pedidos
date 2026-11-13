@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 
 import { createAdminClient } from '@/lib/supabase/server'
 
@@ -19,7 +19,8 @@ import type { FuenteArchivos } from '@/lib/ingesta/fuente'
 import { findPrendido, MOTIVO_FIND } from '@/lib/ingesta/fuente-find'
 import { parsearMayorsur } from './listas'
 import { claveDesdeEnv, descifrarToken } from './crypto'
-import { tomarPagina, tareasIniciales, type TareaCarpeta } from './recorrer'
+import { tomarPagina } from './recorrer'
+import { cursorTrasListar, lockLibre, nuevoLock, planDeListado, type CarpetaConfig, type Cursor } from './cursor'
 import { avisoPlazo } from './vencimiento'
 import { proximoIntento } from './vencimiento'
 
@@ -83,46 +84,80 @@ export async function correrIngesta(opts: { manual?: boolean } = {}) {
     return { ok: false, error: acceso.error, vencida: acceso.invalidGrant }
   }
 
-  const { data: carpetas } = await adm.from('integraciones_google_drive_carpetas')
+  const { data: carpetas, error: eCarp } = await adm.from('integraciones_google_drive_carpetas')
     .select('folder_id, folder_nombre, incluir_subcarpetas').eq('integracion_id', conexion.id).limit(30)
+  if (eCarp) throw new Error(`no pude leer las carpetas configuradas: ${eCarp.message}`)
   if (!carpetas?.length) return { ok: true, sin_carpetas: true }
 
-  // Desde acá la ingesta no sabe que es Drive: lista y baja por la fuente.
-  const fuente = fuenteDrive(acceso.accessToken)
-  const encolados = await encolar(adm, fuente, conexion, carpetas as any[])
-  const procesados = await procesarLote(adm, fuente, conexion.owner_admin_id, inicio)
-  return { ok: true, manual: !!opts.manual, ...encolados, ...procesados }
+  // Una corrida a la vez: el cron y «Procesar ahora» no se pisan. El lock
+  // vence solo (LOCK_MS), así que una corrida que murió no lo deja tomado.
+  const corrida = randomUUID()
+  const cursor = await tomarLock(adm, conexion.id, (conexion.listado_cursor ?? {}) as Cursor, corrida)
+  if (!cursor) return { ok: true, ocupado: true, mensaje: 'Hay otra corrida en curso; esta no hizo nada.' }
+
+  try {
+    // Desde acá la ingesta no sabe que es Drive: lista y baja por la fuente.
+    const fuente = fuenteDrive(acceso.accessToken)
+    const encolados = await encolar(adm, fuente, conexion, cursor, carpetas as CarpetaConfig[])
+    const procesados = await procesarLote(adm, fuente, conexion.owner_admin_id, inicio)
+    return { ok: true, manual: !!opts.manual, corrida, ...encolados, ...procesados }
+  } finally {
+    await soltarLock(adm, conexion.id, corrida).catch(() => { /* vence solo */ })
+  }
 }
 
-async function encolar(adm: Adm, fuente: FuenteArchivos, conexion: any, carpetas: { folder_id: string; folder_nombre: string; incluir_subcarpetas: boolean }[]) {
-  let tareas: TareaCarpeta[] = Array.isArray(conexion.listado_cursor?.tareas) ? conexion.listado_cursor.tareas : []
-  let desde: string | null = conexion.listado_cursor?.desde ?? null
-  if (!tareas.length) {
-    desde = conexion.last_sync_at
-    tareas = tareasIniciales(carpetas.map((c) => ({
-      folderId: c.folder_id,
-      folderNombre: c.folder_nombre,
-      incluirSubcarpetas: c.incluir_subcarpetas !== false,
-    })))
-  }
+/**
+ * Toma el lock con un UPDATE condicionado a que esté libre o vencido. Si otra
+ * corrida lo tiene, no actualiza ninguna fila y devuelve null. (`->>` y no
+ * `->`: un `lock: null` en el JSON no es NULL para SQL.)
+ */
+async function tomarLock(adm: Adm, conexionId: string, cursor: Cursor, corrida: string): Promise<Cursor | null> {
+  const ahora = new Date()
+  if (!lockLibre(cursor.lock, ahora)) return null
+  const conLock: Cursor = { ...cursor, lock: nuevoLock(corrida, ahora) }
+  const { data, error } = await adm.from('integraciones_google_drive')
+    .update({ listado_cursor: conLock })
+    .eq('id', conexionId)
+    .or(`listado_cursor->lock->>hasta.is.null,listado_cursor->lock->>hasta.lt."${ahora.toISOString()}"`)
+    .select('id')
+  if (error) throw new Error(`no pude tomar el lock de la ingesta: ${error.message}`)
+  return data?.length ? conLock : null
+}
+
+async function soltarLock(adm: Adm, conexionId: string, corrida: string) {
+  const { data } = await adm.from('integraciones_google_drive').select('listado_cursor').eq('id', conexionId).maybeSingle()
+  const c = ((data as any)?.listado_cursor ?? {}) as Cursor
+  if (c.lock?.corrida !== corrida) return
+  await adm.from('integraciones_google_drive').update({ listado_cursor: { ...c, lock: null } })
+    .eq('id', conexionId).eq('listado_cursor->lock->>corrida', corrida)
+}
+
+async function encolar(adm: Adm, fuente: FuenteArchivos, conexion: any, cursor: Cursor, carpetas: CarpetaConfig[]) {
+  const plan = planDeListado(cursor, carpetas, new Date().toISOString())
+  let tareas = plan.tareas
   const vistos = new Set<string>()
   let nuevos = 0
   let paginas = 0
   while (tareas.length && paginas < 3 && nuevos < 40) {
-    const paso = await tomarPagina(tareas, (id, page) => fuente.listarPagina(id, page),
-      { maxProfundidad: MAX_PROFUNDIDAD, modificadoDespues: desde, vistos })
+    const paso = await tomarPagina(tareas, (id, page) => fuente.listarPagina(id, page), {
+      maxProfundidad: MAX_PROFUNDIDAD,
+      // Cada carpeta raíz con su fecha: una carpeta nueva trae todo.
+      modificadoDespues: (raizId) => plan.desdePorRaiz[raizId] ?? null,
+      vistos,
+    })
     tareas = paso.tareas
     paginas++
     nuevos += await guardarPagina(adm, paso.archivos)
   }
-  const completo = tareas.length === 0
-  await adm.from('integraciones_google_drive').update({
-    listado_cursor: completo ? { tareas: [], desde: null } : { tareas, desde },
+  const { cursor: siguiente, completo } = cursorTrasListar(cursor, { ...plan, tareas })
+  const { error } = await adm.from('integraciones_google_drive').update({
+    listado_cursor: siguiente,
     listado_completo: completo,
     last_sync_at: completo ? new Date().toISOString() : conexion.last_sync_at,
     updated_at: new Date().toISOString(),
   }).eq('id', conexion.id)
-  return { encolados: nuevos, listado_completo: completo }
+  if (error) throw new Error(`no pude guardar el avance del listado: ${error.message}`)
+  return { encolados: nuevos, listado_completo: completo, carpetas: carpetas.map((c) => c.folder_nombre) }
 }
 
 async function guardarPagina(adm: Adm, archivos: { fileId: string; nombre: string; mime: string; modifiedTime: string | null; md5: string | null; webViewLink: string | null; size: number | null; carpetaRaizId: string; carpetaRaizNombre: string; rutaRelativa: string }[]) {
@@ -206,7 +241,7 @@ async function recuperarTrabados(adm: Adm) {
 async function procesarLote(adm: Adm, fuente: FuenteArchivos, usuarioId: string | null, inicio: number) {
   const recuperados = await recuperarTrabados(adm)
   const { data: cola } = await adm.from('drive_archivos_ingestados')
-    .select('id, file_id, nombre, mime, ruta_relativa, clasificacion, clasificacion_forzada, intentos, bytes, web_view_link, proximo_intento_at')
+    .select('id, file_id, nombre, mime, ruta_relativa, clasificacion, clasificacion_forzada, intentos, bytes, web_view_link, proximo_intento_at, modified_time')
     .eq('estado', 'pendiente')
     .order('created_at', { ascending: true })
     .limit(40)
@@ -240,9 +275,12 @@ async function procesarLote(adm: Adm, fuente: FuenteArchivos, usuarioId: string 
       continue
     }
     const intentos = Number(archivo.intentos ?? 0) + 1
-    await adm.from('drive_archivos_ingestados').update({
+    // Se reclama sólo si sigue pendiente: si otra corrida lo tomó, se saltea.
+    const { data: tomado, error: eTomar } = await adm.from('drive_archivos_ingestados').update({
       estado: 'procesando', intentos, updated_at: new Date().toISOString(),
-    }).eq('id', archivo.id)
+    }).eq('id', archivo.id).eq('estado', 'pendiente').select('id')
+    if (eTomar) throw new Error(`no pude tomar ${archivo.nombre}: ${eTomar.message}`)
+    if (!tomado?.length) continue
     try {
       const r = await procesarUno(adm, fuente, archivo, usuarioId)
       if (r.cubiertos) cubiertos = new Set([...cubiertos, ...r.cubiertos])
@@ -347,7 +385,7 @@ async function procesarUno(adm: Adm, fuente: FuenteArchivos, archivo: any, usuar
       const r = await resolverLista(adm, {
         lista, nombreArchivo: `${archivo.nombre} · ${grupo.proveedor}`, ruta: archivo.ruta_relativa,
         bufferHash: createHash('sha256').update(grupo.proveedor + ':' + grupo.filas.length + ':' + hash).digest('hex'),
-        usuarioId, catalogo, proveedores, mapeos, secciones,
+        usuarioId, catalogo, proveedores, mapeos, secciones, modifiedTime: archivo.modified_time ?? null,
       })
       if (r.aplicado || r.motivo.includes('ya estaba')) aplicadas++
       else enPrevia++
@@ -375,7 +413,7 @@ async function procesarUno(adm: Adm, fuente: FuenteArchivos, archivo: any, usuar
     const secciones = await mapeoSeccionSiExiste(adm)
     const r = await resolverLista(adm, {
       lista, nombreArchivo: archivo.nombre, ruta: archivo.ruta_relativa,
-      bufferHash: hash, usuarioId, catalogo, proveedores, mapeos, secciones,
+      bufferHash: hash, usuarioId, catalogo, proveedores, mapeos, secciones, modifiedTime: archivo.modified_time ?? null,
     })
     return {
       estado: r.aplicado || r.motivo.includes('ya estaba') ? 'ok' : 'previa',
