@@ -24,6 +24,21 @@ export type Senales = {
   /** Primeras celdas, para el banner *** dd/mm/aa *** y pla_3d. */
   celdas?: string[]
   encabezados?: string[]
+  /**
+   * Las primeras filas. Las listas de droguería traen título, fecha y datos
+   * del proveedor antes del encabezado: mirar solo la fila 1 las mandaba a
+   * «sin clasificar».
+   */
+  filas?: string[][]
+}
+
+/**
+ * Las carpetas de compras (la del dueño y la privada) traen listas de precios
+ * por droguería en subcarpetas. Una planilla o un PDF ahí es una lista,
+ * aunque la ruta no diga «lista».
+ */
+function enCarpetaDeCompras(segs: string[]): boolean {
+  return segs.some((x) => /compras\s+farmacias/.test(x))
 }
 
 const MIME_PLANILLA = new Set([
@@ -95,11 +110,17 @@ export function clasificar(s: Senales): Clasificacion {
   if (en('factura') && (pdf || imagen || /factura/.test(nombre))) return 'factura'
   if ((pdf || imagen) && en('factura')) return 'factura'
 
+  if (enCarpetaDeCompras(segs) && !en('factura')) {
+    if (planilla || pdf) return 'precios'
+    // Una foto en la carpeta de listas es un folleto, no una factura.
+    if (imagen) return 'sin_clasificar'
+  }
+
   if (en('lista') && imagen) return 'sin_clasificar'
   if (en('lista') && (planilla || pdf)) return 'precios'
   if (pdf && /lista|precio/.test(nombre)) return 'precios'
 
-  if (planilla && pareceLista(s.encabezados ?? [])) return 'precios'
+  if (planilla && (pareceLista(s.encabezados ?? []) || (s.filas ?? []).some((f) => pareceLista(f)))) return 'precios'
   if (/factura/.test(nombre)) return 'factura'
   if (pdf || imagen) return en('lista') ? 'sin_clasificar' : 'factura'
 

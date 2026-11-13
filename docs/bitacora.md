@@ -1,5 +1,25 @@
 # Bitácora
 
+## 2026-11-13 · Carga en lote que no cargaba y la ingesta de Drive trabada
+
+Rama `fix/lote-y-drive-ingesta`, PR en borrador. Sin migraciones, RLS ni secretos. Paquete de deploy con rollback: `docs/deploy/2026-11-13-lote-y-drive.md`.
+
+**Carga en lote (`/admin/finanzas/documentos/lote`).** Causa: el `onChange` del input hacía `const f = e.target.files; e.currentTarget.value = ''; agregar(f)`, y `input.files` es una lista **viva**: vaciar el input la deja en cero. `agregar` recibía cero archivos y salía en silencio, sin request ni error; por eso los logs de Vercel no mostraban nada. Arrastrar y soltar sí andaba. Arreglo: `copiarArchivos()` (`lib/documentos/lote-archivos.ts`) antes de vaciar, también en `recepcion-movil` (andaba de casualidad). Además: si no llega ningún archivo, se avisa; lo que pasa de 4,4 MB después de comprimir se rechaza en el navegador diciendo cuánto pesa (Vercel corta los pedidos de más de 4,5 MB con un 413 que no llega a los logs de la app, y la app aceptaba hasta 12 MB); un 413 o un 401 sin JSON dan un mensaje que dice qué pasó; y un aviso arriba de la lista cuando algún archivo falló. Test: `lote-archivos.test.ts` reproduce la lista viva que se vacía.
+
+**Ingesta de Drive.** Lo que estaba roto:
+- Un archivo pasaba a «procesando» y solo se tomaban los «pendiente»: si la función moría (60 s) quedaba trabado para siempre. Ahora «procesando» lleva un **lock con vencimiento** (`proximo_intento_at` = ahora + 5 min); cada corrida libera lo vencido (las filas viejas se miran por `updated_at`) y, si hay un lock vigente, no se pisa con otra corrida. Gastados los intentos, va a error con el motivo.
+- Se procesaban hasta 4 archivos sin mirar el reloj. Ahora hay un **presupuesto** (40 s): no se empieza un archivo sin tiempo de terminarlo.
+- La planilla «Compras y precios por droguería» se hacía entera: ahora **por partes** (4 droguerías por corrida), con el avance en `listado_cursor.partes`. Las compras se guardan en la primera parte (son idempotentes).
+- Los **maestros** (xls de 42 MB) se bajaban enteros y se abrían para olfatearlos, y solo después se veía que no entraban: ahora, si el tamaño que dice Drive pasa el tope, se marcan para subir a mano **sin bajarlos**; van al final de la cola y de a uno. El olfateo de contenido solo en planillas de hasta 8 MB. **Nunca se aplica un maestro de SIFACO.**
+- **Las carpetas de compras:** una planilla o un PDF en «compras farmacias» o «compras farmacias (privado)», en cualquier subcarpeta, es una lista de precios (antes, sin «lista» en la ruta, caía en «sin clasificar», y una foto se tomaba como factura). Las listas con título arriba del encabezado se reconocen mirando las primeras filas. Acción nueva para sumar las dos carpetas por nombre, con subcarpetas.
+- **La fecha de cada lista** (`lib/drive/fecha-lista.ts`): del nombre, la carpeta, el contenido o, último, la de Drive, con la fuente anotada. Antes se perdía (ni siquiera llegaba a `aplicarLista`) y todo se fechaba con el día de carga; una lista vieja pisaba a una nueva. Ahora una lista más vieja que la vigente queda como historial.
+- **El cron:** sigue en `vercel.json` cada 30 min; ahora exige exactamente `Bearer CRON_SECRET` (sin la variable contesta 503 y lo dice en el log), respeta `DRIVE_INGESTA_ENABLED` y cada corrida queda anotada (`listado_cursor.corridas`): «Ver estado» dice si el cron llega.
+- **Manual:** en la pantalla de Google Drive, «Ver estado», «Destrabar», «Agregar las carpetas de compras» y «Procesar ahora» (todo con `exigirDueno`).
+
+Verificación: `npm test` 63 pasan (15 nuevos de la cola, el lock, las carpetas, las fechas y el cron, y 4 de la carga en lote), `tsc` limpio, lint sin errores, `npm run build` completo en verde.
+
+Decidido sin firma (a confirmar): lock de 5 minutos; presupuesto de 40 s; 4 grupos de la planilla por corrida; olfateo hasta 8 MB; nada de más de 30 MB se baja en automático; una lista más vieja que la vigente no la reemplaza.
+
 ## 2026-11-12 · CI en cada PR y config de lint
 
 `.github/workflows/ci.yml` corre `npm ci`, `npm test`, `tsc --noEmit`,

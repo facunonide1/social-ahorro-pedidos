@@ -1,5 +1,6 @@
 'use client'
 
+import { copiarArchivos } from '@/lib/documentos/lote-archivos'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Camera, Check, Loader2, FileText, Monitor, Trash2 } from 'lucide-react'
@@ -40,9 +41,9 @@ export function RecepcionMovil({
   const subiendo = fotos.some((f) => f.estado === 'subiendo')
   const puedeGuardar = !!proveedorId && !!sucursalId && !subiendo && !guardando
 
-  async function agregar(rol: Foto['rol'], files: FileList | null) {
-    if (!files?.length) return
-    for (const file of Array.from(files)) {
+  async function agregar(rol: Foto['rol'], files: File[]) {
+    if (!files.length) return
+    for (const file of files) {
       const marca: Foto = { rol, nombre: file.name, estado: 'subiendo' }
       setFotos((f) => [...f, marca])
 
@@ -189,7 +190,7 @@ function BotonFoto({
   icono: Icono, titulo, detalle, fotos, onPick,
 }: {
   icono: any; titulo: string; detalle: string; fotos: Foto[]
-  onPick: (f: FileList | null) => void
+  onPick: (f: File[]) => void
 }) {
   return (
     <div className="rounded-xl border border-border bg-card p-3">
@@ -207,7 +208,7 @@ function BotonFoto({
         {/* `capture` abre la cámara directo en el celular. Y acepta varias: una
             entrega puede traer más de una factura. */}
         <input type="file" accept="image/*,application/pdf" capture="environment" multiple
-          className="hidden" onChange={(e) => { onPick(e.target.files); e.currentTarget.value = '' }} />
+          className="hidden" onChange={(e) => { const fs = copiarArchivos(e.currentTarget.files); e.currentTarget.value = ''; onPick(fs) }} />
       </label>
 
       {fotos.length > 0 && (

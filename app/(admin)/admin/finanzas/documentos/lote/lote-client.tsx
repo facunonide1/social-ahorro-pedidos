@@ -14,6 +14,7 @@ import {
   DOC_MAX_ARCHIVOS_LOTE,
 } from '@/lib/documentos/config'
 import { subirDocumentoCliente } from '@/lib/documentos/subir-cliente'
+import { copiarArchivos } from '@/lib/documentos/lote-archivos'
 
 type EstadoItem = 'en_cola' | 'subiendo' | 'leyendo' | 'listo' | 'duplicado' | 'error'
 
@@ -116,9 +117,13 @@ export function LoteClient() {
     [procesarUno],
   )
 
-  function agregar(files: FileList | File[]) {
-    const arr = Array.from(files)
-    if (!arr.length) return
+  function agregar(files: File[]) {
+    const arr = files
+    if (!arr.length) {
+      // Antes salía en silencio: si llega vacío, que se vea.
+      toast.error('No llegó ningún archivo. Probá elegirlos de nuevo o arrastralos acá.')
+      return
+    }
 
     const libres = DOC_MAX_ARCHIVOS_LOTE - items.length
     if (libres <= 0) {
@@ -158,7 +163,7 @@ export function LoteClient() {
       <div
         onDragOver={(e) => { e.preventDefault(); setArrastrando(true) }}
         onDragLeave={() => setArrastrando(false)}
-        onDrop={(e) => { e.preventDefault(); setArrastrando(false); agregar(e.dataTransfer.files) }}
+        onDrop={(e) => { e.preventDefault(); setArrastrando(false); agregar(copiarArchivos(e.dataTransfer.files)) }}
         className={cn(
           'flex flex-col items-center gap-2 rounded-lg border-2 border-dashed py-10 text-center transition-colors',
           arrastrando ? 'border-primary bg-accent' : 'border-border',
@@ -176,7 +181,13 @@ export function LoteClient() {
           multiple
           accept={DOC_ACCEPT_ATTR}
           className="hidden"
-          onChange={(e) => { const f = e.target.files; e.currentTarget.value = ''; if (f) agregar(f) }}
+          onChange={(e) => {
+            // Copiar ANTES de vaciar el input: `files` es una lista viva y vaciar
+            // el valor la deja en cero (lib/documentos/lote-archivos.ts).
+            const f = copiarArchivos(e.currentTarget.files)
+            e.currentTarget.value = ''
+            agregar(f)
+          }}
         />
         <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>Elegir archivos</Button>
       </div>
@@ -202,6 +213,18 @@ export function LoteClient() {
               </Button>
             )}
           </div>
+
+          {!!conError.length && !corriendo && (
+            <div role="alert" className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-sm">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" />
+              <div>
+                <div className="font-medium">
+                  {conError.length === 1 ? 'Un archivo no se pudo cargar' : `${conError.length} archivos no se pudieron cargar`}
+                </div>
+                <div className="text-xs text-muted-foreground">El motivo está al lado de cada uno. Los demás siguieron.</div>
+              </div>
+            </div>
+          )}
 
           <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
             {items.map((it) => <Fila key={it.key} item={it} loteId={loteId} />)}
