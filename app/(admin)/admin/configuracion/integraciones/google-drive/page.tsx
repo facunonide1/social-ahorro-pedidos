@@ -6,6 +6,7 @@ import { avisoPlazo, venceEstimado } from '@/lib/drive/vencimiento'
 import { resumenIngesta } from '@/lib/drive/correr'
 
 import { DriveClient } from './drive-client'
+import { EstadoIngesta } from './estado-ingesta'
 
 function filaBandeja(b: any) {
   return {
@@ -44,7 +45,9 @@ export default async function GoogleDrivePage({ searchParams }: { searchParams: 
           { label: 'Google Drive' },
         ]}
       />
-      <div className="p-4 md:p-6">
+      <div className="space-y-4 p-4 md:p-6">
+        {/* El estado y «Procesar ahora» se ven aunque la ingesta esté apagada: ahí dice por qué. */}
+        <EstadoIngesta />
         <DriveClient
           habilitada={habilitada}
           autoAplicar={preciosAutoAplicar()}

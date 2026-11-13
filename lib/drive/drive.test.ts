@@ -429,13 +429,14 @@ test('entra un solo pesado por corrida y el presupuesto corta a los 45 segundos'
   const chico = { id: 'c', bytes: UMBRAL_PESADO - 1, clasificacion: 'factura', clasificacionForzada: null }
   const plan = planificarCorrida([planilla, otra, maestro, mediano, chico], { max: 4 })
   assert.deepEqual(plan.elegir.map((a) => a.id), ['p', 'c'])
-  assert.deepEqual(plan.dejar.map((a) => a.id), ['p2', 'm', 'med'])
+  // Por prioridad (13/11): el maestro queda último, detrás de la planilla y la lista.
+  assert.deepEqual(plan.dejar.map((a) => a.id), ['p2', 'med', 'm'])
   assert.equal(plan.omitidos.length, 0)
   assert.equal(sigueEnPresupuesto(44_999), true)
   assert.equal(sigueEnPresupuesto(45_000), false)
 })
 
-test('un procesando de más de 10 minutos vuelve a pendiente y al tope queda en error', () => {
+test('un procesando de más de MINUTOS_TRABADO minutos vuelve a pendiente y al tope queda en error', () => {
   const ahora = new Date('2026-11-12T15:00:00Z')
   const hace = (min: number) => new Date(ahora.getTime() - min * 60_000).toISOString()
   assert.equal(decisionTrabado({

@@ -6,14 +6,20 @@
  * 2 MB o más, entra de a uno. El resto de la corrida son archivos chicos,
  * mientras no se hayan ido 45 segundos desde que arrancó la ingesta.
  *
- * Si algo quedó en `procesando` más de 10 minutos, el cron murió a la mitad.
- * Vuelve a pendiente con un intento más. Al llegar al tope de intentos, error.
+ * Si algo quedó en `procesando` más de 3 minutos, el cron murió a la mitad:
+ * la función tiene maxDuration 60, así que no puede seguir viva. Vuelve a
+ * pendiente con un intento más. Al llegar al tope de intentos, error.
+ *
+ * ORDEN (13/11): el pesado que entra en la corrida se elige por prioridad, no
+ * por orden de llegada. Primero la planilla de compras y las listas, después
+ * las facturas, y los maestros al final: un maestro (que además nunca se
+ * aplica solo) no puede tener esperando a la planilla ni a las listas.
  */
 
 export const TOPE_BYTES = 12 * 1024 * 1024
 export const UMBRAL_PESADO = 2 * 1024 * 1024
 export const PRESUPUESTO_MS = 45_000
-export const MINUTOS_TRABADO = 10
+export const MINUTOS_TRABADO = 3
 
 export type ArchivoPlan = {
   bytes: number | null
@@ -43,6 +49,17 @@ export function sigueEnPresupuesto(transcurridoMs: number, presupuestoMs = PRESU
   return transcurridoMs < presupuestoMs
 }
 
+/** Menor = primero. Lo que no se sabe qué es va antes que el maestro. */
+export function prioridad(a: ArchivoPlan): number {
+  switch (claseEfectiva(a)) {
+    case 'planilla': return 0
+    case 'precios': return 1
+    case 'factura': return 2
+    case 'maestro': return 9
+    default: return 5
+  }
+}
+
 export function planificarCorrida<T extends ArchivoPlan>(
   archivos: T[],
   opts: { max: number },
@@ -51,8 +68,10 @@ export function planificarCorrida<T extends ArchivoPlan>(
   const siguen: T[] = []
   for (const a of archivos) (superaTope(a.bytes) ? omitidos : siguen).push(a)
 
-  const pesados = siguen.filter((a) => esPesado(a))
-  const livianos = siguen.filter((a) => !esPesado(a))
+  // `sort` es estable: a igual prioridad se respeta el orden de llegada.
+  const porPrioridad = [...siguen].sort((a, b) => prioridad(a) - prioridad(b))
+  const pesados = porPrioridad.filter((a) => esPesado(a))
+  const livianos = porPrioridad.filter((a) => !esPesado(a))
   const elegir: T[] = []
   const dejar: T[] = []
   if (opts.max > 0 && pesados[0]) elegir.push(pesados[0])

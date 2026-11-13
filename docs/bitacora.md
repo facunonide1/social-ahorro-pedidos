@@ -1,5 +1,74 @@
 # Bitácora
 
+## 2026-11-13 · Drive: por qué no entró nada y qué cambia
+
+Estado que reportó Facu en producción (main `fa7a354`): 3 archivos `ok`, la
+planilla «Compras y precios por droguería» en `procesando` desde las 16:36 UTC,
+4 maestros de unos 42 MB en `pendiente` y nada de la carpeta «compras
+farmacias». El cron no volvió a hacer nada.
+
+**Las causas, según el código de main:**
+
+1. **Los maestros mataban la función.** Main baja y parsea cada archivo sin
+   mirar el tamaño. Los maestros `.xls` de 42 MB pasan la memoria y los 60 s:
+   la función muere a la mitad y no deja registro. La planilla quedó en
+   `procesando` por lo mismo, y main no tiene cómo destrabarla.
+2. **Una sola fecha de corte para todas las carpetas.** El listado
+   incremental trae lo modificado después de `last_sync_at`, la fecha del
+   último listado completo. Una carpeta agregada después tiene todos sus
+   archivos más viejos que esa fecha y **nunca entran**. Es lo que pasó con
+   «compras farmacias».
+3. **El cron y «Procesar ahora» se podían pisar**: los dos marcaban el mismo
+   archivo y lo procesaban dos veces.
+4. **La fecha de cada lista era la del día de ingesta**, y una lista vieja
+   reemplazaba a la vigente.
+
+**Qué cambia** (sobre la pila de ingesta, #22 → #34):
+
+- **Tamaño y orden.** Desde el #22, un archivo de más de 12 MB no se baja:
+  pasa a previa con dónde subirlo a mano (la carga de SIFACO lo lee en el
+  navegador y lo manda por lotes, o sea por partes). Ahora, además, el pesado
+  que entra en cada corrida sale por **prioridad**: planilla, listas,
+  facturas y el maestro al final. Los maestros no bloquean la cola, y nunca
+  se aplican al catálogo.
+- **Destrabe.** Un `procesando` de más de 3 minutos vuelve a `pendiente` con
+  un intento más (antes, 10 minutos en el #22; la función no vive más de 60
+  s). La planilla de las 16:36 se destraba en la próxima corrida.
+- **Lock con vencimiento.** Una corrida a la vez: un UPDATE condicionado
+  sobre `listado_cursor.lock` (jsonb, sin columna nueva) que vence a los 2
+  minutos. Además, cada archivo se reclama con
+  `update … where estado = 'pendiente'`: si otra corrida lo tomó, se saltea.
+  Se probó en Postgres local que la condición usa `->>`: un `lock: null` en el
+  JSON no es NULL para SQL, y con `->` el lock no se habría soltado nunca.
+- **Una fecha por carpeta.** `listado_cursor.porCarpeta` guarda, por carpeta
+  raíz, el inicio del último listado completo. Una carpeta sin fecha trae
+  todo. La primera corrida después del deploy relista todo una vez (el
+  cursor viejo no tiene esa fecha), y `guardarPagina` no reencola lo que no
+  cambió.
+- **Las dos carpetas, con subcarpetas.** Se lee lo que está configurado. El
+  panel nuevo avisa si falta «compras farmacias» o «compras farmacias
+  (privado)», o si alguna no incluye subcarpetas.
+- **Listas por droguería y con su fecha.** La droguería sale como antes (alias
+  y sección SIFACO). La fecha sale de lo que dice la lista, si no del nombre
+  del archivo, si no de Drive, y si no de hoy (`lib/drive/fecha-lista.ts`).
+  Va en los ítems, en el historial y en `listas_precios.mapeo_usado.fecha_lista`.
+  Una lista más vieja que la vigente entra al historial sin reemplazarla. Los
+  errores de escritura de la lista ahora cortan.
+- **El cron.** Sigue en `vercel.json` cada 30 minutos. Acepta sólo
+  `Authorization: Bearer <CRON_SECRET>` (el que manda Vercel). Sin
+  CRON_SECRET responde 500 con el motivo, en vez de un 401 que parece «no
+  corrió». Respeta `DRIVE_INGESTA_ENABLED` y deja una línea JSON por corrida.
+- **A mano y con estado.** En la pantalla de Google Drive, arriba: «Estado de
+  la ingesta» (`GET /api/integraciones/google-drive/estado`, sólo
+  super_admin, sólo lee). Muestra los conteos por estado, las carpetas con su
+  último listado, si hay una corrida en curso, lo trabado, el próximo
+  pendiente y los avisos: falta una carpeta, falta CRON_SECRET, ingesta
+  apagada, token vencido. «Procesar ahora» corre el mismo lote que el cron y
+  dice qué hizo.
+
+Sin migraciones, RLS ni secretos. La 0294 está aplicada en la base (las
+tablas tienen filas), aunque la bitácora decía que no.
+
 ## 2026-11-12 · FIND tiene su lugar como fuente, apagado
 
 `lib/ingesta/fuente-find.ts` es el esqueleto de FIND como fuente: cumple
