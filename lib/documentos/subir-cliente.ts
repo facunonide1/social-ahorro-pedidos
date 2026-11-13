@@ -1,4 +1,5 @@
 import { comprimirSiHaceFalta } from '@/lib/documentos/comprimir-cliente'
+import { mensajeDeEstado, motivoParaNoSubir } from '@/lib/documentos/lote-archivos'
 
 export type SubidaCliente =
   | { estado: 'subido'; extraccionId: string; archivoPath: string; archivoHash: string; mimeType: string }
@@ -16,6 +17,10 @@ export type SubidaCliente =
 export async function subirDocumentoCliente(file: File, loteId?: string): Promise<SubidaCliente> {
   try {
     const listo = await comprimirSiHaceFalta(file)
+    // Lo que Vercel cortaría antes de la función (413, sin log en la app) se
+    // avisa acá, con el tamaño, en vez de un «probá de nuevo» que no sirve.
+    const motivo = motivoParaNoSubir(listo)
+    if (motivo) return { estado: 'error', mensaje: motivo }
     const fd = new FormData()
     fd.append('archivo', listo)
     if (loteId) fd.append('lote_id', loteId)
@@ -24,7 +29,7 @@ export async function subirDocumentoCliente(file: File, loteId?: string): Promis
     const j = await r.json().catch(() => null)
 
     if (!r.ok) {
-      return { estado: 'error', mensaje: j?.error ?? 'No pude subir el archivo. Probá de nuevo.' }
+      return { estado: 'error', mensaje: j?.error ?? mensajeDeEstado(r.status) }
     }
     return j as SubidaCliente
   } catch {
