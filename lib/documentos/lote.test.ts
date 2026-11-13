@@ -26,10 +26,10 @@ test('el bug: leer la FileList después de limpiar el input la da vacía; copiar
   const mal = listaViva([a, b])
   const ref = mal.files
   mal.value = ''
-  assert.equal(copiarArchivos(ref).length, 0) // lo que hacía el código viejo
+  assert.equal(copiarArchivos<File>(ref).length, 0) // lo que hacía el código viejo
 
   const bien = listaViva([a, b])
-  const copia = copiarArchivos(bien.files)
+  const copia = copiarArchivos<File>(bien.files)
   bien.value = ''
   assert.deepEqual(copia.map((f) => f.name), ['factura.pdf', 'foto.jpg'])
   assert.deepEqual(copiarArchivos(null), [])
