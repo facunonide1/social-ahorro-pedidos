@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 
+import type { FechaDeLista } from './fecha-lista'
 import * as XLSX from 'xlsx'
 
 import { paginar } from '@/lib/supabase/paginar'
@@ -53,13 +54,24 @@ export async function aplicarLista(adm: Adm, opts: {
   hash: string
   filas: (FilaLista & { productoId: string | null; score: number; via: string })[]
   usuarioId: string | null
-}): Promise<{ listaId: string; anteriorId: string | null; yaEstaba: boolean }> {
+  /** La fecha de la lista (lib/drive/fecha-lista.ts). Sin ella, la de hoy. */
+  fecha?: FechaDeLista | null
+}): Promise<{ listaId: string; anteriorId: string | null; yaEstaba: boolean; masVieja?: boolean }> {
   const rubro = 'farmacia'
+  const hoy = new Date().toISOString().slice(0, 10)
+  const fecha = opts.fecha?.fecha ?? hoy
   const { data: vigente } = await adm.from('listas_precios')
-    .select('id, hash').eq('proveedor_id', opts.proveedorId).eq('rubro', rubro).eq('vigente', true).limit(5)
+    .select('id, hash, mapeo_usado, fecha_carga').eq('proveedor_id', opts.proveedorId).eq('rubro', rubro).eq('vigente', true).limit(5)
   const misma = ((vigente ?? []) as any[]).find((l) => l.hash === opts.hash)
   if (misma) return { listaId: misma.id, anteriorId: null, yaEstaba: true }
-  const anteriorId = (vigente ?? [])[0]?.id ?? null
+  // Una lista MÁS VIEJA que la vigente no la reemplaza: se guarda como
+  // historial (vigente = false). Antes, el orden de carga decidía.
+  const actual = ((vigente ?? []) as any[])[0]
+  const fechaActual: string | null = actual
+    ? (actual.mapeo_usado?.vigente_desde ?? String(actual.fecha_carga ?? '').slice(0, 10)) || null
+    : null
+  const masVieja = !!fechaActual && fecha < fechaActual
+  const anteriorId = !masVieja ? (actual?.id ?? null) : null
   if (anteriorId) {
     await adm.from('listas_precios').update({ vigente: false }).eq('proveedor_id', opts.proveedorId).eq('rubro', rubro).eq('vigente', true)
   }
@@ -68,12 +80,11 @@ export async function aplicarLista(adm: Adm, opts: {
     rubro,
     archivo_nombre: opts.archivoNombre,
     hash: opts.hash,
-    vigente: true,
+    vigente: !masVieja,
     created_by: opts.usuarioId,
-    mapeo_usado: { origen: 'google_drive' },
+    mapeo_usado: { origen: 'google_drive', vigente_desde: fecha, fecha_fuente: opts.fecha?.fuente ?? 'carga' },
   }).select('id').single()
   if (error || !lista) throw new Error(error?.message ?? 'no se pudo crear la lista')
-  const hoy = new Date().toISOString().slice(0, 10)
   const items = opts.filas.map((f) => ({
     lista_id: lista.id,
     sku: f.sku,
@@ -82,17 +93,17 @@ export async function aplicarLista(adm: Adm, opts: {
     producto_id: f.productoId,
     precio: f.precio,
     desc_volumen: { categoria: f.categoria, condiciones: f.condiciones, descuento: f.descuento },
-    fecha: hoy,
+    fecha,
     match_score: f.score,
     match_via: f.via,
   }))
   await enTandas(items, async (t) => { await adm.from('listas_precios_items').insert(t) })
   const hist = items.filter((i) => i.producto_id && i.precio > 0).map((i) => ({
     item_id: i.producto_id, tercero_id: opts.proveedorId, precio_unitario: i.precio,
-    fecha: hoy, origen: 'lista_precios',
+    fecha, origen: 'lista_precios',
   }))
   await enTandas(hist, async (t) => { if (t.length) await adm.from('doc_precios_historial').insert(t) })
-  return { listaId: lista.id, anteriorId, yaEstaba: false }
+  return { listaId: lista.id, anteriorId, yaEstaba: false, masVieja }
 }
 
 export async function revertirLista(adm: Adm, listaId: string, anteriorId: string | null) {
@@ -118,6 +129,7 @@ export async function resolverLista(adm: Adm, opts: {
   catalogo: ProductoRef[]
   proveedores: ProveedorRef[]
   mapeos: { nombreNorm: string; productoId: string; proveedorId: string | null }[]
+  fecha?: FechaDeLista | null
 }) {
   const prov = detectarProveedor({
     nombreArchivo: opts.nombreArchivo,
@@ -146,12 +158,17 @@ export async function resolverLista(adm: Adm, opts: {
     hash: opts.bufferHash,
     filas,
     usuarioId: opts.usuarioId,
+    fecha: opts.fecha ?? null,
   })
   return {
     aplicado: !r.yaEstaba,
     matchPct,
     proveedorId: prov.id,
-    motivo: r.yaEstaba ? 'Esa lista ya estaba vigente.' : `Aplicada. Match ${matchPct}%.`,
+    motivo: r.yaEstaba
+      ? 'Esa lista ya estaba vigente.'
+      : r.masVieja
+        ? `Es más vieja que la vigente: quedó como historial. Match ${matchPct}%.`
+        : `Aplicada. Match ${matchPct}%.`,
     listaId: r.listaId,
     anteriorId: r.anteriorId,
     sinMatch: filas.filter((f) => f.via === 'sin_match').length,
