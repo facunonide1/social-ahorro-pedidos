@@ -14,6 +14,7 @@ import {
   DOC_MAX_ARCHIVOS_LOTE,
 } from '@/lib/documentos/config'
 import { subirDocumentoCliente } from '@/lib/documentos/subir-cliente'
+import { copiarArchivos } from '@/lib/documentos/lote'
 
 type EstadoItem = 'en_cola' | 'subiendo' | 'leyendo' | 'listo' | 'duplicado' | 'error'
 
@@ -52,6 +53,8 @@ export function LoteClient() {
   const [corriendo, setCorriendo] = useState(false)
   const [arrastrando, setArrastrando] = useState(false)
   const fileRef = useRef<HTMLInputElement | null>(null)
+  // El File de cada fila, para poder reintentar la que falló.
+  const archivos = useRef(new Map<string, File>())
 
   const actualizar = useCallback((key: string, patch: Partial<Item>) => {
     setItems((xs) => xs.map((x) => (x.key === key ? { ...x, ...patch } : x)))
@@ -59,43 +62,54 @@ export function LoteClient() {
 
   const procesarUno = useCallback(
     async (item: Item, file: File) => {
-      actualizar(item.key, { estado: 'subiendo' })
-      const sub = await subirDocumentoCliente(file, loteId)
-
-      if (sub.estado === 'error') {
-        actualizar(item.key, { estado: 'error', mensaje: sub.mensaje })
-        return
-      }
-      if (sub.estado === 'duplicado') {
-        actualizar(item.key, { estado: 'duplicado', extraccionId: sub.extraccionId, mensaje: sub.mensaje })
-        return
-      }
-
-      actualizar(item.key, { estado: 'leyendo', extraccionId: sub.extraccionId })
-
+      // Nada que pase acá adentro puede dejar la fila trabada en «Subiendo»
+      // ni frenar al trabajador de la cola: cualquier error queda en la fila.
       try {
-        const r = await fetch(`/api/documentos/${sub.extraccionId}/extraer`, { method: 'POST' })
-        const j = await r.json().catch(() => null)
-        if (!r.ok) {
-          actualizar(item.key, { estado: 'error', mensaje: j?.error ?? 'No pude leerla.' })
-          return
-        }
-        actualizar(item.key, {
-          estado: 'listo',
-          proveedor:
-            j.tercero?.estado === 'encontrado'
-              ? j.tercero.razonSocial
-              : j.datos?.emisor?.nombre ?? null,
-          renglones: j.lineas?.length ?? 0,
-          total: j.datos?.totales?.total ?? null,
-          mensaje: null,
-        })
-      } catch {
-        actualizar(item.key, { estado: 'error', mensaje: 'Se cortó la conexión mientras la leía.' })
+        await procesarUnoSinRed(item, file)
+      } catch (e: any) {
+        actualizar(item.key, { estado: 'error', mensaje: `Falló sin respuesta del servidor: ${e?.message ?? 'error desconocido'}.` })
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [actualizar, loteId],
   )
+
+  async function procesarUnoSinRed(item: Item, file: File) {
+    actualizar(item.key, { estado: 'subiendo', mensaje: null })
+    const sub = await subirDocumentoCliente(file, loteId)
+
+    if (sub.estado === 'error') {
+      actualizar(item.key, { estado: 'error', mensaje: sub.mensaje })
+      return
+    }
+    if (sub.estado === 'duplicado') {
+      actualizar(item.key, { estado: 'duplicado', extraccionId: sub.extraccionId, mensaje: sub.mensaje })
+      return
+    }
+
+    actualizar(item.key, { estado: 'leyendo', extraccionId: sub.extraccionId })
+
+    try {
+      const r = await fetch(`/api/documentos/${sub.extraccionId}/extraer`, { method: 'POST' })
+      const j = await r.json().catch(() => null)
+      if (!r.ok) {
+        actualizar(item.key, { estado: 'error', mensaje: j?.error ?? 'No pude leerla.' })
+        return
+      }
+      actualizar(item.key, {
+        estado: 'listo',
+        proveedor:
+          j.tercero?.estado === 'encontrado'
+            ? j.tercero.razonSocial
+            : j.datos?.emisor?.nombre ?? null,
+        renglones: j.lineas?.length ?? 0,
+        total: j.datos?.totales?.total ?? null,
+        mensaje: null,
+      })
+    } catch {
+      actualizar(item.key, { estado: 'error', mensaje: 'Se cortó la conexión mientras la leía.' })
+    }
+  }
 
   /** Cola con concurrencia fija: N trabajadores tomando del mismo índice. */
   const arrancar = useCallback(
@@ -144,8 +158,16 @@ export function LoteClient() {
       },
     }))
 
+    for (const n of nuevos) archivos.current.set(n.item.key, n.file)
     setItems((xs) => [...xs, ...nuevos.map((n) => n.item)])
     void arrancar(nuevos)
+  }
+
+  function reintentar(item: Item) {
+    const file = archivos.current.get(item.key)
+    if (!file) { toast.error('Ya no tengo ese archivo: volvé a elegirlo.'); return }
+    actualizar(item.key, { estado: 'en_cola', mensaje: null })
+    void arrancar([{ item, file }])
   }
 
   const listas = items.filter((i) => i.estado === 'listo')
@@ -158,7 +180,7 @@ export function LoteClient() {
       <div
         onDragOver={(e) => { e.preventDefault(); setArrastrando(true) }}
         onDragLeave={() => setArrastrando(false)}
-        onDrop={(e) => { e.preventDefault(); setArrastrando(false); agregar(e.dataTransfer.files) }}
+        onDrop={(e) => { e.preventDefault(); setArrastrando(false); agregar(copiarArchivos(e.dataTransfer.files)) }}
         className={cn(
           'flex flex-col items-center gap-2 rounded-lg border-2 border-dashed py-10 text-center transition-colors',
           arrastrando ? 'border-primary bg-accent' : 'border-border',
@@ -176,7 +198,13 @@ export function LoteClient() {
           multiple
           accept={DOC_ACCEPT_ATTR}
           className="hidden"
-          onChange={(e) => { const f = e.target.files; e.currentTarget.value = ''; if (f) agregar(f) }}
+          onChange={(e) => {
+            // Copiar ANTES de limpiar: la FileList del input es viva y se vacía
+            // con `value = ''`. Ese era el bug: llegaba vacía y no pasaba nada.
+            const f = copiarArchivos(e.currentTarget.files)
+            e.currentTarget.value = ''
+            agregar(f)
+          }}
         />
         <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>Elegir archivos</Button>
       </div>
@@ -203,8 +231,14 @@ export function LoteClient() {
             )}
           </div>
 
+          {!!conError.length && !corriendo && (
+            <div role="alert" className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-sm">
+              {conError.length === 1 ? 'Un archivo no se cargó.' : `${conError.length} archivos no se cargaron.`} El motivo está en cada fila; podés reintentarlos.
+            </div>
+          )}
+
           <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
-            {items.map((it) => <Fila key={it.key} item={it} loteId={loteId} />)}
+            {items.map((it) => <Fila key={it.key} item={it} loteId={loteId} onReintentar={() => reintentar(it)} />)}
           </div>
         </>
       )}
@@ -212,7 +246,7 @@ export function LoteClient() {
   )
 }
 
-function Fila({ item, loteId }: { item: Item; loteId: string }) {
+function Fila({ item, loteId, onReintentar }: { item: Item; loteId: string; onReintentar: () => void }) {
   const enProceso = item.estado === 'subiendo' || item.estado === 'leyendo'
   return (
     <div className="flex items-center gap-3 px-4 py-2.5 text-sm">
@@ -226,7 +260,7 @@ function Fila({ item, loteId }: { item: Item; loteId: string }) {
 
       <div className="min-w-0 flex-1">
         <div className="truncate font-medium">{item.nombre}</div>
-        <div className="truncate text-[11px] text-muted-foreground">
+        <div className={cn('text-[11px]', item.estado === 'error' ? 'text-amber-700 dark:text-amber-400' : 'truncate text-muted-foreground')}>
           {item.estado === 'listo' && item.proveedor
             ? `${item.proveedor} · ${item.renglones} renglones${item.total != null ? ` · ${formatARS(item.total)}` : ''}`
             : item.mensaje ?? ETIQUETA[item.estado]}
@@ -237,6 +271,9 @@ function Fila({ item, loteId }: { item: Item; loteId: string }) {
         <Button asChild size="sm" variant="outline" className="h-7 shrink-0 text-[11px]">
           <Link href={`/admin/finanzas/documentos/revision/${item.extraccionId}?lote=${loteId}`}>Revisar</Link>
         </Button>
+      )}
+      {item.estado === 'error' && (
+        <Button size="sm" variant="outline" className="h-7 shrink-0 text-[11px]" onClick={onReintentar}>Reintentar</Button>
       )}
       {item.estado === 'duplicado' && item.extraccionId && (
         <Button asChild size="sm" variant="ghost" className="h-7 shrink-0 text-[11px]">
