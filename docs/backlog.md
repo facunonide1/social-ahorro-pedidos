@@ -59,8 +59,7 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Qué: corridas que pasan los 60 s con planillas grandes.
 - Terminado: lote seguro (uno pesado por corrida, corte a los 45 s,
   recuperación de `procesando` colgados). Ya está en el PR #7.
-- Rama: `cursor/compras-match-ingesta-61dc` → B1 · Estado: en PR ·
-  Depende de: B1.
+- Rama: `feat/compras-cruce` (B1) · Estado: en PR · Depende de: B1.
 
 **A6 · nora-auditor y generar-agenda**
 - Qué: el auditor corre `compras_rotacion` de toda la cadena y un
@@ -77,7 +76,7 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   reescribe la rama ajena: se arma una rama nueva con main mergeado.
 - Terminado: rama nueva con CI en verde, preview sin depender de las env,
   0296 con rollback.
-- Rama: `feat/compras-cruce` · Estado: pendiente · Depende de: G1.
+- Rama: `feat/compras-cruce` · Estado: en PR · Depende de: G1.
 
 **B2 · Proveedores Monroe Americana y OMICRON**
 - Qué: los alias ya están en el PR #7. Falta la fila «MONROE AMERICANA» en
@@ -92,20 +91,21 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
   (`omitido_por_tamano`).
 - Terminado: la pantalla de Drive lista los omitidos con el link a la carga
   manual, y la carga manual acepta el archivo de a hojas.
-- Rama: `feat/ingesta-archivos-grandes` · Estado: pendiente · Depende de: B1.
+- Rama: `feat/ingesta-archivos-grandes` · Estado: en PR · Depende de: B1 (#22).
 
 **B4 · Ingesta incremental**
-- Qué: hoy mira `modifiedTime > last_sync_at`. Un archivo editado se
-  reprocesa entero, y uno que se movió de carpeta no se ve.
-- Terminado: se compara `md5Checksum` o `version` por archivo, y sólo se
-  reprocesa lo que cambió. Tests.
-- Rama: `feat/ingesta-incremental` · Estado: pendiente · Depende de: H1.
+- Qué: reprocesar sólo lo que cambió.
+- Terminado: ya estaba desde el #5 (lista lo modificado después de
+  `last_sync_at`, y se compara md5 o `modifiedTime` por archivo, con tests).
+  Faltaba que `guardarPagina` leyera sus errores: hecho.
+- Rama: `feat/ingesta-incremental` · Estado: en PR · Depende de: —
 
 **B5 · Las compras ingeridas se ven**
 - Qué: `compras_lineas` no la lee ninguna pantalla.
 - Terminado: listado en compras con filtro de cruzadas y sin cruzar, y
-  «Ignorar».
-- Rama: `feat/compras-cruce` · Estado: pendiente · Depende de: B1.
+  botón para recalcular el cruce. «Ignorar» por línea, sólo si hace falta:
+  pide una columna nueva (migración).
+- Rama: `feat/compras-lineas` · Estado: en PR · Depende de: B1 (#22).
 
 ## C · Maestro por sucursal
 
@@ -277,14 +277,14 @@ tocarlo): la vista `decisiones_pendientes`, `proveedores_detectar`,
 - Terminado: `lib/ingesta/fuente.ts` con `listarCambios`, `descargar` y
   `marcarProcesado`; Drive como primera implementación, sin cambio de
   comportamiento; tests con una fuente falsa.
-- Rama: `feat/fuentes-interfaz` · Estado: pendiente · Depende de: B1.
+- Rama: `feat/fuentes-interfaz` · Estado: en PR · Depende de: B1 (#22).
 
 **H2 · Fuente FIND**
 - Qué: FIND va a ser la fuente maestra.
 - Terminado: esqueleto de la implementación detrás de la bandera
   `INGESTA_FUENTE=find`, que hoy responde «no configurada».
-- Rama: `feat/fuentes-interfaz` · Estado: pendiente · Depende de: H1;
-  credenciales de FIND (P10).
+- Rama: `feat/fuente-find` · Estado: en PR (esqueleto apagado) / bloqueado
+  por humano (API y credenciales de FIND, P10) · Depende de: H1; P10.
 
 ## I · Pulido
 

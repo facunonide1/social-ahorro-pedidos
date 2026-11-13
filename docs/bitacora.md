@@ -1,5 +1,220 @@
 # Bitácora
 
+## 2026-11-13 · Carga en lote: elegías las facturas y no pasaba nada
+
+**La causa.** En `/admin/finanzas/documentos/lote`, el `<input type="file">`
+hacía `const f = e.target.files; e.currentTarget.value = ''; agregar(f)`.
+`input.files` es una FileList **viva**: limpiar el input la vacía. `agregar`
+recibía una lista de largo 0 y salía en la primera línea, así que no había
+request, ni error, ni log en Vercel, que es justo lo que se vio. Arrastrar
+andaba (`dataTransfer.files` no se limpia); elegir con el botón, no. Ahora se
+copia la lista **antes** de limpiar el input (`copiarArchivos`, en
+`lib/documentos/lote.ts`).
+
+**El segundo tope.** La subida pasa por `/api/documentos/subir`, una función
+de Vercel, y Vercel corta cualquier cuerpo de más de 4,5 MB con un 413 antes de
+que llegue al código. El tope propio es 12 MB, pero las fotos comunes se
+comprimen en el navegador y los PDF y los HEIC no: uno de 6 MB nunca llegaba.
+Ahora se revisa antes de mandar (tipo, vacío, 12 MB y 4,3 MB para lo que no se
+comprime) y la fila dice el motivo. El 413, el 401/403 y los errores de red
+también llegan como mensaje. Subir PDF de entre 4,5 y 12 MB pide una subida
+directa al bucket con URL firmada: queda como siguiente paso.
+
+**Errores visibles.** El motivo de la fila que falla se ve entero y en color,
+no truncado en gris. Hay «Reintentar» por fila y un aviso arriba cuando hay
+fallas. Un error inesperado ya no deja la fila trabada en «Subiendo» ni
+detiene la cola.
+
+No se tocó el bucket, sus políticas ni el endpoint del servidor. Test:
+`lib/documentos/lote.test.ts` reproduce la lista viva que se vacía y prueba
+los motivos y la subida con `fetch` simulado.
+
+## 2026-11-13 · Drive: por qué no entró nada y qué cambia
+
+Estado que reportó Facu en producción (main `fa7a354`): 3 archivos `ok`, la
+planilla «Compras y precios por droguería» en `procesando` desde las 16:36 UTC,
+4 maestros de unos 42 MB en `pendiente` y nada de la carpeta «compras
+farmacias». El cron no volvió a hacer nada.
+
+**Las causas, según el código de main:**
+
+1. **Los maestros mataban la función.** Main baja y parsea cada archivo sin
+   mirar el tamaño. Los maestros `.xls` de 42 MB pasan la memoria y los 60 s:
+   la función muere a la mitad y no deja registro. La planilla quedó en
+   `procesando` por lo mismo, y main no tiene cómo destrabarla.
+2. **Una sola fecha de corte para todas las carpetas.** El listado
+   incremental trae lo modificado después de `last_sync_at`, la fecha del
+   último listado completo. Una carpeta agregada después tiene todos sus
+   archivos más viejos que esa fecha y **nunca entran**. Es lo que pasó con
+   «compras farmacias».
+3. **El cron y «Procesar ahora» se podían pisar**: los dos marcaban el mismo
+   archivo y lo procesaban dos veces.
+4. **La fecha de cada lista era la del día de ingesta**, y una lista vieja
+   reemplazaba a la vigente.
+
+**Qué cambia** (sobre la pila de ingesta, #22 → #34):
+
+- **Tamaño y orden.** Desde el #22, un archivo de más de 12 MB no se baja:
+  pasa a previa con dónde subirlo a mano (la carga de SIFACO lo lee en el
+  navegador y lo manda por lotes, o sea por partes). Ahora, además, el pesado
+  que entra en cada corrida sale por **prioridad**: planilla, listas,
+  facturas y el maestro al final. Los maestros no bloquean la cola, y nunca
+  se aplican al catálogo.
+- **Destrabe.** Un `procesando` de más de 3 minutos vuelve a `pendiente` con
+  un intento más (antes, 10 minutos en el #22; la función no vive más de 60
+  s). La planilla de las 16:36 se destraba en la próxima corrida.
+- **Lock con vencimiento.** Una corrida a la vez: un UPDATE condicionado
+  sobre `listado_cursor.lock` (jsonb, sin columna nueva) que vence a los 2
+  minutos. Además, cada archivo se reclama con
+  `update … where estado = 'pendiente'`: si otra corrida lo tomó, se saltea.
+  Se probó en Postgres local que la condición usa `->>`: un `lock: null` en el
+  JSON no es NULL para SQL, y con `->` el lock no se habría soltado nunca.
+- **Una fecha por carpeta.** `listado_cursor.porCarpeta` guarda, por carpeta
+  raíz, el inicio del último listado completo. Una carpeta sin fecha trae
+  todo. La primera corrida después del deploy relista todo una vez (el
+  cursor viejo no tiene esa fecha), y `guardarPagina` no reencola lo que no
+  cambió.
+- **Las dos carpetas, con subcarpetas.** Se lee lo que está configurado. El
+  panel nuevo avisa si falta «compras farmacias» o «compras farmacias
+  (privado)», o si alguna no incluye subcarpetas.
+- **Listas por droguería y con su fecha.** La droguería sale como antes (alias
+  y sección SIFACO). La fecha sale de lo que dice la lista, si no del nombre
+  del archivo, si no de Drive, y si no de hoy (`lib/drive/fecha-lista.ts`).
+  Va en los ítems, en el historial y en `listas_precios.mapeo_usado.fecha_lista`.
+  Una lista más vieja que la vigente entra al historial sin reemplazarla. Los
+  errores de escritura de la lista ahora cortan.
+- **El cron.** Sigue en `vercel.json` cada 30 minutos. Acepta sólo
+  `Authorization: Bearer <CRON_SECRET>` (el que manda Vercel). Sin
+  CRON_SECRET responde 500 con el motivo, en vez de un 401 que parece «no
+  corrió». Respeta `DRIVE_INGESTA_ENABLED` y deja una línea JSON por corrida.
+- **A mano y con estado.** En la pantalla de Google Drive, arriba: «Estado de
+  la ingesta» (`GET /api/integraciones/google-drive/estado`, sólo
+  super_admin, sólo lee). Muestra los conteos por estado, las carpetas con su
+  último listado, si hay una corrida en curso, lo trabado, el próximo
+  pendiente y los avisos: falta una carpeta, falta CRON_SECRET, ingesta
+  apagada, token vencido. «Procesar ahora» corre el mismo lote que el cron y
+  dice qué hizo.
+
+Sin migraciones, RLS ni secretos. La 0294 está aplicada en la base (las
+tablas tienen filas), aunque la bitácora decía que no.
+
+## 2026-11-12 · FIND tiene su lugar como fuente, apagado
+
+`lib/ingesta/fuente-find.ts` es el esqueleto de FIND como fuente: cumple
+`FuenteArchivos` y cualquier uso falla con `FuenteNoConfigurada` («todavía no
+está conectado: falta la API y las credenciales»). Se prende con
+`NORA_FUENTE_FIND='true'` (la bandera `fuente_find`). Prendida, `correrIngesta`
+responde que FIND no está conectado **en vez de seguir con Drive en
+silencio**. Apagada, que es lo que hay hoy, nada cambia.
+
+Cuando haya API de FIND: implementar `listarPagina` y `descargar`, armar su
+conexión y elegir la fuente en `correrIngesta`. Clasificar, parsear, cruzar y
+guardar no se tocan.
+
+## 2026-11-12 · Ingesta incremental: ya estaba; faltaba que leyera sus errores
+
+B4 pedía reprocesar sólo lo que cambió. Eso ya pasa desde el #5: `encolar`
+lista sólo lo modificado después de `last_sync_at`, y `guardarPagina` compara
+cada archivo con `esElMismoContenido` (md5, o `modifiedTime` si Drive no da
+md5, como en las planillas nativas). Si no cambió, no se reencola. Un archivo
+que aparece en las dos carpetas compartidas es el mismo `file_id`. Tiene tests
+en `lib/drive/drive.test.ts`.
+
+Lo que faltaba: `guardarPagina` no leía ningún error. Si el select de «qué
+archivos ya conozco» fallaba, todos parecían nuevos y se reprocesaba la página
+entera. Y si fallaba el insert o el update, el archivo no quedaba encolado sin
+que nadie se enterara. Ahora cualquiera de los dos corta la corrida con el
+motivo, que queda en el log del cron (`conRegistro`).
+
+## 2026-11-12 · Los archivos de más de 12 MB tienen su lugar en la pantalla de Drive
+
+Desde el #22, un archivo que pasa los 12 MB queda en previa con
+`destino_ref = 'omitido_por_tamano'` sin bajarse. Pero aparecía mezclado en la
+bandeja general, con botones de «Clasificar como…» que no lo destraban: el
+cron lo vuelve a saltear. Las copias `.xls` de 42 MB caen siempre acá.
+
+Ahora la pantalla de Google Drive tiene una sección aparte, «Demasiado grandes
+para el cron», con el peso de cada archivo y adónde subirlo a mano según qué
+es: el maestro a Operaciones → SIFACO (que lee el archivo en el navegador y lo
+manda por lotes), las listas a Compras → Listas de precios y las facturas a
+Finanzas → Documentos. La bandeja general ya no los repite.
+
+## 2026-11-12 · La ingesta no sabe que es Drive
+
+FIND va a ser la fuente maestra. Para que cambiar de fuente no sea reescribir
+la ingesta, `lib/ingesta/fuente.ts` define lo único que depende de la fuente:
+listar una página de una carpeta y bajar un archivo (`FuenteArchivos`).
+`lib/drive/fuente-drive.ts` es la implementación de Drive, armada con el access
+token ya refrescado. `correrIngesta` arma la fuente una vez y, de ahí en más,
+`encolar`, `procesarLote` y `procesarUno` reciben la fuente, no el token.
+Clasificar, parsear, cruzar y guardar no cambiaron.
+
+La conexión (OAuth, token cifrado, vencimiento a los 7 días) sigue siendo de
+Drive y queda en `correrIngesta`: cada fuente se construye ya autenticada.
+FIND va a ser otra implementación de `FuenteArchivos` más su propia conexión,
+detrás de la bandera `fuente_find` (G4).
+
+Tests con una fuente en memoria que recorre páginas, subcarpetas y el corte
+por fecha del último sync, y del adaptador de Drive con `fetch` simulado
+(traducción de la respuesta, token, error 403). `npm test` corre por glob.
+
+## 2026-11-12 · Las compras que entraron desde Drive se ven
+
+`compras_lineas` la llena la ingesta y no la mostraba ninguna pantalla.
+`/admin/compras/ingeridas` (está en los accesos rápidos de Compras) muestra
+cuántas líneas hay, cuántas se cruzaron con el catálogo y cuántas no, con
+`count: exact` (no se cuentan filas traídas). Lista las 200 más recientes del
+filtro, y lo dice. Busca por producto, proveedor o código de barras y, si la
+línea está cruzada, muestra con qué producto, la vía y el score.
+
+«Recalcular cruce» recorre `POST /api/compras/rematch` (#22) siguiendo el
+cursor, hasta 40 tandas por clic; cada pedido entra en 60 s y lo que ya se
+cruzó no se pisa. Pantalla y RLS piden lo mismo: super_admin, gerente o
+comprador. Si la tabla no existe, la pantalla lo dice en vez de romperse.
+
+No hay «Ignorar» por línea: `compras_lineas` no tiene columna para eso y
+agregarla es una migración. Queda anotado si hace falta.
+
+## 2026-11-12 · El PR #7 se pone al día con main en `feat/compras-cruce`
+
+El #7 (`cursor/compras-match-ingesta-61dc`) no mergeaba limpio desde que
+entró el #8. No se reescribió esa rama: `feat/compras-cruce` sale de main y
+mergea el #7 con `--no-ff`, así quedan sus commits y su autoría.
+
+Qué trae el #7: `guardarCompras` cruza cada línea con el catálogo (barras de
+`producto_codigos_barras`, después el matcher de las listas) y deja
+`producto_id`, `match_score` y `match_via`. El rematch de las que ya estaban
+sin producto, de a 80, sin borrar: `POST /api/compras/rematch` con sesión y
+`GET /api/cron/compras-rematch` con `CRON_SECRET` (no está en `vercel.json`).
+El cron de Drive deja en previa lo que pasa de 12 MB sin bajarlo, entra un
+solo pesado por corrida, corta a los 45 segundos y saca de `procesando` lo que
+quedó colgado. La bandeja deja ignorar un pendiente. La sección SIFACO puede
+nombrar a la droguería, si la tabla existe.
+
+Conflicto sólo en esta bitácora: quedan todas las entradas de los dos lados,
+las de main (#8 a #11) arriba porque son más nuevas. `package.json` no chocó:
+el #7 no tocaba los tests, y `drive.test.ts` ya estaba en la lista. Lo de
+main (saltear verificadores sin env, el build que no escribe en producción,
+CI y lint) queda como estaba.
+
+Arreglos sobre el #7. `recuperarTrabados` no leía el error del select ni de
+los updates: ahora corta la corrida, igual que el rematch, en vez de contar
+un archivo como recuperado sin haberlo escrito. Lo mismo el update que manda
+a previa un archivo de más de 12 MB. El select de trabados ordena también por
+`id`. `mapeosGuardados` paginaba por `nombre_norm`, que se repite entre
+proveedores: suma `id` al orden para no perder ni repetir filas entre
+páginas. `barrasDelCatalogo` suma `producto_id` por la misma razón. El rematch
+ya ordenaba por `id`, leía todos los errores y tenía `maxDuration`; no hay
+`.in()` con listas largas.
+
+`npm test` 51 de 51, `tsc` limpio, lint en 0 con avisos, build sin env de
+Supabase: los verificadores de la base se saltean, cortes, RLS y lente pasan.
+
+La migración `0296_la_seccion_sifaco_nombra_al_proveedor.sql` sigue sin
+aplicar. Rollback en
+`supabase/rollbacks/0296_la_seccion_sifaco_nombra_al_proveedor.sql`. No se
+tocó la base, ni secretos, ni `sifaco_aplicar_maestro`.
+
 ## 2026-11-12 · CI en cada PR y config de lint
 
 `.github/workflows/ci.yml` corre `npm ci`, `npm test`, `tsc --noEmit`,
@@ -105,6 +320,105 @@ RLS, no: fuera de production no corre aunque las variables estén.
 el null del equipo y la decisión de saltear el build.
 
 No se tocó la base, ni migraciones, ni RLS, ni secretos.
+
+## 2026-11-12 · Las compras que ya entraron cruzan con el catálogo
+
+`guardarCompras` insertaba `compras_lineas` sin `producto_id`, `match_score`
+ni `match_via`. El comparador de `/admin/compras/donde-comprar` lee las listas
+por `producto_id`: una compra sin producto no se puede poner al lado de un
+precio. El cruce es el mismo que el de las listas (`matchearProducto`), con
+un paso delante.
+
+Primero el código de barras. La fuente es `producto_codigos_barras` (un
+producto puede tener hasta cuatro). `productos_catalogo.codigo_barras` es sólo
+el principal y completa los huecos: no pisa un código que ya estaba en la
+tabla. Se guardan los dígitos y, si al sacar los ceros de la izquierda sigue
+siendo un EAN, también esa forma. Un código de menos de 8 dígitos o un cero
+no es un EAN.
+
+Si el código no está, sigue el matcher de las listas: mapeo manual y, si no,
+nombre (producto, droga, concentración, unidades) con `DRIVE_MATCH_SCORE`
+(0,62 si no está). Debajo del umbral la fila queda con `producto_id` null,
+`match_via = sin_match` y el score que tuvo. No se borra nada. El `hash_linea`
+no cambió, así que un reingreso no duplica: `ignoreDuplicates` deja la fila
+vieja como está. Las que ya estaban sin producto las toma el rematch, en otro
+paso.
+
+El índice por token no cambia el resultado. Un score mayor a cero comparte al
+menos un token con la ficha; el barrido de 46.000 fichas por cada línea de la
+planilla no entra en los 60 segundos del cron. El test compara el índice
+contra el barrido completo.
+
+Las 727 filas que ya estaban sin producto no se reescriben al reingresar: el
+hash choca y `ignoreDuplicates` las deja. El rematch las recorre de a 80,
+sólo donde `producto_id` es null, y aplica el mismo cruce. No borra nada y no
+pisa un producto que ya estaba. Si el score y la vía ya coinciden, no escribe.
+Corta a los 40 segundos y devuelve `siguiente` para seguir. Hoy unas 82
+deberían cruzar por barras.
+
+Lo llama un super_admin, gerente o comprador en `POST /api/compras/rematch`.
+El cron, sin sesión, es `GET /api/cron/compras-rematch` con `CRON_SECRET`: el
+middleware manda a login cualquier otra API sin sesión, así que el secreto no
+serviría en la ruta de compras. No está en `vercel.json`. Se corre a mano.
+
+## 2026-11-12 · El cron no se come un archivo que no entra
+
+`/api/cron/drive-ingesta` tiene `maxDuration` 60. La planilla «Compras y
+precios por droguería» quedó en `procesando`: la corrida murió a la mitad y
+nadie la devolvía a la cola.
+
+Un archivo de más de 12 MB se marca `previa` con `destino_ref =
+omitido_por_tamano` antes de descargarlo, así no gasta uno de los 4 lugares.
+Si Drive no manda el tamaño (un Google Sheet) y al bajarlo igual pasa el
+tope, tampoco se parsea. La planilla, un maestro, o un archivo de 2 MB o más
+entra de a uno por corrida. A los 45 segundos desde que arrancó la ingesta no
+se empieza otro: el resto sigue `pendiente`.
+
+Si `procesando` tiene más de 10 minutos —más que los 60 del tope, menos que
+los 30 del cron— vuelve a `pendiente` con intento+1. Empezar a procesarlo
+suma otro intento, igual que antes. Al llegar a 3, `error`. `updated_at` se
+escribe al pasar a `procesando`, para no recuperar un archivo que está
+corriendo de verdad.
+
+En la pantalla de Drive, Ignorar también está para los que siguen
+`pendiente`. Antes el botón sólo aparecía en sin clasificar, previa y error,
+y un pendiente no se podía sacar de la cola sin esperar a que fallara.
+
+## 2026-11-12 · La sección SIFACO puede nombrar a la droguería
+
+Migración `0296`, sin aplicar. Rollback en `supabase/rollbacks/0296_…sql`.
+La `0295` quedó para el historial de precios y facturas, en el PR #6.
+Tabla `sifaco_seccion_proveedor(seccion text primary key, proveedor_id uuid
+references proveedores on delete set null, nota text, created_at)`. RLS
+prendido. La lectura es la de `proveedores_read` (cualquier admin). La
+escritura es la de `proveedores_write` (super_admin, gerente, comprador,
+administrativo), partida en insert, update y delete: un `FOR ALL` también da
+SELECT y el auditor lo marca. No hay filas. El mapeo lo carga Facu.
+
+Propuesto, no cargado:
+
+- MIC → MICROSULES
+- MAY → MAYORSUR
+- PHA → Pharmamerican / PHARMOS, a confirmar
+- CEO → CEOS
+- WES → WEST
+- Z59 → LAFARMEN
+- Z33 → HIERBAS
+- Z34 → KIOSKO
+- NOR → ¿NORMA? Dudoso
+- El resto queda con el código como nombre hasta que exista la fila
+
+Si la tabla no está, la consulta devuelve el error de «no existe» y el cruce
+sigue sin ella. No se rompe la ingesta. Un código sin fila no inventa un
+proveedor: `proveedor_nombre` sigue siendo Z45, MIC o el que venga.
+
+`detectarProveedor` ahora distingue Monroe Americana de Monroe. El alias
+busca «monroe americana» en la razón social. En `proveedores` no está
+«MONROE AMERICANA»: hasta que se cargue, una factura de Monroe Americana no
+se cuelga de un proveedor que sólo se llama Monroe. «Laboratorio Omicron»
+matchea con el proveedor que ya existe, OMICRON.
+
+No se tocó `sifaco_aplicar_maestro`.
 
 ## 2026-11-12 · Google Drive: carpetas compartidas, listas al comparador, maestro solo en previa
 

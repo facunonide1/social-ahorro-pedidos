@@ -18,6 +18,14 @@ type Bandeja = {
   link: string
   matchPct: number | null
   intentos: number
+  megas?: number | null
+}
+
+/** Dónde se sube a mano un archivo que pasa el tope del cron, según qué es. */
+function dondeSubirlo(clasificacion: string): { href: string; label: string } {
+  if (clasificacion === 'maestro') return { href: '/admin/operaciones/sifaco', label: 'Operaciones → SIFACO (importar maestro)' }
+  if (clasificacion === 'factura') return { href: '/admin/finanzas/documentos', label: 'Finanzas → Documentos' }
+  return { href: '/admin/compras/listas-precios', label: 'Compras → Listas de precios' }
 }
 
 export function DriveClient(props: {
@@ -37,6 +45,8 @@ export function DriveClient(props: {
   carpetas: Carpeta[]
   progreso: { hechos: number; total: number; cuentas: Record<string, number> }
   bandeja: Bandeja[]
+  pendientes: Bandeja[]
+  grandes: Bandeja[]
 }) {
   const router = useRouter()
   const [q, setQ] = useState('compras farmacias')
@@ -222,6 +232,56 @@ export function DriveClient(props: {
           {' · '}sin clasificar {props.progreso.cuentas.sin_clasificar ?? 0}
         </div>
       </section>
+
+      <section className="space-y-3 rounded-xl border bg-card p-5">
+        <h2 className="font-medium">Pendientes</h2>
+        {props.pendientes.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No hay archivos esperando.</p>
+        ) : (
+          <ul className="space-y-3">
+            {props.pendientes.map((b) => (
+              <li key={b.fileId} className="rounded-md border px-3 py-2 text-sm">
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <a className="font-medium underline" href={b.link} target="_blank" rel="noreferrer">{b.nombre}</a>
+                  <span className="text-xs text-muted-foreground">{b.clasificacion}{b.intentos ? ` · intento ${b.intentos}` : ''}</span>
+                </div>
+                {b.ruta && <div className="text-xs text-muted-foreground">{b.ruta}</div>}
+                <div className="mt-2">
+                  <Button size="sm" variant="outline" disabled={ocupado} onClick={() => post({ accion: 'clasificar', fileId: b.fileId, clasificacion: 'ignorar' }, 'Quedó ignorado.')}>
+                    Ignorar
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {props.grandes.length > 0 && (
+        <section className="space-y-3 rounded-xl border border-amber-500/40 bg-card p-5">
+          <h2 className="font-medium">Demasiado grandes para el cron ({props.grandes.length})</h2>
+          <p className="text-sm text-muted-foreground">
+            Pasan los 12 MB que el cron puede bajar y leer en una corrida. No se van a procesar solos:
+            bajalos de Drive y subilos a mano donde dice cada uno. La carga manual lee el archivo en el
+            navegador y lo manda por partes.
+          </p>
+          <ul className="space-y-2">
+            {props.grandes.map((b) => {
+              const d = dondeSubirlo(b.clasificacion)
+              return (
+                <li key={b.fileId} className="rounded-md border px-3 py-2 text-sm">
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <a className="font-medium underline" href={b.link} target="_blank" rel="noreferrer">{b.nombre}</a>
+                    <span className="text-xs text-muted-foreground">{b.megas != null ? `${b.megas} MB · ` : ''}{b.clasificacion}</span>
+                  </div>
+                  {b.ruta && <div className="text-xs text-muted-foreground">{b.ruta}</div>}
+                  <div className="mt-1 text-xs">Subirlo en <a className="underline" href={d.href}>{d.label}</a>.</div>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      )}
 
       <section className="space-y-3 rounded-xl border bg-card p-5">
         <h2 className="font-medium">Sin clasificar, en previa o con error</h2>

@@ -6,6 +6,22 @@ import { avisoPlazo, venceEstimado } from '@/lib/drive/vencimiento'
 import { resumenIngesta } from '@/lib/drive/correr'
 
 import { DriveClient } from './drive-client'
+import { EstadoIngesta } from './estado-ingesta'
+
+function filaBandeja(b: any) {
+  return {
+    fileId: b.file_id as string,
+    nombre: b.nombre as string,
+    ruta: (b.ruta_relativa as string | null) ?? null,
+    clasificacion: b.clasificacion as string,
+    estado: b.estado as string,
+    error: (b.error as string | null) ?? null,
+    link: (b.web_view_link as string | null) || `https://drive.google.com/file/d/${b.file_id}/view`,
+    matchPct: (b.match_pct as number | null) ?? null,
+    intentos: Number(b.intentos ?? 0),
+    megas: b.bytes == null ? null : Math.round(Number(b.bytes) / 1_048_576),
+  }
+}
 
 export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Google Drive' }
@@ -29,7 +45,9 @@ export default async function GoogleDrivePage({ searchParams }: { searchParams: 
           { label: 'Google Drive' },
         ]}
       />
-      <div className="p-4 md:p-6">
+      <div className="space-y-4 p-4 md:p-6">
+        {/* El estado y «Procesar ahora» se ven aunque la ingesta esté apagada: ahí dice por qué. */}
+        <EstadoIngesta />
         <DriveClient
           habilitada={habilitada}
           autoAplicar={preciosAutoAplicar()}
@@ -54,17 +72,9 @@ export default async function GoogleDrivePage({ searchParams }: { searchParams: 
             total: resumen?.total ?? 0,
             cuentas: resumen?.cuentas ?? {},
           }}
-          bandeja={(resumen?.bandeja ?? []).map((b: any) => ({
-            fileId: b.file_id,
-            nombre: b.nombre,
-            ruta: b.ruta_relativa,
-            clasificacion: b.clasificacion,
-            estado: b.estado,
-            error: b.error,
-            link: b.web_view_link || `https://drive.google.com/file/d/${b.file_id}/view`,
-            matchPct: b.match_pct,
-            intentos: b.intentos,
-          }))}
+          bandeja={(resumen?.bandeja ?? []).map(filaBandeja)}
+          pendientes={(resumen?.pendientes ?? []).map(filaBandeja)}
+          grandes={(resumen?.grandes ?? []).map(filaBandeja)}
         />
       </div>
     </>

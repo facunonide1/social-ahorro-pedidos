@@ -68,7 +68,17 @@ function modificadoDespues(nodo: NodoDrive, desde: string | null): boolean {
 export async function tomarPagina(
   tareas: TareaCarpeta[],
   listar: (folderId: string, pageToken: string | null) => Promise<PaginaDrive>,
-  opts: { maxProfundidad: number; modificadoDespues: string | null; vistos: Set<string> },
+  opts: {
+    maxProfundidad: number
+    /**
+     * Desde cuándo traer, POR CARPETA RAÍZ. Antes era una sola fecha para
+     * todas (el último listado completo): una carpeta agregada después quedaba
+     * con todos sus archivos «viejos» filtrados para siempre. Así no entró
+     * nada de «compras farmacias». null = traer todo.
+     */
+    modificadoDespues: string | null | ((raizId: string) => string | null)
+    vistos: Set<string>
+  },
 ): Promise<{ tareas: TareaCarpeta[]; archivos: ArchivoVisto[]; hubo: boolean }> {
   if (!tareas.length) return { tareas, archivos: [], hubo: false }
   const [actual, ...resto] = tareas
@@ -93,7 +103,10 @@ export async function tomarPagina(
       continue
     }
     if (opts.vistos.has(nodo.id)) continue
-    if (!modificadoDespues(nodo, opts.modificadoDespues)) continue
+    const desde = typeof opts.modificadoDespues === 'function'
+      ? opts.modificadoDespues(actual.raizId)
+      : opts.modificadoDespues
+    if (!modificadoDespues(nodo, desde)) continue
     opts.vistos.add(nodo.id)
     archivos.push({
       fileId: nodo.id,

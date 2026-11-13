@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 
 import { createAdminClient } from '@/lib/supabase/server'
 
@@ -9,10 +9,18 @@ import {
 import { clasificar, type Clasificacion } from './clasificar'
 import { esElMismoContenido } from './dedupe'
 import { ingestaHabilitada, MAX_INTENTOS, MAX_PROFUNDIDAD, ARCHIVOS_POR_CORRIDA } from './flag'
-import { descargar, listarPagina, refrescarAccessToken } from './google'
+import {
+  TOPE_BYTES, decisionTrabado, mensajeTope, planificarCorrida, sigueEnPresupuesto,
+} from './lote'
+import { mapeoSeccionSiExiste } from './seccion'
+import { refrescarAccessToken } from './google'
+import { fuenteDrive } from './fuente-drive'
+import type { FuenteArchivos } from '@/lib/ingesta/fuente'
+import { findPrendido, MOTIVO_FIND } from '@/lib/ingesta/fuente-find'
 import { parsearMayorsur } from './listas'
 import { claveDesdeEnv, descifrarToken } from './crypto'
-import { tomarPagina, tareasIniciales, type TareaCarpeta } from './recorrer'
+import { tomarPagina } from './recorrer'
+import { cursorTrasListar, lockLibre, nuevoLock, planDeListado, type CarpetaConfig, type Cursor } from './cursor'
 import { avisoPlazo } from './vencimiento'
 import { proximoIntento } from './vencimiento'
 
@@ -43,7 +51,11 @@ async function marcarVencida(adm: Adm, row: { id: string; connected_at: string }
 }
 
 export async function correrIngesta(opts: { manual?: boolean } = {}) {
+  const inicio = Date.now()
   if (!ingestaHabilitada()) return { ok: true, omitido: 'deshabilitado' }
+  // Con la bandera de FIND prendida, la ingesta NO cae en Drive en silencio:
+  // dice que la fuente pedida todavía no existe.
+  if (findPrendido()) return { ok: false, fuente: 'find', error: `FIND ${MOTIVO_FIND}` }
   const adm = createAdminClient()
   const { data: conexion } = await adm.from('integraciones_google_drive')
     .select('id, refresh_token_cifrado, iv, tag, estado, connected_at, last_sync_at, listado_cursor, listado_completo, owner_admin_id')
@@ -72,57 +84,90 @@ export async function correrIngesta(opts: { manual?: boolean } = {}) {
     return { ok: false, error: acceso.error, vencida: acceso.invalidGrant }
   }
 
-  const { data: carpetas } = await adm.from('integraciones_google_drive_carpetas')
+  const { data: carpetas, error: eCarp } = await adm.from('integraciones_google_drive_carpetas')
     .select('folder_id, folder_nombre, incluir_subcarpetas').eq('integracion_id', conexion.id).limit(30)
+  if (eCarp) throw new Error(`no pude leer las carpetas configuradas: ${eCarp.message}`)
   if (!carpetas?.length) return { ok: true, sin_carpetas: true }
 
-  const encolados = await encolar(adm, acceso.accessToken, conexion, carpetas as any[])
-  const procesados = await procesarLote(adm, acceso.accessToken, conexion.owner_admin_id)
-  return { ok: true, manual: !!opts.manual, ...encolados, ...procesados }
+  // Una corrida a la vez: el cron y «Procesar ahora» no se pisan. El lock
+  // vence solo (LOCK_MS), así que una corrida que murió no lo deja tomado.
+  const corrida = randomUUID()
+  const cursor = await tomarLock(adm, conexion.id, (conexion.listado_cursor ?? {}) as Cursor, corrida)
+  if (!cursor) return { ok: true, ocupado: true, mensaje: 'Hay otra corrida en curso; esta no hizo nada.' }
+
+  try {
+    // Desde acá la ingesta no sabe que es Drive: lista y baja por la fuente.
+    const fuente = fuenteDrive(acceso.accessToken)
+    const encolados = await encolar(adm, fuente, conexion, cursor, carpetas as CarpetaConfig[])
+    const procesados = await procesarLote(adm, fuente, conexion.owner_admin_id, inicio)
+    return { ok: true, manual: !!opts.manual, corrida, ...encolados, ...procesados }
+  } finally {
+    await soltarLock(adm, conexion.id, corrida).catch(() => { /* vence solo */ })
+  }
 }
 
-async function encolar(adm: Adm, token: string, conexion: any, carpetas: { folder_id: string; folder_nombre: string; incluir_subcarpetas: boolean }[]) {
-  let tareas: TareaCarpeta[] = Array.isArray(conexion.listado_cursor?.tareas) ? conexion.listado_cursor.tareas : []
-  let desde: string | null = conexion.listado_cursor?.desde ?? null
-  if (!tareas.length) {
-    desde = conexion.last_sync_at
-    tareas = tareasIniciales(carpetas.map((c) => ({
-      folderId: c.folder_id,
-      folderNombre: c.folder_nombre,
-      incluirSubcarpetas: c.incluir_subcarpetas !== false,
-    })))
-  }
+/**
+ * Toma el lock con un UPDATE condicionado a que esté libre o vencido. Si otra
+ * corrida lo tiene, no actualiza ninguna fila y devuelve null. (`->>` y no
+ * `->`: un `lock: null` en el JSON no es NULL para SQL.)
+ */
+async function tomarLock(adm: Adm, conexionId: string, cursor: Cursor, corrida: string): Promise<Cursor | null> {
+  const ahora = new Date()
+  if (!lockLibre(cursor.lock, ahora)) return null
+  const conLock: Cursor = { ...cursor, lock: nuevoLock(corrida, ahora) }
+  const { data, error } = await adm.from('integraciones_google_drive')
+    .update({ listado_cursor: conLock })
+    .eq('id', conexionId)
+    .or(`listado_cursor->lock->>hasta.is.null,listado_cursor->lock->>hasta.lt."${ahora.toISOString()}"`)
+    .select('id')
+  if (error) throw new Error(`no pude tomar el lock de la ingesta: ${error.message}`)
+  return data?.length ? conLock : null
+}
+
+async function soltarLock(adm: Adm, conexionId: string, corrida: string) {
+  const { data } = await adm.from('integraciones_google_drive').select('listado_cursor').eq('id', conexionId).maybeSingle()
+  const c = ((data as any)?.listado_cursor ?? {}) as Cursor
+  if (c.lock?.corrida !== corrida) return
+  await adm.from('integraciones_google_drive').update({ listado_cursor: { ...c, lock: null } })
+    .eq('id', conexionId).eq('listado_cursor->lock->>corrida', corrida)
+}
+
+async function encolar(adm: Adm, fuente: FuenteArchivos, conexion: any, cursor: Cursor, carpetas: CarpetaConfig[]) {
+  const plan = planDeListado(cursor, carpetas, new Date().toISOString())
+  let tareas = plan.tareas
   const vistos = new Set<string>()
   let nuevos = 0
   let paginas = 0
   while (tareas.length && paginas < 3 && nuevos < 40) {
-    const paso = await tomarPagina(tareas, (id, page) => listarPagina(token, id, page).then((p) => ({
-      files: p.files.map((f) => ({
-        id: f.id, name: f.name, mimeType: f.mimeType,
-        modifiedTime: f.modifiedTime ?? null, md5Checksum: f.md5Checksum ?? null,
-        webViewLink: f.webViewLink ?? null, size: f.size ?? null,
-      })),
-      nextPageToken: p.nextPageToken,
-    })), { maxProfundidad: MAX_PROFUNDIDAD, modificadoDespues: desde, vistos })
+    const paso = await tomarPagina(tareas, (id, page) => fuente.listarPagina(id, page), {
+      maxProfundidad: MAX_PROFUNDIDAD,
+      // Cada carpeta raíz con su fecha: una carpeta nueva trae todo.
+      modificadoDespues: (raizId) => plan.desdePorRaiz[raizId] ?? null,
+      vistos,
+    })
     tareas = paso.tareas
     paginas++
     nuevos += await guardarPagina(adm, paso.archivos)
   }
-  const completo = tareas.length === 0
-  await adm.from('integraciones_google_drive').update({
-    listado_cursor: completo ? { tareas: [], desde: null } : { tareas, desde },
+  const { cursor: siguiente, completo } = cursorTrasListar(cursor, { ...plan, tareas })
+  const { error } = await adm.from('integraciones_google_drive').update({
+    listado_cursor: siguiente,
     listado_completo: completo,
     last_sync_at: completo ? new Date().toISOString() : conexion.last_sync_at,
     updated_at: new Date().toISOString(),
   }).eq('id', conexion.id)
-  return { encolados: nuevos, listado_completo: completo }
+  if (error) throw new Error(`no pude guardar el avance del listado: ${error.message}`)
+  return { encolados: nuevos, listado_completo: completo, carpetas: carpetas.map((c) => c.folder_nombre) }
 }
 
 async function guardarPagina(adm: Adm, archivos: { fileId: string; nombre: string; mime: string; modifiedTime: string | null; md5: string | null; webViewLink: string | null; size: number | null; carpetaRaizId: string; carpetaRaizNombre: string; rutaRelativa: string }[]) {
   if (!archivos.length) return 0
   const ids = archivos.map((a) => a.fileId)
-  const { data: previos } = await adm.from('drive_archivos_ingestados')
+  // Si esto falla, NO se sigue: sin `previos`, todo parecería nuevo y se
+  // reprocesaría (e insertaría de nuevo) la página entera.
+  const { data: previos, error: ePrev } = await adm.from('drive_archivos_ingestados')
     .select('file_id, md5, modified_time, estado').in('file_id', ids).limit(200)
+  if (ePrev) throw new Error(`no pude leer qué archivos ya conocía: ${ePrev.message}`)
   const porId = new Map(((previos ?? []) as any[]).map((p) => [p.file_id, p]))
   let n = 0
   for (const a of archivos) {
@@ -150,26 +195,78 @@ async function guardarPagina(adm: Adm, archivos: { fileId: string; nombre: strin
       error: null,
       updated_at: new Date().toISOString(),
     }
-    if (prev) await adm.from('drive_archivos_ingestados').update(fila).eq('file_id', a.fileId)
-    else await adm.from('drive_archivos_ingestados').insert(fila)
+    const { error: eFila } = prev
+      ? await adm.from('drive_archivos_ingestados').update(fila).eq('file_id', a.fileId)
+      : await adm.from('drive_archivos_ingestados').insert(fila)
+    if (eFila) throw new Error(`no pude encolar ${a.nombre}: ${eFila.message}`)
     n++
   }
   return n
 }
 
-async function procesarLote(adm: Adm, token: string, usuarioId: string | null) {
+async function recuperarTrabados(adm: Adm) {
+  const { data, error } = await adm.from('drive_archivos_ingestados')
+    .select('id, intentos, updated_at')
+    .eq('estado', 'procesando')
+    .order('updated_at', { ascending: true })
+    .order('id', { ascending: true })
+    .limit(40)
+  if (error) throw new Error(`no pude leer los trabados: ${error.message}`)
+  const ahora = new Date()
+  let recuperados = 0
+  for (const a of (data ?? []) as any[]) {
+    const d = decisionTrabado({
+      updatedAt: a.updated_at ?? null,
+      ahora,
+      intentos: Number(a.intentos ?? 0),
+      maxIntentos: MAX_INTENTOS,
+    })
+    if (d.accion === 'esperar') continue
+    const estado = d.accion === 'error' ? 'error' : 'pendiente'
+    const { error: eUp } = await adm.from('drive_archivos_ingestados').update({
+      estado,
+      intentos: d.intentos,
+      error: d.accion === 'error'
+        ? 'Quedó trabado en procesando y se agotaron los intentos.'
+        : 'Quedó trabado en procesando. Vuelve a la cola.',
+      proximo_intento_at: null,
+      updated_at: ahora.toISOString(),
+    }).eq('id', a.id)
+    if (eUp) throw new Error(`no pude sacar de procesando ${a.id}: ${eUp.message}`)
+    recuperados++
+  }
+  return recuperados
+}
+
+async function procesarLote(adm: Adm, fuente: FuenteArchivos, usuarioId: string | null, inicio: number) {
+  const recuperados = await recuperarTrabados(adm)
   const { data: cola } = await adm.from('drive_archivos_ingestados')
-    .select('id, file_id, nombre, mime, ruta_relativa, clasificacion, clasificacion_forzada, intentos, bytes, web_view_link, proximo_intento_at')
+    .select('id, file_id, nombre, mime, ruta_relativa, clasificacion, clasificacion_forzada, intentos, bytes, web_view_link, proximo_intento_at, modified_time')
     .eq('estado', 'pendiente')
     .order('created_at', { ascending: true })
-    .limit(20)
+    .limit(40)
   const ahoraMs = Date.now()
   const archivos = ((cola ?? []) as any[]).filter((a) => !a.proximo_intento_at || Date.parse(a.proximo_intento_at) <= ahoraMs)
-  archivos.sort((a, b) => Number(b.clasificacion === 'planilla') - Number(a.clasificacion === 'planilla'))
-  const lote = archivos.slice(0, ARCHIVOS_POR_CORRIDA)
+  const plan = planificarCorrida(archivos.map((a) => ({
+    ...a,
+    bytes: a.bytes == null ? null : Number(a.bytes),
+    clasificacionForzada: a.clasificacion_forzada ?? null,
+  })), { max: ARCHIVOS_POR_CORRIDA })
   const resultados: { fileId: string; estado: string }[] = []
+  for (const archivo of plan.omitidos) {
+    const mb = Math.round(Number(archivo.bytes) / 1_048_576)
+    const { error: eUp } = await adm.from('drive_archivos_ingestados').update({
+      estado: 'previa',
+      destino_ref: 'omitido_por_tamano',
+      error: mensajeTope(mb),
+      updated_at: new Date().toISOString(),
+    }).eq('id', archivo.id)
+    if (eUp) throw new Error(`no pude pasar a previa ${archivo.file_id}: ${eUp.message}`)
+    resultados.push({ fileId: archivo.file_id, estado: 'previa' })
+  }
   let cubiertos = new Set<string>()
-  for (const archivo of lote) {
+  for (const archivo of plan.elegir) {
+    if (!sigueEnPresupuesto(Date.now() - inicio)) break
     if (cubiertos.has(archivo.file_id)) {
       await adm.from('drive_archivos_ingestados').update({
         estado: 'ok', destino_ref: 'cubierto_por_planilla', error: null,
@@ -178,9 +275,14 @@ async function procesarLote(adm: Adm, token: string, usuarioId: string | null) {
       continue
     }
     const intentos = Number(archivo.intentos ?? 0) + 1
-    await adm.from('drive_archivos_ingestados').update({ estado: 'procesando', intentos }).eq('id', archivo.id)
+    // Se reclama sólo si sigue pendiente: si otra corrida lo tomó, se saltea.
+    const { data: tomado, error: eTomar } = await adm.from('drive_archivos_ingestados').update({
+      estado: 'procesando', intentos, updated_at: new Date().toISOString(),
+    }).eq('id', archivo.id).eq('estado', 'pendiente').select('id')
+    if (eTomar) throw new Error(`no pude tomar ${archivo.nombre}: ${eTomar.message}`)
+    if (!tomado?.length) continue
     try {
-      const r = await procesarUno(adm, token, archivo, usuarioId)
+      const r = await procesarUno(adm, fuente, archivo, usuarioId)
       if (r.cubiertos) cubiertos = new Set([...cubiertos, ...r.cubiertos])
       await adm.from('drive_archivos_ingestados').update({
         estado: r.estado,
@@ -207,10 +309,10 @@ async function procesarLote(adm: Adm, token: string, usuarioId: string | null) {
       resultados.push({ fileId: archivo.file_id, estado })
     }
   }
-  return { procesados: resultados.length, resultados }
+  return { procesados: resultados.length, resultados, recuperados, omitidos: plan.omitidos.length }
 }
 
-async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: string | null): Promise<{
+async function procesarUno(adm: Adm, fuente: FuenteArchivos, archivo: any, usuarioId: string | null): Promise<{
   estado: string
   clasificacion: Clasificacion
   destino?: string | null
@@ -225,8 +327,17 @@ async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: str
 }> {
   const forzada = archivo.clasificacion_forzada as Clasificacion | null
   if (forzada === 'ignorar') return { estado: 'ok', clasificacion: 'ignorar' }
-  const buf = await descargar(token, { id: archivo.file_id, mimeType: archivo.mime })
+  const buf = await fuente.descargar({ id: archivo.file_id, mime: archivo.mime })
   const hash = createHash('sha256').update(buf).digest('hex')
+  if (buf.length > TOPE_BYTES) {
+    const clas = forzada ?? clasificar({ nombre: archivo.nombre, mime: archivo.mime, ruta: archivo.ruta_relativa })
+    return {
+      estado: 'previa',
+      clasificacion: clas,
+      error: mensajeTope(Math.round(buf.length / 1_048_576)),
+      hash,
+    }
+  }
   let clas = forzada ?? clasificar({ nombre: archivo.nombre, mime: archivo.mime, ruta: archivo.ruta_relativa })
   if (!forzada && (archivo.mime?.includes('spreadsheet') || /\.xls/i.test(archivo.nombre))) {
     // Señales del contenido, sin cambiar un forzado.
@@ -256,7 +367,10 @@ async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: str
     const planilla = leerPlanilla(buf)
     const catalogo = await catalogoMatch(adm)
     const cubiertos = planilla.archivos.map((a) => a.fileId)
-    await guardarCompras(adm, planilla.compras, 'planilla', archivo.file_id, proveedores)
+    const secciones = await mapeoSeccionSiExiste(adm)
+    await guardarCompras(adm, planilla.compras, 'planilla', archivo.file_id, proveedores, {
+      catalogo, mapeos, secciones,
+    })
     let aplicadas = 0
     let enPrevia = 0
     for (const grupo of planilla.precios) {
@@ -271,7 +385,7 @@ async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: str
       const r = await resolverLista(adm, {
         lista, nombreArchivo: `${archivo.nombre} · ${grupo.proveedor}`, ruta: archivo.ruta_relativa,
         bufferHash: createHash('sha256').update(grupo.proveedor + ':' + grupo.filas.length + ':' + hash).digest('hex'),
-        usuarioId, catalogo, proveedores, mapeos,
+        usuarioId, catalogo, proveedores, mapeos, secciones, modifiedTime: archivo.modified_time ?? null,
       })
       if (r.aplicado || r.motivo.includes('ya estaba')) aplicadas++
       else enPrevia++
@@ -296,9 +410,10 @@ async function procesarUno(adm: Adm, token: string, archivo: any, usuarioId: str
       return { estado: 'sin_clasificar', clasificacion: 'sin_clasificar', error: 'No encontré precios.', hash }
     }
     const catalogo = await catalogoMatch(adm)
+    const secciones = await mapeoSeccionSiExiste(adm)
     const r = await resolverLista(adm, {
       lista, nombreArchivo: archivo.nombre, ruta: archivo.ruta_relativa,
-      bufferHash: hash, usuarioId, catalogo, proveedores, mapeos,
+      bufferHash: hash, usuarioId, catalogo, proveedores, mapeos, secciones, modifiedTime: archivo.modified_time ?? null,
     })
     return {
       estado: r.aplicado || r.motivo.includes('ya estaba') ? 'ok' : 'previa',
@@ -359,6 +474,20 @@ export async function resumenIngesta(adm: Adm) {
   const { data: bandeja } = await adm.from('drive_archivos_ingestados')
     .select('id, file_id, nombre, ruta_relativa, clasificacion, estado, error, web_view_link, match_pct, intentos')
     .in('estado', ['sin_clasificar', 'error', 'previa'])
+    .or('destino_ref.is.null,destino_ref.neq.omitido_por_tamano')
     .order('updated_at', { ascending: false }).limit(40)
-  return { conexion, carpetas: carpetas ?? [], cuentas, total, hechos, bandeja: bandeja ?? [] }
+  // Los que pasan el tope del cron van aparte: reclasificarlos no los destraba
+  // (el cron los vuelve a saltear); hay que subirlos a mano.
+  const { data: grandes } = await adm.from('drive_archivos_ingestados')
+    .select('id, file_id, nombre, ruta_relativa, clasificacion, estado, error, web_view_link, match_pct, intentos, bytes')
+    .eq('estado', 'previa').eq('destino_ref', 'omitido_por_tamano')
+    .order('updated_at', { ascending: false }).limit(40)
+  const { data: pendientes } = await adm.from('drive_archivos_ingestados')
+    .select('id, file_id, nombre, ruta_relativa, clasificacion, estado, error, web_view_link, match_pct, intentos')
+    .eq('estado', 'pendiente')
+    .order('created_at', { ascending: true }).limit(40)
+  return {
+    conexion, carpetas: carpetas ?? [], cuentas, total, hechos,
+    bandeja: bandeja ?? [], pendientes: pendientes ?? [], grandes: grandes ?? [],
+  }
 }
