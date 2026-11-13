@@ -1,5 +1,34 @@
 # Bitácora
 
+## 2026-11-13 · Carga en lote: elegías las facturas y no pasaba nada
+
+**La causa.** En `/admin/finanzas/documentos/lote`, el `<input type="file">`
+hacía `const f = e.target.files; e.currentTarget.value = ''; agregar(f)`.
+`input.files` es una FileList **viva**: limpiar el input la vacía. `agregar`
+recibía una lista de largo 0 y salía en la primera línea, así que no había
+request, ni error, ni log en Vercel, que es justo lo que se vio. Arrastrar
+andaba (`dataTransfer.files` no se limpia); elegir con el botón, no. Ahora se
+copia la lista **antes** de limpiar el input (`copiarArchivos`, en
+`lib/documentos/lote.ts`).
+
+**El segundo tope.** La subida pasa por `/api/documentos/subir`, una función
+de Vercel, y Vercel corta cualquier cuerpo de más de 4,5 MB con un 413 antes de
+que llegue al código. El tope propio es 12 MB, pero las fotos comunes se
+comprimen en el navegador y los PDF y los HEIC no: uno de 6 MB nunca llegaba.
+Ahora se revisa antes de mandar (tipo, vacío, 12 MB y 4,3 MB para lo que no se
+comprime) y la fila dice el motivo. El 413, el 401/403 y los errores de red
+también llegan como mensaje. Subir PDF de entre 4,5 y 12 MB pide una subida
+directa al bucket con URL firmada: queda como siguiente paso.
+
+**Errores visibles.** El motivo de la fila que falla se ve entero y en color,
+no truncado en gris. Hay «Reintentar» por fila y un aviso arriba cuando hay
+fallas. Un error inesperado ya no deja la fila trabada en «Subiendo» ni
+detiene la cola.
+
+No se tocó el bucket, sus políticas ni el endpoint del servidor. Test:
+`lib/documentos/lote.test.ts` reproduce la lista viva que se vacía y prueba
+los motivos y la subida con `fetch` simulado.
+
 ## 2026-11-12 · CI en cada PR y config de lint
 
 `.github/workflows/ci.yml` corre `npm ci`, `npm test`, `tsc --noEmit`,
