@@ -43,6 +43,26 @@ export function DriveClient(props: {
   const [halladas, setHalladas] = useState<{ id: string; nombre: string }[]>([])
   const [elegidas, setElegidas] = useState<Carpeta[]>(props.carpetas)
   const [ocupado, setOcupado] = useState(false)
+  const [estado, setEstado] = useState<null | {
+    cron_configurado: boolean
+    corridas: { at: string; origen: string; resultado: string }[]
+    trabados: { nombre: string; intentos: number; proximo_intento_at: string | null }[]
+    partes: Record<string, { hecho: number }>
+  }>(null)
+
+  async function verEstado() {
+    setOcupado(true)
+    try {
+      const r = await fetch('/api/integraciones/google-drive/procesar')
+      const j = await r.json()
+      if (!r.ok) throw new Error(j?.error || 'No se pudo')
+      setEstado(j)
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Error')
+    } finally {
+      setOcupado(false)
+    }
+  }
 
   async function post(body: unknown, ok: string) {
     setOcupado(true)
@@ -210,10 +230,45 @@ export function DriveClient(props: {
             {props.progreso.hechos} de {props.progreso.total}
             {props.conexion?.listadoCompleto ? ' · listado al día' : ' · todavía listando'}
           </span>
-          <Button className="ml-auto" disabled={ocupado || !props.conexion} onClick={() => post({}, 'Corrí un lote.')}>
-            Procesar ahora
-          </Button>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <Button variant="outline" disabled={ocupado} onClick={verEstado}>Ver estado</Button>
+            <Button variant="outline" disabled={ocupado || !props.conexion} onClick={() => post({ accion: 'destrabar' }, 'Lo que estaba «procesando» volvió a la cola.')}>
+              Destrabar
+            </Button>
+            <Button variant="outline" disabled={ocupado || !props.conexion} onClick={() => post({ accion: 'carpetas-compras' }, 'Revisé las carpetas de compras.')}>
+              Agregar las carpetas de compras
+            </Button>
+            <Button disabled={ocupado || !props.conexion} onClick={() => post({}, 'Corrí un lote.')}>
+              Procesar ahora
+            </Button>
+          </div>
         </div>
+        {estado && (
+          <div className="space-y-2 rounded-md border px-3 py-2 text-xs">
+            <div>
+              Cron: {estado.cron_configurado ? 'CRON_SECRET configurado' : <b>falta CRON_SECRET: el cron no puede entrar</b>}
+              {' · '}{estado.trabados.length ? `${estado.trabados.length} procesando ahora` : 'nada trabado'}
+              {Object.keys(estado.partes).length ? ` · ${Object.keys(estado.partes).length} planilla(s) a mitad de camino` : ''}
+            </div>
+            {estado.trabados.map((t) => (
+              <div key={t.nombre} className="text-muted-foreground">
+                Procesando: {t.nombre} (intento {t.intentos}{t.proximo_intento_at ? `, se libera ${new Date(t.proximo_intento_at).toLocaleTimeString('es-AR')}` : ''})
+              </div>
+            ))}
+            <div className="font-medium">Últimas corridas</div>
+            {estado.corridas.length === 0 ? (
+              <div className="text-muted-foreground">Ninguna registrada todavía: si pasaron más de 30 minutos, el cron no está llegando.</div>
+            ) : (
+              <ul className="space-y-0.5">
+                {estado.corridas.map((c) => (
+                  <li key={c.at}>
+                    {new Date(c.at).toLocaleString('es-AR')} · {c.origen} · {c.resultado}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
         <div className="text-xs text-muted-foreground">
           Pendientes {props.progreso.cuentas.pendiente ?? 0}
           {' · '}ok {props.progreso.cuentas.ok ?? 0}
